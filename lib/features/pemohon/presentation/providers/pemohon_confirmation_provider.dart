@@ -1,0 +1,139 @@
+// lib/features/pemohon/presentation/providers/pemohon_confirmation_provider.dart
+//
+// Riverpod state management untuk fitur Konfirmasi Mutasi oleh Pemohon.
+// Sumber: ROLE-FLOW.md §3, SCREEN-SPEC.md REQ-009, TECHNICAL-DESIGN.md.
+
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../../core/errors/result.dart';
+import '../../../auth/presentation/providers/auth_provider.dart';
+import '../../../mutation/domain/entities/mutation.dart';
+import '../../../mutation/domain/entities/mutation_status.dart';
+import '../../../mutation/domain/usecases/confirm_mutation_usecase.dart';
+import '../../../mutation/presentation/providers/mutation_provider.dart';
+
+// ─── Use Case Provider ────────────────────────────────────────────────────────
+
+final confirmMutationUseCaseProvider = Provider<ConfirmMutationUseCase>((ref) {
+  final repo = ref.watch(mutationRepositoryProvider);
+  return ConfirmMutationUseCase(repository: repo);
+});
+
+// ─── Pending Confirmations Provider ──────────────────────────────────────────
+
+/// Provider daftar mutasi milik user yang sedang menunggu konfirmasi Pemohon.
+///
+/// Filter: status == pendingConfirmation.
+/// Sumber: ROLE-FLOW.md §3, SCREEN-SPEC.md REQ-001 & REQ-009.
+final pendingConfirmationsProvider = FutureProvider<List<Mutation>>((ref) async {
+  final asyncMutations = await ref.watch(mutationListProvider.future);
+
+  return asyncMutations
+      .where((m) => m.status == MutationStatus.pendingConfirmation)
+      .toList();
+});
+
+// ─── Confirmation Action State ────────────────────────────────────────────────
+
+class PemohonConfirmationActionState {
+  final bool isLoading;
+  final String? error;
+  final String? successMessage;
+  final Mutation? result;
+
+  const PemohonConfirmationActionState({
+    this.isLoading = false,
+    this.error,
+    this.successMessage,
+    this.result,
+  });
+
+  PemohonConfirmationActionState copyWith({
+    bool? isLoading,
+    String? error,
+    String? successMessage,
+    Mutation? result,
+    bool clearError = false,
+    bool clearSuccess = false,
+  }) {
+    return PemohonConfirmationActionState(
+      isLoading: isLoading ?? this.isLoading,
+      error: clearError ? null : (error ?? this.error),
+      successMessage:
+          clearSuccess ? null : (successMessage ?? this.successMessage),
+      result: result ?? this.result,
+    );
+  }
+}
+
+// ─── Confirmation Action Notifier ─────────────────────────────────────────────
+
+class PemohonConfirmationActionNotifier
+    extends StateNotifier<PemohonConfirmationActionState> {
+  final ConfirmMutationUseCase confirmUseCase;
+  final Ref ref;
+
+  PemohonConfirmationActionNotifier({
+    required this.confirmUseCase,
+    required this.ref,
+  }) : super(const PemohonConfirmationActionState());
+
+  /// Konfirmasi mutasi oleh Pemohon — status berubah menjadi [completed].
+  ///
+  /// Mengembalikan `true` jika berhasil, `false` jika gagal.
+  /// Status TIDAK berubah sebelum backend berhasil — sesuai ROLE-FLOW.md §8.
+  Future<bool> confirm({required String mutationId}) async {
+    final authState = ref.read(authStateProvider);
+    final confirmedBy = authState.user?.name ?? 'Pemohon';
+
+    state = state.copyWith(
+      isLoading: true,
+      clearError: true,
+      clearSuccess: true,
+    );
+
+    final result = await confirmUseCase(
+      ConfirmMutationParams(
+        mutationId: mutationId,
+        confirmedBy: confirmedBy,
+      ),
+    );
+
+    if (result is Success<Mutation>) {
+      state = PemohonConfirmationActionState(
+        isLoading: false,
+        successMessage: 'Konfirmasi berhasil. Mutasi aset telah selesai.',
+        result: result.data,
+      );
+      // Refresh daftar mutasi
+      ref.invalidate(mutationListProvider);
+      return true;
+    } else if (result is AppFailure<Mutation>) {
+      state = PemohonConfirmationActionState(
+        isLoading: false,
+        error: result.failure.userMessage,
+      );
+      return false;
+    }
+
+    state = const PemohonConfirmationActionState(
+      isLoading: false,
+      error: 'Terjadi kesalahan sistem saat melakukan konfirmasi.',
+    );
+    return false;
+  }
+
+  void reset() {
+    state = const PemohonConfirmationActionState();
+  }
+}
+
+// ─── Provider ────────────────────────────────────────────────────────────────
+
+final pemohonConfirmationActionProvider = StateNotifierProvider<
+    PemohonConfirmationActionNotifier, PemohonConfirmationActionState>((ref) {
+  final useCase = ref.watch(confirmMutationUseCaseProvider);
+  return PemohonConfirmationActionNotifier(
+    confirmUseCase: useCase,
+    ref: ref,
+  );
+});

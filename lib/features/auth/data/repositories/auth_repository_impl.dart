@@ -1,0 +1,88 @@
+// lib/features/auth/data/repositories/auth_repository_impl.dart
+//
+// Implementasi skeleton AuthRepository untuk Foundation.
+// Sumber: SKILLS.md §5 (authentication), TECHNICAL-DESIGN.md §4.1.
+
+import '../../../../core/errors/failures.dart';
+import '../../../../core/errors/result.dart';
+import '../../../../core/storage/secure_storage.dart';
+import '../../domain/entities/user.dart';
+import '../../domain/entities/user_role.dart';
+import '../../domain/repositories/auth_repository.dart';
+
+/// Implementasi in-memory & secure storage skeleton untuk [AuthRepository].
+class AuthRepositoryImpl implements AuthRepository {
+  final SecureStorage secureStorage;
+  User? _currentUser;
+
+  AuthRepositoryImpl({required this.secureStorage});
+
+  @override
+  Future<Result<User>> login({
+    required String username,
+    required String password,
+  }) async {
+    if (username.trim().isEmpty || password.isEmpty) {
+      return Result.failure(
+        const ValidationFailure(message: 'Username dan password tidak boleh kosong'),
+      );
+    }
+
+    // Determine role based on username prefix for testing convenience
+    UserRole role = UserRole.pemohon;
+    final lower = username.toLowerCase();
+    if (lower.contains('admin')) {
+      role = UserRole.admin;
+    } else if (lower.contains('operator')) {
+      role = UserRole.operator;
+    } else if (lower.contains('kabag')) {
+      role = UserRole.kabagAset;
+    } else if (lower.contains('kadiv')) {
+      role = UserRole.kadiv;
+    } else if (lower.contains('staff')) {
+      role = UserRole.staffAset;
+    }
+
+    final user = User(
+      id: 'usr_${DateTime.now().millisecondsSinceEpoch}',
+      username: username,
+      name: username.toUpperCase(),
+      email: '$lower@mutasiku.id',
+      role: role,
+      department: 'Aset & Logistik',
+    );
+
+    _currentUser = user;
+    await secureStorage.saveAuthToken('dummy_foundation_token_${user.id}');
+    await secureStorage.saveUserId(user.id);
+
+    return Result.success(user);
+  }
+
+  @override
+  Future<void> logout() async {
+    _currentUser = null;
+    await secureStorage.clearAll();
+  }
+
+  @override
+  Future<Result<User?>> getCurrentUser() async {
+    if (_currentUser != null) return Result.success(_currentUser);
+
+    final hasToken = await secureStorage.hasAuthToken();
+    if (!hasToken) return Result.success(null);
+
+    final userId = await secureStorage.getUserId();
+    if (userId == null) return Result.success(null);
+
+    _currentUser = User(
+      id: userId,
+      username: 'user_mutasiku',
+      name: 'User MutasiKu',
+      email: 'user@mutasiku.id',
+      role: UserRole.pemohon,
+      department: 'Umum',
+    );
+    return Result.success(_currentUser);
+  }
+}
