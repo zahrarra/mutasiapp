@@ -126,6 +126,14 @@ class FakeKadivMutationRepository implements MutationRepository {
     mutations[index] = updated;
     return Result.success(updated);
   }
+
+  @override
+  Future<Result<Mutation>> confirmMutation({
+    required String mutationId,
+    required String confirmedBy,
+  }) async {
+    throw UnimplementedError();
+  }
 }
 
 void main() {
