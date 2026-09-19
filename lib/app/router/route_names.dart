@@ -42,8 +42,10 @@ abstract final class RouteNames {
   static const String operatorMutationsPath = '/operator/mutations';
   static const String operatorMutationsName = 'operatorMutations';
 
-  static const String operatorVerificationDetailPath = '/operator/mutations/:id';
-  static const String operatorVerificationDetailName = 'operatorVerificationDetail';
+  static const String operatorVerificationDetailPath =
+      '/operator/mutations/:id';
+  static const String operatorVerificationDetailName =
+      'operatorVerificationDetail';
 
   static const String operatorReturnFormPath = '/operator/mutations/:id/return';
   static const String operatorReturnFormName = 'operatorReturnForm';
@@ -111,4 +113,26 @@ abstract final class RouteNames {
 
   static const String adminCriteriaPath = '/admin/approval-criteria';
   static const String adminCriteriaName = 'adminCriteria';
+
+  // ─── Pemohon Routes (lengkapi) ───────────────────────────────────────────
+  static const String pemohonShellPath = '/pemohon';
+  static const String pemohonShellName = 'pemohonShell';
+
+  static const String pemohonSelectAssetPath = '/pemohon/assets/select';
+  static const String pemohonSelectAssetName = 'pemohonSelectAsset';
+
+  static const String pemohonCreateMutationPath = '/pemohon/mutasi/create';
+  static const String pemohonCreateMutationName = 'pemohonCreateMutation';
+
+  static const String pemohonSubmitSuccessPath = '/pemohon/mutasi/success';
+  static const String pemohonSubmitSuccessName = 'pemohonSubmitSuccess';
+
+  static const String pemohonMutationDetailPath = '/pemohon/mutasi/:id';
+  static const String pemohonMutationDetailName = 'pemohonMutationDetail';
+
+  static const String pemohonEditMutationPath = '/pemohon/mutasi/:id/edit';
+  static const String pemohonEditMutationName = 'pemohonEditMutation';
+
+  static const String pemohonProfilePath = '/pemohon/profile';
+  static const String pemohonProfileName = 'pemohonProfile';
 }

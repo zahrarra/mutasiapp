@@ -123,6 +123,14 @@ class FakeKabagMutationRepository implements MutationRepository {
   }) async {
     throw UnimplementedError();
   }
+
+  @override
+  Future<Result<Mutation>> confirmMutation({
+    required String mutationId,
+    required String confirmedBy,
+  }) async {
+    throw UnimplementedError();
+  }
 }
 
 void main() {
