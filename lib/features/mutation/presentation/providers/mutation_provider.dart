@@ -4,6 +4,7 @@
 // Sumber: ROLE-FLOW.md §3, SCREEN-SPEC.md REQ-002–007.
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+
 import '../../../../core/errors/result.dart';
 import '../../../asset/domain/entities/asset.dart';
 import '../../../asset/presentation/providers/asset_provider.dart';
@@ -14,6 +15,7 @@ import '../../domain/repositories/mutation_repository.dart';
 import '../../domain/usecases/get_mutation_detail_usecase.dart';
 import '../../domain/usecases/get_mutations_usecase.dart';
 import '../../domain/usecases/submit_mutation_usecase.dart';
+import '../../domain/usecases/update_mutation_usecase.dart';
 
 // ─── Repository & Use Case Providers ─────────────────────────────────────────
 
@@ -40,9 +42,17 @@ final getMutationsUseCaseProvider = Provider<GetMutationsUseCase>((ref) {
 });
 
 /// Provider untuk [GetMutationDetailUseCase].
-final getMutationDetailUseCaseProvider = Provider<GetMutationDetailUseCase>((ref) {
+final getMutationDetailUseCaseProvider = Provider<GetMutationDetailUseCase>((
+  ref,
+) {
   final repo = ref.watch(mutationRepositoryProvider);
   return GetMutationDetailUseCase(repository: repo);
+});
+
+/// Provider untuk [UpdateMutationUseCase].
+final updateMutationUseCaseProvider = Provider<UpdateMutationUseCase>((ref) {
+  final repo = ref.watch(mutationRepositoryProvider);
+  return UpdateMutationUseCase(repository: repo);
 });
 
 // ─── Eligible Assets Provider ────────────────────────────────────────────────
@@ -102,8 +112,10 @@ final mutationListProvider = FutureProvider<List<Mutation>>((ref) async {
 // ─── Mutation Detail Provider ────────────────────────────────────────────────
 
 /// Provider detail satu mutasi berdasarkan ID.
-final mutationDetailProvider =
-    FutureProvider.family<Mutation, String>((ref, id) async {
+final mutationDetailProvider = FutureProvider.family<Mutation, String>((
+  ref,
+  id,
+) async {
   final useCase = ref.watch(getMutationDetailUseCaseProvider);
   final result = await useCase(id);
 
@@ -123,11 +135,7 @@ class SubmitMutationState {
   final Mutation? result;
   final String? error;
 
-  const SubmitMutationState({
-    this.isLoading = false,
-    this.result,
-    this.error,
-  });
+  const SubmitMutationState({this.isLoading = false, this.result, this.error});
 
   SubmitMutationState copyWith({
     bool? isLoading,
@@ -150,10 +158,14 @@ class SubmitMutationNotifier extends StateNotifier<SubmitMutationState> {
   final Ref ref;
 
   SubmitMutationNotifier({required this.useCase, required this.ref})
-      : super(const SubmitMutationState());
+    : super(const SubmitMutationState());
 
   Future<Mutation?> submit(SubmitMutationParams params) async {
-    state = state.copyWith(isLoading: true, clearError: true, clearResult: true);
+    state = state.copyWith(
+      isLoading: true,
+      clearError: true,
+      clearResult: true,
+    );
 
     final result = await useCase(params);
 
@@ -185,6 +197,81 @@ class SubmitMutationNotifier extends StateNotifier<SubmitMutationState> {
 /// Provider untuk [SubmitMutationNotifier].
 final submitMutationProvider =
     StateNotifierProvider<SubmitMutationNotifier, SubmitMutationState>((ref) {
-  final useCase = ref.watch(submitMutationUseCaseProvider);
-  return SubmitMutationNotifier(useCase: useCase, ref: ref);
-});
+      final useCase = ref.watch(submitMutationUseCaseProvider);
+      return SubmitMutationNotifier(useCase: useCase, ref: ref);
+    });
+
+// ─── Update (Edit) Mutation Provider ─────────────────────────────────────────
+
+/// State untuk proses edit pengajuan mutasi (REQ-008).
+class UpdateMutationState {
+  final bool isLoading;
+  final Mutation? result;
+  final String? error;
+
+  const UpdateMutationState({this.isLoading = false, this.result, this.error});
+
+  UpdateMutationState copyWith({
+    bool? isLoading,
+    Mutation? result,
+    String? error,
+    bool clearError = false,
+    bool clearResult = false,
+  }) {
+    return UpdateMutationState(
+      isLoading: isLoading ?? this.isLoading,
+      result: clearResult ? null : (result ?? this.result),
+      error: clearError ? null : (error ?? this.error),
+    );
+  }
+}
+
+/// Notifier untuk mengelola proses edit pengajuan mutasi yang dikembalikan.
+class UpdateMutationNotifier extends StateNotifier<UpdateMutationState> {
+  final UpdateMutationUseCase useCase;
+  final Ref ref;
+
+  UpdateMutationNotifier({required this.useCase, required this.ref})
+    : super(const UpdateMutationState());
+
+  Future<Mutation?> submit(UpdateMutationParams params) async {
+    state = state.copyWith(
+      isLoading: true,
+      clearError: true,
+      clearResult: true,
+    );
+
+    final result = await useCase(params);
+
+    if (result is Success<Mutation>) {
+      state = UpdateMutationState(isLoading: false, result: result.data);
+      // Invalidate list & detail agar ter-refresh
+      ref.invalidate(mutationListProvider);
+      ref.invalidate(mutationDetailProvider(params.mutationId));
+      return result.data;
+    } else if (result is AppFailure<Mutation>) {
+      state = UpdateMutationState(
+        isLoading: false,
+        error: result.failure.userMessage,
+      );
+      return null;
+    }
+
+    state = const UpdateMutationState(
+      isLoading: false,
+      error: 'Terjadi kesalahan. Coba lagi.',
+    );
+    return null;
+  }
+
+  void reset() {
+    state = const UpdateMutationState();
+  }
+}
+
+/// Provider untuk [UpdateMutationNotifier].
+final updateMutationProvider =
+    StateNotifierProvider<UpdateMutationNotifier, UpdateMutationState>((ref) {
+      final useCase = ref.watch(updateMutationUseCaseProvider);
+      return UpdateMutationNotifier(useCase: useCase, ref: ref);
+    });

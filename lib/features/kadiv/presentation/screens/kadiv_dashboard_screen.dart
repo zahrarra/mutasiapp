@@ -6,6 +6,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+
 import '../../../../app/router/route_names.dart';
 import '../../../../app/theme/app_colors.dart';
 import '../../../../app/theme/app_spacing.dart';
@@ -27,6 +28,20 @@ class KadivDashboardScreen extends ConsumerWidget {
 
     return RoleDashboardLayout(
       title: 'Dashboard Kadiv',
+      selectedIndex: 0,
+      onNavDestinationSelected: (index) {
+        switch (index) {
+          case 1:
+            context.push(RouteNames.kadivApprovalsPath);
+            break;
+          case 2:
+            context.push(RouteNames.kadivNotificationsPath);
+            break;
+          case 3:
+            context.push(RouteNames.profilePath);
+            break;
+        }
+      },
       navItems: const [
         RoleNavItem(label: 'Home', icon: Icons.home_outlined),
         RoleNavItem(label: 'Approval', icon: Icons.verified_user_outlined),
@@ -48,10 +63,7 @@ class KadivDashboardScreen extends ConsumerWidget {
           const SizedBox(height: AppSpacing.xs),
           const Text(
             'Tinjau dan putuskan pengajuan mutasi aset dengan kriteria khusus tingkat Kepala Divisi.',
-            style: TextStyle(
-              fontSize: 13,
-              color: AppColors.textSecondary,
-            ),
+            style: TextStyle(fontSize: 13, color: AppColors.textSecondary),
           ),
           const SizedBox(height: AppSpacing.lg),
 
@@ -160,11 +172,14 @@ class KadivDashboardScreen extends ConsumerWidget {
           asyncMutations.when(
             data: (mutations) {
               // Filter yang relevan untuk Kadiv
-              final relevant = mutations.where((m) {
-                return m.status == MutationStatus.waitingKadivApproval ||
-                    m.kadivApprovedBy != null ||
-                    m.kadivRejectedBy != null;
-              }).take(5).toList();
+              final relevant = mutations
+                  .where((m) {
+                    return m.status == MutationStatus.waitingKadivApproval ||
+                        m.kadivApprovedBy != null ||
+                        m.kadivRejectedBy != null;
+                  })
+                  .take(5)
+                  .toList();
 
               if (relevant.isEmpty) {
                 return Container(
@@ -321,8 +336,10 @@ class KadivDashboardScreen extends ConsumerWidget {
                     ),
                   ),
                   Container(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 2,
+                    ),
                     decoration: BoxDecoration(
                       color: item.status.backgroundColor,
                       borderRadius: BorderRadius.circular(AppRadius.pill),

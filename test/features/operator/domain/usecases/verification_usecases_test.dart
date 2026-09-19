@@ -27,6 +27,36 @@ class FakeMutationRepository implements MutationRepository {
   }
 
   @override
+  Future<Result<Mutation>> updateMutation({
+    required String mutationId,
+    required String targetLocation,
+    required String targetPic,
+    required String reason,
+    String? documentName,
+  }) async {
+    final index = mutations.indexWhere((m) => m.id == mutationId);
+
+    if (index == -1) {
+      return const Result.failure(
+        NotFoundFailure(message: 'Pengajuan mutasi tidak ditemukan.'),
+      );
+    }
+
+    final current = mutations[index];
+
+    final updated = current.copyWith(
+      targetLocation: targetLocation,
+      targetPic: targetPic,
+      reason: reason,
+      status: MutationStatus.submitted,
+    );
+
+    mutations[index] = updated;
+
+    return Result.success(updated);
+  }
+
+  @override
   Future<Result<List<Mutation>>> getMutationsByUser(String userId) async {
     return Result.success(mutations);
   }
@@ -210,47 +240,53 @@ void main() {
       expect(result.failureOrNull, isA<NotFoundFailure>());
     });
 
-    test('fails if mutation is not in submitted status (e.g. already returned)',
-        () async {
-      final fakeRepo = FakeMutationRepository([
-        createDummyMutation(id: 'mut_1', status: MutationStatus.returned),
-      ]);
-      final useCase = VerifyMutationUseCase(repository: fakeRepo);
+    test(
+      'fails if mutation is not in submitted status (e.g. already returned)',
+      () async {
+        final fakeRepo = FakeMutationRepository([
+          createDummyMutation(id: 'mut_1', status: MutationStatus.returned),
+        ]);
+        final useCase = VerifyMutationUseCase(repository: fakeRepo);
 
-      final result = await useCase(
-        mutationId: 'mut_1',
-        operatorName: 'Operator Joko',
-      );
+        final result = await useCase(
+          mutationId: 'mut_1',
+          operatorName: 'Operator Joko',
+        );
 
-      expect(result.isFailure, true);
-      expect(result.failureOrNull, isA<ValidationFailure>());
-      expect(
-        result.failureOrNull?.message,
-        contains('Hanya pengajuan berstatus Diajukan yang dapat diverifikasi'),
-      );
-    });
+        expect(result.isFailure, true);
+        expect(result.failureOrNull, isA<ValidationFailure>());
+        expect(
+          result.failureOrNull?.message,
+          contains(
+            'Hanya pengajuan berstatus Diajukan yang dapat diverifikasi',
+          ),
+        );
+      },
+    );
   });
 
   group('ReturnMutationUseCase tests', () {
-    test('succeeds when mutation is submitted and reason is provided',
-        () async {
-      final fakeRepo = FakeMutationRepository([
-        createDummyMutation(id: 'mut_1', status: MutationStatus.submitted),
-      ]);
-      final useCase = ReturnMutationUseCase(repository: fakeRepo);
+    test(
+      'succeeds when mutation is submitted and reason is provided',
+      () async {
+        final fakeRepo = FakeMutationRepository([
+          createDummyMutation(id: 'mut_1', status: MutationStatus.submitted),
+        ]);
+        final useCase = ReturnMutationUseCase(repository: fakeRepo);
 
-      final result = await useCase(
-        mutationId: 'mut_1',
-        reason: 'Dokumen SK Mutasi belum lengkap.',
-        operatorName: 'Operator Joko',
-      );
+        final result = await useCase(
+          mutationId: 'mut_1',
+          reason: 'Dokumen SK Mutasi belum lengkap.',
+          operatorName: 'Operator Joko',
+        );
 
-      expect(result.isSuccess, true);
-      final updated = result.dataOrNull!;
-      expect(updated.status, MutationStatus.returned);
-      expect(updated.returnReason, 'Dokumen SK Mutasi belum lengkap.');
-      expect(updated.verifiedBy, 'Operator Joko');
-    });
+        expect(result.isSuccess, true);
+        final updated = result.dataOrNull!;
+        expect(updated.status, MutationStatus.returned);
+        expect(updated.returnReason, 'Dokumen SK Mutasi belum lengkap.');
+        expect(updated.verifiedBy, 'Operator Joko');
+      },
+    );
 
     test('fails when reason is empty or whitespace (PRD Aturan 5)', () async {
       final fakeRepo = FakeMutationRepository([

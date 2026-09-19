@@ -6,6 +6,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+
 import '../../../../app/router/route_names.dart';
 import '../../../../app/theme/app_colors.dart';
 import '../../../../app/theme/app_spacing.dart';
@@ -26,12 +27,26 @@ class OperatorDashboardScreen extends ConsumerWidget {
 
     return RoleDashboardLayout(
       title: 'Dashboard Operator',
+      selectedIndex: 0,
       navItems: const [
         RoleNavItem(label: 'Home', icon: Icons.home_outlined),
         RoleNavItem(label: 'Pengajuan', icon: Icons.fact_check_outlined),
         RoleNavItem(label: 'Notifikasi', icon: Icons.notifications_outlined),
         RoleNavItem(label: 'Profil', icon: Icons.person_outline),
       ],
+      onNavDestinationSelected: (index) {
+        switch (index) {
+          case 1:
+            context.push(RouteNames.operatorMutationsPath);
+            break;
+          case 2:
+            context.push(RouteNames.operatorNotificationsPath);
+            break;
+          case 3:
+            context.push(RouteNames.profilePath);
+            break;
+        }
+      },
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -47,10 +62,7 @@ class OperatorDashboardScreen extends ConsumerWidget {
           const SizedBox(height: AppSpacing.xs),
           const Text(
             'Periksa dan verifikasi kelengkapan pengajuan mutasi aset.',
-            style: TextStyle(
-              fontSize: 13,
-              color: AppColors.textSecondary,
-            ),
+            style: TextStyle(fontSize: 13, color: AppColors.textSecondary),
           ),
           const SizedBox(height: AppSpacing.lg),
 
@@ -136,7 +148,8 @@ class OperatorDashboardScreen extends ConsumerWidget {
                 shrinkWrap: true,
                 physics: const NeverScrollableScrollPhysics(),
                 itemCount: recentMutations.length,
-                separatorBuilder: (_, _) => const SizedBox(height: AppSpacing.sm),
+                separatorBuilder: (_, _) =>
+                    const SizedBox(height: AppSpacing.sm),
                 itemBuilder: (context, index) {
                   final item = recentMutations[index];
                   return _buildRecentCard(context, item);

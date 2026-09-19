@@ -6,6 +6,10 @@
 /// List nama route dan path di MutasiKu untuk 6 Role.
 abstract final class RouteNames {
   /// General routes
+
+  static const String landingPath = '/';
+  static const String landingName = 'landing';
+
   static const String loginPath = '/login';
   static const String loginName = 'login';
 
@@ -53,6 +57,9 @@ abstract final class RouteNames {
   static const String operatorHistoryPath = '/operator/verification-history';
   static const String operatorHistoryName = 'operatorHistory';
 
+  static const String operatorNotificationsPath = '/operator/notifications';
+  static const String operatorNotificationsName = 'operatorNotifications';
+
   // ─── Kabag Aset Routes ────────────────────────────────────────────────────
   static const String kabagDashboardPath = '/kabag/dashboard';
   static const String kabagDashboardName = 'kabagDashboard';
@@ -69,6 +76,9 @@ abstract final class RouteNames {
   static const String kabagHistoryPath = '/kabag/approval-history';
   static const String kabagHistoryName = 'kabagHistory';
 
+  static const String kabagNotificationsPath = '/kabag/notifications';
+  static const String kabagNotificationsName = 'kabagNotifications';
+
   // ─── Kadiv Routes ─────────────────────────────────────────────────────────
   static const String kadivDashboardPath = '/kadiv/dashboard';
   static const String kadivDashboardName = 'kadivDashboard';
@@ -84,6 +94,9 @@ abstract final class RouteNames {
 
   static const String kadivHistoryPath = '/kadiv/approval-history';
   static const String kadivHistoryName = 'kadivHistory';
+
+  static const String kadivNotificationsPath = '/kadiv/notifications';
+  static const String kadivNotificationsName = 'kadivNotifications';
 
   // ─── Staff Aset Routes ────────────────────────────────────────────────────
   static const String staffDashboardPath = '/staff-aset/dashboard';
@@ -115,24 +128,38 @@ abstract final class RouteNames {
   static const String adminCriteriaName = 'adminCriteria';
 
   // ─── Pemohon Routes (lengkapi) ───────────────────────────────────────────
+  static const String pemohonMutasiFormPath = '/pemohon/mutasi/create/form';
+  static const String pemohonMutasiFormName = 'pemohonMutasiForm';
+
+  static const String pemohonMutasiReviewPath = '/pemohon/mutasi/create/review';
+  static const String pemohonMutasiReviewName = 'pemohonMutasiReview';
+
+  static const String pemohonMutasiSuccessPath =
+      '/pemohon/mutasi/create/success';
+  static const String pemohonMutasiSuccessName = 'pemohonMutasiSuccess';
+
   static const String pemohonShellPath = '/pemohon';
   static const String pemohonShellName = 'pemohonShell';
 
   static const String pemohonSelectAssetPath = '/pemohon/assets/select';
   static const String pemohonSelectAssetName = 'pemohonSelectAsset';
 
-  static const String pemohonCreateMutationPath = '/pemohon/mutasi/create';
-  static const String pemohonCreateMutationName = 'pemohonCreateMutation';
+  static const String pemohonMutasiCreatePath = '/pemohon/mutasi/create';
+  static const String pemohonMutasiCreateName = 'pemohonMutasiCreate';
 
   static const String pemohonSubmitSuccessPath = '/pemohon/mutasi/success';
   static const String pemohonSubmitSuccessName = 'pemohonSubmitSuccess';
 
-  static const String pemohonMutationDetailPath = '/pemohon/mutasi/:id';
-  static const String pemohonMutationDetailName = 'pemohonMutationDetail';
+  static const String pemohonMutasiDetailPath = '/pemohon/mutasi/:id';
+  static const String pemohonMutasiDetailName = 'pemohonMutasiDetail';
 
-  static const String pemohonEditMutationPath = '/pemohon/mutasi/:id/edit';
-  static const String pemohonEditMutationName = 'pemohonEditMutation';
+  static const String pemohonMutasiEditPath = '/pemohon/mutasi/:id/edit';
+  static const String pemohonMutasiEditName = 'pemohonMutasiEdit';
 
   static const String pemohonProfilePath = '/pemohon/profile';
   static const String pemohonProfileName = 'pemohonProfile';
+
+  // ─── Common Routes ────────────────────────────────────────────────────────
+  static const String profilePath = '/profile';
+  static const String profileName = 'profile';
 }

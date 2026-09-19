@@ -6,6 +6,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+
 import '../../../../app/router/route_names.dart';
 import '../../../../app/theme/app_colors.dart';
 import '../../../../app/theme/app_spacing.dart';
@@ -26,6 +27,20 @@ class KabagDashboardScreen extends ConsumerWidget {
 
     return RoleDashboardLayout(
       title: 'Dashboard Kabag Aset',
+      selectedIndex: 0,
+      onNavDestinationSelected: (index) {
+        switch (index) {
+          case 1:
+            context.push(RouteNames.kabagApprovalsPath);
+            break;
+          case 2:
+            context.push(RouteNames.kabagNotificationsPath);
+            break;
+          case 3:
+            context.push(RouteNames.profilePath);
+            break;
+        }
+      },
       navItems: const [
         RoleNavItem(label: 'Home', icon: Icons.home_outlined),
         RoleNavItem(label: 'Approval', icon: Icons.how_to_reg_outlined),
@@ -47,10 +62,7 @@ class KabagDashboardScreen extends ConsumerWidget {
           const SizedBox(height: AppSpacing.xs),
           const Text(
             'Tinjau dan berikan persetujuan atas pengajuan mutasi aset.',
-            style: TextStyle(
-              fontSize: 13,
-              color: AppColors.textSecondary,
-            ),
+            style: TextStyle(fontSize: 13, color: AppColors.textSecondary),
           ),
           const SizedBox(height: AppSpacing.lg),
 

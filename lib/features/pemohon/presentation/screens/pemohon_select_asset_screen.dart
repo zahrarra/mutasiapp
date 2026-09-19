@@ -78,7 +78,9 @@ class _PemohonSelectAssetScreenState
               ),
               Expanded(
                 child: ListView.builder(
-                  padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: AppSpacing.lg,
+                  ),
                   itemCount: filtered.length,
                   itemBuilder: (context, index) {
                     final asset = filtered[index];
@@ -93,7 +95,9 @@ class _PemohonSelectAssetScreenState
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(12),
                         side: BorderSide(
-                          color: selected ? AppColors.primary : AppColors.border,
+                          color: selected
+                              ? AppColors.primary
+                              : AppColors.border,
                         ),
                       ),
                       child: ListTile(
@@ -157,7 +161,7 @@ class _PemohonSelectAssetScreenState
                               ref
                                   .read(mutationFormProvider.notifier)
                                   .selectAsset(_selected!);
-                              context.push(RouteNames.pemohonCreateMutationPath);
+                              context.push(RouteNames.pemohonMutasiCreatePath);
                             },
                       style: ElevatedButton.styleFrom(
                         backgroundColor: AppColors.primary,

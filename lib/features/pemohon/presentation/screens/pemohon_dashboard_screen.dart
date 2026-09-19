@@ -18,16 +18,30 @@ class PemohonDashboardScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return RoleDashboardLayout(
       title: 'Dashboard Pemohon',
+      selectedIndex: 0,
       navItems: const [
         RoleNavItem(label: 'Home', icon: Icons.home_outlined),
         RoleNavItem(label: 'Mutasi Saya', icon: Icons.assignment_outlined),
         RoleNavItem(label: 'Notifikasi', icon: Icons.notifications_outlined),
         RoleNavItem(label: 'Profil', icon: Icons.person_outline),
       ],
+      onNavDestinationSelected: (index) {
+        switch (index) {
+          case 1:
+            context.push(RouteNames.pemohonMutasiPath);
+            break;
+          case 2:
+            context.push(RouteNames.pemohonNotificationsPath);
+            break;
+          case 3:
+            context.push(RouteNames.profilePath);
+            break;
+        }
+      },
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
+          Text(
             'Layanan Pengajuan Mutasi Aset',
             style: TextStyle(
               fontSize: 16,
@@ -35,21 +49,20 @@ class PemohonDashboardScreen extends StatelessWidget {
               color: AppColors.primary,
             ),
           ),
-          const SizedBox(height: AppSpacing.xs),
-          const Text(
+          SizedBox(height: AppSpacing.xs),
+          Text(
             'Sebagai Pemohon, Anda dapat membuat pengajuan mutasi aset baru, melacak tiket pengajuan, serta mengonfirmasi hasil perpindahan aset.',
             style: TextStyle(fontSize: 13, color: AppColors.textSecondary),
           ),
-          const SizedBox(height: AppSpacing.md),
+          SizedBox(height: AppSpacing.md),
 
-          // Tombol buat pengajuan — seluruh card bisa diklik
-          Material(
+          Card(
+            elevation: 0,
             color: AppColors.primary,
-            borderRadius: BorderRadius.circular(12),
             child: InkWell(
-              onTap: () => context.push(RouteNames.pemohonSelectAssetPath),
-              borderRadius: BorderRadius.circular(12),
-              child: const Padding(
+              borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
+              onTap: () => context.push(RouteNames.pemohonMutasiCreatePath),
+              child: Padding(
                 padding: EdgeInsets.all(AppSpacing.md),
                 child: Row(
                   children: [
@@ -87,16 +100,53 @@ class PemohonDashboardScreen extends StatelessWidget {
               ),
             ),
           ),
-
           const SizedBox(height: AppSpacing.md),
 
-          // Tombol ke daftar mutasi
-          SizedBox(
-            width: double.infinity,
-            child: OutlinedButton.icon(
-              onPressed: () => context.go(RouteNames.pemohonMutasiPath),
-              icon: const Icon(Icons.list_alt),
-              label: const Text('Lihat Mutasi Saya'),
+          Card(
+            elevation: 0,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
+              side: const BorderSide(color: AppColors.border),
+            ),
+            child: InkWell(
+              borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
+              onTap: () => context.push(RouteNames.pemohonMutasiPath),
+              child: const Padding(
+                padding: EdgeInsets.all(AppSpacing.md),
+                child: Row(
+                  children: [
+                    Icon(
+                      Icons.assignment_outlined,
+                      color: AppColors.primary,
+                      size: 28,
+                    ),
+                    SizedBox(width: AppSpacing.md),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Lihat Mutasi Saya',
+                            style: TextStyle(
+                              color: AppColors.textPrimary,
+                              fontWeight: FontWeight.bold,
+                              fontSize: 15,
+                            ),
+                          ),
+                          Text(
+                            'Pantau status & riwayat seluruh pengajuan Anda',
+                            style: TextStyle(
+                              color: AppColors.textSecondary,
+                              fontSize: 12,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    Icon(Icons.arrow_forward, color: AppColors.textSecondary),
+                  ],
+                ),
+              ),
             ),
           ),
         ],

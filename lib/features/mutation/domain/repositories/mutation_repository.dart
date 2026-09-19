@@ -31,6 +31,20 @@ abstract class MutationRepository {
   /// Gagal jika aset locked atau data tidak valid.
   Future<Result<Mutation>> submitMutation(SubmitMutationParams params);
 
+  /// Perbarui pengajuan mutasi yang berstatus [MutationStatus.returned].
+  ///
+  /// Sumber: SCREEN-SPEC.md REQ-008 (Edit Pengajuan).
+  /// Setelah diperbarui, status kembali menjadi [MutationStatus.submitted]
+  /// dan pengajuan masuk kembali ke antrean verifikasi Operator.
+  /// Gagal jika mutasi tidak ditemukan atau status saat ini bukan `returned`.
+  Future<Result<Mutation>> updateMutation({
+    required String mutationId,
+    required String targetLocation,
+    required String targetPic,
+    required String reason,
+    String? documentName,
+  });
+
   /// Ambil daftar mutasi milik user tertentu.
   Future<Result<List<Mutation>>> getMutationsByUser(String userId);
 

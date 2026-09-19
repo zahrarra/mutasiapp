@@ -123,14 +123,14 @@ class _PemohonMutationListScreenState
                           80,
                         ),
                         itemCount: filtered.length,
-                        separatorBuilder: (_, __) =>
+                        separatorBuilder: (_, _) =>
                             const SizedBox(height: AppSpacing.md),
                         itemBuilder: (context, i) {
                           final m = filtered[i];
                           return PemohonMutationCard(
                             mutation: m,
                             onTap: () => context.push(
-                              RouteNames.pemohonMutationDetailPath.replaceFirst(
+                              RouteNames.pemohonMutasiDetailPath.replaceFirst(
                                 ':id',
                                 m.id,
                               ),

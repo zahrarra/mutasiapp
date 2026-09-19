@@ -27,6 +27,36 @@ class FakeKabagMutationRepository implements MutationRepository {
   }
 
   @override
+  Future<Result<Mutation>> updateMutation({
+    required String mutationId,
+    required String targetLocation,
+    required String targetPic,
+    required String reason,
+    String? documentName,
+  }) async {
+    final index = mutations.indexWhere((m) => m.id == mutationId);
+
+    if (index == -1) {
+      return const Result.failure(
+        NotFoundFailure(message: 'Pengajuan mutasi tidak ditemukan.'),
+      );
+    }
+
+    final current = mutations[index];
+
+    final updated = current.copyWith(
+      targetLocation: targetLocation,
+      targetPic: targetPic,
+      reason: reason,
+      status: MutationStatus.submitted,
+    );
+
+    mutations[index] = updated;
+
+    return Result.success(updated);
+  }
+
+  @override
   Future<Result<List<Mutation>>> getMutationsByUser(String userId) async {
     return Result.success(mutations);
   }
@@ -138,7 +168,11 @@ void main() {
     id: 'AST-002',
     assetCode: 'AST-FUR-2024-0002',
     name: 'Meja Kerja Eksekutif',
-    category: AssetCategory(id: 'cat_2', code: 'FUR', name: 'Furniture & Mebel'),
+    category: AssetCategory(
+      id: 'cat_2',
+      code: 'FUR',
+      name: 'Furniture & Mebel',
+    ),
     location: 'Kantor Pusat',
     pic: 'Dewi',
     status: AssetStatus.inMutation,
@@ -168,7 +202,10 @@ void main() {
   group('ApproveMutationKabagUseCase tests', () {
     test('succeeds when mutation status is waitingKabagApproval', () async {
       final fakeRepo = FakeKabagMutationRepository([
-        createDummyMutation(id: 'mut_kbg_1', status: MutationStatus.waitingKabagApproval),
+        createDummyMutation(
+          id: 'mut_kbg_1',
+          status: MutationStatus.waitingKabagApproval,
+        ),
       ]);
       final useCase = ApproveMutationKabagUseCase(repository: fakeRepo);
 
@@ -188,10 +225,7 @@ void main() {
       final fakeRepo = FakeKabagMutationRepository([]);
       final useCase = ApproveMutationKabagUseCase(repository: fakeRepo);
 
-      final result = await useCase(
-        mutationId: '   ',
-        kabagName: 'Pak Kabag',
-      );
+      final result = await useCase(mutationId: '   ', kabagName: 'Pak Kabag');
 
       expect(result.isFailure, true);
       expect(result.failureOrNull, isA<ValidationFailure>());
@@ -210,52 +244,70 @@ void main() {
       expect(result.failureOrNull, isA<NotFoundFailure>());
     });
 
-    test('fails if mutation status is not waitingKabagApproval (e.g. submitted)',
-        () async {
-      final fakeRepo = FakeKabagMutationRepository([
-        createDummyMutation(id: 'mut_kbg_1', status: MutationStatus.submitted),
-      ]);
-      final useCase = ApproveMutationKabagUseCase(repository: fakeRepo);
+    test(
+      'fails if mutation status is not waitingKabagApproval (e.g. submitted)',
+      () async {
+        final fakeRepo = FakeKabagMutationRepository([
+          createDummyMutation(
+            id: 'mut_kbg_1',
+            status: MutationStatus.submitted,
+          ),
+        ]);
+        final useCase = ApproveMutationKabagUseCase(repository: fakeRepo);
 
-      final result = await useCase(
-        mutationId: 'mut_kbg_1',
-        kabagName: 'Pak Kabag',
-      );
+        final result = await useCase(
+          mutationId: 'mut_kbg_1',
+          kabagName: 'Pak Kabag',
+        );
 
-      expect(result.isFailure, true);
-      expect(result.failureOrNull, isA<ValidationFailure>());
-      expect(
-        result.failureOrNull?.message,
-        contains('Hanya pengajuan berstatus Menunggu Approval Kabag yang dapat disetujui'),
-      );
-    });
+        expect(result.isFailure, true);
+        expect(result.failureOrNull, isA<ValidationFailure>());
+        expect(
+          result.failureOrNull?.message,
+          contains(
+            'Hanya pengajuan berstatus Menunggu Approval Kabag yang dapat disetujui',
+          ),
+        );
+      },
+    );
   });
 
   group('RejectMutationKabagUseCase tests', () {
-    test('succeeds when status is waitingKabagApproval and reason is provided',
-        () async {
-      final fakeRepo = FakeKabagMutationRepository([
-        createDummyMutation(id: 'mut_kbg_1', status: MutationStatus.waitingKabagApproval),
-      ]);
-      final useCase = RejectMutationKabagUseCase(repository: fakeRepo);
+    test(
+      'succeeds when status is waitingKabagApproval and reason is provided',
+      () async {
+        final fakeRepo = FakeKabagMutationRepository([
+          createDummyMutation(
+            id: 'mut_kbg_1',
+            status: MutationStatus.waitingKabagApproval,
+          ),
+        ]);
+        final useCase = RejectMutationKabagUseCase(repository: fakeRepo);
 
-      final result = await useCase(
-        mutationId: 'mut_kbg_1',
-        reason: 'Aset masih terpakai untuk proyek aktif.',
-        kabagName: 'Pak Kabag',
-      );
+        final result = await useCase(
+          mutationId: 'mut_kbg_1',
+          reason: 'Aset masih terpakai untuk proyek aktif.',
+          kabagName: 'Pak Kabag',
+        );
 
-      expect(result.isSuccess, true);
-      final updated = result.dataOrNull!;
-      expect(updated.status, MutationStatus.rejected);
-      expect(updated.rejectionReason, 'Aset masih terpakai untuk proyek aktif.');
-      expect(updated.rejectedBy, 'Pak Kabag');
-      expect(updated.rejectedAt, isNotNull);
-    });
+        expect(result.isSuccess, true);
+        final updated = result.dataOrNull!;
+        expect(updated.status, MutationStatus.rejected);
+        expect(
+          updated.rejectionReason,
+          'Aset masih terpakai untuk proyek aktif.',
+        );
+        expect(updated.rejectedBy, 'Pak Kabag');
+        expect(updated.rejectedAt, isNotNull);
+      },
+    );
 
     test('fails when reason is empty (PRD Aturan 7 & KBG-004)', () async {
       final fakeRepo = FakeKabagMutationRepository([
-        createDummyMutation(id: 'mut_kbg_1', status: MutationStatus.waitingKabagApproval),
+        createDummyMutation(
+          id: 'mut_kbg_1',
+          status: MutationStatus.waitingKabagApproval,
+        ),
       ]);
       final useCase = RejectMutationKabagUseCase(repository: fakeRepo);
 
@@ -291,25 +343,33 @@ void main() {
   });
 
   group('GetKabagApprovalsUseCase tests', () {
-    test('filters only waitingKabagApproval when onlyWaitingApproval is true',
-        () async {
-      final fakeRepo = FakeKabagMutationRepository([
-        createDummyMutation(id: 'm1', status: MutationStatus.waitingKabagApproval),
-        createDummyMutation(id: 'm2', status: MutationStatus.submitted),
-        createDummyMutation(id: 'm3', status: MutationStatus.approved),
-        createDummyMutation(id: 'm4', status: MutationStatus.waitingKabagApproval),
-      ]);
-      final useCase = GetKabagApprovalsUseCase(repository: fakeRepo);
+    test(
+      'filters only waitingKabagApproval when onlyWaitingApproval is true',
+      () async {
+        final fakeRepo = FakeKabagMutationRepository([
+          createDummyMutation(
+            id: 'm1',
+            status: MutationStatus.waitingKabagApproval,
+          ),
+          createDummyMutation(id: 'm2', status: MutationStatus.submitted),
+          createDummyMutation(id: 'm3', status: MutationStatus.approved),
+          createDummyMutation(
+            id: 'm4',
+            status: MutationStatus.waitingKabagApproval,
+          ),
+        ]);
+        final useCase = GetKabagApprovalsUseCase(repository: fakeRepo);
 
-      final result = await useCase(onlyWaitingApproval: true);
+        final result = await useCase(onlyWaitingApproval: true);
 
-      expect(result.isSuccess, true);
-      final list = result.dataOrNull!;
-      expect(list.length, 2);
-      expect(
-        list.every((m) => m.status == MutationStatus.waitingKabagApproval),
-        true,
-      );
-    });
+        expect(result.isSuccess, true);
+        final list = result.dataOrNull!;
+        expect(list.length, 2);
+        expect(
+          list.every((m) => m.status == MutationStatus.waitingKabagApproval),
+          true,
+        );
+      },
+    );
   });
 }

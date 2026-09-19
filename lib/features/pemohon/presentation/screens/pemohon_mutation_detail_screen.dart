@@ -84,7 +84,7 @@ class PemohonMutationDetailScreen extends ConsumerWidget {
                 if (m.status == MutationStatus.returned)
                   ElevatedButton(
                     onPressed: () => context.push(
-                      RouteNames.pemohonEditMutationPath.replaceFirst(
+                      RouteNames.pemohonMutasiEditPath.replaceFirst(
                         ':id',
                         m.id,
                       ),

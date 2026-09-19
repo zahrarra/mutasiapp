@@ -25,7 +25,11 @@ class PemohonSubmitSuccessScreen extends StatelessWidget {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              const Icon(Icons.check_circle, size: 72, color: AppColors.success),
+              const Icon(
+                Icons.check_circle,
+                size: 72,
+                color: AppColors.success,
+              ),
               const SizedBox(height: AppSpacing.lg),
               const Text(
                 'Pengajuan Berhasil Dikirim',
@@ -75,8 +79,10 @@ class PemohonSubmitSuccessScreen extends StatelessWidget {
                 height: 48,
                 child: ElevatedButton(
                   onPressed: () => context.go(
-                    RouteNames.pemohonMutationDetailPath
-                        .replaceFirst(':id', mutationId),
+                    RouteNames.pemohonMutasiDetailPath.replaceFirst(
+                      ':id',
+                      mutationId,
+                    ),
                   ),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppColors.primary,

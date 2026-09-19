@@ -6,6 +6,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+
 import '../../../../app/theme/app_colors.dart';
 import '../../../../app/theme/app_spacing.dart';
 import '../../../mutation/domain/entities/mutation.dart';
@@ -16,10 +17,7 @@ import '../providers/pemohon_confirmation_provider.dart';
 class PemohonConfirmationScreen extends ConsumerStatefulWidget {
   final String mutationId;
 
-  const PemohonConfirmationScreen({
-    super.key,
-    required this.mutationId,
-  });
+  const PemohonConfirmationScreen({super.key, required this.mutationId});
 
   @override
   ConsumerState<PemohonConfirmationScreen> createState() =>
@@ -30,8 +28,7 @@ class _PemohonConfirmationScreenState
     extends ConsumerState<PemohonConfirmationScreen> {
   @override
   Widget build(BuildContext context) {
-    final asyncMutation =
-        ref.watch(mutationDetailProvider(widget.mutationId));
+    final asyncMutation = ref.watch(mutationDetailProvider(widget.mutationId));
     final actionState = ref.watch(pemohonConfirmationActionProvider);
 
     return Scaffold(
@@ -44,8 +41,7 @@ class _PemohonConfirmationScreenState
         ),
       ),
       body: asyncMutation.when(
-        data: (mutation) =>
-            _buildBody(context, ref, mutation, actionState),
+        data: (mutation) => _buildBody(context, ref, mutation, actionState),
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (err, _) => Center(
           child: Padding(
@@ -122,10 +118,8 @@ class _PemohonConfirmationScreenState
                     const SizedBox(height: AppSpacing.md),
 
                     // ─── Info Banner ──────────────────────────────────────────
-                    if (isPendingConfirmation)
-                      _buildInfoBanner(),
-                    if (isCompleted)
-                      _buildCompletedBanner(),
+                    if (isPendingConfirmation) _buildInfoBanner(),
+                    if (isCompleted) _buildCompletedBanner(),
                     if (isPendingConfirmation || isCompleted)
                       const SizedBox(height: AppSpacing.md),
 
@@ -272,7 +266,7 @@ class _PemohonConfirmationScreenState
       decoration: BoxDecoration(
         color: AppColors.infoContainer,
         borderRadius: BorderRadius.circular(AppRadius.card),
-        border: Border.all(color: AppColors.info.withOpacity(0.3)),
+        border: Border.all(color: AppColors.info.withValues(alpha: 0.3)),
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -300,12 +294,15 @@ class _PemohonConfirmationScreenState
       decoration: BoxDecoration(
         color: AppColors.successContainer,
         borderRadius: BorderRadius.circular(AppRadius.card),
-        border: Border.all(color: AppColors.success.withOpacity(0.3)),
+        border: Border.all(color: AppColors.success.withValues(alpha: 0.3)),
       ),
       child: Row(
         children: [
-          const Icon(Icons.check_circle_outline,
-              color: AppColors.success, size: 18),
+          const Icon(
+            Icons.check_circle_outline,
+            color: AppColors.success,
+            size: 18,
+          ),
           const SizedBox(width: AppSpacing.sm),
           const Expanded(
             child: Text(
@@ -328,7 +325,7 @@ class _PemohonConfirmationScreenState
       decoration: BoxDecoration(
         color: AppColors.successContainer,
         borderRadius: BorderRadius.circular(AppRadius.card),
-        border: Border.all(color: AppColors.success.withOpacity(0.3)),
+        border: Border.all(color: AppColors.success.withValues(alpha: 0.3)),
       ),
       child: Row(
         children: [
@@ -356,7 +353,7 @@ class _PemohonConfirmationScreenState
       decoration: BoxDecoration(
         color: AppColors.errorContainer,
         borderRadius: BorderRadius.circular(AppRadius.card),
-        border: Border.all(color: AppColors.error.withOpacity(0.3)),
+        border: Border.all(color: AppColors.error.withValues(alpha: 0.3)),
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -457,10 +454,7 @@ class _PemohonConfirmationScreenState
                 mutation.asset.category.name,
               ),
               const SizedBox(width: AppSpacing.sm),
-              _buildAssetInfoChip(
-                Icons.star_outline,
-                mutation.asset.condition,
-              ),
+              _buildAssetInfoChip(Icons.star_outline, mutation.asset.condition),
             ],
           ),
         ],
@@ -476,10 +470,7 @@ class _PemohonConfirmationScreenState
         const SizedBox(width: 4),
         Text(
           label,
-          style: const TextStyle(
-            fontSize: 12,
-            color: AppColors.textSecondary,
-          ),
+          style: const TextStyle(fontSize: 12, color: AppColors.textSecondary),
         ),
       ],
     );
@@ -625,20 +616,19 @@ class _PemohonConfirmationScreenState
         label: 'Approval',
         subtitle: mutation.approvedAt != null
             ? '${mutation.approvedBy ?? 'Pejabat'} · ${_formatDate(mutation.approvedAt!)}'
-            : (mutation.rejectedAt != null
-                ? 'Ditolak'
-                : null),
+            : (mutation.rejectedAt != null ? 'Ditolak' : null),
         isDone: mutation.approvedAt != null,
-        isRejected: mutation.rejectedAt != null &&
-            mutation.approvedAt == null,
+        isRejected: mutation.rejectedAt != null && mutation.approvedAt == null,
       ),
       _TimelineStep(
         label: 'Update Data Aset',
-        subtitle: (currentStatus == MutationStatus.pendingConfirmation ||
+        subtitle:
+            (currentStatus == MutationStatus.pendingConfirmation ||
                 currentStatus == MutationStatus.completed)
             ? 'Selesai'
             : null,
-        isDone: currentStatus == MutationStatus.pendingConfirmation ||
+        isDone:
+            currentStatus == MutationStatus.pendingConfirmation ||
             currentStatus == MutationStatus.completed,
       ),
       _TimelineStep(
@@ -696,7 +686,7 @@ class _PemohonConfirmationScreenState
                 height: 24,
                 decoration: BoxDecoration(
                   color: step.isDone || step.isCurrent || step.isRejected
-                      ? dotColor.withOpacity(0.15)
+                      ? dotColor.withValues(alpha: 0.15)
                       : Colors.transparent,
                   shape: BoxShape.circle,
                   border: Border.all(color: dotColor, width: 1.5),
@@ -730,10 +720,10 @@ class _PemohonConfirmationScreenState
                       color: step.isRejected
                           ? AppColors.error
                           : step.isCurrent
-                              ? AppColors.textPrimary
-                              : step.isDone
-                                  ? AppColors.textPrimary
-                                  : AppColors.textSecondary,
+                          ? AppColors.textPrimary
+                          : step.isDone
+                          ? AppColors.textPrimary
+                          : AppColors.textSecondary,
                     ),
                   ),
                   if (step.isCurrent)
@@ -890,12 +880,12 @@ class _PemohonConfirmationScreenState
       ),
     );
 
-    if (confirmed != true || !mounted) return;
+    if (confirmed != true || !context.mounted) return;
 
     final notifier = ref.read(pemohonConfirmationActionProvider.notifier);
     final success = await notifier.confirm(mutationId: widget.mutationId);
 
-    if (!mounted) return;
+    if (!context.mounted) return;
 
     if (success) {
       // Refresh detail
@@ -948,8 +938,18 @@ class _PemohonConfirmationScreenState
 
   String _formatDate(DateTime date) {
     final months = [
-      'Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun',
-      'Jul', 'Ags', 'Sep', 'Okt', 'Nov', 'Des',
+      'Jan',
+      'Feb',
+      'Mar',
+      'Apr',
+      'Mei',
+      'Jun',
+      'Jul',
+      'Ags',
+      'Sep',
+      'Okt',
+      'Nov',
+      'Des',
     ];
     return '${date.day} ${months[date.month - 1]} ${date.year}';
   }

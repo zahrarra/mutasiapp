@@ -187,8 +187,7 @@ class MutationRepositoryImpl implements MutationRepository {
           targetLocation: 'Data Center Surabaya (DRC)',
           currentPic: 'Hendra Setiawan',
           targetPic: 'Bambang Pratama',
-          reason:
-              'Relokasi server inti data center utama ke Disaster Recovery Center Surabaya sesuai kebijakan kepatuhan OJK.',
+          reason: 'Relokasi server inti data center utama ke Disaster Recovery Center Surabaya sesuai kebijakan kepatuhan OJK.',
           documentName: 'SK_Relokasi_Infrastruktur_TI.pdf',
           status: MutationStatus.waitingKadivApproval,
           verifiedBy: 'Operator Aset',
@@ -268,7 +267,8 @@ class MutationRepositoryImpl implements MutationRepository {
     _ticketCounter++;
     final year = DateTime.now().year;
     final categoryCode = asset.category.code.toUpperCase();
-    final ticketNumber = '$categoryCode-$year-${_ticketCounter.toString().padLeft(5, '0')}';
+    final ticketNumber =
+        '$categoryCode-$year-${_ticketCounter.toString().padLeft(5, '0')}';
 
     final mutationId = 'mut_${DateTime.now().millisecondsSinceEpoch}';
 
@@ -290,6 +290,69 @@ class MutationRepositoryImpl implements MutationRepository {
     _mutations.add(mutation);
 
     return Result.success(mutation);
+  }
+
+  @override
+  Future<Result<Mutation>> updateMutation({
+    required String mutationId,
+    required String targetLocation,
+    required String targetPic,
+    required String reason,
+    String? documentName,
+  }) async {
+    await Future.delayed(const Duration(milliseconds: 300));
+
+    final index = _mutations.indexWhere((m) => m.id == mutationId);
+    if (index == -1) {
+      return const Result.failure(
+        NotFoundFailure(message: 'Pengajuan mutasi tidak ditemukan.'),
+      );
+    }
+
+    final current = _mutations[index];
+
+    if (current.status != MutationStatus.returned) {
+      return const Result.failure(
+        ConflictFailure(
+          message: 'Pengajuan ini tidak dapat diedit karena bukan berstatus "Dikembalikan ke Pemohon".',
+        ),
+      );
+    }
+
+    if (targetLocation.trim().isEmpty) {
+      return const Result.failure(
+        ValidationFailure(message: 'Lokasi tujuan wajib dipilih.'),
+      );
+    }
+    if (targetPic.trim().isEmpty) {
+      return const Result.failure(
+        ValidationFailure(message: 'Penanggung jawab baru wajib dipilih.'),
+      );
+    }
+    if (reason.trim().isEmpty) {
+      return const Result.failure(
+        ValidationFailure(message: 'Alasan mutasi wajib diisi.'),
+      );
+    }
+
+    // Edit mengembalikan pengajuan ke antrean verifikasi Operator
+    // (status -> submitted), sesuai ROLE-FLOW.md §3.
+    //
+    // CATATAN: Mutation.copyWith saat ini menggunakan pola `x ?? this.x`,
+    // sehingga field nullable (mis. returnReason) tidak bisa "dikosongkan"
+    // lewat copyWith. returnReason lama akan tetap tersimpan sebagai jejak
+    // riwayat pengembalian sebelumnya — ini bukan bug baru dari perubahan
+    // ini, melainkan keterbatasan copyWith yang sudah ada di entity.
+    final updated = current.copyWith(
+      targetLocation: targetLocation,
+      targetPic: targetPic,
+      reason: reason,
+      documentName: documentName,
+      status: MutationStatus.submitted,
+    );
+
+    _mutations[index] = updated;
+    return Result.success(updated);
   }
 
   @override
@@ -492,9 +555,7 @@ class MutationRepositoryImpl implements MutationRepository {
     }
 
     final current = _mutations[index];
-    final updated = current.copyWith(
-      status: MutationStatus.completed,
-    );
+    final updated = current.copyWith(status: MutationStatus.completed);
 
     _mutations[index] = updated;
     return Result.success(updated);

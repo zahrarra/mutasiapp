@@ -6,8 +6,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:mutasiku/features/pemohon/presentation/screens/pemohon_confirmation_screen.dart';
 
+import '../../features/auth/presentation/screens/landing_screen.dart';
 import '../../features/admin/presentation/screens/admin_dashboard_screen.dart';
 import '../../features/asset/presentation/screens/asset_category_screen.dart';
 import '../../features/asset/presentation/screens/asset_detail_screen.dart';
@@ -28,7 +28,16 @@ import '../../features/operator/presentation/screens/operator_dashboard_screen.d
 import '../../features/operator/presentation/screens/operator_mutations_screen.dart';
 import '../../features/operator/presentation/screens/operator_return_form_screen.dart';
 import '../../features/operator/presentation/screens/operator_verification_detail_screen.dart';
+import '../../features/pemohon/presentation/screens/pemohon_confirmation_screen.dart';
+import '../../features/pemohon/presentation/screens/pemohon_create_mutation_screen.dart';
 import '../../features/pemohon/presentation/screens/pemohon_dashboard_screen.dart';
+import '../../features/pemohon/presentation/screens/pemohon_edit_mutation_screen.dart';
+import '../../features/pemohon/presentation/screens/pemohon_mutation_detail_screen.dart';
+import '../../features/pemohon/presentation/screens/pemohon_mutation_list_screen.dart';
+import '../../features/pemohon/presentation/screens/pemohon_notifications_screen.dart';
+import '../../features/pemohon/presentation/screens/pemohon_profile_screen.dart';
+import '../../features/pemohon/presentation/screens/pemohon_select_asset_screen.dart';
+import '../../features/pemohon/presentation/screens/pemohon_submit_success_screen.dart';
 import '../../features/staff/presentation/screens/staff_dashboard_screen.dart';
 import 'route_guards.dart';
 import 'route_names.dart';
@@ -50,7 +59,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
   final routerNotifier = RouterNotifier(ref);
 
   return GoRouter(
-    initialLocation: RouteNames.dashboardPath,
+    initialLocation: RouteNames.landingPath,
     refreshListenable: routerNotifier,
     redirect: (BuildContext context, GoRouterState state) {
       final authState = ref.read(authStateProvider);
@@ -67,24 +76,27 @@ final appRouterProvider = Provider<GoRouter>((ref) {
     },
     routes: [
       GoRoute(
+        path: RouteNames.landingPath,
+        name: RouteNames.landingName,
+        builder: (context, state) => const LandingScreen(),
+      ),
+      GoRoute(
         path: RouteNames.loginPath,
         name: RouteNames.loginName,
         builder: (context, state) => const LoginScreen(),
       ),
-
       GoRoute(
         path: RouteNames.dashboardPath,
         name: RouteNames.dashboardName,
         builder: (context, state) => const DashboardScreen(),
       ),
-
       GoRoute(
         path: RouteNames.unauthorizedPath,
         name: RouteNames.unauthorizedName,
         builder: (context, state) => const UnauthorizedScreen(),
       ),
 
-      // ─── Asset Routes ───────────────────────────────────────────────────────
+      // ─── Asset Routes ─────────────────────────────────────────────────────
       GoRoute(
         path: RouteNames.assetsPath,
         name: RouteNames.assetsName,
@@ -99,7 +111,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         },
       ),
 
-      // ─── Role Dashboards ───────────────────────────────────────────────────
+      // ─── Admin ────────────────────────────────────────────────────────────
       GoRoute(
         path: RouteNames.adminDashboardPath,
         name: RouteNames.adminDashboardName,
@@ -110,11 +122,41 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         name: RouteNames.adminCategoriesName,
         builder: (context, state) => const AssetCategoryScreen(),
       ),
+
+      // ─── Pemohon ──────────────────────────────────────────────────────────
       GoRoute(
         path: RouteNames.pemohonDashboardPath,
         name: RouteNames.pemohonDashboardName,
         builder: (context, state) => const PemohonDashboardScreen(),
       ),
+      GoRoute(
+        path: RouteNames.pemohonSelectAssetPath,
+        name: RouteNames.pemohonSelectAssetName,
+        builder: (context, state) => const PemohonSelectAssetScreen(),
+      ),
+      GoRoute(
+        path: RouteNames.pemohonMutasiCreatePath,
+        name: RouteNames.pemohonMutasiCreateName,
+        builder: (context, state) => const PemohonCreateMutationScreen(),
+      ),
+      GoRoute(
+        path: RouteNames.pemohonSubmitSuccessPath,
+        name: RouteNames.pemohonSubmitSuccessName,
+        builder: (context, state) {
+          final ticket = state.uri.queryParameters['ticket'] ?? '-';
+          final id = state.uri.queryParameters['id'] ?? '';
+          return PemohonSubmitSuccessScreen(
+            ticketNumber: ticket,
+            mutationId: id,
+          );
+        },
+      ),
+      GoRoute(
+        path: RouteNames.pemohonMutasiPath,
+        name: RouteNames.pemohonMutasiName,
+        builder: (context, state) => const PemohonMutationListScreen(),
+      ),
+      // Path lebih spesifik dulu (confirm & edit), baru detail :id
       GoRoute(
         path: RouteNames.pemohonConfirmationPath,
         name: RouteNames.pemohonConfirmationName,
@@ -123,6 +165,34 @@ final appRouterProvider = Provider<GoRouter>((ref) {
           return PemohonConfirmationScreen(mutationId: id);
         },
       ),
+      GoRoute(
+        path: RouteNames.pemohonMutasiEditPath,
+        name: RouteNames.pemohonMutasiEditName,
+        builder: (context, state) {
+          final id = state.pathParameters['id'] ?? '';
+          return PemohonEditMutationScreen(mutationId: id);
+        },
+      ),
+      GoRoute(
+        path: RouteNames.pemohonMutasiDetailPath,
+        name: RouteNames.pemohonMutasiDetailName,
+        builder: (context, state) {
+          final id = state.pathParameters['id'] ?? '';
+          return PemohonMutationDetailScreen(mutationId: id);
+        },
+      ),
+      GoRoute(
+        path: RouteNames.pemohonNotificationsPath,
+        name: RouteNames.pemohonNotificationsName,
+        builder: (context, state) => const PemohonNotificationsScreen(),
+      ),
+      GoRoute(
+        path: RouteNames.pemohonProfilePath,
+        name: RouteNames.pemohonProfileName,
+        builder: (context, state) => const PemohonProfileScreen(),
+      ),
+
+      // ─── Operator ─────────────────────────────────────────────────────────
       GoRoute(
         path: RouteNames.operatorDashboardPath,
         name: RouteNames.operatorDashboardName,
@@ -149,6 +219,8 @@ final appRouterProvider = Provider<GoRouter>((ref) {
           return OperatorReturnFormScreen(mutationId: id);
         },
       ),
+
+      // ─── Kabag ────────────────────────────────────────────────────────────
       GoRoute(
         path: RouteNames.kabagDashboardPath,
         name: RouteNames.kabagDashboardName,
@@ -175,6 +247,8 @@ final appRouterProvider = Provider<GoRouter>((ref) {
           return KabagRejectFormScreen(mutationId: id);
         },
       ),
+
+      // ─── Kadiv ────────────────────────────────────────────────────────────
       GoRoute(
         path: RouteNames.kadivDashboardPath,
         name: RouteNames.kadivDashboardName,
@@ -206,6 +280,8 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         name: RouteNames.kadivHistoryName,
         builder: (context, state) => const KadivApprovalsScreen(),
       ),
+
+      // ─── Staff ────────────────────────────────────────────────────────────
       GoRoute(
         path: RouteNames.staffDashboardPath,
         name: RouteNames.staffDashboardName,
