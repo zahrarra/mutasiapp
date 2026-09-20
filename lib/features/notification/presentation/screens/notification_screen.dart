@@ -30,24 +30,33 @@ class NotificationScreen extends ConsumerWidget {
         actions: [
           if (notifications.any((n) => !n.isRead))
             TextButton(
-              onPressed: () => ref.read(notificationProvider.notifier).markAllAsRead(),
-              child: const Text('Tandai semua dibaca', style: TextStyle(color: Colors.white)),
+              onPressed: () =>
+                  ref.read(notificationProvider.notifier).markAllAsRead(),
+              child: const Text(
+                'Tandai semua dibaca',
+                style: TextStyle(color: Colors.white),
+              ),
             ),
         ],
       ),
       body: notifications.isEmpty
           ? const Center(
-              child: Text('Belum ada notifikasi.', style: TextStyle(color: AppColors.textSecondary)),
+              child: Text(
+                'Belum ada notifikasi.',
+                style: TextStyle(color: AppColors.textSecondary),
+              ),
             )
           : ListView.separated(
               padding: const EdgeInsets.all(AppSpacing.md),
               itemCount: notifications.length,
-              separatorBuilder: (_, __) => const SizedBox(height: AppSpacing.sm),
+              separatorBuilder: (_, _) => const SizedBox(height: AppSpacing.sm),
               itemBuilder: (context, index) {
                 final item = notifications[index];
                 return _NotificationTile(
                   item: item,
-                  onTap: () => ref.read(notificationProvider.notifier).markAsRead(item.id),
+                  onTap: () => ref
+                      .read(notificationProvider.notifier)
+                      .markAsRead(item.id),
                 );
               },
             ),
@@ -65,13 +74,21 @@ class _NotificationTile extends StatelessWidget {
   Widget build(BuildContext context) {
     final (icon, color) = switch (item.type) {
       NotificationType.info => (Icons.info_outline, AppColors.info),
-      NotificationType.success => (Icons.check_circle_outline, AppColors.success),
-      NotificationType.warning => (Icons.warning_amber_outlined, AppColors.warning),
+      NotificationType.success => (
+        Icons.check_circle_outline,
+        AppColors.success,
+      ),
+      NotificationType.warning => (
+        Icons.warning_amber_outlined,
+        AppColors.warning,
+      ),
       NotificationType.action => (Icons.touch_app_outlined, AppColors.primary),
     };
 
     return Material(
-      color: item.isRead ? AppColors.surface : AppColors.infoContainer.withOpacity(0.4),
+      color: item.isRead
+          ? AppColors.surface
+          : AppColors.infoContainer.withValues(alpha: 0.4),
       borderRadius: BorderRadius.circular(AppRadius.card),
       child: InkWell(
         onTap: onTap,
@@ -87,7 +104,10 @@ class _NotificationTile extends StatelessWidget {
             children: [
               Container(
                 padding: const EdgeInsets.all(AppSpacing.sm),
-                decoration: BoxDecoration(color: color.withOpacity(0.12), shape: BoxShape.circle),
+                decoration: BoxDecoration(
+                  color: color.withValues(alpha: 0.12),
+                  shape: BoxShape.circle,
+                ),
                 child: Icon(icon, color: color, size: 20),
               ),
               const SizedBox(width: AppSpacing.sm),
@@ -99,14 +119,29 @@ class _NotificationTile extends StatelessWidget {
                       item.title,
                       style: TextStyle(
                         fontSize: 14,
-                        fontWeight: item.isRead ? FontWeight.w500 : FontWeight.w700,
+                        fontWeight: item.isRead
+                            ? FontWeight.w500
+                            : FontWeight.w700,
                         color: AppColors.textPrimary,
                       ),
                     ),
                     const SizedBox(height: 2),
-                    Text(item.message, style: const TextStyle(fontSize: 12, color: AppColors.textSecondary, height: 1.4)),
+                    Text(
+                      item.message,
+                      style: const TextStyle(
+                        fontSize: 12,
+                        color: AppColors.textSecondary,
+                        height: 1.4,
+                      ),
+                    ),
                     const SizedBox(height: 4),
-                    Text(_relativeTime(item.createdAt), style: const TextStyle(fontSize: 11, color: AppColors.textDisabled)),
+                    Text(
+                      _relativeTime(item.createdAt),
+                      style: const TextStyle(
+                        fontSize: 11,
+                        color: AppColors.textDisabled,
+                      ),
+                    ),
                   ],
                 ),
               ),
@@ -115,7 +150,10 @@ class _NotificationTile extends StatelessWidget {
                   margin: const EdgeInsets.only(top: 4),
                   width: 8,
                   height: 8,
-                  decoration: const BoxDecoration(color: AppColors.primary, shape: BoxShape.circle),
+                  decoration: const BoxDecoration(
+                    color: AppColors.primary,
+                    shape: BoxShape.circle,
+                  ),
                 ),
             ],
           ),

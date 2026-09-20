@@ -40,7 +40,11 @@ class MutationFormScreen extends ConsumerWidget {
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                const Icon(Icons.inventory_2_outlined, size: 48, color: AppColors.textDisabled),
+                const Icon(
+                  Icons.inventory_2_outlined,
+                  size: 48,
+                  color: AppColors.textDisabled,
+                ),
                 const SizedBox(height: AppSpacing.md),
                 const Text(
                   'Belum ada aset yang dipilih.',
@@ -49,7 +53,8 @@ class MutationFormScreen extends ConsumerWidget {
                 const SizedBox(height: AppSpacing.md),
                 CustomButton(
                   label: 'Pilih Aset',
-                  onPressed: () => context.go(RouteNames.pemohonMutasiCreatePath),
+                  onPressed: () =>
+                      context.go(RouteNames.pemohonMutasiCreatePath),
                 ),
               ],
             ),
@@ -82,7 +87,10 @@ class MutationFormScreen extends ConsumerWidget {
                       color: AppColors.infoContainer,
                       borderRadius: BorderRadius.circular(AppRadius.small),
                     ),
-                    child: const Icon(Icons.inventory_2_outlined, color: AppColors.primary),
+                    child: const Icon(
+                      Icons.inventory_2_outlined,
+                      color: AppColors.primary,
+                    ),
                   ),
                   const SizedBox(width: AppSpacing.sm),
                   Expanded(
@@ -91,11 +99,17 @@ class MutationFormScreen extends ConsumerWidget {
                       children: [
                         Text(
                           asset.name,
-                          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                          style: const TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 14,
+                          ),
                         ),
                         Text(
                           '${asset.assetCode} · ${asset.location}',
-                          style: const TextStyle(fontSize: 12, color: AppColors.textSecondary),
+                          style: const TextStyle(
+                            fontSize: 12,
+                            color: AppColors.textSecondary,
+                          ),
                         ),
                       ],
                     ),
@@ -112,7 +126,9 @@ class MutationFormScreen extends ConsumerWidget {
             _buildLabel('Lokasi Tujuan *'),
             const SizedBox(height: AppSpacing.xs),
             _buildDropdown(
-              value: formState.targetLocation.isEmpty ? null : formState.targetLocation,
+              value: formState.targetLocation.isEmpty
+                  ? null
+                  : formState.targetLocation,
               hint: 'Pilih lokasi tujuan',
               items: locations,
               errorText: formState.fieldErrors['targetLocation'],
@@ -151,7 +167,10 @@ class MutationFormScreen extends ConsumerWidget {
                 ),
                 focusedBorder: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
-                  borderSide: const BorderSide(color: AppColors.primary, width: 2),
+                  borderSide: const BorderSide(
+                    color: AppColors.primary,
+                    width: 2,
+                  ),
                 ),
               ),
             ),
@@ -190,12 +209,20 @@ class MutationFormScreen extends ConsumerWidget {
                     const SizedBox(width: AppSpacing.sm),
                     Expanded(
                       child: Text(
-                        formState.documentName ?? 'Ketuk untuk melampirkan dokumen',
-                        style: const TextStyle(fontSize: 13, color: AppColors.textSecondary),
+                        formState.documentName ??
+                            'Ketuk untuk melampirkan dokumen',
+                        style: const TextStyle(
+                          fontSize: 13,
+                          color: AppColors.textSecondary,
+                        ),
                       ),
                     ),
                     if (formState.documentName != null)
-                      const Icon(Icons.close, size: 18, color: AppColors.textDisabled),
+                      const Icon(
+                        Icons.close,
+                        size: 18,
+                        color: AppColors.textDisabled,
+                      ),
                   ],
                 ),
               ),
@@ -207,7 +234,7 @@ class MutationFormScreen extends ConsumerWidget {
               width: double.infinity,
               onPressed: () {
                 if (notifier.validate()) {
-                  context.push(RouteNames.pemohonMutasiReviewPath);
+                  context.push(RouteNames.pemohonSubmitSuccessPath);
                 }
               },
             ),
@@ -219,13 +246,13 @@ class MutationFormScreen extends ConsumerWidget {
   }
 
   Widget _buildLabel(String text) => Text(
-        text,
-        style: const TextStyle(
-          fontWeight: FontWeight.w600,
-          fontSize: 14,
-          color: AppColors.textPrimary,
-        ),
-      );
+    text,
+    style: const TextStyle(
+      fontWeight: FontWeight.w600,
+      fontSize: 14,
+      color: AppColors.textPrimary,
+    ),
+  );
 
   Widget _buildDropdown({
     required String? value,
@@ -235,11 +262,19 @@ class MutationFormScreen extends ConsumerWidget {
     required ValueChanged<String?> onChanged,
   }) {
     return DropdownButtonFormField<String>(
-      value: value,
+      initialValue: value,
       isExpanded: true,
-      hint: Text(hint, style: const TextStyle(color: AppColors.textDisabled, fontSize: 13)),
+      hint: Text(
+        hint,
+        style: const TextStyle(color: AppColors.textDisabled, fontSize: 13),
+      ),
       items: items
-          .map((e) => DropdownMenuItem(value: e, child: Text(e, style: const TextStyle(fontSize: 13))))
+          .map(
+            (e) => DropdownMenuItem(
+              value: e,
+              child: Text(e, style: const TextStyle(fontSize: 13)),
+            ),
+          )
           .toList(),
       onChanged: onChanged,
       decoration: InputDecoration(

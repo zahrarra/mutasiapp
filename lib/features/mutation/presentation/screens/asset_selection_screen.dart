@@ -27,7 +27,8 @@ class AssetSelectionScreen extends ConsumerStatefulWidget {
   const AssetSelectionScreen({super.key});
 
   @override
-  ConsumerState<AssetSelectionScreen> createState() => _AssetSelectionScreenState();
+  ConsumerState<AssetSelectionScreen> createState() =>
+      _AssetSelectionScreenState();
 }
 
 class _AssetSelectionScreenState extends ConsumerState<AssetSelectionScreen> {
@@ -46,9 +47,7 @@ class _AssetSelectionScreenState extends ConsumerState<AssetSelectionScreen> {
 
     return Scaffold(
       backgroundColor: AppColors.background,
-      appBar: AppBar(
-        title: const Text('Pilih Aset'),
-      ),
+      appBar: AppBar(title: const Text('Pilih Aset')),
       body: Column(
         children: [
           Container(
@@ -56,7 +55,8 @@ class _AssetSelectionScreenState extends ConsumerState<AssetSelectionScreen> {
             color: AppColors.surface,
             child: TextField(
               controller: _searchController,
-              onChanged: (val) => setState(() => _query = val.trim().toLowerCase()),
+              onChanged: (val) =>
+                  setState(() => _query = val.trim().toLowerCase()),
               decoration: InputDecoration(
                 hintText: 'Cari kode, nama, atau lokasi aset...',
                 prefixIcon: const Icon(Icons.search),
@@ -74,7 +74,10 @@ class _AssetSelectionScreenState extends ConsumerState<AssetSelectionScreen> {
                 ),
                 focusedBorder: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
-                  borderSide: const BorderSide(color: AppColors.primary, width: 2),
+                  borderSide: const BorderSide(
+                    color: AppColors.primary,
+                    width: 2,
+                  ),
                 ),
               ),
             ),
@@ -82,7 +85,8 @@ class _AssetSelectionScreenState extends ConsumerState<AssetSelectionScreen> {
           Expanded(
             child: allAssetsAsync.when(
               data: (assets) => _buildList(assets),
-              loading: () => const LoadingIndicator(message: 'Memuat daftar aset...'),
+              loading: () =>
+                  const LoadingIndicator(message: 'Memuat daftar aset...'),
               error: (err, _) => ErrorView(
                 message: 'Gagal memuat daftar aset.\n${err.toString()}',
                 onRetry: () => ref.invalidate(allUserAssetsProvider),
@@ -144,10 +148,7 @@ class _AssetSelectionScreenState extends ConsumerState<AssetSelectionScreen> {
             ),
           ),
         for (final asset in eligible)
-          AssetCard(
-            asset: asset,
-            onTap: () => _onAssetSelected(asset),
-          ),
+          AssetCard(asset: asset, onTap: () => _onAssetSelected(asset)),
         if (locked.isNotEmpty) ...[
           const Padding(
             padding: EdgeInsets.symmetric(vertical: AppSpacing.sm),
@@ -161,10 +162,7 @@ class _AssetSelectionScreenState extends ConsumerState<AssetSelectionScreen> {
             ),
           ),
           for (final asset in locked)
-            Opacity(
-              opacity: 0.6,
-              child: AssetCard(asset: asset, onTap: null),
-            ),
+            Opacity(opacity: 0.6, child: AssetCard(asset: asset, onTap: null)),
         ],
       ],
     );
@@ -173,6 +171,6 @@ class _AssetSelectionScreenState extends ConsumerState<AssetSelectionScreen> {
   void _onAssetSelected(Asset asset) {
     ref.read(mutationFormProvider.notifier).reset();
     ref.read(mutationFormProvider.notifier).selectAsset(asset);
-    context.push(RouteNames.pemohonMutasiFormPath);
+    context.push(RouteNames.pemohonMutasiCreatePath);
   }
 }

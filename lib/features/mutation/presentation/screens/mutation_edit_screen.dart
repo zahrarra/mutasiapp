@@ -11,7 +11,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-import '../../../../app/router/route_names.dart';
 import '../../../../app/theme/app_colors.dart';
 import '../../../../app/theme/app_spacing.dart';
 import '../../../../core/widgets/custom_button.dart';
@@ -80,7 +79,11 @@ class _MutationEditScreenState extends ConsumerState<MutationEditScreen> {
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    const Icon(Icons.lock_outline, size: 48, color: AppColors.textDisabled),
+                    const Icon(
+                      Icons.lock_outline,
+                      size: 48,
+                      color: AppColors.textDisabled,
+                    ),
                     const SizedBox(height: AppSpacing.md),
                     const Text(
                       'Pengajuan ini tidak dapat diedit karena statusnya\nbukan "Dikembalikan ke Pemohon".',
@@ -104,7 +107,8 @@ class _MutationEditScreenState extends ConsumerState<MutationEditScreen> {
         loading: () => const LoadingIndicator(),
         error: (err, _) => ErrorView(
           message: 'Gagal memuat data pengajuan.\n${err.toString()}',
-          onRetry: () => ref.invalidate(mutationDetailProvider(widget.mutationId)),
+          onRetry: () =>
+              ref.invalidate(mutationDetailProvider(widget.mutationId)),
         ),
       ),
     );
@@ -134,12 +138,20 @@ class _MutationEditScreenState extends ConsumerState<MutationEditScreen> {
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Icon(Icons.info_outline, color: AppColors.warning, size: 18),
+                  const Icon(
+                    Icons.info_outline,
+                    color: AppColors.warning,
+                    size: 18,
+                  ),
                   const SizedBox(width: AppSpacing.sm),
                   Expanded(
                     child: Text(
                       'Alasan dikembalikan Operator: ${mutation.returnReason}',
-                      style: const TextStyle(fontSize: 13, color: AppColors.warning, height: 1.4),
+                      style: const TextStyle(
+                        fontSize: 13,
+                        color: AppColors.warning,
+                        height: 1.4,
+                      ),
                     ),
                   ),
                 ],
@@ -155,7 +167,10 @@ class _MutationEditScreenState extends ConsumerState<MutationEditScreen> {
                 color: AppColors.errorContainer,
                 borderRadius: BorderRadius.circular(AppRadius.card),
               ),
-              child: Text(updateState.error!, style: const TextStyle(fontSize: 13, color: AppColors.error)),
+              child: Text(
+                updateState.error!,
+                style: const TextStyle(fontSize: 13, color: AppColors.error),
+              ),
             ),
 
           Container(
@@ -167,12 +182,18 @@ class _MutationEditScreenState extends ConsumerState<MutationEditScreen> {
             ),
             child: Row(
               children: [
-                const Icon(Icons.inventory_2_outlined, color: AppColors.primary),
+                const Icon(
+                  Icons.inventory_2_outlined,
+                  color: AppColors.primary,
+                ),
                 const SizedBox(width: AppSpacing.sm),
                 Expanded(
                   child: Text(
                     '${mutation.asset.name} · ${mutation.asset.assetCode}',
-                    style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
+                    style: const TextStyle(
+                      fontWeight: FontWeight.w600,
+                      fontSize: 13,
+                    ),
                   ),
                 ),
               ],
@@ -180,37 +201,74 @@ class _MutationEditScreenState extends ConsumerState<MutationEditScreen> {
           ),
           const SizedBox(height: AppSpacing.lg),
 
-          const Text('Lokasi Tujuan *', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 14)),
+          const Text(
+            'Lokasi Tujuan *',
+            style: TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
+          ),
           const SizedBox(height: AppSpacing.xs),
           DropdownButtonFormField<String>(
-            value: formState.targetLocation.isEmpty ? null : formState.targetLocation,
+            initialValue: formState.targetLocation.isEmpty
+                ? null
+                : formState.targetLocation,
             isExpanded: true,
-            items: locations.map((e) => DropdownMenuItem(value: e, child: Text(e, style: const TextStyle(fontSize: 13)))).toList(),
+            items: locations
+                .map(
+                  (e) => DropdownMenuItem(
+                    value: e,
+                    child: Text(e, style: const TextStyle(fontSize: 13)),
+                  ),
+                )
+                .toList(),
             onChanged: (val) => notifier.setTargetLocation(val ?? ''),
             decoration: InputDecoration(
               errorText: formState.fieldErrors['targetLocation'],
-              contentPadding: const EdgeInsets.symmetric(horizontal: AppSpacing.md, vertical: AppSpacing.sm),
-              border: OutlineInputBorder(borderRadius: BorderRadius.circular(AppSpacing.radiusMd)),
+              contentPadding: const EdgeInsets.symmetric(
+                horizontal: AppSpacing.md,
+                vertical: AppSpacing.sm,
+              ),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
+              ),
             ),
           ),
           const SizedBox(height: AppSpacing.lg),
 
-          const Text('Penanggung Jawab (PIC) Baru *', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 14)),
+          const Text(
+            'Penanggung Jawab (PIC) Baru *',
+            style: TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
+          ),
           const SizedBox(height: AppSpacing.xs),
           DropdownButtonFormField<String>(
-            value: formState.targetPic.isEmpty ? null : formState.targetPic,
+            initialValue: formState.targetPic.isEmpty
+                ? null
+                : formState.targetPic,
             isExpanded: true,
-            items: pics.map((e) => DropdownMenuItem(value: e, child: Text(e, style: const TextStyle(fontSize: 13)))).toList(),
+            items: pics
+                .map(
+                  (e) => DropdownMenuItem(
+                    value: e,
+                    child: Text(e, style: const TextStyle(fontSize: 13)),
+                  ),
+                )
+                .toList(),
             onChanged: (val) => notifier.setTargetPic(val ?? ''),
             decoration: InputDecoration(
               errorText: formState.fieldErrors['targetPic'],
-              contentPadding: const EdgeInsets.symmetric(horizontal: AppSpacing.md, vertical: AppSpacing.sm),
-              border: OutlineInputBorder(borderRadius: BorderRadius.circular(AppSpacing.radiusMd)),
+              contentPadding: const EdgeInsets.symmetric(
+                horizontal: AppSpacing.md,
+                vertical: AppSpacing.sm,
+              ),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
+              ),
             ),
           ),
           const SizedBox(height: AppSpacing.lg),
 
-          const Text('Alasan / Justifikasi Mutasi *', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 14)),
+          const Text(
+            'Alasan / Justifikasi Mutasi *',
+            style: TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
+          ),
           const SizedBox(height: AppSpacing.xs),
           TextFormField(
             controller: _reasonController,
@@ -219,7 +277,9 @@ class _MutationEditScreenState extends ConsumerState<MutationEditScreen> {
             decoration: InputDecoration(
               errorText: formState.fieldErrors['reason'],
               contentPadding: const EdgeInsets.all(AppSpacing.md),
-              border: OutlineInputBorder(borderRadius: BorderRadius.circular(AppSpacing.radiusMd)),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
+              ),
             ),
           ),
           const SizedBox(height: AppSpacing.xxxl),
@@ -228,7 +288,7 @@ class _MutationEditScreenState extends ConsumerState<MutationEditScreen> {
             label: 'Kirim Ulang Pengajuan',
             width: double.infinity,
             isLoading: updateState.isLoading,
-            onPressed: () => _onSubmit(context, mutation),
+            onPressed: () => _onSubmit(mutation),
           ),
           const SizedBox(height: AppSpacing.lg),
         ],
@@ -236,12 +296,14 @@ class _MutationEditScreenState extends ConsumerState<MutationEditScreen> {
     );
   }
 
-  Future<void> _onSubmit(BuildContext context, Mutation mutation) async {
+  Future<void> _onSubmit(Mutation mutation) async {
     final formNotifier = ref.read(mutationFormProvider.notifier);
     if (!formNotifier.validate()) return;
 
     final formState = ref.read(mutationFormProvider);
-    final result = await ref.read(updateMutationProvider.notifier).submit(
+    final result = await ref
+        .read(updateMutationProvider.notifier)
+        .submit(
           UpdateMutationParams(
             mutationId: mutation.id,
             targetLocation: formState.targetLocation,

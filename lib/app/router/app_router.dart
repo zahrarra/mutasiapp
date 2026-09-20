@@ -7,12 +7,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-import '../../features/auth/presentation/screens/landing_screen.dart';
 import '../../features/admin/presentation/screens/admin_dashboard_screen.dart';
 import '../../features/asset/presentation/screens/asset_category_screen.dart';
 import '../../features/asset/presentation/screens/asset_detail_screen.dart';
 import '../../features/asset/presentation/screens/asset_list_screen.dart';
 import '../../features/auth/presentation/providers/auth_provider.dart';
+import '../../features/auth/presentation/screens/landing_screen.dart';
 import '../../features/auth/presentation/screens/login_screen.dart';
 import '../../features/auth/presentation/screens/unauthorized_screen.dart';
 import '../../features/dashboard/presentation/screens/dashboard_screen.dart';
@@ -42,7 +42,7 @@ import '../../features/staff/presentation/screens/staff_dashboard_screen.dart';
 import 'route_guards.dart';
 import 'route_names.dart';
 
-/// Notifier sederhana untuk memicu re-evaluation GoRouter ketika status auth berubah.
+/// Notifier untuk re-evaluate GoRouter saat auth berubah.
 class RouterNotifier extends ChangeNotifier {
   final Ref _ref;
 
@@ -66,15 +66,14 @@ final appRouterProvider = Provider<GoRouter>((ref) {
 
       if (authState.isLoading) return null;
 
-      final currentLocation = state.matchedLocation;
-
       return RouteGuards.handleRedirect(
         isAuthenticated: authState.isAuthenticated,
         role: authState.user?.role,
-        currentLocation: currentLocation,
+        currentLocation: state.matchedLocation,
       );
     },
     routes: [
+      // ─── Umum ───────────────────────────────────────────────────────────
       GoRoute(
         path: RouteNames.landingPath,
         name: RouteNames.landingName,
@@ -96,7 +95,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         builder: (context, state) => const UnauthorizedScreen(),
       ),
 
-      // ─── Asset Routes ─────────────────────────────────────────────────────
+      // ─── Asset ──────────────────────────────────────────────────────────
       GoRoute(
         path: RouteNames.assetsPath,
         name: RouteNames.assetsName,
@@ -111,7 +110,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         },
       ),
 
-      // ─── Admin ────────────────────────────────────────────────────────────
+      // ─── Admin ──────────────────────────────────────────────────────────
       GoRoute(
         path: RouteNames.adminDashboardPath,
         name: RouteNames.adminDashboardName,
@@ -123,11 +122,26 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         builder: (context, state) => const AssetCategoryScreen(),
       ),
 
-      // ─── Pemohon ──────────────────────────────────────────────────────────
+      // ─── Pemohon ────────────────────────────────────────────────────────
       GoRoute(
         path: RouteNames.pemohonDashboardPath,
         name: RouteNames.pemohonDashboardName,
         builder: (context, state) => const PemohonDashboardScreen(),
+      ),
+      GoRoute(
+        path: RouteNames.profilePath,
+        name: RouteNames.profileName,
+        builder: (context, state) => const PemohonProfileScreen(),
+      ),
+      GoRoute(
+        path: RouteNames.pemohonProfilePath,
+        name: RouteNames.pemohonProfileName,
+        builder: (context, state) => const PemohonProfileScreen(),
+      ),
+      GoRoute(
+        path: RouteNames.pemohonMutasiPath,
+        name: RouteNames.pemohonMutasiName,
+        builder: (context, state) => const PemohonMutationListScreen(),
       ),
       GoRoute(
         path: RouteNames.pemohonSelectAssetPath,
@@ -151,12 +165,6 @@ final appRouterProvider = Provider<GoRouter>((ref) {
           );
         },
       ),
-      GoRoute(
-        path: RouteNames.pemohonMutasiPath,
-        name: RouteNames.pemohonMutasiName,
-        builder: (context, state) => const PemohonMutationListScreen(),
-      ),
-      // Path lebih spesifik dulu (confirm & edit), baru detail :id
       GoRoute(
         path: RouteNames.pemohonConfirmationPath,
         name: RouteNames.pemohonConfirmationName,
@@ -186,13 +194,8 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         name: RouteNames.pemohonNotificationsName,
         builder: (context, state) => const PemohonNotificationsScreen(),
       ),
-      GoRoute(
-        path: RouteNames.pemohonProfilePath,
-        name: RouteNames.pemohonProfileName,
-        builder: (context, state) => const PemohonProfileScreen(),
-      ),
 
-      // ─── Operator ─────────────────────────────────────────────────────────
+      // ─── Operator ───────────────────────────────────────────────────────
       GoRoute(
         path: RouteNames.operatorDashboardPath,
         name: RouteNames.operatorDashboardName,
@@ -220,7 +223,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         },
       ),
 
-      // ─── Kabag ────────────────────────────────────────────────────────────
+      // ─── Kabag ──────────────────────────────────────────────────────────
       GoRoute(
         path: RouteNames.kabagDashboardPath,
         name: RouteNames.kabagDashboardName,
@@ -248,7 +251,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         },
       ),
 
-      // ─── Kadiv ────────────────────────────────────────────────────────────
+      // ─── Kadiv ──────────────────────────────────────────────────────────
       GoRoute(
         path: RouteNames.kadivDashboardPath,
         name: RouteNames.kadivDashboardName,
@@ -281,7 +284,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         builder: (context, state) => const KadivApprovalsScreen(),
       ),
 
-      // ─── Staff ────────────────────────────────────────────────────────────
+      // ─── Staff ──────────────────────────────────────────────────────────
       GoRoute(
         path: RouteNames.staffDashboardPath,
         name: RouteNames.staffDashboardName,

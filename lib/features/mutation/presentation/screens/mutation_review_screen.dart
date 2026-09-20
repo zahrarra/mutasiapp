@@ -59,12 +59,19 @@ class MutationReviewScreen extends ConsumerWidget {
                     ),
                     child: Row(
                       children: [
-                        const Icon(Icons.error_outline, color: AppColors.error, size: 18),
+                        const Icon(
+                          Icons.error_outline,
+                          color: AppColors.error,
+                          size: 18,
+                        ),
                         const SizedBox(width: AppSpacing.sm),
                         Expanded(
                           child: Text(
                             submitState.error!,
-                            style: const TextStyle(fontSize: 13, color: AppColors.error),
+                            style: const TextStyle(
+                              fontSize: 13,
+                              color: AppColors.error,
+                            ),
                           ),
                         ),
                       ],
@@ -80,7 +87,11 @@ class MutationReviewScreen extends ConsumerWidget {
                     _InfoRow(label: 'Nama Aset', value: asset.name),
                     _InfoRow(label: 'Kode Aset', value: asset.assetCode),
                     _InfoRow(label: 'Kategori', value: asset.category.name),
-                    _InfoRow(label: 'Lokasi Saat Ini', value: asset.location, isLast: true),
+                    _InfoRow(
+                      label: 'Lokasi Saat Ini',
+                      value: asset.location,
+                      isLast: true,
+                    ),
                   ],
                 ),
                 const SizedBox(height: AppSpacing.md),
@@ -89,8 +100,17 @@ class MutationReviewScreen extends ConsumerWidget {
                 const SizedBox(height: AppSpacing.sm),
                 _InfoCard(
                   children: [
-                    _InfoRow(label: 'Lokasi Tujuan', value: formState.targetLocation, highlight: true),
-                    _InfoRow(label: 'PIC Baru', value: formState.targetPic, highlight: true, isLast: true),
+                    _InfoRow(
+                      label: 'Lokasi Tujuan',
+                      value: formState.targetLocation,
+                      highlight: true,
+                    ),
+                    _InfoRow(
+                      label: 'PIC Baru',
+                      value: formState.targetPic,
+                      highlight: true,
+                      isLast: true,
+                    ),
                   ],
                 ),
                 const SizedBox(height: AppSpacing.md),
@@ -107,7 +127,11 @@ class MutationReviewScreen extends ConsumerWidget {
                   ),
                   child: Text(
                     formState.reason,
-                    style: const TextStyle(fontSize: 13, color: AppColors.textPrimary, height: 1.5),
+                    style: const TextStyle(
+                      fontSize: 13,
+                      color: AppColors.textPrimary,
+                      height: 1.5,
+                    ),
                   ),
                 ),
 
@@ -124,9 +148,15 @@ class MutationReviewScreen extends ConsumerWidget {
                     ),
                     child: Row(
                       children: [
-                        const Icon(Icons.description, color: AppColors.textSecondary),
+                        const Icon(
+                          Icons.description,
+                          color: AppColors.textSecondary,
+                        ),
                         const SizedBox(width: AppSpacing.sm),
-                        Text(formState.documentName!, style: const TextStyle(fontSize: 13)),
+                        Text(
+                          formState.documentName!,
+                          style: const TextStyle(fontSize: 13),
+                        ),
                       ],
                     ),
                   ),
@@ -166,9 +196,15 @@ class MutationReviewScreen extends ConsumerWidget {
                     ? const SizedBox(
                         width: 20,
                         height: 20,
-                        child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: Colors.white,
+                        ),
                       )
-                    : const Text('Ajukan Mutasi', style: TextStyle(fontWeight: FontWeight.w600)),
+                    : const Text(
+                        'Ajukan Mutasi',
+                        style: TextStyle(fontWeight: FontWeight.w600),
+                      ),
               ),
             ),
           ),
@@ -199,7 +235,7 @@ class MutationReviewScreen extends ConsumerWidget {
     if (mutation != null) {
       ref.read(mutationFormProvider.notifier).reset();
       context.go(
-        '${RouteNames.pemohonMutasiSuccessPath}?ticket=${Uri.encodeComponent(mutation.ticketNumber)}',
+        '${RouteNames.pemohonSubmitSuccessPath}?ticket=${Uri.encodeComponent(mutation.ticketNumber)}',
       );
     }
     // Jika gagal, error sudah ditampilkan lewat submitState.error di atas.
@@ -266,7 +302,10 @@ class _InfoRow extends StatelessWidget {
             width: 120,
             child: Text(
               label,
-              style: const TextStyle(fontSize: 12, color: AppColors.textSecondary),
+              style: const TextStyle(
+                fontSize: 12,
+                color: AppColors.textSecondary,
+              ),
             ),
           ),
           Expanded(

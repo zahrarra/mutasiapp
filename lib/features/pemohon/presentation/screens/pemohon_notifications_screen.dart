@@ -25,7 +25,7 @@ class PemohonNotificationsScreen extends StatelessWidget {
       body: ListView.separated(
         padding: const EdgeInsets.all(AppSpacing.lg),
         itemCount: items.length,
-        separatorBuilder: (_, __) => const SizedBox(height: AppSpacing.sm),
+        separatorBuilder: (_, _) => const SizedBox(height: AppSpacing.sm),
         itemBuilder: (context, i) {
           final item = items[i];
           return Card(
