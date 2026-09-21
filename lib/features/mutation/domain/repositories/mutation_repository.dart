@@ -9,6 +9,8 @@ import '../entities/mutation.dart';
 /// Parameter untuk mengajukan mutasi baru.
 class SubmitMutationParams {
   final String assetId;
+  final String assetName;
+  final String sourceLocation;
   final String targetLocation;
   final String targetPic;
   final String reason;
@@ -16,6 +18,8 @@ class SubmitMutationParams {
 
   const SubmitMutationParams({
     required this.assetId,
+    required this.assetName,
+    required this.sourceLocation,
     required this.targetLocation,
     required this.targetPic,
     required this.reason,

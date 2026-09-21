@@ -4,12 +4,17 @@
 // Sumber: SCREEN-SPEC.md REQ-004 (Form Mutasi), REQ-005 (Review).
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../../../asset/domain/entities/asset.dart';
 
 /// State form pengajuan mutasi.
 class MutationFormState {
-  /// Aset yang dipilih.
-  final Asset? selectedAsset;
+  /// Nama aset yang akan dimutasi.
+  final String assetName;
+
+  /// Kode / nomor aset.
+  final String assetId;
+
+  /// Lokasi asal aset.
+  final String sourceLocation;
 
   /// Lokasi tujuan mutasi.
   final String targetLocation;
@@ -27,7 +32,9 @@ class MutationFormState {
   final Map<String, String?> fieldErrors;
 
   const MutationFormState({
-    this.selectedAsset,
+    this.assetName = '',
+    this.assetId = '',
+    this.sourceLocation = '',
     this.targetLocation = '',
     this.targetPic = '',
     this.reason = '',
@@ -35,18 +42,34 @@ class MutationFormState {
     this.fieldErrors = const {},
   });
 
+  /// Apakah semua field wajib sudah terisi.
+  bool get isComplete =>
+      assetName.trim().isNotEmpty &&
+      assetId.trim().isNotEmpty &&
+      sourceLocation.trim().isNotEmpty &&
+      targetLocation.trim().isNotEmpty &&
+      targetPic.trim().isNotEmpty &&
+      reason.trim().isNotEmpty;
+
+  /// Apakah ada error validasi aktif.
+  bool get hasErrors =>
+      fieldErrors.values.any((e) => e != null && e.isNotEmpty);
+
   MutationFormState copyWith({
-    Asset? selectedAsset,
+    String? assetName,
+    String? assetId,
+    String? sourceLocation,
     String? targetLocation,
     String? targetPic,
     String? reason,
     String? documentName,
     Map<String, String?>? fieldErrors,
-    bool clearAsset = false,
     bool clearDocument = false,
   }) {
     return MutationFormState(
-      selectedAsset: clearAsset ? null : (selectedAsset ?? this.selectedAsset),
+      assetName: assetName ?? this.assetName,
+      assetId: assetId ?? this.assetId,
+      sourceLocation: sourceLocation ?? this.sourceLocation,
       targetLocation: targetLocation ?? this.targetLocation,
       targetPic: targetPic ?? this.targetPic,
       reason: reason ?? this.reason,
@@ -54,62 +77,89 @@ class MutationFormState {
       fieldErrors: fieldErrors ?? this.fieldErrors,
     );
   }
-
-  /// Apakah semua field wajib sudah terisi.
-  bool get isComplete =>
-      selectedAsset != null &&
-      targetLocation.trim().isNotEmpty &&
-      targetPic.trim().isNotEmpty &&
-      reason.trim().isNotEmpty;
-
-  /// Apakah ada error validasi aktif.
-  bool get hasErrors => fieldErrors.values.any((e) => e != null && e.isNotEmpty);
 }
 
 /// Notifier untuk mengelola state form mutasi.
 class MutationFormNotifier extends StateNotifier<MutationFormState> {
   MutationFormNotifier() : super(const MutationFormState());
 
-  void selectAsset(Asset asset) {
-    state = state.copyWith(selectedAsset: asset, fieldErrors: {});
+  /// Mengubah nama aset.
+  void setAssetName(String value) {
+    final errors = Map<String, String?>.from(state.fieldErrors);
+    errors.remove('assetName');
+
+    state = state.copyWith(assetName: value, fieldErrors: errors);
   }
 
+  /// Mengubah kode / nomor aset.
+  void setAssetId(String value) {
+    final errors = Map<String, String?>.from(state.fieldErrors);
+    errors.remove('assetId');
+
+    state = state.copyWith(assetId: value, fieldErrors: errors);
+  }
+
+  /// Mengubah lokasi asal aset.
+  void setSourceLocation(String value) {
+    final errors = Map<String, String?>.from(state.fieldErrors);
+    errors.remove('sourceLocation');
+
+    state = state.copyWith(sourceLocation: value, fieldErrors: errors);
+  }
+
+  /// Mengubah lokasi tujuan.
   void setTargetLocation(String value) {
     final errors = Map<String, String?>.from(state.fieldErrors);
     errors.remove('targetLocation');
+
     state = state.copyWith(targetLocation: value, fieldErrors: errors);
   }
 
+  /// Mengubah PIC / penanggung jawab baru.
   void setTargetPic(String value) {
     final errors = Map<String, String?>.from(state.fieldErrors);
     errors.remove('targetPic');
+
     state = state.copyWith(targetPic: value, fieldErrors: errors);
   }
 
+  /// Mengubah alasan mutasi.
   void setReason(String value) {
     final errors = Map<String, String?>.from(state.fieldErrors);
     errors.remove('reason');
+
     state = state.copyWith(reason: value, fieldErrors: errors);
   }
 
+  /// Mengubah dokumen pendukung.
   void setDocumentName(String? value) {
     state = state.copyWith(documentName: value);
   }
 
-  /// Validasi semua field. Return true jika valid.
+  /// Validasi semua field.
+  ///
+  /// Return `true` jika semua field valid.
   bool validate() {
     final errors = <String, String?>{};
 
-    if (state.selectedAsset == null) {
-      errors['asset'] = 'Aset wajib dipilih.';
+    if (state.assetName.trim().isEmpty) {
+      errors['assetName'] = 'Nama aset wajib diisi.';
+    }
+
+    if (state.assetId.trim().isEmpty) {
+      errors['assetId'] = 'Kode / nomor aset wajib diisi.';
+    }
+
+    if (state.sourceLocation.trim().isEmpty) {
+      errors['sourceLocation'] = 'Lokasi asal wajib diisi.';
     }
 
     if (state.targetLocation.trim().isEmpty) {
-      errors['targetLocation'] = 'Lokasi tujuan wajib dipilih.';
+      errors['targetLocation'] = 'Lokasi tujuan wajib diisi.';
     }
 
     if (state.targetPic.trim().isEmpty) {
-      errors['targetPic'] = 'Penanggung jawab baru wajib dipilih.';
+      errors['targetPic'] = 'Penanggung jawab baru wajib diisi.';
     }
 
     if (state.reason.trim().isEmpty) {
@@ -117,6 +167,7 @@ class MutationFormNotifier extends StateNotifier<MutationFormState> {
     }
 
     state = state.copyWith(fieldErrors: errors);
+
     return errors.isEmpty;
   }
 
@@ -129,8 +180,8 @@ class MutationFormNotifier extends StateNotifier<MutationFormState> {
 /// Provider untuk [MutationFormNotifier].
 final mutationFormProvider =
     StateNotifierProvider<MutationFormNotifier, MutationFormState>((ref) {
-  return MutationFormNotifier();
-});
+      return MutationFormNotifier();
+    });
 
 // ─── Mock Data untuk Dropdown ────────────────────────────────────────────────
 

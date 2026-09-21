@@ -63,8 +63,8 @@ class MutationStatusStepper extends StatelessWidget {
                       color: done
                           ? AppColors.primary
                           : current
-                              ? AppColors.surface
-                              : AppColors.disabledBackground,
+                          ? AppColors.surface
+                          : AppColors.disabledBackground,
                       border: Border.all(color: color, width: 2),
                     ),
                     child: done

@@ -5,6 +5,12 @@
 //
 // Ticket format: KATEGORI-TAHUN-NOURUT (server-generated simulation).
 // Data disimpan in-memory untuk development/testing.
+//
+// CATATAN FLOW PENGAJUAN:
+// Pemohon memasukkan data aset secara manual pada form pengajuan.
+// Aset TIDAK dicari terlebih dahulu dari AssetRepository/database.
+// Setelah pengajuan disetujui sampai tahap Staff Aset, barulah data
+// aset dapat diproses/diperbarui pada database aset.
 
 import '../../../../core/errors/failures.dart';
 import '../../../../core/errors/result.dart';
@@ -17,6 +23,11 @@ import '../../domain/entities/mutation_status.dart';
 import '../../domain/repositories/mutation_repository.dart';
 
 class MutationRepositoryImpl implements MutationRepository {
+  // Dependency ini masih dipertahankan agar tidak memutus konfigurasi
+  // dependency injection/provider yang sudah ada.
+  //
+  // Untuk submitMutation(), dependency ini TIDAK digunakan karena
+  // pengajuan mutasi menerima data aset secara manual dari Pemohon.
   final AssetRepository assetRepository;
 
   MutationRepositoryImpl({required this.assetRepository}) {
@@ -43,18 +54,20 @@ class MutationRepositoryImpl implements MutationRepository {
         code: 'ELK',
         name: 'Elektronik & IT',
       );
+
       const catVeh = AssetCategory(
         id: 'cat_3',
         code: 'VEH',
         name: 'Kendaraan Operasional',
       );
+
       const catFur = AssetCategory(
         id: 'cat_2',
         code: 'FUR',
         name: 'Furniture & Mebel',
       );
 
-      // Mock Aset 1 - Laptop Dell Latitude (SCREEN-SPEC.md REQ-002, OPR-002, OPR-003)
+      // Mock Aset 1 - Laptop Dell Latitude
       const asset1 = Asset(
         id: 'AST-00124',
         assetCode: 'AST-ELK-2024-0124',
@@ -93,7 +106,8 @@ class MutationRepositoryImpl implements MutationRepository {
         acquisitionYear: 2024,
       );
 
-      // Mock Aset 4 - Meja Kerja Eksekutif (Sudah verifikasi valid -> Menunggu Approval Kabag)
+      // Mock Aset 4 - Meja Kerja Eksekutif
+      // Sudah verifikasi valid -> Menunggu Approval Kabag
       const asset4 = Asset(
         id: 'AST-00018',
         assetCode: 'AST-FUR-2022-0018',
@@ -121,6 +135,7 @@ class MutationRepositoryImpl implements MutationRepository {
           status: MutationStatus.submitted,
           createdAt: DateTime.now().subtract(const Duration(hours: 2)),
         ),
+
         Mutation(
           id: 'mut_002',
           ticketNumber: 'KENDARAAN-2026-00042',
@@ -135,6 +150,7 @@ class MutationRepositoryImpl implements MutationRepository {
           status: MutationStatus.submitted,
           createdAt: DateTime.now().subtract(const Duration(hours: 5)),
         ),
+
         Mutation(
           id: 'mut_003',
           ticketNumber: 'ELEKTRONIK-2026-00105',
@@ -152,6 +168,7 @@ class MutationRepositoryImpl implements MutationRepository {
           verifiedAt: DateTime.now().subtract(const Duration(days: 1)),
           createdAt: DateTime.now().subtract(const Duration(days: 2)),
         ),
+
         Mutation(
           id: 'mut_004',
           ticketNumber: 'FURNITUR-2026-00018',
@@ -168,6 +185,7 @@ class MutationRepositoryImpl implements MutationRepository {
           verifiedAt: DateTime.now().subtract(const Duration(hours: 4)),
           createdAt: DateTime.now().subtract(const Duration(days: 1)),
         ),
+
         Mutation(
           id: 'mut_005',
           ticketNumber: 'ELEKTRONIK-2026-00088',
@@ -197,8 +215,8 @@ class MutationRepositoryImpl implements MutationRepository {
           createdAt: DateTime.now().subtract(const Duration(days: 1)),
         ),
 
-        // Seed data mut_006: Menunggu konfirmasi Pemohon (pendingConfirmation)
-        // Sumber: SCREEN-SPEC.md REQ-009
+        // Seed data mut_006:
+        // Menunggu konfirmasi Pemohon (pendingConfirmation)
         Mutation(
           id: 'mut_006',
           ticketNumber: 'FURNITUR-2026-00055',
@@ -240,48 +258,103 @@ class MutationRepositoryImpl implements MutationRepository {
 
   @override
   Future<Result<Mutation>> submitMutation(SubmitMutationParams params) async {
-    // Simulate network delay
+    // Simulate network delay.
     await Future.delayed(const Duration(milliseconds: 300));
 
-    // Ambil data aset
-    final assetResult = await assetRepository.getAssetById(params.assetId);
+    // ================================================================
+    // DATA ASET DIMASUKKAN MANUAL OLEH PEMOHON
+    // ================================================================
+    //
+    // Tidak ada pencarian ke AssetRepository/database di tahap ini.
+    //
+    // Pemohon boleh mengajukan mutasi untuk aset yang belum ada
+    // di database aset aplikasi. Data yang dimasukkan pada form
+    // menjadi dasar data aset pada pengajuan mutasi.
+    const manualCategory = AssetCategory(
+      id: 'cat_manual',
+      code: 'OTH',
+      name: 'Lainnya',
+    );
 
-    if (assetResult.isFailure) {
+    final assetId = params.assetId.trim();
+    final assetName = params.assetName.trim();
+    final sourceLocation = params.sourceLocation.trim();
+    final targetLocation = params.targetLocation.trim();
+    final targetPic = params.targetPic.trim();
+    final reason = params.reason.trim();
+
+    // Validasi dasar di repository sebagai lapisan pengaman tambahan.
+    if (assetId.isEmpty) {
       return const Result.failure(
-        NotFoundFailure(message: 'Aset tidak ditemukan.'),
+        ValidationFailure(message: 'Kode / Nomor Aset / Serial wajib diisi.'),
       );
     }
 
-    final asset = assetResult.dataOrNull!;
-
-    // Validasi lock
-    if (asset.isLocked) {
+    if (assetName.isEmpty) {
       return const Result.failure(
-        ConflictFailure(
-          message: 'Aset sedang dalam proses mutasi lain. Pengajuan tidak dapat dilanjutkan.',
-        ),
+        ValidationFailure(message: 'Nama aset wajib diisi.'),
       );
     }
 
-    // Generate ticket number: KATEGORI_CODE-TAHUN-NOURUT
+    if (sourceLocation.isEmpty) {
+      return const Result.failure(
+        ValidationFailure(message: 'Lokasi aset saat ini wajib diisi.'),
+      );
+    }
+
+    if (targetLocation.isEmpty) {
+      return const Result.failure(
+        ValidationFailure(message: 'Lokasi tujuan wajib diisi.'),
+      );
+    }
+
+    if (targetPic.isEmpty) {
+      return const Result.failure(
+        ValidationFailure(message: 'Penanggung jawab baru wajib diisi.'),
+      );
+    }
+
+    if (reason.isEmpty) {
+      return const Result.failure(
+        ValidationFailure(message: 'Alasan mutasi wajib diisi.'),
+      );
+    }
+
+    // Membentuk representasi Asset berdasarkan data manual Pemohon.
+    // Ini BUKAN pencarian aset pada database.
+    final asset = Asset(
+      id: assetId,
+      assetCode: assetId,
+      name: assetName,
+      category: manualCategory,
+      location: sourceLocation,
+      pic: '-',
+      status: AssetStatus.available,
+      condition: 'Baik',
+      acquisitionYear: DateTime.now().year,
+    );
+
+    // Generate ticket number: KATEGORI_CODE-TAHUN-NOURUT.
     _ticketCounter++;
+
     final year = DateTime.now().year;
-    final categoryCode = asset.category.code.toUpperCase();
+
     final ticketNumber =
-        '$categoryCode-$year-${_ticketCounter.toString().padLeft(5, '0')}';
+        '${manualCategory.code}-$year-${_ticketCounter.toString().padLeft(5, '0')}';
 
     final mutationId = 'mut_${DateTime.now().millisecondsSinceEpoch}';
 
+    // Membuat pengajuan mutasi.
     final mutation = Mutation(
       id: mutationId,
       ticketNumber: ticketNumber,
       asset: asset,
       applicantName: 'Pemohon',
-      currentLocation: asset.location,
-      targetLocation: params.targetLocation,
-      currentPic: asset.pic,
-      targetPic: params.targetPic,
-      reason: params.reason,
+      currentLocation: sourceLocation,
+      targetLocation: targetLocation,
+      currentPic: '-',
+      targetPic: targetPic,
+      reason: reason,
       documentName: params.documentName,
       status: MutationStatus.submitted,
       createdAt: DateTime.now(),
@@ -303,6 +376,7 @@ class MutationRepositoryImpl implements MutationRepository {
     await Future.delayed(const Duration(milliseconds: 300));
 
     final index = _mutations.indexWhere((m) => m.id == mutationId);
+
     if (index == -1) {
       return const Result.failure(
         NotFoundFailure(message: 'Pengajuan mutasi tidak ditemukan.'),
@@ -324,25 +398,27 @@ class MutationRepositoryImpl implements MutationRepository {
         ValidationFailure(message: 'Lokasi tujuan wajib dipilih.'),
       );
     }
+
     if (targetPic.trim().isEmpty) {
       return const Result.failure(
         ValidationFailure(message: 'Penanggung jawab baru wajib dipilih.'),
       );
     }
+
     if (reason.trim().isEmpty) {
       return const Result.failure(
         ValidationFailure(message: 'Alasan mutasi wajib diisi.'),
       );
     }
 
-    // Edit mengembalikan pengajuan ke antrean verifikasi Operator
-    // (status -> submitted), sesuai ROLE-FLOW.md §3.
+    // Edit mengembalikan pengajuan ke antrean verifikasi Operator.
+    // status -> submitted, sesuai ROLE-FLOW.md §3.
     //
-    // CATATAN: Mutation.copyWith saat ini menggunakan pola `x ?? this.x`,
-    // sehingga field nullable (mis. returnReason) tidak bisa "dikosongkan"
-    // lewat copyWith. returnReason lama akan tetap tersimpan sebagai jejak
-    // riwayat pengembalian sebelumnya — ini bukan bug baru dari perubahan
-    // ini, melainkan keterbatasan copyWith yang sudah ada di entity.
+    // CATATAN:
+    // Mutation.copyWith saat ini menggunakan pola `x ?? this.x`,
+    // sehingga field nullable seperti returnReason tidak bisa
+    // dikosongkan lewat copyWith. returnReason lama akan tetap
+    // tersimpan sebagai jejak riwayat pengembalian sebelumnya.
     final updated = current.copyWith(
       targetLocation: targetLocation,
       targetPic: targetPic,
@@ -352,12 +428,14 @@ class MutationRepositoryImpl implements MutationRepository {
     );
 
     _mutations[index] = updated;
+
     return Result.success(updated);
   }
 
   @override
   Future<Result<List<Mutation>>> getMutationsByUser(String userId) async {
     await Future.delayed(const Duration(milliseconds: 200));
+
     return Result.success(List.unmodifiable(_mutations.reversed.toList()));
   }
 
@@ -367,6 +445,7 @@ class MutationRepositoryImpl implements MutationRepository {
 
     try {
       final mutation = _mutations.firstWhere((m) => m.id == id);
+
       return Result.success(mutation);
     } catch (_) {
       return const Result.failure(
@@ -378,6 +457,7 @@ class MutationRepositoryImpl implements MutationRepository {
   @override
   Future<Result<List<Mutation>>> getAllMutations() async {
     await Future.delayed(const Duration(milliseconds: 200));
+
     return Result.success(List.unmodifiable(_mutations.reversed.toList()));
   }
 
@@ -389,6 +469,7 @@ class MutationRepositoryImpl implements MutationRepository {
     await Future.delayed(const Duration(milliseconds: 300));
 
     final index = _mutations.indexWhere((m) => m.id == mutationId);
+
     if (index == -1) {
       return const Result.failure(
         NotFoundFailure(message: 'Pengajuan mutasi tidak ditemukan.'),
@@ -396,6 +477,7 @@ class MutationRepositoryImpl implements MutationRepository {
     }
 
     final current = _mutations[index];
+
     final updated = current.copyWith(
       status: MutationStatus.waitingKabagApproval,
       verifiedAt: DateTime.now(),
@@ -403,6 +485,7 @@ class MutationRepositoryImpl implements MutationRepository {
     );
 
     _mutations[index] = updated;
+
     return Result.success(updated);
   }
 
@@ -415,6 +498,7 @@ class MutationRepositoryImpl implements MutationRepository {
     await Future.delayed(const Duration(milliseconds: 300));
 
     final index = _mutations.indexWhere((m) => m.id == mutationId);
+
     if (index == -1) {
       return const Result.failure(
         NotFoundFailure(message: 'Pengajuan mutasi tidak ditemukan.'),
@@ -422,6 +506,7 @@ class MutationRepositoryImpl implements MutationRepository {
     }
 
     final current = _mutations[index];
+
     final updated = current.copyWith(
       status: MutationStatus.returned,
       returnReason: reason,
@@ -430,6 +515,7 @@ class MutationRepositoryImpl implements MutationRepository {
     );
 
     _mutations[index] = updated;
+
     return Result.success(updated);
   }
 
@@ -441,6 +527,7 @@ class MutationRepositoryImpl implements MutationRepository {
     await Future.delayed(const Duration(milliseconds: 300));
 
     final index = _mutations.indexWhere((m) => m.id == mutationId);
+
     if (index == -1) {
       return const Result.failure(
         NotFoundFailure(message: 'Pengajuan mutasi tidak ditemukan.'),
@@ -448,6 +535,7 @@ class MutationRepositoryImpl implements MutationRepository {
     }
 
     final current = _mutations[index];
+
     final updated = current.copyWith(
       status: MutationStatus.approved,
       approvedAt: DateTime.now(),
@@ -455,6 +543,7 @@ class MutationRepositoryImpl implements MutationRepository {
     );
 
     _mutations[index] = updated;
+
     return Result.success(updated);
   }
 
@@ -467,6 +556,7 @@ class MutationRepositoryImpl implements MutationRepository {
     await Future.delayed(const Duration(milliseconds: 300));
 
     final index = _mutations.indexWhere((m) => m.id == mutationId);
+
     if (index == -1) {
       return const Result.failure(
         NotFoundFailure(message: 'Pengajuan mutasi tidak ditemukan.'),
@@ -474,6 +564,7 @@ class MutationRepositoryImpl implements MutationRepository {
     }
 
     final current = _mutations[index];
+
     final updated = current.copyWith(
       status: MutationStatus.rejected,
       rejectionReason: reason,
@@ -482,6 +573,7 @@ class MutationRepositoryImpl implements MutationRepository {
     );
 
     _mutations[index] = updated;
+
     return Result.success(updated);
   }
 
@@ -493,6 +585,7 @@ class MutationRepositoryImpl implements MutationRepository {
     await Future.delayed(const Duration(milliseconds: 300));
 
     final index = _mutations.indexWhere((m) => m.id == mutationId);
+
     if (index == -1) {
       return const Result.failure(
         NotFoundFailure(message: 'Pengajuan mutasi tidak ditemukan.'),
@@ -500,6 +593,7 @@ class MutationRepositoryImpl implements MutationRepository {
     }
 
     final current = _mutations[index];
+
     final updated = current.copyWith(
       status: MutationStatus.approved,
       kadivApprovedAt: DateTime.now(),
@@ -507,6 +601,7 @@ class MutationRepositoryImpl implements MutationRepository {
     );
 
     _mutations[index] = updated;
+
     return Result.success(updated);
   }
 
@@ -519,6 +614,7 @@ class MutationRepositoryImpl implements MutationRepository {
     await Future.delayed(const Duration(milliseconds: 300));
 
     final index = _mutations.indexWhere((m) => m.id == mutationId);
+
     if (index == -1) {
       return const Result.failure(
         NotFoundFailure(message: 'Pengajuan mutasi tidak ditemukan.'),
@@ -526,6 +622,7 @@ class MutationRepositoryImpl implements MutationRepository {
     }
 
     final current = _mutations[index];
+
     final updated = current.copyWith(
       status: MutationStatus.rejected,
       rejectionReason: reason,
@@ -537,6 +634,7 @@ class MutationRepositoryImpl implements MutationRepository {
     );
 
     _mutations[index] = updated;
+
     return Result.success(updated);
   }
 
@@ -548,6 +646,7 @@ class MutationRepositoryImpl implements MutationRepository {
     await Future.delayed(const Duration(milliseconds: 300));
 
     final index = _mutations.indexWhere((m) => m.id == mutationId);
+
     if (index == -1) {
       return const Result.failure(
         NotFoundFailure(message: 'Pengajuan mutasi tidak ditemukan.'),
@@ -555,9 +654,11 @@ class MutationRepositoryImpl implements MutationRepository {
     }
 
     final current = _mutations[index];
+
     final updated = current.copyWith(status: MutationStatus.completed);
 
     _mutations[index] = updated;
+
     return Result.success(updated);
   }
 }

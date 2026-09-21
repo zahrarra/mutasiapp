@@ -1,7 +1,7 @@
 // lib/features/pemohon/presentation/screens/pemohon_dashboard_screen.dart
 //
-// Dashboard Pemohon — UI mengikuti mockup (header, hero card, tracking, bottom nav pill).
-// Data: authStateProvider + mutationListProvider (jika tersedia).
+// Dashboard Pemohon — UI mengikuti mockup.
+// Data: authStateProvider + mutationListProvider.
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -49,13 +49,8 @@ class _PemohonDashboardScreenState
     super.dispose();
   }
 
-  void _goSelectAsset() {
-    // Sesuaikan jika path create beda di route_names kamu
-    if (_hasPath(RouteNames.pemohonSelectAssetPath)) {
-      context.push(RouteNames.pemohonSelectAssetPath);
-    } else {
-      context.push(RouteNames.pemohonMutasiCreatePath);
-    }
+  void _goCreateMutation() {
+    context.push(RouteNames.pemohonMutasiCreatePath);
   }
 
   void _goMutasiList() {
@@ -70,10 +65,9 @@ class _PemohonDashboardScreenState
     context.push(RouteNames.pemohonProfilePath);
   }
 
-  bool _hasPath(String path) => path.isNotEmpty;
-
   Color _statusColor(MutationStatus? s) {
     if (s == null) return _C.textSecondary;
+
     switch (s) {
       case MutationStatus.completed:
         return _C.success;
@@ -88,7 +82,6 @@ class _PemohonDashboardScreenState
 
   String _statusLabel(MutationStatus? s) {
     if (s == null) return '-';
-    // Sesuaikan dengan displayName di entity kamu jika ada
     return s.name;
   }
 
@@ -107,13 +100,14 @@ class _PemohonDashboardScreenState
         children: [
           Column(
             children: [
-              // ── Header fixed ───────────────────────────────────────────
+              // Header
               _Header(onNotif: _goNotifications, onProfile: _goProfile),
+
               Expanded(
                 child: ListView(
                   padding: const EdgeInsets.fromLTRB(16, 12, 16, 100),
                   children: [
-                    // ── Sapaan ───────────────────────────────────────────
+                    // ── Sapaan ─────────────────────────────────────────
                     Row(
                       children: [
                         Stack(
@@ -220,7 +214,7 @@ class _PemohonDashboardScreenState
 
                     const SizedBox(height: 16),
 
-                    // ── Hero card ────────────────────────────────────────
+                    // ── Hero card ──────────────────────────────────────
                     Container(
                       padding: const EdgeInsets.all(16),
                       decoration: BoxDecoration(
@@ -301,7 +295,7 @@ class _PemohonDashboardScreenState
                                 child: SizedBox(
                                   height: 44,
                                   child: ElevatedButton.icon(
-                                    onPressed: _goSelectAsset,
+                                    onPressed: _goCreateMutation,
                                     style: ElevatedButton.styleFrom(
                                       backgroundColor: _C.surface,
                                       foregroundColor: _C.primaryContainer,
@@ -366,7 +360,7 @@ class _PemohonDashboardScreenState
 
                     const SizedBox(height: 16),
 
-                    // ── Search ───────────────────────────────────────────
+                    // ── Search ─────────────────────────────────────────
                     Row(
                       children: [
                         Expanded(
@@ -441,7 +435,7 @@ class _PemohonDashboardScreenState
 
                     const SizedBox(height: 20),
 
-                    // ── Mutasi dalam proses ──────────────────────────────
+                    // ── Mutasi dalam proses ────────────────────────────
                     mutationsAsync.when(
                       data: (list) {
                         final aktif = list
@@ -451,6 +445,7 @@ class _PemohonDashboardScreenState
                                   m.status != MutationStatus.rejected,
                             )
                             .toList();
+
                         final fokus = aktif.isNotEmpty ? aktif.first : null;
 
                         return Column(
@@ -490,7 +485,7 @@ class _PemohonDashboardScreenState
                               _EmptyCard(
                                 text: 'Belum ada mutasi aktif',
                                 actionLabel: 'Ajukan Mutasi',
-                                onAction: _goSelectAsset,
+                                onAction: _goCreateMutation,
                               )
                             else
                               _ActiveMutationCard(
@@ -525,7 +520,7 @@ class _PemohonDashboardScreenState
 
                     const SizedBox(height: 20),
 
-                    // ── Pengajuan terbaru ────────────────────────────────
+                    // ── Pengajuan terbaru ──────────────────────────────
                     Row(
                       children: [
                         const Text(
@@ -558,9 +553,11 @@ class _PemohonDashboardScreenState
                       ],
                     ),
                     const SizedBox(height: 8),
+
                     mutationsAsync.when(
                       data: (list) {
                         final recent = list.take(5).toList();
+
                         if (recent.isEmpty) {
                           return const Padding(
                             padding: EdgeInsets.symmetric(vertical: 16),
@@ -573,6 +570,7 @@ class _PemohonDashboardScreenState
                             ),
                           );
                         }
+
                         return Column(
                           children: recent.map((m) {
                             return Padding(
@@ -604,7 +602,7 @@ class _PemohonDashboardScreenState
             ],
           ),
 
-          // ── Bottom nav pill ──────────────────────────────────────────
+          // ── Bottom nav pill ────────────────────────────────────────
           Positioned(
             left: 16,
             right: 16,
@@ -637,7 +635,7 @@ class _PemohonDashboardScreenState
   }
 }
 
-// ─── Widgets ───────────────────────────────────────────────────────────────
+// ─── Header ────────────────────────────────────────────────────────────────
 
 class _Header extends StatelessWidget {
   const _Header({required this.onNotif, required this.onProfile});
@@ -729,6 +727,8 @@ class _Header extends StatelessWidget {
     );
   }
 }
+
+// ─── Active Mutation Card ──────────────────────────────────────────────────
 
 class _ActiveMutationCard extends StatelessWidget {
   const _ActiveMutationCard({
@@ -895,7 +895,6 @@ class _ActiveMutationCard extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 12),
-          // Stepper sederhana (4 tahap)
           const _MiniStepper(currentStep: 2),
           const SizedBox(height: 12),
           SizedBox(
@@ -923,20 +922,25 @@ class _ActiveMutationCard extends StatelessWidget {
   }
 }
 
+// ─── Mini Stepper ──────────────────────────────────────────────────────────
+
 class _MiniStepper extends StatelessWidget {
   const _MiniStepper({required this.currentStep});
 
-  final int currentStep; // 0..3
+  final int currentStep;
 
   @override
   Widget build(BuildContext context) {
     const labels = ['Diajukan', 'Verifikasi', 'Approval', 'Selesai'];
+
     return Row(
       children: List.generate(4, (i) {
         final done = i < currentStep;
         final active = i == currentStep;
+
         return Expanded(
           child: Column(
+            mainAxisSize: MainAxisSize.min,
             children: [
               Container(
                 width: 20,
@@ -967,8 +971,11 @@ class _MiniStepper extends StatelessWidget {
               const SizedBox(height: 4),
               Text(
                 labels[i],
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
                 style: TextStyle(
                   fontSize: 10,
+                  height: 1.1,
                   fontWeight: active ? FontWeight.w600 : FontWeight.w500,
                   color: done || active ? _C.secondary : _C.textSecondary,
                 ),
@@ -980,6 +987,8 @@ class _MiniStepper extends StatelessWidget {
     );
   }
 }
+
+// ─── Recent Tile ───────────────────────────────────────────────────────────
 
 class _RecentTile extends StatelessWidget {
   const _RecentTile({
@@ -1084,6 +1093,8 @@ class _RecentTile extends StatelessWidget {
   }
 }
 
+// ─── Empty Card ────────────────────────────────────────────────────────────
+
 class _EmptyCard extends StatelessWidget {
   const _EmptyCard({
     required this.text,
@@ -1105,6 +1116,7 @@ class _EmptyCard extends StatelessWidget {
         borderRadius: BorderRadius.circular(16),
       ),
       child: Column(
+        mainAxisSize: MainAxisSize.min,
         children: [
           Text(text, style: const TextStyle(color: _C.textSecondary)),
           const SizedBox(height: 12),
@@ -1114,6 +1126,8 @@ class _EmptyCard extends StatelessWidget {
     );
   }
 }
+
+// ─── Bottom Navigation ─────────────────────────────────────────────────────
 
 class _BottomPillNav extends StatelessWidget {
   const _BottomPillNav({required this.index, required this.onSelect});
@@ -1125,29 +1139,37 @@ class _BottomPillNav extends StatelessWidget {
   Widget build(BuildContext context) {
     Widget item(int i, IconData icon, String label) {
       final active = index == i;
-      return InkWell(
-        onTap: () => onSelect(i),
-        borderRadius: BorderRadius.circular(999),
-        child: SizedBox(
-          width: 64,
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(
-                icon,
-                size: 22,
-                color: active ? _C.primaryContainer : _C.textSecondary,
+
+      return Expanded(
+        child: InkWell(
+          onTap: () => onSelect(i),
+          borderRadius: BorderRadius.circular(999),
+          child: Center(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(vertical: 8),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(
+                    icon,
+                    size: 20,
+                    color: active ? _C.primaryContainer : _C.textSecondary,
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    label,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      fontSize: 10,
+                      height: 1.0,
+                      fontWeight: active ? FontWeight.w600 : FontWeight.w500,
+                      color: active ? _C.primaryContainer : _C.textSecondary,
+                    ),
+                  ),
+                ],
               ),
-              const SizedBox(height: 2),
-              Text(
-                label,
-                style: TextStyle(
-                  fontSize: 11,
-                  fontWeight: active ? FontWeight.w600 : FontWeight.w500,
-                  color: active ? _C.primaryContainer : _C.textSecondary,
-                ),
-              ),
-            ],
+            ),
           ),
         ),
       );
@@ -1167,7 +1189,6 @@ class _BottomPillNav extends StatelessWidget {
         ],
       ),
       child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceAround,
         children: [
           item(0, Icons.home_outlined, 'Beranda'),
           item(1, Icons.sync_alt, 'Mutasi Saya'),

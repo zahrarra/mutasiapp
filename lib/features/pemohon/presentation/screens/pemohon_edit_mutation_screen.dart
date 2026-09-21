@@ -7,12 +7,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-import '../../../../app/router/route_names.dart';
 import '../../../../app/theme/app_colors.dart';
 import '../../../../app/theme/app_spacing.dart';
 import '../../../../core/widgets/error_view.dart';
 import '../../../../core/widgets/loading_indicator.dart';
-import '../../../mutation/domain/repositories/mutation_repository.dart';
+import '../../../mutation/domain/usecases/update_mutation_usecase.dart';
 import '../../../mutation/presentation/providers/mutation_provider.dart';
 
 class PemohonEditMutationScreen extends ConsumerStatefulWidget {
@@ -40,22 +39,47 @@ class _PemohonEditMutationScreenState
     super.dispose();
   }
 
-  Future<void> _resubmit(String assetId) async {
-    final params = SubmitMutationParams(
-      assetId: assetId,
-      targetLocation: _locationController.text.trim(),
-      targetPic: _picController.text.trim(),
-      reason: _reasonController.text.trim(),
-    );
+  Future<void> _resubmit() async {
+    final location = _locationController.text.trim();
+    final pic = _picController.text.trim();
+    final reason = _reasonController.text.trim();
 
+    if (location.isEmpty || pic.isEmpty || reason.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Lokasi, PIC, dan alasan wajib diisi')),
+      );
+      return;
+    }
+
+    // PENTING: pakai UpdateMutationUseCase (bukan SubmitMutationUseCase) agar
+    // pengajuan yang sudah ada di-UPDATE di tempat (nomor tiket tetap sama),
+    // bukan membuat tiket baru. Sumber: SCREEN-SPEC.md REQ-008.
     final mutation = await ref
-        .read(submitMutationProvider.notifier)
-        .submit(params);
+        .read(updateMutationProvider.notifier)
+        .submit(
+          UpdateMutationParams(
+            mutationId: widget.mutationId,
+            targetLocation: location,
+            targetPic: pic,
+            reason: reason,
+          ),
+        );
 
     if (!mounted) return;
     if (mutation != null) {
-      context.go(
-        '${RouteNames.pemohonSubmitSuccessPath}?ticket=${Uri.encodeComponent(mutation.ticketNumber)}&id=${mutation.id}',
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Pengajuan berhasil dikirim ulang untuk verifikasi.'),
+          backgroundColor: AppColors.success,
+        ),
+      );
+      // Kembali ke detail mutasi yang sama (bukan layar sukses baru),
+      // karena ini melanjutkan tiket yang sudah ada, bukan tiket baru.
+      context.pop();
+    } else {
+      final err = ref.read(updateMutationProvider).error;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(err ?? 'Gagal mengirim ulang pengajuan')),
       );
     }
   }
@@ -63,7 +87,7 @@ class _PemohonEditMutationScreenState
   @override
   Widget build(BuildContext context) {
     final asyncDetail = ref.watch(mutationDetailProvider(widget.mutationId));
-    final submitState = ref.watch(submitMutationProvider);
+    final submitState = ref.watch(updateMutationProvider);
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -129,9 +153,7 @@ class _PemohonEditMutationScreenState
                 ),
                 const SizedBox(height: AppSpacing.xxl),
                 ElevatedButton(
-                  onPressed: submitState.isLoading
-                      ? null
-                      : () => _resubmit(m.asset.id),
+                  onPressed: submitState.isLoading ? null : () => _resubmit(),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppColors.primary,
                     foregroundColor: Colors.white,

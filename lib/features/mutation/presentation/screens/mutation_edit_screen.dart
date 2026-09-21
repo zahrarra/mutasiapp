@@ -3,9 +3,9 @@
 // Screen: Edit Pengajuan Mutasi yang Dikembalikan (REQ-008).
 // Sumber: SCREEN-SPEC.md REQ-008, ROLE-FLOW.md §3.
 //
-// Hanya dapat diakses untuk mutasi berstatus `returned`. Menggunakan ulang
-// [mutationFormProvider] (state form) yang di-prefill dari data mutasi
-// yang sudah ada, lalu dikirim lewat [updateMutationProvider].
+// Hanya dapat diakses untuk mutasi berstatus `returned`.
+// Menggunakan mutationFormProvider untuk state form yang di-prefill
+// dari data mutasi, lalu dikirim melalui updateMutationProvider.
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -34,7 +34,7 @@ class MutationEditScreen extends ConsumerStatefulWidget {
 
 class _MutationEditScreenState extends ConsumerState<MutationEditScreen> {
   bool _prefilled = false;
-  late TextEditingController _reasonController;
+  late final TextEditingController _reasonController;
 
   @override
   void initState() {
@@ -48,18 +48,33 @@ class _MutationEditScreenState extends ConsumerState<MutationEditScreen> {
     super.dispose();
   }
 
+  /// Mengisi form berdasarkan data mutasi yang dikembalikan.
+  ///
+  /// Tidak menggunakan selectAsset() karena form sekarang menggunakan
+  /// input aset manual.
   void _prefillOnce(Mutation mutation) {
     if (_prefilled) return;
+
     _prefilled = true;
+
     final notifier = ref.read(mutationFormProvider.notifier);
+
     notifier.reset();
-    notifier.selectAsset(mutation.asset);
+
+    // Data aset.
+    notifier.setAssetName(mutation.asset.name);
+    notifier.setAssetId(mutation.asset.assetCode);
+    notifier.setSourceLocation(mutation.currentLocation);
+
+    // Data mutasi.
     notifier.setTargetLocation(mutation.targetLocation);
     notifier.setTargetPic(mutation.targetPic);
     notifier.setReason(mutation.reason);
+
     if (mutation.documentName != null) {
       notifier.setDocumentName(mutation.documentName);
     }
+
     _reasonController.text = mutation.reason;
   }
 
@@ -86,7 +101,8 @@ class _MutationEditScreenState extends ConsumerState<MutationEditScreen> {
                     ),
                     const SizedBox(height: AppSpacing.md),
                     const Text(
-                      'Pengajuan ini tidak dapat diedit karena statusnya\nbukan "Dikembalikan ke Pemohon".',
+                      'Pengajuan ini tidak dapat diedit karena statusnya\n'
+                      'bukan "Dikembalikan ke Pemohon".',
                       textAlign: TextAlign.center,
                       style: TextStyle(color: AppColors.textSecondary),
                     ),
@@ -102,13 +118,15 @@ class _MutationEditScreenState extends ConsumerState<MutationEditScreen> {
           }
 
           _prefillOnce(mutation);
+
           return _buildForm(context, mutation);
         },
         loading: () => const LoadingIndicator(),
         error: (err, _) => ErrorView(
           message: 'Gagal memuat data pengajuan.\n${err.toString()}',
-          onRetry: () =>
-              ref.invalidate(mutationDetailProvider(widget.mutationId)),
+          onRetry: () {
+            ref.invalidate(mutationDetailProvider(widget.mutationId));
+          },
         ),
       ),
     );
@@ -117,8 +135,10 @@ class _MutationEditScreenState extends ConsumerState<MutationEditScreen> {
   Widget _buildForm(BuildContext context, Mutation mutation) {
     final formState = ref.watch(mutationFormProvider);
     final notifier = ref.read(mutationFormProvider.notifier);
+
     final locations = ref.watch(availableLocationsProvider);
     final pics = ref.watch(availablePicsProvider);
+
     final updateState = ref.watch(updateMutationProvider);
 
     return SingleChildScrollView(
@@ -126,6 +146,7 @@ class _MutationEditScreenState extends ConsumerState<MutationEditScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          // Alasan pengembalian.
           if (mutation.returnReason != null)
             Container(
               width: double.infinity,
@@ -146,7 +167,8 @@ class _MutationEditScreenState extends ConsumerState<MutationEditScreen> {
                   const SizedBox(width: AppSpacing.sm),
                   Expanded(
                     child: Text(
-                      'Alasan dikembalikan Operator: ${mutation.returnReason}',
+                      'Alasan dikembalikan Operator: '
+                      '${mutation.returnReason}',
                       style: const TextStyle(
                         fontSize: 13,
                         color: AppColors.warning,
@@ -158,6 +180,7 @@ class _MutationEditScreenState extends ConsumerState<MutationEditScreen> {
               ),
             ),
 
+          // Error update.
           if (updateState.error != null)
             Container(
               width: double.infinity,
@@ -173,6 +196,7 @@ class _MutationEditScreenState extends ConsumerState<MutationEditScreen> {
               ),
             ),
 
+          // Informasi aset.
           Container(
             padding: const EdgeInsets.all(AppSpacing.md),
             decoration: BoxDecoration(
@@ -189,7 +213,8 @@ class _MutationEditScreenState extends ConsumerState<MutationEditScreen> {
                 const SizedBox(width: AppSpacing.sm),
                 Expanded(
                   child: Text(
-                    '${mutation.asset.name} · ${mutation.asset.assetCode}',
+                    '${mutation.asset.name} · '
+                    '${mutation.asset.assetCode}',
                     style: const TextStyle(
                       fontWeight: FontWeight.w600,
                       fontSize: 13,
@@ -199,13 +224,16 @@ class _MutationEditScreenState extends ConsumerState<MutationEditScreen> {
               ],
             ),
           ),
+
           const SizedBox(height: AppSpacing.lg),
 
+          // Lokasi tujuan.
           const Text(
             'Lokasi Tujuan *',
             style: TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
           ),
           const SizedBox(height: AppSpacing.xs),
+
           DropdownButtonFormField<String>(
             initialValue: formState.targetLocation.isEmpty
                 ? null
@@ -213,13 +241,15 @@ class _MutationEditScreenState extends ConsumerState<MutationEditScreen> {
             isExpanded: true,
             items: locations
                 .map(
-                  (e) => DropdownMenuItem(
-                    value: e,
-                    child: Text(e, style: const TextStyle(fontSize: 13)),
+                  (location) => DropdownMenuItem<String>(
+                    value: location,
+                    child: Text(location, style: const TextStyle(fontSize: 13)),
                   ),
                 )
                 .toList(),
-            onChanged: (val) => notifier.setTargetLocation(val ?? ''),
+            onChanged: (value) {
+              notifier.setTargetLocation(value ?? '');
+            },
             decoration: InputDecoration(
               errorText: formState.fieldErrors['targetLocation'],
               contentPadding: const EdgeInsets.symmetric(
@@ -231,13 +261,16 @@ class _MutationEditScreenState extends ConsumerState<MutationEditScreen> {
               ),
             ),
           ),
+
           const SizedBox(height: AppSpacing.lg),
 
+          // PIC baru.
           const Text(
             'Penanggung Jawab (PIC) Baru *',
             style: TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
           ),
           const SizedBox(height: AppSpacing.xs),
+
           DropdownButtonFormField<String>(
             initialValue: formState.targetPic.isEmpty
                 ? null
@@ -245,13 +278,15 @@ class _MutationEditScreenState extends ConsumerState<MutationEditScreen> {
             isExpanded: true,
             items: pics
                 .map(
-                  (e) => DropdownMenuItem(
-                    value: e,
-                    child: Text(e, style: const TextStyle(fontSize: 13)),
+                  (pic) => DropdownMenuItem<String>(
+                    value: pic,
+                    child: Text(pic, style: const TextStyle(fontSize: 13)),
                   ),
                 )
                 .toList(),
-            onChanged: (val) => notifier.setTargetPic(val ?? ''),
+            onChanged: (value) {
+              notifier.setTargetPic(value ?? '');
+            },
             decoration: InputDecoration(
               errorText: formState.fieldErrors['targetPic'],
               contentPadding: const EdgeInsets.symmetric(
@@ -263,13 +298,16 @@ class _MutationEditScreenState extends ConsumerState<MutationEditScreen> {
               ),
             ),
           ),
+
           const SizedBox(height: AppSpacing.lg),
 
+          // Alasan.
           const Text(
             'Alasan / Justifikasi Mutasi *',
             style: TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
           ),
           const SizedBox(height: AppSpacing.xs),
+
           TextFormField(
             controller: _reasonController,
             maxLines: 4,
@@ -282,14 +320,17 @@ class _MutationEditScreenState extends ConsumerState<MutationEditScreen> {
               ),
             ),
           ),
+
           const SizedBox(height: AppSpacing.xxxl),
 
+          // Submit.
           CustomButton(
             label: 'Kirim Ulang Pengajuan',
             width: double.infinity,
             isLoading: updateState.isLoading,
-            onPressed: () => _onSubmit(mutation),
+            onPressed: updateState.isLoading ? null : () => _onSubmit(mutation),
           ),
+
           const SizedBox(height: AppSpacing.lg),
         ],
       ),
@@ -298,9 +339,13 @@ class _MutationEditScreenState extends ConsumerState<MutationEditScreen> {
 
   Future<void> _onSubmit(Mutation mutation) async {
     final formNotifier = ref.read(mutationFormProvider.notifier);
-    if (!formNotifier.validate()) return;
+
+    if (!formNotifier.validate()) {
+      return;
+    }
 
     final formState = ref.read(mutationFormProvider);
+
     final result = await ref
         .read(updateMutationProvider.notifier)
         .submit(
@@ -317,12 +362,14 @@ class _MutationEditScreenState extends ConsumerState<MutationEditScreen> {
 
     if (result != null) {
       ref.read(mutationFormProvider.notifier).reset();
+
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('Pengajuan berhasil dikirim ulang untuk verifikasi.'),
           backgroundColor: AppColors.success,
         ),
       );
+
       context.pop();
     }
   }

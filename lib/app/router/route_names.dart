@@ -5,7 +5,8 @@
 
 /// List nama route dan path di MutasiKu untuk 6 Role.
 abstract final class RouteNames {
-  // ─── General ──────────────────────────────────────────────────────────────
+  /// General routes
+
   static const String landingPath = '/';
   static const String landingName = 'landing';
 
@@ -18,54 +19,27 @@ abstract final class RouteNames {
   static const String unauthorizedPath = '/unauthorized';
   static const String unauthorizedName = 'unauthorized';
 
-  /// Profil bersama (opsional). Pemohon disarankan pakai [pemohonProfilePath].
-  static const String profilePath = '/profile';
-  static const String profileName = 'profile';
-
-  // ─── Asset ────────────────────────────────────────────────────────────────
+  // ─── Asset Routes ─────────────────────────────────────────────────────────
   static const String assetsPath = '/assets';
   static const String assetsName = 'assets';
 
   static const String assetDetailPath = '/assets/:id';
   static const String assetDetailName = 'assetDetail';
 
-  // ─── Pemohon ──────────────────────────────────────────────────────────────
+  // ─── Pemohon Routes ───────────────────────────────────────────────────────
   static const String pemohonDashboardPath = '/pemohon/dashboard';
   static const String pemohonDashboardName = 'pemohonDashboard';
 
-  /// Daftar mutasi (Cek Tiket / Mutasi Saya)
   static const String pemohonMutasiPath = '/pemohon/mutasi';
   static const String pemohonMutasiName = 'pemohonMutasi';
-
-  /// Pilih aset (langkah 1)
-  static const String pemohonSelectAssetPath = '/pemohon/assets/select';
-  static const String pemohonSelectAssetName = 'pemohonSelectAsset';
-
-  /// Form pengajuan (langkah 2)
-  static const String pemohonMutasiCreatePath = '/pemohon/mutasi/create';
-  static const String pemohonMutasiCreateName = 'pemohonMutasiCreate';
-
-  /// Sukses setelah submit (satu path saja)
-  static const String pemohonSubmitSuccessPath = '/pemohon/mutasi/success';
-  static const String pemohonSubmitSuccessName = 'pemohonSubmitSuccess';
-
-  /// Detail tiket — daftarkan SETELAH confirm & edit di app_router
-  static const String pemohonMutasiDetailPath = '/pemohon/mutasi/:id';
-  static const String pemohonMutasiDetailName = 'pemohonMutasiDetail';
-
-  static const String pemohonMutasiEditPath = '/pemohon/mutasi/:id/edit';
-  static const String pemohonMutasiEditName = 'pemohonMutasiEdit';
-
-  static const String pemohonConfirmationPath = '/pemohon/mutasi/:id/confirm';
-  static const String pemohonConfirmationName = 'pemohonConfirmation';
 
   static const String pemohonNotificationsPath = '/pemohon/notifications';
   static const String pemohonNotificationsName = 'pemohonNotifications';
 
-  static const String pemohonProfilePath = '/pemohon/profile';
-  static const String pemohonProfileName = 'pemohonProfile';
+  static const String pemohonConfirmationPath = '/pemohon/mutasi/:id/confirm';
+  static const String pemohonConfirmationName = 'pemohonConfirmation';
 
-  // ─── Operator ─────────────────────────────────────────────────────────────
+  // ─── Operator Routes ──────────────────────────────────────────────────────
   static const String operatorDashboardPath = '/operator/dashboard';
   static const String operatorDashboardName = 'operatorDashboard';
 
@@ -86,7 +60,7 @@ abstract final class RouteNames {
   static const String operatorNotificationsPath = '/operator/notifications';
   static const String operatorNotificationsName = 'operatorNotifications';
 
-  // ─── Kabag Aset ───────────────────────────────────────────────────────────
+  // ─── Kabag Aset Routes ────────────────────────────────────────────────────
   static const String kabagDashboardPath = '/kabag/dashboard';
   static const String kabagDashboardName = 'kabagDashboard';
 
@@ -105,7 +79,7 @@ abstract final class RouteNames {
   static const String kabagNotificationsPath = '/kabag/notifications';
   static const String kabagNotificationsName = 'kabagNotifications';
 
-  // ─── Kadiv ────────────────────────────────────────────────────────────────
+  // ─── Kadiv Routes ─────────────────────────────────────────────────────────
   static const String kadivDashboardPath = '/kadiv/dashboard';
   static const String kadivDashboardName = 'kadivDashboard';
 
@@ -124,7 +98,7 @@ abstract final class RouteNames {
   static const String kadivNotificationsPath = '/kadiv/notifications';
   static const String kadivNotificationsName = 'kadivNotifications';
 
-  // ─── Staff Aset ───────────────────────────────────────────────────────────
+  // ─── Staff Aset Routes ────────────────────────────────────────────────────
   static const String staffDashboardPath = '/staff-aset/dashboard';
   static const String staffDashboardName = 'staffDashboard';
 
@@ -134,7 +108,10 @@ abstract final class RouteNames {
   static const String staffAssetsPath = '/staff-aset/assets';
   static const String staffAssetsName = 'staffAssets';
 
-  // ─── Admin ────────────────────────────────────────────────────────────────
+  static const String staffNotificationsPath = '/staff-aset/notifications';
+  static const String staffNotificationsName = 'staffNotifications';
+
+  // ─── Admin Routes ─────────────────────────────────────────────────────────
   static const String adminDashboardPath = '/admin/dashboard';
   static const String adminDashboardName = 'adminDashboard';
 
@@ -152,4 +129,37 @@ abstract final class RouteNames {
 
   static const String adminCriteriaPath = '/admin/approval-criteria';
   static const String adminCriteriaName = 'adminCriteria';
+
+  // ─── Pemohon Routes (lengkapi) ───────────────────────────────────────────
+  static const String pemohonMutasiFormPath = '/pemohon/mutasi/create/form';
+  static const String pemohonMutasiFormName = 'pemohonMutasiForm';
+
+  static const String pemohonMutasiReviewPath = '/pemohon/mutasi/create/review';
+  static const String pemohonMutasiReviewName = 'pemohonMutasiReview';
+
+  static const String pemohonMutasiSuccessPath =
+      '/pemohon/mutasi/create/success';
+  static const String pemohonMutasiSuccessName = 'pemohonMutasiSuccess';
+
+  static const String pemohonShellPath = '/pemohon';
+  static const String pemohonShellName = 'pemohonShell';
+
+  static const String pemohonMutasiCreatePath = '/pemohon/mutasi/create';
+  static const String pemohonMutasiCreateName = 'pemohonMutasiCreate';
+
+  static const String pemohonSubmitSuccessPath = '/pemohon/mutasi/success';
+  static const String pemohonSubmitSuccessName = 'pemohonSubmitSuccess';
+
+  static const String pemohonMutasiDetailPath = '/pemohon/mutasi/:id';
+  static const String pemohonMutasiDetailName = 'pemohonMutasiDetail';
+
+  static const String pemohonMutasiEditPath = '/pemohon/mutasi/:id/edit';
+  static const String pemohonMutasiEditName = 'pemohonMutasiEdit';
+
+  static const String pemohonProfilePath = '/pemohon/profile';
+  static const String pemohonProfileName = 'pemohonProfile';
+
+  // ─── Common Routes ────────────────────────────────────────────────────────
+  static const String profilePath = '/profile';
+  static const String profileName = 'profile';
 }

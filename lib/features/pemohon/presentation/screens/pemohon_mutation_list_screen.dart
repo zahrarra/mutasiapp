@@ -65,7 +65,7 @@ class _PemohonMutationListScreenState
         ],
       ),
       floatingActionButton: FloatingActionButton.extended(
-        onPressed: () => context.push(RouteNames.pemohonSelectAssetPath),
+        onPressed: () => context.push(RouteNames.pemohonMutasiCreatePath),
         backgroundColor: AppColors.primary,
         foregroundColor: Colors.white,
         icon: const Icon(Icons.add),

@@ -1,11 +1,7 @@
 // lib/features/mutation/presentation/screens/mutation_form_screen.dart
 //
 // Screen: Form Pengajuan Mutasi (REQ-004).
-// Sumber: SCREEN-SPEC.md REQ-004, ROLE-FLOW.md §3.
-//
-// Langkah 2 dari alur Pengajuan Mutasi: isi lokasi tujuan, PIC baru,
-// alasan, dan dokumen pendukung (opsional) untuk aset yang sudah dipilih
-// di AssetSelectionScreen.
+// Pemohon menginput data aset secara manual.
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -17,7 +13,6 @@ import '../../../../app/theme/app_spacing.dart';
 import '../../../../core/widgets/custom_button.dart';
 import '../providers/mutation_form_provider.dart';
 
-/// Screen form pengajuan mutasi (langkah 2 dari alur Pengajuan Mutasi).
 class MutationFormScreen extends ConsumerWidget {
   const MutationFormScreen({super.key});
 
@@ -28,100 +23,75 @@ class MutationFormScreen extends ConsumerWidget {
     final locations = ref.watch(availableLocationsProvider);
     final pics = ref.watch(availablePicsProvider);
 
-    final asset = formState.selectedAsset;
-
-    if (asset == null) {
-      // Guard: form diakses tanpa aset terpilih (mis. deep link langsung).
-      return Scaffold(
-        appBar: AppBar(title: const Text('Form Mutasi')),
-        body: Center(
-          child: Padding(
-            padding: const EdgeInsets.all(AppSpacing.lg),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                const Icon(
-                  Icons.inventory_2_outlined,
-                  size: 48,
-                  color: AppColors.textDisabled,
-                ),
-                const SizedBox(height: AppSpacing.md),
-                const Text(
-                  'Belum ada aset yang dipilih.',
-                  style: TextStyle(fontWeight: FontWeight.w600),
-                ),
-                const SizedBox(height: AppSpacing.md),
-                CustomButton(
-                  label: 'Pilih Aset',
-                  onPressed: () =>
-                      context.go(RouteNames.pemohonMutasiCreatePath),
-                ),
-              ],
-            ),
-          ),
-        ),
-      );
-    }
-
     return Scaffold(
       backgroundColor: AppColors.background,
-      appBar: AppBar(title: const Text('Form Mutasi')),
+      appBar: AppBar(title: const Text('Form Pengajuan Mutasi')),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(AppSpacing.md),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // ─── Ringkasan Aset Terpilih ────────────────────────────────
-            Container(
-              padding: const EdgeInsets.all(AppSpacing.md),
-              decoration: BoxDecoration(
-                color: AppColors.surface,
-                borderRadius: BorderRadius.circular(AppRadius.card),
-                border: Border.all(color: AppColors.border),
-              ),
-              child: Row(
-                children: [
-                  Container(
-                    padding: const EdgeInsets.all(AppSpacing.sm),
-                    decoration: BoxDecoration(
-                      color: AppColors.infoContainer,
-                      borderRadius: BorderRadius.circular(AppRadius.small),
-                    ),
-                    child: const Icon(
-                      Icons.inventory_2_outlined,
-                      color: AppColors.primary,
-                    ),
-                  ),
-                  const SizedBox(width: AppSpacing.sm),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          asset.name,
-                          style: const TextStyle(
-                            fontWeight: FontWeight.bold,
-                            fontSize: 14,
-                          ),
-                        ),
-                        Text(
-                          '${asset.assetCode} · ${asset.location}',
-                          style: const TextStyle(
-                            fontSize: 12,
-                            color: AppColors.textSecondary,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  TextButton(
-                    onPressed: () => context.pop(),
-                    child: const Text('Ganti'),
-                  ),
-                ],
+            const Text(
+              'Data Aset',
+              style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
+            ),
+
+            const SizedBox(height: AppSpacing.md),
+
+            _buildLabel('Nama Aset *'),
+            const SizedBox(height: AppSpacing.xs),
+            TextFormField(
+              initialValue: formState.assetName,
+              onChanged: notifier.setAssetName,
+              decoration: InputDecoration(
+                hintText: 'Contoh: Laptop Dell Latitude',
+                errorText: formState.fieldErrors['assetName'],
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
+                ),
               ),
             ),
+
             const SizedBox(height: AppSpacing.lg),
+
+            _buildLabel('Kode / Nomor Aset *'),
+            const SizedBox(height: AppSpacing.xs),
+            TextFormField(
+              initialValue: formState.assetId,
+              onChanged: notifier.setAssetId,
+              decoration: InputDecoration(
+                hintText: 'Contoh: AST-ELK-2026-001',
+                errorText: formState.fieldErrors['assetId'],
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
+                ),
+              ),
+            ),
+
+            const SizedBox(height: AppSpacing.lg),
+
+            _buildLabel('Lokasi Aset Saat Ini *'),
+            const SizedBox(height: AppSpacing.xs),
+            TextFormField(
+              initialValue: formState.sourceLocation,
+              onChanged: notifier.setSourceLocation,
+              decoration: InputDecoration(
+                hintText: 'Contoh: Kantor Pusat',
+                errorText: formState.fieldErrors['sourceLocation'],
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
+                ),
+              ),
+            ),
+
+            const SizedBox(height: AppSpacing.lg),
+
+            const Text(
+              'Detail Mutasi',
+              style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
+            ),
+
+            const SizedBox(height: AppSpacing.md),
 
             _buildLabel('Lokasi Tujuan *'),
             const SizedBox(height: AppSpacing.xs),
@@ -132,8 +102,11 @@ class MutationFormScreen extends ConsumerWidget {
               hint: 'Pilih lokasi tujuan',
               items: locations,
               errorText: formState.fieldErrors['targetLocation'],
-              onChanged: (val) => notifier.setTargetLocation(val ?? ''),
+              onChanged: (value) {
+                notifier.setTargetLocation(value ?? '');
+              },
             ),
+
             const SizedBox(height: AppSpacing.lg),
 
             _buildLabel('Penanggung Jawab (PIC) Baru *'),
@@ -143,8 +116,11 @@ class MutationFormScreen extends ConsumerWidget {
               hint: 'Pilih PIC baru',
               items: pics,
               errorText: formState.fieldErrors['targetPic'],
-              onChanged: (val) => notifier.setTargetPic(val ?? ''),
+              onChanged: (value) {
+                notifier.setTargetPic(value ?? '');
+              },
             ),
+
             const SizedBox(height: AppSpacing.lg),
 
             _buildLabel('Alasan / Justifikasi Mutasi *'),
@@ -154,35 +130,21 @@ class MutationFormScreen extends ConsumerWidget {
               maxLines: 4,
               onChanged: notifier.setReason,
               decoration: InputDecoration(
-                hintText: 'Jelaskan alasan mutasi aset ini...',
+                hintText: 'Jelaskan alasan mutasi aset...',
                 errorText: formState.fieldErrors['reason'],
                 contentPadding: const EdgeInsets.all(AppSpacing.md),
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
-                  borderSide: const BorderSide(color: AppColors.border),
-                ),
-                enabledBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
-                  borderSide: const BorderSide(color: AppColors.border),
-                ),
-                focusedBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
-                  borderSide: const BorderSide(
-                    color: AppColors.primary,
-                    width: 2,
-                  ),
                 ),
               ),
             ),
+
             const SizedBox(height: AppSpacing.lg),
 
             _buildLabel('Dokumen Pendukung (Opsional)'),
             const SizedBox(height: AppSpacing.xs),
             InkWell(
               onTap: () {
-                // Upload dokumen aktual memerlukan integrasi backend/storage
-                // yang belum final (lihat TECHNICAL-DESIGN.md - Open Questions).
-                // Untuk MVP, disimulasikan sebagai nama file statis.
                 notifier.setDocumentName(
                   formState.documentName == null ? 'surat_pengantar.pdf' : null,
                 );
@@ -193,10 +155,7 @@ class MutationFormScreen extends ConsumerWidget {
                 decoration: BoxDecoration(
                   color: AppColors.surface,
                   borderRadius: BorderRadius.circular(AppRadius.button),
-                  border: Border.all(
-                    color: AppColors.border,
-                    style: BorderStyle.solid,
-                  ),
+                  border: Border.all(color: AppColors.border),
                 ),
                 child: Row(
                   children: [
@@ -227,6 +186,7 @@ class MutationFormScreen extends ConsumerWidget {
                 ),
               ),
             ),
+
             const SizedBox(height: AppSpacing.xxxl),
 
             CustomButton(
@@ -234,10 +194,11 @@ class MutationFormScreen extends ConsumerWidget {
               width: double.infinity,
               onPressed: () {
                 if (notifier.validate()) {
-                  context.push(RouteNames.pemohonSubmitSuccessPath);
+                  context.push(RouteNames.pemohonMutasiReviewPath);
                 }
               },
             ),
+
             const SizedBox(height: AppSpacing.lg),
           ],
         ),
@@ -245,14 +206,16 @@ class MutationFormScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildLabel(String text) => Text(
-    text,
-    style: const TextStyle(
-      fontWeight: FontWeight.w600,
-      fontSize: 14,
-      color: AppColors.textPrimary,
-    ),
-  );
+  Widget _buildLabel(String text) {
+    return Text(
+      text,
+      style: const TextStyle(
+        fontWeight: FontWeight.w600,
+        fontSize: 14,
+        color: AppColors.textPrimary,
+      ),
+    );
+  }
 
   Widget _buildDropdown({
     required String? value,
@@ -270,9 +233,9 @@ class MutationFormScreen extends ConsumerWidget {
       ),
       items: items
           .map(
-            (e) => DropdownMenuItem(
-              value: e,
-              child: Text(e, style: const TextStyle(fontSize: 13)),
+            (item) => DropdownMenuItem<String>(
+              value: item,
+              child: Text(item, style: const TextStyle(fontSize: 13)),
             ),
           )
           .toList(),
@@ -285,15 +248,6 @@ class MutationFormScreen extends ConsumerWidget {
         ),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
-          borderSide: const BorderSide(color: AppColors.border),
-        ),
-        enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
-          borderSide: const BorderSide(color: AppColors.border),
-        ),
-        focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
-          borderSide: const BorderSide(color: AppColors.primary, width: 2),
         ),
       ),
     );

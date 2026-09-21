@@ -1,10 +1,12 @@
 // lib/features/mutation/presentation/screens/mutation_review_screen.dart
 //
-// Screen: Review Pengajuan Mutasi sebelum submit (REQ-005).
-// Sumber: SCREEN-SPEC.md REQ-005, ROLE-FLOW.md §3.
+// Review pengajuan mutasi sebelum dikirim.
+// Flow:
+// Form Manual -> Review -> Submit -> Success
 //
-// Langkah 3 dari alur Pengajuan Mutasi: konfirmasi ulang seluruh data
-// sebelum dikirim ke server (submitMutation).
+// CATATAN:
+// Pengajuan menggunakan data aset yang diinput manual oleh Pemohon.
+// Tidak ada pencarian AssetRepository pada proses submit.
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -13,11 +15,11 @@ import 'package:go_router/go_router.dart';
 import '../../../../app/router/route_names.dart';
 import '../../../../app/theme/app_colors.dart';
 import '../../../../app/theme/app_spacing.dart';
+import '../../../../core/widgets/custom_button.dart';
 import '../../domain/repositories/mutation_repository.dart';
 import '../providers/mutation_form_provider.dart';
 import '../providers/mutation_provider.dart';
 
-/// Screen review pengajuan mutasi (langkah 3 dari alur Pengajuan Mutasi).
 class MutationReviewScreen extends ConsumerWidget {
   const MutationReviewScreen({super.key});
 
@@ -25,190 +27,105 @@ class MutationReviewScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final formState = ref.watch(mutationFormProvider);
     final submitState = ref.watch(submitMutationProvider);
-    final asset = formState.selectedAsset;
-
-    if (asset == null) {
-      // Guard: review diakses tanpa data form lengkap.
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        context.go(RouteNames.pemohonMutasiCreatePath);
-      });
-      return const Scaffold(body: SizedBox.shrink());
-    }
 
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(title: const Text('Review Pengajuan')),
-      body: Stack(
-        children: [
-          SingleChildScrollView(
-            padding: const EdgeInsets.fromLTRB(
-              AppSpacing.md,
-              AppSpacing.md,
-              AppSpacing.md,
-              AppSpacing.giant + AppSpacing.giant,
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+      body: SingleChildScrollView(
+        padding: const EdgeInsets.all(AppSpacing.md),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const _SectionTitle('Data Aset'),
+            const SizedBox(height: AppSpacing.sm),
+
+            _InfoCard(
               children: [
-                if (submitState.error != null) ...[
-                  Container(
-                    padding: const EdgeInsets.all(AppSpacing.sm),
-                    decoration: BoxDecoration(
-                      color: AppColors.errorContainer,
-                      borderRadius: BorderRadius.circular(AppRadius.card),
-                    ),
-                    child: Row(
-                      children: [
-                        const Icon(
-                          Icons.error_outline,
-                          color: AppColors.error,
-                          size: 18,
-                        ),
-                        const SizedBox(width: AppSpacing.sm),
-                        Expanded(
-                          child: Text(
-                            submitState.error!,
-                            style: const TextStyle(
-                              fontSize: 13,
-                              color: AppColors.error,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(height: AppSpacing.md),
-                ],
-
-                const _SectionTitle('Aset yang Dimutasi'),
-                const SizedBox(height: AppSpacing.sm),
-                _InfoCard(
-                  children: [
-                    _InfoRow(label: 'Nama Aset', value: asset.name),
-                    _InfoRow(label: 'Kode Aset', value: asset.assetCode),
-                    _InfoRow(label: 'Kategori', value: asset.category.name),
-                    _InfoRow(
-                      label: 'Lokasi Saat Ini',
-                      value: asset.location,
-                      isLast: true,
-                    ),
-                  ],
+                _InfoRow(label: 'Nama Aset', value: formState.assetName),
+                _InfoRow(label: 'Kode / Nomor Aset', value: formState.assetId),
+                _InfoRow(
+                  label: 'Lokasi Asal',
+                  value: formState.sourceLocation,
+                  isLast: true,
                 ),
-                const SizedBox(height: AppSpacing.md),
-
-                const _SectionTitle('Detail Mutasi'),
-                const SizedBox(height: AppSpacing.sm),
-                _InfoCard(
-                  children: [
-                    _InfoRow(
-                      label: 'Lokasi Tujuan',
-                      value: formState.targetLocation,
-                      highlight: true,
-                    ),
-                    _InfoRow(
-                      label: 'PIC Baru',
-                      value: formState.targetPic,
-                      highlight: true,
-                      isLast: true,
-                    ),
-                  ],
-                ),
-                const SizedBox(height: AppSpacing.md),
-
-                const _SectionTitle('Alasan Mutasi'),
-                const SizedBox(height: AppSpacing.sm),
-                Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.all(AppSpacing.md),
-                  decoration: BoxDecoration(
-                    color: AppColors.surface,
-                    borderRadius: BorderRadius.circular(AppRadius.card),
-                    border: Border.all(color: AppColors.border),
-                  ),
-                  child: Text(
-                    formState.reason,
-                    style: const TextStyle(
-                      fontSize: 13,
-                      color: AppColors.textPrimary,
-                      height: 1.5,
-                    ),
-                  ),
-                ),
-
-                if (formState.documentName != null) ...[
-                  const SizedBox(height: AppSpacing.md),
-                  const _SectionTitle('Dokumen Pendukung'),
-                  const SizedBox(height: AppSpacing.sm),
-                  Container(
-                    padding: const EdgeInsets.all(AppSpacing.md),
-                    decoration: BoxDecoration(
-                      color: AppColors.surface,
-                      borderRadius: BorderRadius.circular(AppRadius.card),
-                      border: Border.all(color: AppColors.border),
-                    ),
-                    child: Row(
-                      children: [
-                        const Icon(
-                          Icons.description,
-                          color: AppColors.textSecondary,
-                        ),
-                        const SizedBox(width: AppSpacing.sm),
-                        Text(
-                          formState.documentName!,
-                          style: const TextStyle(fontSize: 13),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
               ],
             ),
-          ),
 
-          Positioned(
-            left: 0,
-            right: 0,
-            bottom: 0,
-            child: Container(
-              padding: const EdgeInsets.fromLTRB(
-                AppSpacing.md,
-                AppSpacing.sm,
-                AppSpacing.md,
-                AppSpacing.lg,
-              ),
-              decoration: const BoxDecoration(
-                color: AppColors.surface,
-                border: Border(top: BorderSide(color: AppColors.border)),
-              ),
-              child: ElevatedButton(
-                onPressed: submitState.isLoading
-                    ? null
-                    : () => _onSubmit(context, ref, asset.id, formState),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.primary,
-                  foregroundColor: Colors.white,
-                  minimumSize: const Size.fromHeight(AppSpacing.buttonHeight),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(AppRadius.button),
-                  ),
+            const SizedBox(height: AppSpacing.lg),
+
+            const _SectionTitle('Detail Mutasi'),
+            const SizedBox(height: AppSpacing.sm),
+
+            _InfoCard(
+              children: [
+                _InfoRow(
+                  label: 'Lokasi Tujuan',
+                  value: formState.targetLocation,
                 ),
-                child: submitState.isLoading
-                    ? const SizedBox(
-                        width: 20,
-                        height: 20,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2,
-                          color: Colors.white,
-                        ),
-                      )
-                    : const Text(
-                        'Ajukan Mutasi',
-                        style: TextStyle(fontWeight: FontWeight.w600),
+                _InfoRow(label: 'PIC Baru', value: formState.targetPic),
+                _InfoRow(label: 'Alasan Mutasi', value: formState.reason),
+                _InfoRow(
+                  label: 'Dokumen Pendukung',
+                  value: formState.documentName ?? 'Tidak ada',
+                  isLast: true,
+                ),
+              ],
+            ),
+
+            const SizedBox(height: AppSpacing.xl),
+
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(AppSpacing.md),
+              decoration: BoxDecoration(
+                color: AppColors.surface,
+                borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
+                border: Border.all(color: AppColors.border),
+              ),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Icon(Icons.info_outline, color: AppColors.primary),
+                  const SizedBox(width: AppSpacing.sm),
+                  Expanded(
+                    child: Text(
+                      'Pastikan seluruh data pengajuan sudah benar '
+                      'sebelum dikirim.',
+                      style: TextStyle(
+                        color: AppColors.textSecondary,
+                        fontSize: 13,
+                        height: 1.4,
                       ),
+                    ),
+                  ),
+                ],
               ),
             ),
-          ),
-        ],
+
+            const SizedBox(height: AppSpacing.xl),
+
+            CustomButton(
+              label: 'Kirim Pengajuan',
+              width: double.infinity,
+              isLoading: submitState.isLoading,
+              onPressed: submitState.isLoading
+                  ? null
+                  : () => _onSubmit(context, ref, formState),
+            ),
+
+            const SizedBox(height: AppSpacing.md),
+
+            SizedBox(
+              width: double.infinity,
+              child: OutlinedButton(
+                onPressed: submitState.isLoading ? null : () => context.pop(),
+                child: const Text('Kembali'),
+              ),
+            ),
+
+            const SizedBox(height: AppSpacing.lg),
+          ],
+        ),
       ),
     );
   }
@@ -216,34 +133,47 @@ class MutationReviewScreen extends ConsumerWidget {
   Future<void> _onSubmit(
     BuildContext context,
     WidgetRef ref,
-    String assetId,
     MutationFormState formState,
   ) async {
     final notifier = ref.read(submitMutationProvider.notifier);
-    final mutation = await notifier.submit(
-      SubmitMutationParams(
-        assetId: assetId,
-        targetLocation: formState.targetLocation,
-        targetPic: formState.targetPic,
-        reason: formState.reason,
-        documentName: formState.documentName,
-      ),
+
+    final params = SubmitMutationParams(
+      assetId: formState.assetId.trim(),
+      assetName: formState.assetName.trim(),
+      sourceLocation: formState.sourceLocation.trim(),
+      targetLocation: formState.targetLocation.trim(),
+      targetPic: formState.targetPic.trim(),
+      reason: formState.reason.trim(),
+      documentName: formState.documentName,
     );
+
+    final mutation = await notifier.submit(params);
 
     if (!context.mounted) return;
 
+    // Submit berhasil.
+    //
+    // mutation sudah merupakan object yang baru saja dibuat
+    // oleh submitMutation(). Jadi tidak perlu memanggil
+    // getMutationById() lagi.
     if (mutation != null) {
+      final ticketNumber = mutation.ticketNumber;
+
+      // Bersihkan form setelah data berhasil disimpan.
       ref.read(mutationFormProvider.notifier).reset();
+
+      // Langsung menuju halaman sukses.
       context.go(
-        '${RouteNames.pemohonSubmitSuccessPath}?ticket=${Uri.encodeComponent(mutation.ticketNumber)}',
+        '${RouteNames.pemohonSubmitSuccessPath}'
+        '?ticket=${Uri.encodeComponent(ticketNumber)}',
       );
     }
-    // Jika gagal, error sudah ditampilkan lewat submitState.error di atas.
   }
 }
 
 class _SectionTitle extends StatelessWidget {
   final String title;
+
   const _SectionTitle(this.title);
 
   @override
@@ -251,10 +181,9 @@ class _SectionTitle extends StatelessWidget {
     return Text(
       title,
       style: const TextStyle(
-        fontSize: 13,
-        fontWeight: FontWeight.w600,
-        color: AppColors.textSecondary,
-        letterSpacing: 0.3,
+        fontSize: 16,
+        fontWeight: FontWeight.w700,
+        color: AppColors.textPrimary,
       ),
     );
   }
@@ -262,15 +191,17 @@ class _SectionTitle extends StatelessWidget {
 
 class _InfoCard extends StatelessWidget {
   final List<Widget> children;
+
   const _InfoCard({required this.children});
 
   @override
   Widget build(BuildContext context) {
     return Container(
+      width: double.infinity,
       padding: const EdgeInsets.all(AppSpacing.md),
       decoration: BoxDecoration(
         color: AppColors.surface,
-        borderRadius: BorderRadius.circular(AppRadius.card),
+        borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
         border: Border.all(color: AppColors.border),
       ),
       child: Column(children: children),
@@ -282,40 +213,40 @@ class _InfoRow extends StatelessWidget {
   final String label;
   final String value;
   final bool isLast;
-  final bool highlight;
 
   const _InfoRow({
     required this.label,
     required this.value,
     this.isLast = false,
-    this.highlight = false,
   });
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: EdgeInsets.only(bottom: isLast ? 0 : AppSpacing.sm),
-      child: Row(
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(vertical: AppSpacing.sm),
+      decoration: isLast
+          ? null
+          : const BoxDecoration(
+              border: Border(bottom: BorderSide(color: AppColors.border)),
+            ),
+      child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          SizedBox(
-            width: 120,
-            child: Text(
-              label,
-              style: const TextStyle(
-                fontSize: 12,
-                color: AppColors.textSecondary,
-              ),
+          Text(
+            label,
+            style: const TextStyle(
+              fontSize: 12,
+              color: AppColors.textSecondary,
             ),
           ),
-          Expanded(
-            child: Text(
-              value,
-              style: TextStyle(
-                fontSize: 13,
-                fontWeight: highlight ? FontWeight.w700 : FontWeight.w500,
-                color: highlight ? AppColors.secondary : AppColors.textPrimary,
-              ),
+          const SizedBox(height: 4),
+          Text(
+            value.isEmpty ? '-' : value,
+            style: const TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.w600,
+              color: AppColors.textPrimary,
             ),
           ),
         ],

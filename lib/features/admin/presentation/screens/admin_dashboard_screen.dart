@@ -4,6 +4,9 @@
 // Sumber: ROLE-FLOW.md §2, WIREFRAME.md §2.
 
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
+
+import '../../../../app/router/route_names.dart';
 import '../../../../app/theme/app_colors.dart';
 import '../../../../app/theme/app_spacing.dart';
 import '../../../auth/presentation/widgets/role_dashboard_layout.dart';
@@ -13,14 +16,32 @@ class AdminDashboardScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const RoleDashboardLayout(
+    return RoleDashboardLayout(
       title: 'Dashboard Admin',
-      navItems: [
+      selectedIndex: 0,
+      navItems: const [
         RoleNavItem(label: 'Home', icon: Icons.dashboard_outlined),
         RoleNavItem(label: 'Master Data', icon: Icons.storage_outlined),
         RoleNavItem(label: 'Users', icon: Icons.people_outline),
         RoleNavItem(label: 'Profil', icon: Icons.person_outline),
       ],
+      onNavDestinationSelected: (index) {
+        switch (index) {
+          case 1:
+            context.push(RouteNames.adminCategoriesPath);
+            break;
+          case 2:
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('Fitur Manajemen User segera hadir'),
+              ),
+            );
+            break;
+          case 3:
+            context.push(RouteNames.profilePath);
+            break;
+        }
+      },
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -35,10 +56,7 @@ class AdminDashboardScreen extends StatelessWidget {
           SizedBox(height: AppSpacing.xs),
           Text(
             'Sebagai Admin, Anda memiliki wewenang penuh untuk mengelola User, Role, Lokasi, Kategori Aset, dan Kriteria Approval.',
-            style: TextStyle(
-              fontSize: 13,
-              color: AppColors.textSecondary,
-            ),
+            style: TextStyle(fontSize: 13, color: AppColors.textSecondary),
           ),
           SizedBox(height: AppSpacing.md),
 
@@ -56,7 +74,8 @@ class AdminDashboardScreen extends StatelessWidget {
           SizedBox(height: AppSpacing.sm),
           _AdminMenuCard(
             title: 'Kategori Aset & Kriteria Approval',
-            subtitle: 'Atur threshold kriteria approval mutasi untuk level Kadiv',
+            subtitle:
+                'Atur threshold kriteria approval mutasi untuk level Kadiv',
             icon: Icons.tune_outlined,
           ),
         ],
@@ -94,7 +113,10 @@ class _AdminMenuCard extends StatelessWidget {
           subtitle,
           style: const TextStyle(fontSize: 12, color: AppColors.textSecondary),
         ),
-        trailing: const Icon(Icons.chevron_right, color: AppColors.textDisabled),
+        trailing: const Icon(
+          Icons.chevron_right,
+          color: AppColors.textDisabled,
+        ),
         onTap: () {},
       ),
     );

@@ -62,21 +62,24 @@ class MutationDetailScreen extends ConsumerWidget {
                 _buildHeader(mutation),
                 const SizedBox(height: AppSpacing.md),
 
-                if (mutation.status == MutationStatus.returned && mutation.returnReason != null)
+                if (mutation.status == MutationStatus.returned &&
+                    mutation.returnReason != null)
                   _buildBanner(
                     icon: Icons.info_outline,
                     color: AppColors.warning,
                     background: AppColors.warningContainer,
                     text: 'Dikembalikan Operator: ${mutation.returnReason}',
                   ),
-                if (mutation.status == MutationStatus.rejected && mutation.rejectionReason != null)
+                if (mutation.status == MutationStatus.rejected &&
+                    mutation.rejectionReason != null)
                   _buildBanner(
                     icon: Icons.cancel_outlined,
                     color: AppColors.error,
                     background: AppColors.errorContainer,
                     text: 'Ditolak Kabag Aset: ${mutation.rejectionReason}',
                   ),
-                if (mutation.status == MutationStatus.rejected && mutation.kadivRejectionReason != null)
+                if (mutation.status == MutationStatus.rejected &&
+                    mutation.kadivRejectionReason != null)
                   _buildBanner(
                     icon: Icons.cancel_outlined,
                     color: AppColors.error,
@@ -97,14 +100,22 @@ class MutationDetailScreen extends ConsumerWidget {
                 _infoCard([
                   _infoRow('Nama Aset', mutation.asset.name),
                   _infoRow('Kode Aset', mutation.asset.assetCode),
-                  _infoRow('Kategori', mutation.asset.category.name, isLast: true),
+                  _infoRow(
+                    'Kategori',
+                    mutation.asset.category.name,
+                    isLast: true,
+                  ),
                 ]),
                 const SizedBox(height: AppSpacing.md),
 
                 _sectionTitle('Perpindahan'),
                 const SizedBox(height: AppSpacing.sm),
                 _infoCard([
-                  _transferRow('Lokasi', mutation.currentLocation, mutation.targetLocation),
+                  _transferRow(
+                    'Lokasi',
+                    mutation.currentLocation,
+                    mutation.targetLocation,
+                  ),
                   const SizedBox(height: AppSpacing.md),
                   _transferRow('PIC', mutation.currentPic, mutation.targetPic),
                 ]),
@@ -115,7 +126,11 @@ class MutationDetailScreen extends ConsumerWidget {
                 _infoCard([
                   Text(
                     mutation.reason,
-                    style: const TextStyle(fontSize: 13, color: AppColors.textPrimary, height: 1.5),
+                    style: const TextStyle(
+                      fontSize: 13,
+                      color: AppColors.textPrimary,
+                      height: 1.5,
+                    ),
                   ),
                 ]),
                 const SizedBox(height: AppSpacing.md),
@@ -125,7 +140,10 @@ class MutationDetailScreen extends ConsumerWidget {
                 _infoCard([
                   Text(
                     _formatDate(mutation.createdAt),
-                    style: const TextStyle(fontSize: 13, color: AppColors.textPrimary),
+                    style: const TextStyle(
+                      fontSize: 13,
+                      color: AppColors.textPrimary,
+                    ),
                   ),
                 ]),
                 const SizedBox(height: AppSpacing.giant),
@@ -133,7 +151,8 @@ class MutationDetailScreen extends ConsumerWidget {
             ),
           ),
         ),
-        if (showEdit || showConfirm) _buildActionBar(context, mutation, showEdit, showConfirm),
+        if (showEdit || showConfirm)
+          _buildActionBar(context, mutation, showEdit, showConfirm),
       ],
     );
   }
@@ -155,24 +174,40 @@ class MutationDetailScreen extends ConsumerWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text('Nomor Tiket', style: TextStyle(fontSize: 11, color: AppColors.textSecondary)),
+                const Text(
+                  'Nomor Tiket',
+                  style: TextStyle(
+                    fontSize: 11,
+                    color: AppColors.textSecondary,
+                  ),
+                ),
                 const SizedBox(height: 2),
                 Text(
                   mutation.ticketNumber,
-                  style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700),
+                  style: const TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w700,
+                  ),
                 ),
               ],
             ),
           ),
           Container(
-            padding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm, vertical: 4),
+            padding: const EdgeInsets.symmetric(
+              horizontal: AppSpacing.sm,
+              vertical: 4,
+            ),
             decoration: BoxDecoration(
               color: mutation.status.backgroundColor,
               borderRadius: BorderRadius.circular(AppRadius.pill),
             ),
             child: Text(
               mutation.status.displayName,
-              style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: mutation.status.color),
+              style: TextStyle(
+                fontSize: 11,
+                fontWeight: FontWeight.w600,
+                color: mutation.status.color,
+              ),
             ),
           ),
         ],
@@ -190,13 +225,21 @@ class MutationDetailScreen extends ConsumerWidget {
       padding: const EdgeInsets.only(top: AppSpacing.sm),
       child: Container(
         padding: const EdgeInsets.all(AppSpacing.sm),
-        decoration: BoxDecoration(color: background, borderRadius: BorderRadius.circular(AppRadius.card)),
+        decoration: BoxDecoration(
+          color: background,
+          borderRadius: BorderRadius.circular(AppRadius.card),
+        ),
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Icon(icon, color: color, size: 18),
             const SizedBox(width: AppSpacing.sm),
-            Expanded(child: Text(text, style: TextStyle(fontSize: 13, color: color, height: 1.4))),
+            Expanded(
+              child: Text(
+                text,
+                style: TextStyle(fontSize: 13, color: color, height: 1.4),
+              ),
+            ),
           ],
         ),
       ),
@@ -206,70 +249,132 @@ class MutationDetailScreen extends ConsumerWidget {
   // ─── Sections ───────────────────────────────────────────────────────────
 
   Widget _sectionTitle(String title) => Text(
-        title,
+    title,
+    style: const TextStyle(
+      fontSize: 13,
+      fontWeight: FontWeight.w600,
+      color: AppColors.textSecondary,
+    ),
+  );
+
+  Widget _infoCard(List<Widget> children) => Container(
+    width: double.infinity,
+    padding: const EdgeInsets.all(AppSpacing.md),
+    decoration: BoxDecoration(
+      color: AppColors.surface,
+      borderRadius: BorderRadius.circular(AppRadius.card),
+      border: Border.all(color: AppColors.border),
+    ),
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: children,
+    ),
+  );
+
+  Widget _infoRow(String label, String value, {bool isLast = false}) => Padding(
+    padding: EdgeInsets.only(bottom: isLast ? 0 : AppSpacing.sm),
+    child: Row(
+      children: [
+        SizedBox(
+          width: 100,
+          child: Text(
+            label,
+            style: const TextStyle(
+              fontSize: 12,
+              color: AppColors.textSecondary,
+            ),
+          ),
+        ),
+        Expanded(
+          child: Text(
+            value,
+            style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500),
+          ),
+        ),
+      ],
+    ),
+  );
+
+  Widget _transferRow(String label, String from, String to) => Column(
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: [
+      Text(
+        label,
         style: const TextStyle(
-          fontSize: 13,
+          fontSize: 12,
           fontWeight: FontWeight.w600,
           color: AppColors.textSecondary,
         ),
-      );
-
-  Widget _infoCard(List<Widget> children) => Container(
-        width: double.infinity,
-        padding: const EdgeInsets.all(AppSpacing.md),
-        decoration: BoxDecoration(
-          color: AppColors.surface,
-          borderRadius: BorderRadius.circular(AppRadius.card),
-          border: Border.all(color: AppColors.border),
-        ),
-        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: children),
-      );
-
-  Widget _infoRow(String label, String value, {bool isLast = false}) => Padding(
-        padding: EdgeInsets.only(bottom: isLast ? 0 : AppSpacing.sm),
-        child: Row(
-          children: [
-            SizedBox(width: 100, child: Text(label, style: const TextStyle(fontSize: 12, color: AppColors.textSecondary))),
-            Expanded(child: Text(value, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500))),
-          ],
-        ),
-      );
-
-  Widget _transferRow(String label, String from, String to) => Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+      ),
+      const SizedBox(height: AppSpacing.xs),
+      Row(
         children: [
-          Text(label, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
-          const SizedBox(height: AppSpacing.xs),
-          Row(
-            children: [
-              Expanded(
-                child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm, vertical: AppSpacing.xs),
-                  decoration: BoxDecoration(color: AppColors.background, borderRadius: BorderRadius.circular(AppRadius.small)),
-                  child: Text(from, style: const TextStyle(fontSize: 12), overflow: TextOverflow.ellipsis),
+          Expanded(
+            child: Container(
+              padding: const EdgeInsets.symmetric(
+                horizontal: AppSpacing.sm,
+                vertical: AppSpacing.xs,
+              ),
+              decoration: BoxDecoration(
+                color: AppColors.background,
+                borderRadius: BorderRadius.circular(AppRadius.small),
+              ),
+              child: Text(
+                from,
+                style: const TextStyle(fontSize: 12),
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+          ),
+          const Padding(
+            padding: EdgeInsets.symmetric(horizontal: AppSpacing.xs),
+            child: Icon(
+              Icons.arrow_forward,
+              size: 14,
+              color: AppColors.secondary,
+            ),
+          ),
+          Expanded(
+            child: Container(
+              padding: const EdgeInsets.symmetric(
+                horizontal: AppSpacing.sm,
+                vertical: AppSpacing.xs,
+              ),
+              decoration: BoxDecoration(
+                color: AppColors.successContainer,
+                borderRadius: BorderRadius.circular(AppRadius.small),
+              ),
+              child: Text(
+                to,
+                style: const TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                  color: AppColors.secondary,
                 ),
+                overflow: TextOverflow.ellipsis,
               ),
-              const Padding(
-                padding: EdgeInsets.symmetric(horizontal: AppSpacing.xs),
-                child: Icon(Icons.arrow_forward, size: 14, color: AppColors.secondary),
-              ),
-              Expanded(
-                child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm, vertical: AppSpacing.xs),
-                  decoration: BoxDecoration(color: AppColors.successContainer, borderRadius: BorderRadius.circular(AppRadius.small)),
-                  child: Text(to, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.secondary), overflow: TextOverflow.ellipsis),
-                ),
-              ),
-            ],
+            ),
           ),
         ],
-      );
+      ),
+    ],
+  );
 
   // ─── Action Bar ─────────────────────────────────────────────────────────
 
-  Widget _buildActionBar(BuildContext context, Mutation mutation, bool showEdit, bool showConfirm) {
+  Widget _buildActionBar(
+    BuildContext context,
+    Mutation mutation,
+    bool showEdit,
+    bool showConfirm,
+  ) {
     return Container(
-      padding: const EdgeInsets.fromLTRB(AppSpacing.md, AppSpacing.sm, AppSpacing.md, AppSpacing.lg),
+      padding: const EdgeInsets.fromLTRB(
+        AppSpacing.md,
+        AppSpacing.sm,
+        AppSpacing.md,
+        AppSpacing.lg,
+      ),
       decoration: const BoxDecoration(
         color: AppColors.surface,
         border: Border(top: BorderSide(color: AppColors.border)),
@@ -277,12 +382,23 @@ class MutationDetailScreen extends ConsumerWidget {
       child: CustomButton(
         label: showEdit ? 'Edit Pengajuan' : 'Konfirmasi Sekarang',
         width: double.infinity,
-        icon: Icon(showEdit ? Icons.edit_outlined : Icons.check_circle_outline, size: 18, color: Colors.white),
+        icon: Icon(
+          showEdit ? Icons.edit_outlined : Icons.check_circle_outline,
+          size: 18,
+          color: Colors.white,
+        ),
         onPressed: () {
           if (showEdit) {
-            context.push(RouteNames.pemohonMutasiEditPath.replaceFirst(':id', mutation.id));
+            context.push(
+              RouteNames.pemohonMutasiEditPath.replaceFirst(':id', mutation.id),
+            );
           } else {
-            context.push(RouteNames.pemohonConfirmationPath.replaceFirst(':id', mutation.id));
+            context.push(
+              RouteNames.pemohonConfirmationPath.replaceFirst(
+                ':id',
+                mutation.id,
+              ),
+            );
           }
         },
       ),
@@ -290,7 +406,20 @@ class MutationDetailScreen extends ConsumerWidget {
   }
 
   String _formatDate(DateTime date) {
-    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Ags', 'Sep', 'Okt', 'Nov', 'Des'];
+    const months = [
+      'Jan',
+      'Feb',
+      'Mar',
+      'Apr',
+      'Mei',
+      'Jun',
+      'Jul',
+      'Ags',
+      'Sep',
+      'Okt',
+      'Nov',
+      'Des',
+    ];
     return '${date.day} ${months[date.month - 1]} ${date.year}, ${date.hour.toString().padLeft(2, '0')}:${date.minute.toString().padLeft(2, '0')}';
   }
 }

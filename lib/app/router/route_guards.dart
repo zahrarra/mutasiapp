@@ -13,29 +13,25 @@ import 'route_names.dart';
 abstract final class RouteGuards {
   /// Memeriksa apakah [role] berhak mengakses route [location].
   static bool canAccessRoute(UserRole? role, String location) {
-    // User belum memiliki role.
     if (role == null) {
       return location == RouteNames.loginPath ||
           location == RouteNames.landingPath;
     }
 
-    // Common routes yang tersedia untuk semua role yang sudah login.
+    // Route bersama untuk semua role yang sudah login.
     if (location == RouteNames.dashboardPath ||
         location == RouteNames.unauthorizedPath ||
-        location == RouteNames.assetsPath ||
         location == RouteNames.profilePath ||
+        location == RouteNames.assetsPath ||
         location.startsWith('/assets/')) {
       return true;
     }
 
-    // Role-based prefix validation.
-    // Admin, Pemohon, Operator, Kabag, Kadiv, Staff Aset.
+    // Boleh mengakses path sesuai role sendiri.
     if (location.startsWith(role.routePrefix)) {
       return true;
     }
 
-    // Menolak akses lintas role.
-    // Contoh: Pemohon mencoba membuka /kabag atau /admin.
     return false;
   }
 
@@ -54,10 +50,10 @@ abstract final class RouteGuards {
     if (!isAuthenticated && !isPublic) {
       debugPrint(
         '[RouteGuard] Unauthenticated user redirected to '
-        '${RouteNames.landingPath}',
+        '${RouteNames.loginPath}',
       );
 
-      return RouteNames.landingPath;
+      return RouteNames.loginPath;
     }
 
     // 2. Sudah login tetapi mencoba membuka Landing/Login.

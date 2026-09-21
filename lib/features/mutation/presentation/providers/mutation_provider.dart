@@ -2,8 +2,14 @@
 //
 // Riverpod providers untuk Mutation Submission.
 // Sumber: ROLE-FLOW.md §3, SCREEN-SPEC.md REQ-002–007.
+//
+// FLOW PENGAJUAN BARU:
+// Pemohon menginput data aset secara manual.
+// Aset tidak harus sudah tersedia di database.
+// SubmitMutationUseCase tidak melakukan pencarian aset.
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter/foundation.dart';
 
 import '../../../../core/errors/result.dart';
 import '../../../asset/domain/entities/asset.dart';
@@ -20,24 +26,39 @@ import '../../domain/usecases/update_mutation_usecase.dart';
 // ─── Repository & Use Case Providers ─────────────────────────────────────────
 
 /// Provider untuk [MutationRepository].
+///
+/// MutationRepositoryImpl masih menggunakan AssetRepository sebagai
+/// dependency repository karena dependency tersebut masih digunakan
+/// pada struktur data/repository lain.
 final mutationRepositoryProvider = Provider<MutationRepository>((ref) {
   final assetRepo = ref.watch(assetRepositoryProvider);
+
   return MutationRepositoryImpl(assetRepository: assetRepo);
 });
 
 /// Provider untuk [SubmitMutationUseCase].
+///
+/// PENTING:
+/// SubmitMutationUseCase TIDAK lagi membutuhkan AssetRepository.
+///
+/// Data aset berasal dari input manual Pemohon:
+/// - assetName
+/// - assetId
+/// - sourceLocation
+/// - targetLocation
+/// - targetPic
+/// - reason
+/// - documentName
 final submitMutationUseCaseProvider = Provider<SubmitMutationUseCase>((ref) {
   final mutationRepo = ref.watch(mutationRepositoryProvider);
-  final assetRepo = ref.watch(assetRepositoryProvider);
-  return SubmitMutationUseCase(
-    mutationRepository: mutationRepo,
-    assetRepository: assetRepo,
-  );
+
+  return SubmitMutationUseCase(mutationRepository: mutationRepo);
 });
 
 /// Provider untuk [GetMutationsUseCase].
 final getMutationsUseCaseProvider = Provider<GetMutationsUseCase>((ref) {
   final repo = ref.watch(mutationRepositoryProvider);
+
   return GetMutationsUseCase(repository: repo);
 });
 
@@ -46,16 +67,24 @@ final getMutationDetailUseCaseProvider = Provider<GetMutationDetailUseCase>((
   ref,
 ) {
   final repo = ref.watch(mutationRepositoryProvider);
+
   return GetMutationDetailUseCase(repository: repo);
 });
 
 /// Provider untuk [UpdateMutationUseCase].
 final updateMutationUseCaseProvider = Provider<UpdateMutationUseCase>((ref) {
   final repo = ref.watch(mutationRepositoryProvider);
+
   return UpdateMutationUseCase(repository: repo);
 });
 
 // ─── Eligible Assets Provider ────────────────────────────────────────────────
+//
+// Provider di bawah masih dipertahankan karena kemungkinan masih digunakan
+// oleh halaman/fitur aset lain.
+//
+// Namun FORM PENGAJUAN MUTASI BARU tidak menggunakan provider ini.
+// Pemohon langsung mengisi data aset secara manual.
 
 /// Provider yang memfilter aset eligible untuk mutasi.
 ///
@@ -66,25 +95,32 @@ final eligibleAssetsProvider = FutureProvider<List<Asset>>((ref) async {
   final result = await useCase();
 
   if (result is Success<List<Asset>>) {
-    // Hanya return aset yang tidak locked
     return result.data.where((asset) => !asset.isLocked).toList();
-  } else if (result is AppFailure<List<Asset>>) {
+  }
+
+  if (result is AppFailure<List<Asset>>) {
     throw Exception(result.failure.userMessage);
   }
+
   return [];
 });
 
-/// Provider yang mengambil semua aset (termasuk locked) untuk tampilan
-/// dengan indikator lock.
+/// Provider yang mengambil semua aset termasuk locked.
+///
+/// Provider ini tetap dipertahankan untuk kebutuhan halaman aset
+/// atau fitur lama yang masih menampilkan daftar aset.
 final allUserAssetsProvider = FutureProvider<List<Asset>>((ref) async {
   final useCase = ref.watch(getAssetsUseCaseProvider);
   final result = await useCase();
 
   if (result is Success<List<Asset>>) {
     return result.data;
-  } else if (result is AppFailure<List<Asset>>) {
+  }
+
+  if (result is AppFailure<List<Asset>>) {
     throw Exception(result.failure.userMessage);
   }
+
   return [];
 });
 
@@ -103,9 +139,12 @@ final mutationListProvider = FutureProvider<List<Mutation>>((ref) async {
 
   if (result is Success<List<Mutation>>) {
     return result.data;
-  } else if (result is AppFailure<List<Mutation>>) {
+  }
+
+  if (result is AppFailure<List<Mutation>>) {
     throw Exception(result.failure.userMessage);
   }
+
   return [];
 });
 
@@ -117,13 +156,17 @@ final mutationDetailProvider = FutureProvider.family<Mutation, String>((
   id,
 ) async {
   final useCase = ref.watch(getMutationDetailUseCaseProvider);
+
   final result = await useCase(id);
 
   if (result is Success<Mutation>) {
     return result.data;
-  } else if (result is AppFailure<Mutation>) {
+  }
+
+  if (result is AppFailure<Mutation>) {
     throw Exception(result.failure.userMessage);
   }
+
   throw Exception('Pengajuan mutasi tidak ditemukan.');
 });
 
@@ -161,6 +204,15 @@ class SubmitMutationNotifier extends StateNotifier<SubmitMutationState> {
     : super(const SubmitMutationState());
 
   Future<Mutation?> submit(SubmitMutationParams params) async {
+    debugPrint('========== SUBMIT START ==========');
+    debugPrint('assetId: ${params.assetId}');
+    debugPrint('assetName: ${params.assetName}');
+    debugPrint('sourceLocation: ${params.sourceLocation}');
+    debugPrint('targetLocation: ${params.targetLocation}');
+    debugPrint('targetPic: ${params.targetPic}');
+    debugPrint('reason: ${params.reason}');
+    debugPrint('==================================');
+
     state = state.copyWith(
       isLoading: true,
       clearError: true,
@@ -169,23 +221,47 @@ class SubmitMutationNotifier extends StateNotifier<SubmitMutationState> {
 
     final result = await useCase(params);
 
+    debugPrint('[SubmitMutation] RESULT TYPE: ${result.runtimeType}');
+
     if (result is Success<Mutation>) {
+      debugPrint('[SubmitMutation] SUCCESS');
+      debugPrint('[SubmitMutation] Ticket: ${result.data.ticketNumber}');
+      debugPrint('[SubmitMutation] ID: ${result.data.id}');
+
       state = SubmitMutationState(isLoading: false, result: result.data);
-      // Invalidate mutation list agar ter-refresh
-      ref.invalidate(mutationListProvider);
+
       return result.data;
-    } else if (result is AppFailure<Mutation>) {
+    }
+
+    if (result is AppFailure<Mutation>) {
+      debugPrint(
+        '[SubmitMutation] FAILURE TYPE: '
+        '${result.failure.runtimeType}',
+      );
+      debugPrint(
+        '[SubmitMutation] FAILURE MESSAGE: '
+        '${result.failure.message}',
+      );
+      debugPrint(
+        '[SubmitMutation] USER MESSAGE: '
+        '${result.failure.userMessage}',
+      );
+
       state = SubmitMutationState(
         isLoading: false,
         error: result.failure.userMessage,
       );
+
       return null;
     }
+
+    debugPrint('[SubmitMutation] UNKNOWN RESULT');
 
     state = const SubmitMutationState(
       isLoading: false,
       error: 'Terjadi kesalahan. Coba lagi.',
     );
+
     return null;
   }
 
@@ -198,6 +274,7 @@ class SubmitMutationNotifier extends StateNotifier<SubmitMutationState> {
 final submitMutationProvider =
     StateNotifierProvider<SubmitMutationNotifier, SubmitMutationState>((ref) {
       final useCase = ref.watch(submitMutationUseCaseProvider);
+
       return SubmitMutationNotifier(useCase: useCase, ref: ref);
     });
 
@@ -226,7 +303,8 @@ class UpdateMutationState {
   }
 }
 
-/// Notifier untuk mengelola proses edit pengajuan mutasi yang dikembalikan.
+/// Notifier untuk mengelola proses edit pengajuan mutasi
+/// yang dikembalikan.
 class UpdateMutationNotifier extends StateNotifier<UpdateMutationState> {
   final UpdateMutationUseCase useCase;
   final Ref ref;
@@ -245,15 +323,20 @@ class UpdateMutationNotifier extends StateNotifier<UpdateMutationState> {
 
     if (result is Success<Mutation>) {
       state = UpdateMutationState(isLoading: false, result: result.data);
-      // Invalidate list & detail agar ter-refresh
+
+      // Refresh list & detail.
       ref.invalidate(mutationListProvider);
       ref.invalidate(mutationDetailProvider(params.mutationId));
+
       return result.data;
-    } else if (result is AppFailure<Mutation>) {
+    }
+
+    if (result is AppFailure<Mutation>) {
       state = UpdateMutationState(
         isLoading: false,
         error: result.failure.userMessage,
       );
+
       return null;
     }
 
@@ -261,6 +344,7 @@ class UpdateMutationNotifier extends StateNotifier<UpdateMutationState> {
       isLoading: false,
       error: 'Terjadi kesalahan. Coba lagi.',
     );
+
     return null;
   }
 
@@ -273,5 +357,6 @@ class UpdateMutationNotifier extends StateNotifier<UpdateMutationState> {
 final updateMutationProvider =
     StateNotifierProvider<UpdateMutationNotifier, UpdateMutationState>((ref) {
       final useCase = ref.watch(updateMutationUseCaseProvider);
+
       return UpdateMutationNotifier(useCase: useCase, ref: ref);
     });
