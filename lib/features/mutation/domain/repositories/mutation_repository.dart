@@ -8,6 +8,12 @@ import '../entities/mutation.dart';
 
 /// Parameter untuk mengajukan mutasi baru.
 class SubmitMutationParams {
+  /// ID user yang mengajukan mutasi.
+  ///
+  /// Diisi otomatis dari user yang sedang login
+  /// pada SubmitMutationNotifier.
+  final String? applicantId;
+
   final String assetId;
   final String assetName;
   final String sourceLocation;
@@ -17,6 +23,7 @@ class SubmitMutationParams {
   final String? documentName;
 
   const SubmitMutationParams({
+    this.applicantId,
     required this.assetId,
     required this.assetName,
     required this.sourceLocation,
@@ -31,16 +38,11 @@ class SubmitMutationParams {
 abstract class MutationRepository {
   /// Ajukan mutasi baru.
   ///
-  /// Mengembalikan [Mutation] dengan ticket number yang di-generate server.
-  /// Gagal jika aset locked atau data tidak valid.
+  /// Mengembalikan [Mutation] dengan ticket number
+  /// yang di-generate oleh repository/server.
   Future<Result<Mutation>> submitMutation(SubmitMutationParams params);
 
-  /// Perbarui pengajuan mutasi yang berstatus [MutationStatus.returned].
-  ///
-  /// Sumber: SCREEN-SPEC.md REQ-008 (Edit Pengajuan).
-  /// Setelah diperbarui, status kembali menjadi [MutationStatus.submitted]
-  /// dan pengajuan masuk kembali ke antrean verifikasi Operator.
-  /// Gagal jika mutasi tidak ditemukan atau status saat ini bukan `returned`.
+  /// Perbarui pengajuan mutasi yang dikembalikan ke Pemohon.
   Future<Result<Mutation>> updateMutation({
     required String mutationId,
     required String targetLocation,
@@ -55,52 +57,51 @@ abstract class MutationRepository {
   /// Ambil detail satu mutasi berdasarkan ID.
   Future<Result<Mutation>> getMutationById(String id);
 
-  /// Ambil semua daftar mutasi (untuk kebutuhan verifikasi Operator / manajemen).
+  /// Ambil semua daftar mutasi.
+  ///
+  /// Digunakan oleh Operator untuk melihat seluruh pengajuan.
   Future<Result<List<Mutation>>> getAllMutations();
 
-  /// Verifikasi mutasi oleh Operator (status berubah menjadi waitingKabagApproval).
+  /// Verifikasi mutasi oleh Operator.
   Future<Result<Mutation>> verifyMutation({
     required String mutationId,
     required String operatorName,
   });
 
-  /// Kembalikan pengajuan mutasi ke Pemohon dengan alasan pengembalian (status berubah menjadi returned).
+  /// Kembalikan pengajuan mutasi ke Pemohon.
   Future<Result<Mutation>> returnMutation({
     required String mutationId,
     required String reason,
     required String operatorName,
   });
 
-  /// Persetujuan mutasi oleh Kabag Aset (status berubah menjadi approved).
+  /// Persetujuan mutasi oleh Kabag Aset.
   Future<Result<Mutation>> approveMutationKabag({
     required String mutationId,
     required String kabagName,
   });
 
-  /// Penolakan mutasi oleh Kabag Aset dengan alasan (status berubah menjadi rejected).
+  /// Penolakan mutasi oleh Kabag Aset.
   Future<Result<Mutation>> rejectMutationKabag({
     required String mutationId,
     required String reason,
     required String kabagName,
   });
 
-  /// Persetujuan mutasi oleh Kadiv (status berubah menjadi approved / menunggu update aset).
+  /// Persetujuan mutasi oleh Kadiv.
   Future<Result<Mutation>> approveMutationKadiv({
     required String mutationId,
     required String kadivName,
   });
 
-  /// Penolakan mutasi oleh Kadiv dengan alasan (status berubah menjadi rejected).
+  /// Penolakan mutasi oleh Kadiv.
   Future<Result<Mutation>> rejectMutationKadiv({
     required String mutationId,
     required String reason,
     required String kadivName,
   });
 
-  /// Konfirmasi mutasi oleh Pemohon (status berubah menjadi completed).
-  ///
-  /// Hanya valid jika status saat ini adalah [MutationStatus.pendingConfirmation].
-  /// Sumber: ROLE-FLOW.md §3, SCREEN-SPEC.md REQ-009.
+  /// Konfirmasi mutasi oleh Pemohon.
   Future<Result<Mutation>> confirmMutation({
     required String mutationId,
     required String confirmedBy,
