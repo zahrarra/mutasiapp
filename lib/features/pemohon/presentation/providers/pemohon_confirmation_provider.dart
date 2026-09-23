@@ -122,6 +122,53 @@ class PemohonConfirmationActionNotifier
     return false;
   }
 
+  /// Mengembalikan mutasi untuk diperbaiki Pemohon karena kondisi tidak sesuai.
+  /// Status diubah menjadi [MutationStatus.returned] dengan alasan perbaikan.
+  Future<bool> returnForRevision({
+    required String mutationId,
+    required String reason,
+  }) async {
+    final authState = ref.read(authStateProvider);
+    final pemohonName = authState.user?.name ?? 'Pemohon';
+
+    state = state.copyWith(
+      isLoading: true,
+      clearError: true,
+      clearSuccess: true,
+    );
+
+    final repo = ref.read(mutationRepositoryProvider);
+    final result = await repo.returnMutation(
+      mutationId: mutationId,
+      reason: reason,
+      operatorName: pemohonName,
+    );
+
+    if (result is Success<Mutation>) {
+      state = PemohonConfirmationActionState(
+        isLoading: false,
+        successMessage: 'Pengajuan dikembalikan untuk perbaikan data.',
+        result: result.data,
+      );
+      ref.invalidate(mutationListProvider);
+      ref.invalidate(mutationDetailProvider(mutationId));
+      ref.invalidate(pendingConfirmationsProvider);
+      return true;
+    } else if (result is AppFailure<Mutation>) {
+      state = PemohonConfirmationActionState(
+        isLoading: false,
+        error: result.failure.userMessage,
+      );
+      return false;
+    }
+
+    state = const PemohonConfirmationActionState(
+      isLoading: false,
+      error: 'Terjadi kesalahan sistem saat memproses perbaikan.',
+    );
+    return false;
+  }
+
   void reset() {
     state = const PemohonConfirmationActionState();
   }

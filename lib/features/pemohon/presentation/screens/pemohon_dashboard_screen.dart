@@ -9,8 +9,10 @@ import 'package:go_router/go_router.dart';
 
 import '../../../../app/router/route_names.dart';
 import '../../../auth/presentation/providers/auth_provider.dart';
+import '../../../mutation/domain/entities/mutation.dart';
 import '../../../mutation/domain/entities/mutation_status.dart';
 import '../../../mutation/presentation/providers/mutation_provider.dart';
+import '../widgets/mutation_filter_bottom_sheet.dart';
 
 /// Warna mengikuti mockup dashboard Pemohon.
 class _C {
@@ -43,6 +45,8 @@ class _PemohonDashboardScreenState
     extends ConsumerState<PemohonDashboardScreen> {
   final _searchController = TextEditingController();
 
+  MutationStatus? _dashboardFilterStatus;
+
   @override
   void dispose() {
     _searchController.dispose();
@@ -54,7 +58,7 @@ class _PemohonDashboardScreenState
   }
 
   void _goMutasiList() {
-    context.go(RouteNames.pemohonMutasiPath);
+    context.push(RouteNames.pemohonMutasiPath);
   }
 
   void _goNotifications() {
@@ -63,6 +67,27 @@ class _PemohonDashboardScreenState
 
   void _goProfile() {
     context.push(RouteNames.pemohonProfilePath);
+  }
+
+  Future<void> _openDashboardFilter(List<Mutation> list) async {
+    final Map<MutationStatus?, int> counts = {
+      null: list.length,
+    };
+    for (final s in MutationStatus.values) {
+      counts[s] = list.where((m) => m.status == s).length;
+    }
+
+    final selected = await showMutationFilterBottomSheet(
+      context: context,
+      currentStatus: _dashboardFilterStatus,
+      counts: counts,
+    );
+
+    if (mounted) {
+      setState(() {
+        _dashboardFilterStatus = selected;
+      });
+    }
   }
 
   Color _statusColor(MutationStatus? s) {
@@ -419,19 +444,71 @@ class _PemohonDashboardScreenState
                           ),
                           child: IconButton(
                             onPressed: () {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(
-                                  content: Text('Filter segera tersedia'),
-                                  duration: Duration(seconds: 1),
-                                ),
-                              );
+                              mutationsAsync.whenData((list) {
+                                _openDashboardFilter(list);
+                              });
                             },
-                            icon: const Icon(Icons.tune, size: 20),
-                            color: _C.textPrimary,
+                            tooltip: 'Filter Status',
+                            icon: Icon(
+                              Icons.tune,
+                              size: 20,
+                              color: _dashboardFilterStatus != null
+                                  ? _C.primaryContainer
+                                  : _C.textPrimary,
+                            ),
                           ),
                         ),
                       ],
                     ),
+
+                    if (_dashboardFilterStatus != null) ...[
+                      const SizedBox(height: 10),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 6,
+                        ),
+                        decoration: BoxDecoration(
+                          color: _dashboardFilterStatus!.color
+                              .withValues(alpha: 0.12),
+                          borderRadius: BorderRadius.circular(16),
+                          border: Border.all(
+                            color: _dashboardFilterStatus!.color
+                                .withValues(alpha: 0.3),
+                          ),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(
+                              Icons.filter_alt,
+                              size: 14,
+                              color: _dashboardFilterStatus!.color,
+                            ),
+                            const SizedBox(width: 6),
+                            Text(
+                              'Filter: ${_dashboardFilterStatus!.displayName}',
+                              style: TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w600,
+                                color: _dashboardFilterStatus!.color,
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            InkWell(
+                              onTap: () => setState(
+                                () => _dashboardFilterStatus = null,
+                              ),
+                              child: Icon(
+                                Icons.close,
+                                size: 14,
+                                color: _dashboardFilterStatus!.color,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
 
                     const SizedBox(height: 20),
 
@@ -556,14 +633,21 @@ class _PemohonDashboardScreenState
 
                     mutationsAsync.when(
                       data: (list) {
-                        final recent = list.take(5).toList();
+                        final filteredList = _dashboardFilterStatus != null
+                            ? list
+                                .where((m) => m.status == _dashboardFilterStatus)
+                                .toList()
+                            : list;
+                        final recent = filteredList.take(5).toList();
 
                         if (recent.isEmpty) {
-                          return const Padding(
-                            padding: EdgeInsets.symmetric(vertical: 16),
+                          return Padding(
+                            padding: const EdgeInsets.symmetric(vertical: 16),
                             child: Text(
-                              'Belum ada pengajuan',
-                              style: TextStyle(
+                              _dashboardFilterStatus != null
+                                  ? 'Tidak ada pengajuan dengan status "${_dashboardFilterStatus!.displayName}"'
+                                  : 'Belum ada pengajuan',
+                              style: const TextStyle(
                                 fontSize: 13,
                                 color: _C.textSecondary,
                               ),

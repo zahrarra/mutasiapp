@@ -7,6 +7,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../../app/router/route_names.dart';
 import '../../../../app/theme/app_colors.dart';
 import '../../../../app/theme/app_spacing.dart';
 import '../../../mutation/domain/entities/mutation.dart';
@@ -908,26 +909,138 @@ class _PemohonConfirmationScreenState
   }
 
   void _onTidakSesuaiTap(BuildContext context) {
-    // Flow "Tidak Sesuai" belum dikunci oleh PRD — hanya tampilkan dialog info.
-    // Sumber: SCREEN-SPEC.md REQ-009: "Flow setelah 'Tidak Sesuai' belum dikunci karena merupakan Open Question pada PRD."
+    final reasonController = TextEditingController();
+    final formKey = GlobalKey<FormState>();
+
     showDialog<void>(
       context: context,
+      barrierDismissible: false,
       builder: (ctx) => AlertDialog(
-        title: const Row(
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(AppRadius.card),
+        ),
+        title: Row(
           children: [
-            Icon(Icons.info_outline, color: AppColors.warning),
-            SizedBox(width: AppSpacing.sm),
-            Text('Informasi'),
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: AppColors.warning.withValues(alpha: 0.12),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(
+                Icons.assignment_return_outlined,
+                color: AppColors.warning,
+                size: 22,
+              ),
+            ),
+            const SizedBox(width: AppSpacing.sm),
+            const Expanded(
+              child: Text(
+                'Mutasi Tidak Sesuai',
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: AppColors.textPrimary,
+                ),
+              ),
+            ),
           ],
         ),
-        content: const Text(
-          'Tindak lanjut untuk kondisi "Tidak Sesuai" sedang dalam proses finalisasi.\n\n'
-          'Silakan hubungi Staff Aset atau atasan Anda untuk penanganan lebih lanjut.',
+        content: Form(
+          key: formKey,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                'Silakan berikan alasan atau catatan ketidaksesuaian aset/lokasi yang diterima agar pengajuan dapat diperbaiki.',
+                style: TextStyle(
+                  fontSize: 13,
+                  color: AppColors.textSecondary,
+                  height: 1.4,
+                ),
+              ),
+              const SizedBox(height: AppSpacing.md),
+              TextFormField(
+                controller: reasonController,
+                maxLines: 3,
+                decoration: InputDecoration(
+                  labelText: 'Alasan / Keterangan *',
+                  hintText: 'Jelaskan ketidaksesuaian...',
+                  hintStyle: const TextStyle(
+                    fontSize: 13,
+                    color: AppColors.textSecondary,
+                  ),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(AppRadius.card),
+                  ),
+                  filled: true,
+                  fillColor: AppColors.surface,
+                ),
+                validator: (val) {
+                  if (val == null || val.trim().isEmpty) {
+                    return 'Alasan ketidaksesuaian wajib diisi';
+                  }
+                  return null;
+                },
+              ),
+            ],
+          ),
         ),
         actions: [
-          ElevatedButton(
+          TextButton(
             onPressed: () => Navigator.of(ctx).pop(),
-            child: const Text('Mengerti'),
+            child: const Text('Batal'),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              if (formKey.currentState?.validate() ?? false) {
+                final reason = reasonController.text.trim();
+                Navigator.of(ctx).pop();
+
+                final success = await ref
+                    .read(pemohonConfirmationActionProvider.notifier)
+                    .returnForRevision(
+                      mutationId: widget.mutationId,
+                      reason: reason,
+                    );
+
+                if (!mounted) return;
+
+                if (success) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Pengajuan dikembalikan untuk perbaikan data.'),
+                      backgroundColor: AppColors.success,
+                    ),
+                  );
+
+                  // Navigasi langsung ke layar perbaikan pengajuan (edit)
+                  context.go(
+                    RouteNames.pemohonMutasiEditPath.replaceFirst(
+                      ':id',
+                      widget.mutationId,
+                    ),
+                  );
+                } else {
+                  final err = ref.read(pemohonConfirmationActionProvider).error;
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text(err ?? 'Gagal memproses perbaikan.'),
+                      backgroundColor: AppColors.error,
+                    ),
+                  );
+                }
+              }
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.primary,
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(AppRadius.card),
+              ),
+            ),
+            child: const Text('Perbaiki Pengajuan'),
           ),
         ],
       ),

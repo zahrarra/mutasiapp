@@ -230,6 +230,9 @@ class SubmitMutationNotifier extends StateNotifier<SubmitMutationState> {
 
       state = SubmitMutationState(isLoading: false, result: result.data);
 
+      // Invalidate list agar mutationListProvider langsung diperbarui dengan data baru
+      ref.invalidate(mutationListProvider);
+
       return result.data;
     }
 

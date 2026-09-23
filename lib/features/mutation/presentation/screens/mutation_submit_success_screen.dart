@@ -7,21 +7,23 @@
 // hasil generate server dan navigasi kembali ke Mutasi Saya / Dashboard.
 
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../app/router/route_names.dart';
 import '../../../../app/theme/app_colors.dart';
 import '../../../../app/theme/app_spacing.dart';
 import '../../../../core/widgets/custom_button.dart';
+import '../providers/mutation_provider.dart';
 
 /// Screen konfirmasi sukses setelah pengajuan mutasi berhasil dikirim.
-class MutationSubmitSuccessScreen extends StatelessWidget {
+class MutationSubmitSuccessScreen extends ConsumerWidget {
   final String? ticketNumber;
 
   const MutationSubmitSuccessScreen({super.key, this.ticketNumber});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     return PopScope(
       canPop: false,
       child: Scaffold(
@@ -94,14 +96,20 @@ class MutationSubmitSuccessScreen extends StatelessWidget {
                 CustomButton(
                   label: 'Lihat Mutasi Saya',
                   width: double.infinity,
-                  onPressed: () => context.go(RouteNames.pemohonMutasiPath),
+                  onPressed: () {
+                    ref.invalidate(mutationListProvider);
+                    context.go(RouteNames.pemohonMutasiPath);
+                  },
                 ),
                 const SizedBox(height: AppSpacing.sm),
                 CustomButton(
                   label: 'Kembali ke Dashboard',
                   variant: ButtonVariant.text,
                   width: double.infinity,
-                  onPressed: () => context.go(RouteNames.pemohonDashboardPath),
+                  onPressed: () {
+                    ref.invalidate(mutationListProvider);
+                    context.go(RouteNames.pemohonDashboardPath);
+                  },
                 ),
               ],
             ),

@@ -31,6 +31,17 @@ class MutationListScreen extends ConsumerWidget {
       backgroundColor: AppColors.background,
       appBar: AppBar(
         title: const Text('Mutasi Saya'),
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back),
+          tooltip: 'Kembali',
+          onPressed: () {
+            if (context.canPop()) {
+              context.pop();
+            } else {
+              context.go(RouteNames.pemohonDashboardPath);
+            }
+          },
+        ),
       ),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () => context.push(RouteNames.pemohonMutasiCreatePath),
