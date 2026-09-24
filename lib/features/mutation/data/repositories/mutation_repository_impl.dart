@@ -125,6 +125,7 @@ class MutationRepositoryImpl implements MutationRepository {
           id: 'mut_001',
           ticketNumber: 'ELEKTRONIK-2026-00124',
           asset: asset1,
+          applicantId: 'usr_pemohon',
           applicantName: 'Rina',
           currentLocation: 'Kantor Pusat',
           targetLocation: 'Cabang Surabaya',
@@ -140,6 +141,7 @@ class MutationRepositoryImpl implements MutationRepository {
           id: 'mut_002',
           ticketNumber: 'KENDARAAN-2026-00042',
           asset: asset2,
+          applicantId: 'usr_budi',
           applicantName: 'Budi Santoso',
           currentLocation: 'Kantor Pusat',
           targetLocation: 'Cabang Bandung',
@@ -155,6 +157,7 @@ class MutationRepositoryImpl implements MutationRepository {
           id: 'mut_003',
           ticketNumber: 'ELEKTRONIK-2026-00105',
           asset: asset3,
+          applicantId: 'usr_pemohon',
           applicantName: 'Andi Wijaya',
           currentLocation: 'Cabang Jakarta',
           targetLocation: 'Kantor Pusat',
@@ -173,6 +176,7 @@ class MutationRepositoryImpl implements MutationRepository {
           id: 'mut_004',
           ticketNumber: 'FURNITUR-2026-00018',
           asset: asset4,
+          applicantId: 'usr_dewi',
           applicantName: 'Dewi Lestari',
           currentLocation: 'Kantor Pusat',
           targetLocation: 'Cabang Semarang',
@@ -200,6 +204,7 @@ class MutationRepositoryImpl implements MutationRepository {
             condition: 'Sangat Baik',
             acquisitionYear: 2024,
           ),
+          applicantId: 'usr_hendra',
           applicantName: 'Hendra Setiawan',
           currentLocation: 'Data Center Pusat',
           targetLocation: 'Data Center Surabaya (DRC)',
@@ -231,6 +236,7 @@ class MutationRepositoryImpl implements MutationRepository {
             condition: 'Sangat Baik',
             acquisitionYear: 2023,
           ),
+          applicantId: 'usr_pemohon',
           applicantName: 'Rina',
           currentLocation: 'Kantor Pusat',
           targetLocation: 'Cabang Semarang',
@@ -244,6 +250,38 @@ class MutationRepositoryImpl implements MutationRepository {
           approvedBy: 'H. M. Yusuf (Kabag Aset)',
           approvedAt: DateTime.now().subtract(const Duration(days: 2)),
           createdAt: DateTime.now().subtract(const Duration(days: 4)),
+        ),
+
+        // Seed data mut_007:
+        // Menunggu pembaruan aset oleh Staff Aset (approved)
+        Mutation(
+          id: 'mut_007',
+          ticketNumber: 'ELEKTRONIK-2026-00077',
+          asset: const Asset(
+            id: 'AST-00077',
+            assetCode: 'AST-ELK-2024-0077',
+            name: 'Laptop Dell Latitude 5430',
+            category: catElk,
+            location: 'Kantor Pusat — IT Support',
+            pic: 'Rizky Pratama',
+            status: AssetStatus.inMutation,
+            condition: 'Baik',
+            acquisitionYear: 2024,
+          ),
+          applicantId: 'usr_pemohon',
+          applicantName: 'Rina Pemohon',
+          currentLocation: 'Kantor Pusat — IT Support',
+          targetLocation: 'Cabang Solo — Operasional',
+          currentPic: 'Rizky Pratama',
+          targetPic: 'Agus Santoso',
+          reason: 'Dukungan operasional staf baru di Cabang Solo.',
+          documentName: 'Surat_Penugasan_Solo.pdf',
+          status: MutationStatus.approved,
+          verifiedBy: 'Operator Aset',
+          verifiedAt: DateTime.now().subtract(const Duration(days: 1)),
+          approvedBy: 'H. M. Yusuf (Kabag Aset)',
+          approvedAt: DateTime.now().subtract(const Duration(hours: 3)),
+          createdAt: DateTime.now().subtract(const Duration(days: 2)),
         ),
       ]);
     }
@@ -349,10 +387,11 @@ class MutationRepositoryImpl implements MutationRepository {
       id: mutationId,
       ticketNumber: ticketNumber,
       asset: asset,
-      applicantName: 'Pemohon',
+      applicantId: params.applicantId,
+      applicantName: params.applicantName ?? 'Pemohon',
       currentLocation: sourceLocation,
       targetLocation: targetLocation,
-      currentPic: '-',
+      currentPic: params.currentPic ?? '-',
       targetPic: targetPic,
       reason: reason,
       documentName: params.documentName,
@@ -436,7 +475,17 @@ class MutationRepositoryImpl implements MutationRepository {
   Future<Result<List<Mutation>>> getMutationsByUser(String userId) async {
     await Future.delayed(const Duration(milliseconds: 200));
 
-    return Result.success(List.unmodifiable(_mutations.reversed.toList()));
+    final userMutations = _mutations.where((m) {
+      if (m.applicantId == userId) return true;
+      // Mendukung alias ID pemohon standar (usr_pemohon, usr_101, user_pemohon)
+      if ((userId == 'usr_pemohon' || userId == 'usr_101' || userId == 'user_pemohon') &&
+          m.applicantId == 'usr_pemohon') {
+        return true;
+      }
+      return false;
+    }).toList();
+
+    return Result.success(List.unmodifiable(userMutations.reversed.toList()));
   }
 
   @override
@@ -523,6 +572,7 @@ class MutationRepositoryImpl implements MutationRepository {
   Future<Result<Mutation>> approveMutationKabag({
     required String mutationId,
     required String kabagName,
+    required bool requiresKadivApproval,
   }) async {
     await Future.delayed(const Duration(milliseconds: 300));
 
@@ -536,8 +586,15 @@ class MutationRepositoryImpl implements MutationRepository {
 
     final current = _mutations[index];
 
+    // Jika membutuhkan approval Kadiv → waitingKadivApproval
+    // Jika tidak → approved (langsung ke antrian Staff Aset)
+    final nextStatus = requiresKadivApproval
+        ? MutationStatus.waitingKadivApproval
+        : MutationStatus.approved;
+
     final updated = current.copyWith(
-      status: MutationStatus.approved,
+      status: nextStatus,
+      requiresKadivApproval: requiresKadivApproval,
       approvedAt: DateTime.now(),
       approvedBy: kabagName,
     );
@@ -655,10 +712,77 @@ class MutationRepositoryImpl implements MutationRepository {
 
     final current = _mutations[index];
 
-    final updated = current.copyWith(status: MutationStatus.completed);
+    final updatedAsset = current.asset.copyWith(
+      status: AssetStatus.available,
+      location: current.targetLocation,
+      pic: current.targetPic,
+    );
+
+    final updated = current.copyWith(
+      asset: updatedAsset,
+      status: MutationStatus.completed,
+    );
 
     _mutations[index] = updated;
 
     return Result.success(updated);
+  }
+
+  @override
+  Future<Result<Mutation>> processStaffAssetUpdate({
+    required String mutationId,
+    required String newLocation,
+    required String newPic,
+    required String staffName,
+  }) async {
+    await Future.delayed(const Duration(milliseconds: 300));
+
+    final index = _mutations.indexWhere((m) => m.id == mutationId);
+    if (index == -1) {
+      return const Result.failure(
+        NotFoundFailure(message: 'Pengajuan mutasi tidak ditemukan.'),
+      );
+    }
+
+    final current = _mutations[index];
+
+    if (current.status != MutationStatus.approved) {
+      return const Result.failure(
+        ValidationFailure(
+          message:
+              'Hanya mutasi berstatus Disetujui yang dapat diperbarui oleh Staff Aset.',
+        ),
+      );
+    }
+
+    // 1. Update data layer Asset & riwayat mutasi
+    final assetUpdateResult = await assetRepository.updateAssetLocationAndPic(
+      assetId: current.asset.id,
+      newLocation: newLocation,
+      newPic: newPic,
+      ticketNumber: current.ticketNumber,
+      updatedBy: staffName,
+    );
+
+    final updatedAsset = assetUpdateResult is Success<Asset>
+        ? assetUpdateResult.data
+        : current.asset.copyWith(
+            location: newLocation,
+            pic: newPic,
+          );
+
+    // 2. Ubah status mutation menjadi pendingConfirmation
+    final updatedMutation = current.copyWith(
+      asset: updatedAsset,
+      targetLocation: newLocation,
+      targetPic: newPic,
+      status: MutationStatus.pendingConfirmation,
+      staffUpdatedAt: DateTime.now(),
+      staffUpdatedBy: staffName,
+    );
+
+    _mutations[index] = updatedMutation;
+
+    return Result.success(updatedMutation);
   }
 }

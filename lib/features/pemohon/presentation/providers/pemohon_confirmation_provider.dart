@@ -10,6 +10,8 @@ import '../../../mutation/domain/entities/mutation.dart';
 import '../../../mutation/domain/entities/mutation_status.dart';
 import '../../../mutation/domain/usecases/confirm_mutation_usecase.dart';
 import '../../../mutation/presentation/providers/mutation_provider.dart';
+import '../../../notification/domain/entities/notification_item.dart';
+import '../../../notification/presentation/providers/notification_provider.dart';
 
 // ─── Use Case Provider ────────────────────────────────────────────────────────
 
@@ -104,8 +106,34 @@ class PemohonConfirmationActionNotifier
         successMessage: 'Konfirmasi berhasil. Mutasi aset telah selesai.',
         result: result.data,
       );
-      // Refresh daftar mutasi
+      // Refresh daftar mutasi dan detail
       ref.invalidate(mutationListProvider);
+      ref.invalidate(mutationDetailProvider(mutationId));
+      ref.invalidate(pendingConfirmationsProvider);
+
+      // Perbarui notifikasi terkait
+      try {
+        final notifNotifier = ref.read(notificationProvider.notifier);
+        final notifs = ref.read(notificationProvider);
+        for (final n in notifs) {
+          if (n.relatedMutationId == mutationId && !n.isRead) {
+            notifNotifier.markAsRead(n.id);
+          }
+        }
+        notifNotifier.addNotification(
+          NotificationItem(
+            id: 'notif_${DateTime.now().millisecondsSinceEpoch}',
+            title: 'Mutasi Selesai',
+            message:
+                'Mutasi aset ${result.data.ticketNumber} telah dikonfirmasi dan berstatus Selesai.',
+            type: NotificationType.success,
+            createdAt: DateTime.now(),
+            isRead: false,
+            relatedMutationId: mutationId,
+          ),
+        );
+      } catch (_) {}
+
       return true;
     } else if (result is AppFailure<Mutation>) {
       state = PemohonConfirmationActionState(
@@ -153,6 +181,30 @@ class PemohonConfirmationActionNotifier
       ref.invalidate(mutationListProvider);
       ref.invalidate(mutationDetailProvider(mutationId));
       ref.invalidate(pendingConfirmationsProvider);
+
+      // Perbarui notifikasi terkait
+      try {
+        final notifNotifier = ref.read(notificationProvider.notifier);
+        final notifs = ref.read(notificationProvider);
+        for (final n in notifs) {
+          if (n.relatedMutationId == mutationId && !n.isRead) {
+            notifNotifier.markAsRead(n.id);
+          }
+        }
+        notifNotifier.addNotification(
+          NotificationItem(
+            id: 'notif_${DateTime.now().millisecondsSinceEpoch}',
+            title: 'Pengajuan Dikembalikan',
+            message:
+                'Pengajuan mutasi ${result.data.ticketNumber} dikembalikan untuk perbaikan data: $reason',
+            type: NotificationType.warning,
+            createdAt: DateTime.now(),
+            isRead: false,
+            relatedMutationId: mutationId,
+          ),
+        );
+      } catch (_) {}
+
       return true;
     } else if (result is AppFailure<Mutation>) {
       state = PemohonConfirmationActionState(

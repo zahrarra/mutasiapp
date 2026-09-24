@@ -9,7 +9,10 @@ import 'package:go_router/go_router.dart';
 import '../../../../app/router/route_names.dart';
 import '../../../../app/theme/app_colors.dart';
 import '../../../../app/theme/app_spacing.dart';
+import '../../../../core/widgets/searchable_picker_bottom_sheet.dart';
+import '../../../auth/presentation/providers/auth_provider.dart';
 import '../../../mutation/domain/repositories/mutation_repository.dart';
+import '../../../mutation/presentation/providers/mutation_form_provider.dart';
 import '../../../mutation/presentation/providers/mutation_provider.dart';
 
 class PemohonCreateMutationScreen extends ConsumerStatefulWidget {
@@ -26,6 +29,7 @@ class _PemohonCreateMutationScreenState
   final _assetNameController = TextEditingController();
   final _assetCodeController = TextEditingController();
   final _sourceLocationController = TextEditingController();
+  final _currentPicController = TextEditingController();
   final _locationController = TextEditingController();
   final _picController = TextEditingController();
   final _reasonController = TextEditingController();
@@ -36,6 +40,7 @@ class _PemohonCreateMutationScreenState
     _assetNameController.dispose();
     _assetCodeController.dispose();
     _sourceLocationController.dispose();
+    _currentPicController.dispose();
     _locationController.dispose();
     _picController.dispose();
     _reasonController.dispose();
@@ -45,11 +50,16 @@ class _PemohonCreateMutationScreenState
   Future<void> _submit() async {
     if (!(_formKey.currentState?.validate() ?? false)) return;
 
+    final user = ref.read(authStateProvider).user;
+
     final params = SubmitMutationParams(
+      applicantId: user?.id,
+      applicantName: user?.name,
       assetId: _assetCodeController.text.trim(),
       assetName: _assetNameController.text.trim(),
       sourceLocation: _sourceLocationController.text.trim(),
       targetLocation: _locationController.text.trim(),
+      currentPic: _currentPicController.text.trim(),
       targetPic: _picController.text.trim(),
       reason: _reasonController.text.trim(),
       documentName: _documentName,
@@ -62,6 +72,7 @@ class _PemohonCreateMutationScreenState
     if (!mounted) return;
 
     if (mutation != null) {
+      ref.invalidate(mutationListProvider);
       context.go(
         '${RouteNames.pemohonSubmitSuccessPath}'
         '?ticket=${Uri.encodeComponent(mutation.ticketNumber)}'
@@ -75,9 +86,69 @@ class _PemohonCreateMutationScreenState
     }
   }
 
+  Future<void> _pickSourceLocation(List<String> locations) async {
+    final selected = await SearchablePickerBottomSheet.show(
+      context: context,
+      title: 'Pilih Lokasi Asal',
+      items: locations,
+      selectedItem: _sourceLocationController.text.trim().isEmpty
+          ? null
+          : _sourceLocationController.text.trim(),
+      searchHint: 'Cari lokasi asal...',
+    );
+    if (selected != null) {
+      setState(() {
+        _sourceLocationController.text = selected;
+      });
+    }
+  }
+
+  Future<void> _pickTargetLocation(List<String> locations) async {
+    final selected = await SearchablePickerBottomSheet.show(
+      context: context,
+      title: 'Pilih Lokasi / Cabang Tujuan',
+      items: locations,
+      selectedItem: _locationController.text.trim().isEmpty
+          ? null
+          : _locationController.text.trim(),
+      searchHint: 'Cari cabang tujuan...',
+    );
+    if (selected != null) {
+      setState(() {
+        _locationController.text = selected;
+      });
+    }
+  }
+
+  Future<void> _pickPic(List<String> pics) async {
+    final currentPic = _currentPicController.text.trim();
+    final quickActions = <String>[];
+    if (currentPic.isNotEmpty) {
+      quickActions.add(currentPic);
+    }
+
+    final selected = await SearchablePickerBottomSheet.show(
+      context: context,
+      title: 'Pilih Penanggung Jawab (PIC)',
+      items: pics,
+      selectedItem: _picController.text.trim().isEmpty
+          ? null
+          : _picController.text.trim(),
+      searchHint: 'Cari nama PIC...',
+      quickActions: quickActions,
+    );
+    if (selected != null) {
+      setState(() {
+        _picController.text = selected;
+      });
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final submitState = ref.watch(submitMutationProvider);
+    final availableLocations = ref.watch(availableLocationsProvider);
+    final availablePics = ref.watch(availablePicsProvider);
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -141,9 +212,26 @@ class _PemohonCreateMutationScreenState
               const SizedBox(height: AppSpacing.formFieldGap),
               TextFormField(
                 controller: _sourceLocationController,
-                decoration: const InputDecoration(
+                decoration: InputDecoration(
                   labelText: 'Lokasi Asal *',
-                  hintText: 'Contoh: Cabang Palu',
+                  hintText: 'Pilih lokasi asal',
+                  suffixIcon: IconButton(
+                    icon: const Icon(Icons.arrow_drop_down),
+                    onPressed: () => _pickSourceLocation(availableLocations),
+                  ),
+                  border: const OutlineInputBorder(),
+                  filled: true,
+                  fillColor: AppColors.surface,
+                ),
+                validator: (v) =>
+                    (v == null || v.trim().isEmpty) ? 'Wajib diisi' : null,
+              ),
+              const SizedBox(height: AppSpacing.formFieldGap),
+              TextFormField(
+                controller: _currentPicController,
+                decoration: const InputDecoration(
+                  labelText: 'Nama Pengguna/Pemakai Aset Lama *',
+                  hintText: 'Contoh: Budi Santoso (IT Dept)',
                   border: OutlineInputBorder(),
                   filled: true,
                   fillColor: AppColors.surface,
@@ -163,9 +251,14 @@ class _PemohonCreateMutationScreenState
               const SizedBox(height: AppSpacing.sm),
               TextFormField(
                 controller: _locationController,
-                decoration: const InputDecoration(
+                decoration: InputDecoration(
                   labelText: 'Lokasi / Cabang Tujuan *',
-                  border: OutlineInputBorder(),
+                  hintText: 'Pilih cabang tujuan',
+                  suffixIcon: IconButton(
+                    icon: const Icon(Icons.arrow_drop_down),
+                    onPressed: () => _pickTargetLocation(availableLocations),
+                  ),
+                  border: const OutlineInputBorder(),
                   filled: true,
                   fillColor: AppColors.surface,
                 ),
@@ -175,15 +268,38 @@ class _PemohonCreateMutationScreenState
               const SizedBox(height: AppSpacing.formFieldGap),
               TextFormField(
                 controller: _picController,
-                decoration: const InputDecoration(
-                  labelText: 'Penanggung Jawab (PIC) Baru *',
-                  border: OutlineInputBorder(),
+                decoration: InputDecoration(
+                  labelText: 'Penanggung Jawab (PIC) Tujuan *',
+                  hintText: 'Pilih PIC lama atau PIC baru',
+                  suffixIcon: IconButton(
+                    icon: const Icon(Icons.arrow_drop_down),
+                    onPressed: () => _pickPic(availablePics),
+                  ),
+                  border: const OutlineInputBorder(),
                   filled: true,
                   fillColor: AppColors.surface,
                 ),
                 validator: (v) =>
                     (v == null || v.trim().isEmpty) ? 'Wajib diisi' : null,
               ),
+              if (_currentPicController.text.trim().isNotEmpty) ...[
+                const SizedBox(height: AppSpacing.xs),
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: ActionChip(
+                    avatar: const Icon(Icons.history, size: 16),
+                    label: Text(
+                      'Sama dengan Pemakai Lama: ${_currentPicController.text.trim()}',
+                      style: const TextStyle(fontSize: 12),
+                    ),
+                    onPressed: () {
+                      setState(() {
+                        _picController.text = _currentPicController.text.trim();
+                      });
+                    },
+                  ),
+                ),
+              ],
               const SizedBox(height: AppSpacing.formFieldGap),
               TextFormField(
                 controller: _reasonController,

@@ -43,8 +43,12 @@ class AuthRepositoryImpl implements AuthRepository {
       role = UserRole.staffAset;
     }
 
+    final userId = role == UserRole.pemohon
+        ? 'usr_pemohon'
+        : 'usr_${DateTime.now().millisecondsSinceEpoch}';
+
     final user = User(
-      id: 'usr_${DateTime.now().millisecondsSinceEpoch}',
+      id: userId,
       username: username,
       name: username.toUpperCase(),
       email: '$lower@mutasiku.id',

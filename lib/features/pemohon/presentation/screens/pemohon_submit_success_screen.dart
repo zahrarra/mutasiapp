@@ -92,9 +92,13 @@ class PemohonSubmitSuccessScreen extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: AppSpacing.sm),
-              TextButton(
-                onPressed: () => context.go(RouteNames.pemohonDashboardPath),
-                child: const Text('Kembali ke Beranda'),
+              SizedBox(
+                width: double.infinity,
+                height: 48,
+                child: OutlinedButton(
+                  onPressed: () => context.go(RouteNames.pemohonMutasiPath),
+                  child: const Text('Lihat Mutasi Saya'),
+                ),
               ),
             ],
           ),

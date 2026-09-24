@@ -215,6 +215,8 @@ class VerificationActionNotifier extends StateNotifier<VerificationActionState> 
       );
       // Invalidate list agar ter-refresh
       ref.invalidate(operatorAllMutationsProvider);
+      ref.invalidate(mutationDetailProvider(mutationId));
+      ref.invalidate(mutationListProvider);
       return true;
     } else if (result is AppFailure<Mutation>) {
       state = VerificationActionState(
@@ -258,6 +260,8 @@ class VerificationActionNotifier extends StateNotifier<VerificationActionState> 
         result: result.data,
       );
       ref.invalidate(operatorAllMutationsProvider);
+      ref.invalidate(mutationDetailProvider(mutationId));
+      ref.invalidate(mutationListProvider);
       return true;
     } else if (result is AppFailure<Mutation>) {
       state = VerificationActionState(

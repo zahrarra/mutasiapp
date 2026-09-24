@@ -6,6 +6,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:go_router/go_router.dart';
 import 'package:mutasiku/core/errors/result.dart';
 import 'package:mutasiku/features/asset/data/repositories/asset_repository_impl.dart';
 import 'package:mutasiku/features/auth/domain/entities/user.dart';
@@ -19,7 +20,10 @@ import 'package:mutasiku/features/kadiv/presentation/screens/kadiv_approvals_scr
 import 'package:mutasiku/features/kadiv/presentation/screens/kadiv_dashboard_screen.dart';
 import 'package:mutasiku/features/kadiv/presentation/screens/kadiv_reject_form_screen.dart';
 import 'package:mutasiku/features/mutation/data/repositories/mutation_repository_impl.dart';
+import 'package:mutasiku/features/mutation/domain/entities/mutation.dart';
+import 'package:mutasiku/features/mutation/domain/entities/mutation_status.dart';
 import 'package:mutasiku/features/mutation/presentation/providers/mutation_provider.dart';
+import 'package:mutasiku/features/profile/presentation/screens/profile_screen.dart';
 
 class FakeKadivAuthRepository implements AuthRepository {
   final User? user;
@@ -72,6 +76,26 @@ void main() {
   );
 
   Widget createTestWidget(Widget child) {
+    final router = GoRouter(
+      initialLocation: '/',
+      routes: [
+        GoRoute(
+          path: '/',
+          builder: (context, state) => child,
+        ),
+        GoRoute(
+          path: '/kadiv/approvals',
+          builder: (context, state) =>
+              const Scaffold(body: Text('Approvals List')),
+        ),
+        GoRoute(
+          path: '/kadiv/dashboard',
+          builder: (context, state) =>
+              const Scaffold(body: Text('Dashboard Kadiv')),
+        ),
+      ],
+    );
+
     return ProviderScope(
       overrides: [
         authStateProvider.overrideWith(
@@ -79,8 +103,8 @@ void main() {
         ),
         mutationRepositoryProvider.overrideWithValue(mutationRepository),
       ],
-      child: MaterialApp(
-        home: child,
+      child: MaterialApp.router(
+        routerConfig: router,
       ),
     );
   }
@@ -198,5 +222,121 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Alasan penolakan minimal 5 karakter.'), findsOneWidget);
+  });
+
+  testWidgets(
+      'Kadiv approve flow persists MutationStatus.approved and kadivApprovedBy',
+      (tester) async {
+    await tester.pumpWidget(
+      createTestWidget(
+        const KadivApprovalDetailScreen(mutationId: 'mut_005'),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    // Pastikan tombol setujui ada dan klik
+    final btnApprove = find.byKey(const Key('btn_setujui_approval_kadiv'));
+    expect(btnApprove, findsOneWidget);
+    await tester.tap(btnApprove);
+    await tester.pumpAndSettle();
+
+    // Dialog konfirmasi muncul
+    expect(find.text('Konfirmasi Approval Kadiv'), findsOneWidget);
+    final btnConfirm = find.byKey(const Key('btn_confirm_setujui_kadiv'));
+    expect(btnConfirm, findsOneWidget);
+    await tester.tap(btnConfirm);
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 500));
+    await tester.pump(const Duration(milliseconds: 500));
+
+    // Verifikasi pada repository bahwa status mut_005 berubah menjadi approved
+    Mutation? updatedMutation;
+    await tester.runAsync(() async {
+      final updatedResult = await mutationRepository.getMutationById('mut_005');
+      updatedMutation = updatedResult.dataOrNull;
+    });
+    expect(updatedMutation, isNotNull);
+    expect(updatedMutation!.status, MutationStatus.approved);
+    expect(updatedMutation!.kadivApprovedBy, 'Drs. Ahmad Dahlan (Kadiv)');
+    expect(updatedMutation!.kadivApprovedAt, isNotNull);
+  });
+
+  testWidgets(
+      'Kadiv reject flow persists MutationStatus.rejected with kadivRejectionReason',
+      (tester) async {
+    await tester.pumpWidget(
+      createTestWidget(
+        const KadivRejectFormScreen(mutationId: 'mut_005'),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final inputReason = find.byKey(const Key('input_alasan_penolakan_kadiv'));
+    await tester.enterText(
+        inputReason, 'Aset server utama tidak diizinkan mutasi sebelum pengadaan selesai.');
+    await tester.pumpAndSettle();
+
+    final btnSubmit = find.byKey(const Key('btn_submit_tolak_kadiv'));
+    await tester.tap(btnSubmit);
+    await tester.pumpAndSettle();
+
+    // Dialog konfirmasi muncul
+    expect(find.text('Konfirmasi Penolakan Kadiv'), findsOneWidget);
+    final btnConfirm = find.byKey(const Key('btn_confirm_tolak_kadiv_dialog'));
+    expect(btnConfirm, findsOneWidget);
+    await tester.tap(btnConfirm);
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 500));
+    await tester.pump(const Duration(milliseconds: 500));
+
+    // Verifikasi pada repository bahwa status mut_005 berubah menjadi rejected
+    Mutation? updatedRejectMutation;
+    await tester.runAsync(() async {
+      final updatedResult = await mutationRepository.getMutationById('mut_005');
+      updatedRejectMutation = updatedResult.dataOrNull;
+    });
+    expect(updatedRejectMutation, isNotNull);
+    expect(updatedRejectMutation!.status, MutationStatus.rejected);
+    expect(updatedRejectMutation!.rejectionReason,
+        'Aset server utama tidak diizinkan mutasi sebelum pengadaan selesai.');
+    expect(updatedRejectMutation!.kadivRejectionReason,
+        'Aset server utama tidak diizinkan mutasi sebelum pengadaan selesai.');
+    expect(updatedRejectMutation!.kadivRejectedBy, 'Drs. Ahmad Dahlan (Kadiv)');
+    expect(updatedRejectMutation!.kadivRejectedAt, isNotNull);
+  });
+
+  testWidgets('KadivApprovalsScreen search filters results correctly',
+      (tester) async {
+    await tester.pumpWidget(createTestWidget(const KadivApprovalsScreen()));
+    await tester.pumpAndSettle();
+
+    // Default item ada
+    expect(find.text('ELEKTRONIK-2026-00088'), findsOneWidget);
+
+    // Ketik pencarian yang tidak cocok
+    final searchInput = find.byKey(const Key('input_search_kadiv_approvals'));
+    await tester.enterText(searchInput, 'XYZ-TIDAK-ADA');
+    await tester.pumpAndSettle();
+
+    // Empty state muncul
+    expect(find.text('ELEKTRONIK-2026-00088'), findsNothing);
+    expect(find.text('Tidak Ada Mutasi Menunggu Approval'), findsOneWidget);
+
+    // Bersihkan pencarian -> item muncul lagi
+    await tester.enterText(searchInput, '');
+    await tester.pumpAndSettle();
+    expect(find.text('ELEKTRONIK-2026-00088'), findsOneWidget);
+  });
+
+  testWidgets('ProfileScreen renders Kadiv profile consistently',
+      (tester) async {
+    await tester.pumpWidget(createTestWidget(const ProfileScreen()));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Profil'), findsOneWidget);
+    expect(find.text('Drs. Ahmad Dahlan (Kadiv)'), findsOneWidget);
+    expect(find.text('kadiv@mutasiku.id'), findsOneWidget);
+    expect(find.text('Kadiv'), findsWidgets);
+    expect(find.text('Informasi Akun'), findsOneWidget);
   });
 }

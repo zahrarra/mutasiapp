@@ -16,6 +16,9 @@ class Mutation {
   /// Aset yang dimutasi
   final Asset asset;
 
+  /// ID Pemohon (user login yang mengajukan)
+  final String? applicantId;
+
   /// Nama Pemohon
   final String applicantName;
 
@@ -42,6 +45,10 @@ class Mutation {
 
   /// Catatan / alasan pengembalian jika ditolak/dikembalikan oleh Operator
   final String? returnReason;
+
+  /// Apakah mutasi ini memerlukan approval Kadiv sebelum lanjut ke Staff Aset.
+  /// Ditentukan oleh Kabag Aset saat menyetujui pengajuan.
+  final bool requiresKadivApproval;
 
   /// Catatan / alasan penolakan jika ditolak oleh Kabag Aset
   final String? rejectionReason;
@@ -79,6 +86,12 @@ class Mutation {
   /// Catatan / alasan penolakan jika ditolak oleh Kadiv
   final String? kadivRejectionReason;
 
+  /// Tanggal pembaruan lokasi & PIC fisik dilakukan oleh Staff Aset
+  final DateTime? staffUpdatedAt;
+
+  /// Nama Staff Aset yang melakukan pembaruan
+  final String? staffUpdatedBy;
+
   /// Waktu pembuatan pengajuan
   final DateTime createdAt;
 
@@ -86,6 +99,7 @@ class Mutation {
     required this.id,
     required this.ticketNumber,
     required this.asset,
+    this.applicantId,
     required this.applicantName,
     required this.currentLocation,
     required this.targetLocation,
@@ -95,6 +109,7 @@ class Mutation {
     this.documentName,
     required this.status,
     this.returnReason,
+    this.requiresKadivApproval = false,
     this.rejectionReason,
     this.verifiedAt,
     this.verifiedBy,
@@ -107,6 +122,8 @@ class Mutation {
     this.kadivRejectedAt,
     this.kadivRejectedBy,
     this.kadivRejectionReason,
+    this.staffUpdatedAt,
+    this.staffUpdatedBy,
     required this.createdAt,
   });
 
@@ -114,6 +131,7 @@ class Mutation {
     String? id,
     String? ticketNumber,
     Asset? asset,
+    String? applicantId,
     String? applicantName,
     String? currentLocation,
     String? targetLocation,
@@ -123,6 +141,7 @@ class Mutation {
     String? documentName,
     MutationStatus? status,
     String? returnReason,
+    bool? requiresKadivApproval,
     String? rejectionReason,
     DateTime? verifiedAt,
     String? verifiedBy,
@@ -135,12 +154,15 @@ class Mutation {
     DateTime? kadivRejectedAt,
     String? kadivRejectedBy,
     String? kadivRejectionReason,
+    DateTime? staffUpdatedAt,
+    String? staffUpdatedBy,
     DateTime? createdAt,
   }) {
     return Mutation(
       id: id ?? this.id,
       ticketNumber: ticketNumber ?? this.ticketNumber,
       asset: asset ?? this.asset,
+      applicantId: applicantId ?? this.applicantId,
       applicantName: applicantName ?? this.applicantName,
       currentLocation: currentLocation ?? this.currentLocation,
       targetLocation: targetLocation ?? this.targetLocation,
@@ -150,6 +172,8 @@ class Mutation {
       documentName: documentName ?? this.documentName,
       status: status ?? this.status,
       returnReason: returnReason ?? this.returnReason,
+      requiresKadivApproval:
+          requiresKadivApproval ?? this.requiresKadivApproval,
       rejectionReason: rejectionReason ?? this.rejectionReason,
       verifiedAt: verifiedAt ?? this.verifiedAt,
       verifiedBy: verifiedBy ?? this.verifiedBy,
@@ -162,6 +186,8 @@ class Mutation {
       kadivRejectedAt: kadivRejectedAt ?? this.kadivRejectedAt,
       kadivRejectedBy: kadivRejectedBy ?? this.kadivRejectedBy,
       kadivRejectionReason: kadivRejectionReason ?? this.kadivRejectionReason,
+      staffUpdatedAt: staffUpdatedAt ?? this.staffUpdatedAt,
+      staffUpdatedBy: staffUpdatedBy ?? this.staffUpdatedBy,
       createdAt: createdAt ?? this.createdAt,
     );
   }

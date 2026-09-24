@@ -166,4 +166,55 @@ class AssetRepositoryImpl implements AssetRepository {
   Future<Result<List<AssetCategory>>> getCategories() async {
     return Result.success(_mockCategories);
   }
+
+  @override
+  Future<Result<Asset>> updateAssetLocationAndPic({
+    required String assetId,
+    required String newLocation,
+    required String newPic,
+    required String ticketNumber,
+    required String updatedBy,
+  }) async {
+    final index = _mockAssets.indexWhere(
+      (a) => a.id == assetId || a.assetCode == assetId,
+    );
+
+    final historyItem = AssetHistoryItem(
+      id: 'hist_${DateTime.now().millisecondsSinceEpoch}',
+      ticketNumber: ticketNumber,
+      date: DateTime.now(),
+      previousLocation: index != -1 ? _mockAssets[index].location : '-',
+      newLocation: newLocation,
+      previousPic: index != -1 ? _mockAssets[index].pic : '-',
+      newPic: newPic,
+      updatedBy: updatedBy,
+    );
+
+    if (index == -1) {
+      final newAsset = Asset(
+        id: assetId,
+        assetCode: assetId,
+        name: 'Aset $assetId',
+        category: _mockCategories[0],
+        location: newLocation,
+        pic: newPic,
+        status: AssetStatus.inMutation,
+        condition: 'Baik',
+        acquisitionYear: DateTime.now().year,
+        history: [historyItem],
+      );
+      _mockAssets.add(newAsset);
+      return Result.success(newAsset);
+    }
+
+    final current = _mockAssets[index];
+    final updated = current.copyWith(
+      location: newLocation,
+      pic: newPic,
+      history: [...current.history, historyItem],
+    );
+
+    _mockAssets[index] = updated;
+    return Result.success(updated);
+  }
 }

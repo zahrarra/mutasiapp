@@ -6,6 +6,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import '../../../../app/router/route_names.dart';
 import '../../../../app/theme/app_colors.dart';
 import '../../../../app/theme/app_spacing.dart';
 import '../../../mutation/domain/entities/mutation.dart';
@@ -31,7 +32,7 @@ class KadivApprovalDetailScreen extends ConsumerWidget {
         title: const Text('Detail Approval Kadiv'),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
-          onPressed: () => context.pop(),
+          onPressed: () => _safePop(context),
         ),
       ),
       body: asyncMutation.when(
@@ -191,6 +192,11 @@ class KadivApprovalDetailScreen extends ConsumerWidget {
                   ),
                   const Divider(height: AppSpacing.md, color: AppColors.border),
                   _buildDetailRow('Pemohon', mutation.applicantName),
+                  const Divider(height: AppSpacing.md, color: AppColors.border),
+                  _buildDetailRow(
+                    'Waktu Pengajuan',
+                    _formatDate(mutation.createdAt),
+                  ),
                   const Divider(height: AppSpacing.md, color: AppColors.border),
                   _buildTransitionRow(
                     label: 'Lokasi',
@@ -745,7 +751,7 @@ class KadivApprovalDetailScreen extends ConsumerWidget {
                         backgroundColor: AppColors.success,
                       ),
                     );
-                    context.pop();
+                    _safePop(context);
                   } else {
                     final err = ref.read(kadivApprovalActionProvider).error;
                     ScaffoldMessenger.of(context).showSnackBar(
@@ -767,6 +773,18 @@ class KadivApprovalDetailScreen extends ConsumerWidget {
         );
       },
     );
+  }
+
+  void _safePop(BuildContext context) {
+    if (Navigator.of(context).canPop()) {
+      Navigator.of(context).pop();
+    } else {
+      try {
+        context.go(RouteNames.kadivApprovalsPath);
+      } catch (_) {
+        // Fallback for tests without GoRouter ancestor
+      }
+    }
   }
 
   String _formatDate(DateTime dt) {

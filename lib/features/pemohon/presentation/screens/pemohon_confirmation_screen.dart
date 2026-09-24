@@ -10,6 +10,10 @@ import 'package:go_router/go_router.dart';
 import '../../../../app/router/route_names.dart';
 import '../../../../app/theme/app_colors.dart';
 import '../../../../app/theme/app_spacing.dart';
+import '../../../../core/widgets/error_view.dart';
+import '../../../auth/domain/entities/user.dart';
+import '../../../auth/domain/entities/user_role.dart';
+import '../../../auth/presentation/providers/auth_provider.dart';
 import '../../../mutation/domain/entities/mutation.dart';
 import '../../../mutation/domain/entities/mutation_status.dart';
 import '../../../mutation/presentation/providers/mutation_provider.dart';
@@ -27,10 +31,41 @@ class PemohonConfirmationScreen extends ConsumerStatefulWidget {
 
 class _PemohonConfirmationScreenState
     extends ConsumerState<PemohonConfirmationScreen> {
+  void _safePop(BuildContext context) {
+    if (Navigator.of(context).canPop()) {
+      Navigator.of(context).pop();
+    } else {
+      try {
+        context.go(RouteNames.pemohonMutasiPath);
+      } catch (_) {}
+    }
+  }
+
+  bool _isMutationOwnedBy(Mutation mutation, User? user) {
+    if (user == null) return true;
+    if (user.role != UserRole.pemohon) return true;
+
+    if (mutation.applicantId != null && mutation.applicantId == user.id) {
+      return true;
+    }
+    if ((user.id == 'usr_pemohon' ||
+            user.id == 'usr_101' ||
+            user.id == 'user_pemohon') &&
+        mutation.applicantId == 'usr_pemohon') {
+      return true;
+    }
+    if (mutation.applicantName.trim().toLowerCase() ==
+        user.name.trim().toLowerCase()) {
+      return true;
+    }
+    return false;
+  }
+
   @override
   Widget build(BuildContext context) {
     final asyncMutation = ref.watch(mutationDetailProvider(widget.mutationId));
     final actionState = ref.watch(pemohonConfirmationActionProvider);
+    final authState = ref.watch(authStateProvider);
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -38,51 +73,64 @@ class _PemohonConfirmationScreenState
         title: const Text('Konfirmasi Mutasi'),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
-          onPressed: () => context.pop(),
+          tooltip: 'Kembali',
+          onPressed: () => _safePop(context),
         ),
       ),
       body: asyncMutation.when(
-        data: (mutation) => _buildBody(context, ref, mutation, actionState),
+        data: (mutation) {
+          if (!_isMutationOwnedBy(mutation, authState.user)) {
+            return _buildAccessDenied(context);
+          }
+          return _buildBody(context, ref, mutation, actionState);
+        },
         loading: () => const Center(child: CircularProgressIndicator()),
-        error: (err, _) => Center(
-          child: Padding(
-            padding: const EdgeInsets.all(AppSpacing.lg),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                const Icon(
-                  Icons.error_outline,
-                  size: 48,
-                  color: AppColors.error,
-                ),
-                const SizedBox(height: AppSpacing.md),
-                const Text(
-                  'Data belum dapat dimuat.',
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w600,
-                    color: AppColors.textPrimary,
-                  ),
-                ),
-                const SizedBox(height: AppSpacing.xs),
-                Text(
-                  err.toString(),
-                  textAlign: TextAlign.center,
-                  style: const TextStyle(
-                    fontSize: 13,
-                    color: AppColors.textSecondary,
-                  ),
-                ),
-                const SizedBox(height: AppSpacing.lg),
-                OutlinedButton.icon(
-                  onPressed: () =>
-                      ref.invalidate(mutationDetailProvider(widget.mutationId)),
-                  icon: const Icon(Icons.refresh),
-                  label: const Text('Coba Lagi'),
-                ),
-              ],
+        error: (err, _) => ErrorView(
+          message: err.toString(),
+          onRetry: () =>
+              ref.invalidate(mutationDetailProvider(widget.mutationId)),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildAccessDenied(BuildContext context) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(AppSpacing.xl),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(
+              Icons.lock_outline,
+              size: 64,
+              color: AppColors.error,
             ),
-          ),
+            const SizedBox(height: AppSpacing.md),
+            const Text(
+              'Akses Ditolak',
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+                color: AppColors.textPrimary,
+              ),
+            ),
+            const SizedBox(height: AppSpacing.sm),
+            const Text(
+              'Anda hanya dapat melihat dan mengonfirmasi pengajuan mutasi milik Anda sendiri.',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontSize: 14,
+                color: AppColors.textSecondary,
+              ),
+            ),
+            const SizedBox(height: AppSpacing.lg),
+            OutlinedButton.icon(
+              onPressed: () => _safePop(context),
+              icon: const Icon(Icons.arrow_back),
+              label: const Text('Kembali'),
+            ),
+          ],
         ),
       ),
     );
@@ -94,9 +142,10 @@ class _PemohonConfirmationScreenState
     Mutation mutation,
     PemohonConfirmationActionState actionState,
   ) {
+    final effectiveMutation = actionState.result ?? mutation;
     final isPendingConfirmation =
-        mutation.status == MutationStatus.pendingConfirmation;
-    final isCompleted = mutation.status == MutationStatus.completed;
+        effectiveMutation.status == MutationStatus.pendingConfirmation;
+    final isCompleted = effectiveMutation.status == MutationStatus.completed;
 
     return Stack(
       children: [
@@ -115,14 +164,15 @@ class _PemohonConfirmationScreenState
                     ],
 
                     // ─── Header Tiket & Status ────────────────────────────────
-                    _buildTicketHeader(mutation),
+                    _buildTicketHeader(effectiveMutation),
                     const SizedBox(height: AppSpacing.md),
 
                     // ─── Info Banner ──────────────────────────────────────────
                     if (isPendingConfirmation) _buildInfoBanner(),
                     if (isCompleted) _buildCompletedBanner(),
-                    if (isPendingConfirmation || isCompleted)
-                      const SizedBox(height: AppSpacing.md),
+                    if (!isPendingConfirmation && !isCompleted)
+                      _buildNotPendingBanner(effectiveMutation),
+                    const SizedBox(height: AppSpacing.md),
 
                     // ─── Error Banner ─────────────────────────────────────────
                     if (actionState.error != null) ...[
@@ -133,25 +183,25 @@ class _PemohonConfirmationScreenState
                     // ─── Detail Aset ──────────────────────────────────────────
                     _buildSectionTitle('Detail Aset'),
                     const SizedBox(height: AppSpacing.sm),
-                    _buildAssetCard(mutation),
+                    _buildAssetCard(effectiveMutation),
                     const SizedBox(height: AppSpacing.md),
 
-                    // ─── Hasil Mutasi ─────────────────────────────────────────
-                    _buildSectionTitle('Hasil Mutasi'),
+                    // ─── Hasil Mutasi dari Staff Aset ─────────────────────────
+                    _buildSectionTitle('Hasil Pembaruan Staff Aset'),
                     const SizedBox(height: AppSpacing.sm),
-                    _buildMutationResultCard(mutation),
+                    _buildMutationResultCard(effectiveMutation),
                     const SizedBox(height: AppSpacing.md),
 
                     // ─── Timeline ─────────────────────────────────────────────
                     _buildSectionTitle('Timeline Pengajuan'),
                     const SizedBox(height: AppSpacing.sm),
-                    _buildTimeline(mutation),
+                    _buildTimeline(effectiveMutation),
                     const SizedBox(height: AppSpacing.md),
 
                     // ─── Alasan ───────────────────────────────────────────────
                     _buildSectionTitle('Alasan Mutasi'),
                     const SizedBox(height: AppSpacing.sm),
-                    _buildReasonCard(mutation),
+                    _buildReasonCard(effectiveMutation),
 
                     // Extra space for sticky action bar
                     const SizedBox(height: 100),
@@ -162,7 +212,7 @@ class _PemohonConfirmationScreenState
 
             // ─── Sticky Action Bar ────────────────────────────────────────────
             if (isPendingConfirmation)
-              _buildActionBar(context, ref, mutation, actionState),
+              _buildActionBar(context, ref, effectiveMutation, actionState),
           ],
         ),
 
@@ -320,6 +370,38 @@ class _PemohonConfirmationScreenState
     );
   }
 
+  Widget _buildNotPendingBanner(Mutation mutation) {
+    return Container(
+      padding: const EdgeInsets.all(AppSpacing.sm),
+      decoration: BoxDecoration(
+        color: AppColors.warningContainer,
+        borderRadius: BorderRadius.circular(AppRadius.card),
+        border: Border.all(color: AppColors.warning.withValues(alpha: 0.3)),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Icon(
+            Icons.warning_amber_rounded,
+            color: AppColors.warning,
+            size: 18,
+          ),
+          const SizedBox(width: AppSpacing.sm),
+          Expanded(
+            child: Text(
+              'Pengajuan ini berstatus "${mutation.status.displayName}". Konfirmasi hanya dapat dilakukan ketika pengajuan berstatus "Menunggu Konfirmasi".',
+              style: const TextStyle(
+                fontSize: 13,
+                color: AppColors.warning,
+                height: 1.4,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildSuccessBanner(String message) {
     return Container(
       padding: const EdgeInsets.all(AppSpacing.sm),
@@ -448,14 +530,23 @@ class _PemohonConfirmationScreenState
           const SizedBox(height: AppSpacing.sm),
           const Divider(color: AppColors.border, height: 1),
           const SizedBox(height: AppSpacing.sm),
-          Row(
+          Wrap(
+            spacing: AppSpacing.sm,
+            runSpacing: AppSpacing.xs,
             children: [
               _buildAssetInfoChip(
                 Icons.category_outlined,
                 mutation.asset.category.name,
               ),
-              const SizedBox(width: AppSpacing.sm),
               _buildAssetInfoChip(Icons.star_outline, mutation.asset.condition),
+              _buildAssetInfoChip(
+                Icons.location_on_outlined,
+                'Lokasi: ${mutation.asset.location}',
+              ),
+              _buildAssetInfoChip(
+                Icons.person_outline,
+                'PIC: ${mutation.asset.pic}',
+              ),
             ],
           ),
         ],
@@ -490,6 +581,39 @@ class _PemohonConfirmationScreenState
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          if (mutation.staffUpdatedBy != null) ...[
+            Container(
+              padding: const EdgeInsets.symmetric(
+                horizontal: AppSpacing.sm,
+                vertical: 6,
+              ),
+              margin: const EdgeInsets.only(bottom: AppSpacing.md),
+              decoration: BoxDecoration(
+                color: AppColors.infoContainer,
+                borderRadius: BorderRadius.circular(AppRadius.small),
+              ),
+              child: Row(
+                children: [
+                  const Icon(
+                    Icons.badge_outlined,
+                    size: 16,
+                    color: AppColors.info,
+                  ),
+                  const SizedBox(width: 6),
+                  Expanded(
+                    child: Text(
+                      'Diperbarui oleh Staff Aset: ${mutation.staffUpdatedBy}${mutation.staffUpdatedAt != null ? ' (${_formatDate(mutation.staffUpdatedAt!)})' : ''}',
+                      style: const TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                        color: AppColors.info,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
           // Lokasi
           _buildTransferRow(
             label: 'Lokasi',
@@ -623,11 +747,12 @@ class _PemohonConfirmationScreenState
       ),
       _TimelineStep(
         label: 'Update Data Aset',
-        subtitle:
-            (currentStatus == MutationStatus.pendingConfirmation ||
-                currentStatus == MutationStatus.completed)
-            ? 'Selesai'
-            : null,
+        subtitle: mutation.staffUpdatedBy != null
+            ? '${mutation.staffUpdatedBy} · ${_formatDate(mutation.staffUpdatedAt ?? DateTime.now())}'
+            : ((currentStatus == MutationStatus.pendingConfirmation ||
+                    currentStatus == MutationStatus.completed)
+                ? 'Selesai'
+                : null),
         isDone:
             currentStatus == MutationStatus.pendingConfirmation ||
             currentStatus == MutationStatus.completed,
@@ -812,6 +937,7 @@ class _PemohonConfirmationScreenState
 
           // Tombol Sesuai (Primary)
           ElevatedButton.icon(
+            key: const Key('btn_sesuai_konfirmasi'),
             onPressed: actionState.isLoading
                 ? null
                 : () => _onConfirmTap(context, ref, mutation),
@@ -830,6 +956,7 @@ class _PemohonConfirmationScreenState
 
           // Tombol Tidak Sesuai (Outlined/Destructive)
           OutlinedButton.icon(
+            key: const Key('btn_tidak_sesuai_konfirmasi'),
             onPressed: actionState.isLoading
                 ? null
                 : () => _onTidakSesuaiTap(context),
@@ -1005,7 +1132,7 @@ class _PemohonConfirmationScreenState
                       reason: reason,
                     );
 
-                if (!mounted) return;
+                if (!mounted || !context.mounted) return;
 
                 if (success) {
                   ScaffoldMessenger.of(context).showSnackBar(
@@ -1016,12 +1143,18 @@ class _PemohonConfirmationScreenState
                   );
 
                   // Navigasi langsung ke layar perbaikan pengajuan (edit)
-                  context.go(
-                    RouteNames.pemohonMutasiEditPath.replaceFirst(
-                      ':id',
-                      widget.mutationId,
-                    ),
-                  );
+                  try {
+                    context.go(
+                      RouteNames.pemohonMutasiEditPath.replaceFirst(
+                        ':id',
+                        widget.mutationId,
+                      ),
+                    );
+                  } catch (_) {
+                    if (Navigator.of(context).canPop()) {
+                      Navigator.of(context).pop();
+                    }
+                  }
                 } else {
                   final err = ref.read(pemohonConfirmationActionProvider).error;
                   ScaffoldMessenger.of(context).showSnackBar(

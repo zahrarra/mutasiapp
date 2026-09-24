@@ -13,6 +13,7 @@ import '../../../../app/theme/app_spacing.dart';
 import '../../../auth/presentation/providers/auth_provider.dart';
 import '../../../auth/presentation/widgets/role_dashboard_layout.dart';
 import '../../../mutation/domain/entities/mutation.dart';
+import '../../../mutation/domain/entities/mutation_status.dart';
 import '../providers/kabag_approval_provider.dart';
 
 class KabagDashboardScreen extends ConsumerWidget {
@@ -150,11 +151,15 @@ class KabagDashboardScreen extends ConsumerWidget {
 
           asyncMutations.when(
             data: (mutations) {
-              if (mutations.isEmpty) {
+              final recentMutations = mutations
+                  .where((m) => m.status == MutationStatus.waitingKabagApproval)
+                  .take(3)
+                  .toList();
+
+              if (recentMutations.isEmpty) {
                 return _buildEmptyState();
               }
 
-              final recentMutations = mutations.take(3).toList();
               return ListView.separated(
                 shrinkWrap: true,
                 physics: const NeverScrollableScrollPhysics(),

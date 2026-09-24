@@ -105,13 +105,17 @@ final kadivStatsProvider = Provider<KadivApprovalStats>((ref) {
           .length;
       final approved = mutations
           .where((m) =>
-              m.status == MutationStatus.approved &&
-              (m.kadivApprovedBy != null || m.approvedBy != null))
+              (m.status == MutationStatus.approved ||
+                  m.status == MutationStatus.pendingConfirmation ||
+                  m.status == MutationStatus.completed) &&
+              (m.kadivApprovedBy != null || m.kadivApprovedAt != null))
           .length;
       final rejected = mutations
           .where((m) =>
               m.status == MutationStatus.rejected &&
-              (m.kadivRejectedBy != null || m.kadivRejectionReason != null))
+              (m.kadivRejectedBy != null ||
+                  m.kadivRejectedAt != null ||
+                  m.kadivRejectionReason != null))
           .length;
 
       return KadivApprovalStats(
@@ -148,11 +152,15 @@ final filteredKadivApprovalsProvider =
         KadivStatusFilter.waiting =>
           m.status == MutationStatus.waitingKadivApproval,
         KadivStatusFilter.approved =>
-          m.status == MutationStatus.approved &&
-              (m.kadivApprovedBy != null || m.approvedBy != null),
+          (m.status == MutationStatus.approved ||
+                  m.status == MutationStatus.pendingConfirmation ||
+                  m.status == MutationStatus.completed) &&
+              (m.kadivApprovedBy != null || m.kadivApprovedAt != null),
         KadivStatusFilter.rejected =>
           m.status == MutationStatus.rejected &&
-              (m.kadivRejectedBy != null || m.kadivRejectionReason != null),
+              (m.kadivRejectedBy != null ||
+                  m.kadivRejectedAt != null ||
+                  m.kadivRejectionReason != null),
         KadivStatusFilter.all =>
           m.status == MutationStatus.waitingKadivApproval ||
               m.kadivApprovedBy != null ||
@@ -252,6 +260,8 @@ class KadivApprovalActionNotifier
         result: result.data,
       );
       ref.invalidate(kadivAllMutationsProvider);
+      ref.invalidate(mutationDetailProvider(mutationId));
+      ref.invalidate(mutationListProvider);
       return true;
     } else if (result is AppFailure<Mutation>) {
       state = KadivApprovalActionState(
@@ -295,6 +305,8 @@ class KadivApprovalActionNotifier
         result: result.data,
       );
       ref.invalidate(kadivAllMutationsProvider);
+      ref.invalidate(mutationDetailProvider(mutationId));
+      ref.invalidate(mutationListProvider);
       return true;
     } else if (result is AppFailure<Mutation>) {
       state = KadivApprovalActionState(

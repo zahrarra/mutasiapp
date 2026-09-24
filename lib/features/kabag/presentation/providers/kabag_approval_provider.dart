@@ -197,7 +197,10 @@ class KabagApprovalActionNotifier
   }) : super(const KabagApprovalActionState());
 
   /// Eksekusi Approve oleh Kabag Aset
-  Future<bool> approve({required String mutationId}) async {
+  Future<bool> approve({
+    required String mutationId,
+    required bool requiresKadivApproval,
+  }) async {
     final authState = ref.read(authStateProvider);
     final kabagName = authState.user?.name ?? 'Kabag Aset';
 
@@ -210,15 +213,20 @@ class KabagApprovalActionNotifier
     final result = await approveUseCase(
       mutationId: mutationId,
       kabagName: kabagName,
+      requiresKadivApproval: requiresKadivApproval,
     );
 
     if (result is Success<Mutation>) {
       state = KabagApprovalActionState(
         isLoading: false,
-        successMessage: 'Pengajuan mutasi berhasil disetujui.',
+        successMessage: requiresKadivApproval
+            ? 'Pengajuan disetujui dan diteruskan ke Kadiv.'
+            : 'Pengajuan mutasi berhasil disetujui.',
         result: result.data,
       );
       ref.invalidate(kabagAllMutationsProvider);
+      ref.invalidate(mutationDetailProvider(mutationId));
+      ref.invalidate(mutationListProvider);
       return true;
     } else if (result is AppFailure<Mutation>) {
       state = KabagApprovalActionState(
@@ -262,6 +270,8 @@ class KabagApprovalActionNotifier
         result: result.data,
       );
       ref.invalidate(kabagAllMutationsProvider);
+      ref.invalidate(mutationDetailProvider(mutationId));
+      ref.invalidate(mutationListProvider);
       return true;
     } else if (result is AppFailure<Mutation>) {
       state = KabagApprovalActionState(

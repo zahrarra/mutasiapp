@@ -27,6 +27,7 @@ void main() {
       final result = await repository.approveMutationKabag(
         mutationId: target.id,
         kabagName: 'Kabag Test',
+        requiresKadivApproval: false,
       );
 
       expect(result.isSuccess, true);
@@ -34,6 +35,25 @@ void main() {
       expect(updated.status, MutationStatus.approved);
       expect(updated.approvedBy, 'Kabag Test');
       expect(updated.approvedAt, isNotNull);
+    });
+
+    test('approveMutationKabag with requiresKadivApproval sets waitingKadivApproval', () async {
+      final all = await repository.getAllMutations();
+      final target = all.dataOrNull!.firstWhere(
+        (m) => m.status == MutationStatus.waitingKabagApproval,
+      );
+
+      final result = await repository.approveMutationKabag(
+        mutationId: target.id,
+        kabagName: 'Kabag Test',
+        requiresKadivApproval: true,
+      );
+
+      expect(result.isSuccess, true);
+      final updated = result.dataOrNull!;
+      expect(updated.status, MutationStatus.waitingKadivApproval);
+      expect(updated.requiresKadivApproval, true);
+      expect(updated.approvedBy, 'Kabag Test');
     });
 
     test('rejectMutationKabag updates status to rejected with reason', () async {
@@ -62,6 +82,7 @@ void main() {
       final result = await repository.approveMutationKabag(
         mutationId: 'unknown_kabag_id',
         kabagName: 'Kabag Test',
+        requiresKadivApproval: false,
       );
 
       expect(result.isFailure, true);

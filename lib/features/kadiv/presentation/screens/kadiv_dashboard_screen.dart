@@ -171,13 +171,9 @@ class KadivDashboardScreen extends ConsumerWidget {
 
           asyncMutations.when(
             data: (mutations) {
-              // Filter yang relevan untuk Kadiv
+              // Filter yang relevan untuk Kadiv: pengajuan yang menunggu keputusan Kadiv
               final relevant = mutations
-                  .where((m) {
-                    return m.status == MutationStatus.waitingKadivApproval ||
-                        m.kadivApprovedBy != null ||
-                        m.kadivRejectedBy != null;
-                  })
+                  .where((m) => m.status == MutationStatus.waitingKadivApproval)
                   .take(5)
                   .toList();
 

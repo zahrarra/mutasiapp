@@ -13,21 +13,25 @@ class SubmitMutationParams {
   /// Diisi otomatis dari user yang sedang login
   /// pada SubmitMutationNotifier.
   final String? applicantId;
+  final String? applicantName;
 
   final String assetId;
   final String assetName;
   final String sourceLocation;
   final String targetLocation;
+  final String? currentPic;
   final String targetPic;
   final String reason;
   final String? documentName;
 
   const SubmitMutationParams({
     this.applicantId,
+    this.applicantName,
     required this.assetId,
     required this.assetName,
     required this.sourceLocation,
     required this.targetLocation,
+    this.currentPic,
     required this.targetPic,
     required this.reason,
     this.documentName,
@@ -76,9 +80,13 @@ abstract class MutationRepository {
   });
 
   /// Persetujuan mutasi oleh Kabag Aset.
+  ///
+  /// Jika [requiresKadivApproval] true, status menjadi [waitingKadivApproval].
+  /// Jika false, status menjadi [approved] (langsung ke Staff Aset).
   Future<Result<Mutation>> approveMutationKabag({
     required String mutationId,
     required String kabagName,
+    required bool requiresKadivApproval,
   });
 
   /// Penolakan mutasi oleh Kabag Aset.
@@ -105,5 +113,15 @@ abstract class MutationRepository {
   Future<Result<Mutation>> confirmMutation({
     required String mutationId,
     required String confirmedBy,
+  });
+
+  /// Pembaruan lokasi dan PIC fisik aset oleh Staff Aset.
+  ///
+  /// Mengubah status mutasi dari [approved] menjadi [pendingConfirmation].
+  Future<Result<Mutation>> processStaffAssetUpdate({
+    required String mutationId,
+    required String newLocation,
+    required String newPic,
+    required String staffName,
   });
 }

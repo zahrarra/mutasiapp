@@ -6,6 +6,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import '../../../../app/router/route_names.dart';
 import '../../../../app/theme/app_colors.dart';
 import '../../../../app/theme/app_spacing.dart';
 import '../../../mutation/presentation/providers/mutation_provider.dart';
@@ -45,7 +46,13 @@ class _OperatorReturnFormScreenState
         title: const Text('Kembalikan Pengajuan'),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
-          onPressed: () => context.pop(),
+          onPressed: () {
+            if (context.canPop()) {
+              context.pop();
+            } else {
+              context.go(RouteNames.operatorMutationsPath);
+            }
+          },
         ),
       ),
       body: asyncMutation.when(
@@ -261,8 +268,21 @@ class _OperatorReturnFormScreenState
           ),
         );
         // Pop back to list (pop return screen and pop detail screen)
-        context.pop(); // Pop OPR-004
-        context.pop(); // Pop OPR-003 back to OPR-002 list
+        if (Navigator.of(context).canPop()) {
+          Navigator.of(context).pop();
+          if (Navigator.of(context).canPop()) {
+            Navigator.of(context).pop();
+          }
+        } else {
+          try {
+            if (context.canPop()) {
+              context.pop();
+              if (context.canPop()) {
+                context.pop();
+              }
+            }
+          } catch (_) {}
+        }
       } else {
         final err = ref.read(verificationActionProvider).error;
         ScaffoldMessenger.of(context).showSnackBar(

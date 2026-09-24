@@ -40,6 +40,8 @@ import '../../features/pemohon/presentation/screens/pemohon_notifications_screen
 import '../../features/pemohon/presentation/screens/pemohon_profile_screen.dart';
 import '../../features/profile/presentation/screens/profile_screen.dart';
 import '../../features/staff/presentation/screens/staff_dashboard_screen.dart';
+import '../../features/staff/presentation/screens/staff_mutation_detail_screen.dart';
+import '../../features/staff/presentation/screens/staff_mutation_list_screen.dart';
 import 'route_guards.dart';
 import 'route_names.dart';
 
@@ -294,6 +296,19 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         path: RouteNames.staffDashboardPath,
         name: RouteNames.staffDashboardName,
         builder: (context, state) => const StaffAsetDashboardScreen(),
+      ),
+      GoRoute(
+        path: RouteNames.staffMutationsPath,
+        name: RouteNames.staffMutationsName,
+        builder: (context, state) => const StaffMutationListScreen(),
+      ),
+      GoRoute(
+        path: RouteNames.staffMutationDetailPath,
+        name: RouteNames.staffMutationDetailName,
+        builder: (context, state) {
+          final id = state.pathParameters['id'] ?? '';
+          return StaffMutationDetailScreen(mutationId: id);
+        },
       ),
       GoRoute(
         path: RouteNames.staffNotificationsPath,

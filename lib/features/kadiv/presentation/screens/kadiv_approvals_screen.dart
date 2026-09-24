@@ -6,6 +6,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import '../../../../app/router/route_names.dart';
 import '../../../../app/theme/app_colors.dart';
 import '../../../../app/theme/app_spacing.dart';
 import '../../../mutation/domain/entities/mutation.dart';
@@ -39,7 +40,13 @@ class _KadivApprovalsScreenState extends ConsumerState<KadivApprovalsScreen> {
         title: const Text('Approval Kadiv'),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
-          onPressed: () => context.pop(),
+          onPressed: () {
+            if (Navigator.of(context).canPop()) {
+              Navigator.of(context).pop();
+            } else {
+              context.go(RouteNames.kadivDashboardPath);
+            }
+          },
         ),
       ),
       body: Column(

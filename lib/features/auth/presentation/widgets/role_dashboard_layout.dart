@@ -11,6 +11,7 @@ import '../../../../app/theme/app_spacing.dart';
 import '../../../../core/providers/core_providers.dart';
 import '../../../../core/services/connectivity_service.dart';
 import '../../../../core/widgets/status_badge.dart';
+import '../../../notification/presentation/providers/notification_provider.dart';
 import '../providers/auth_provider.dart';
 
 /// Item navigasi bottom bar per role.
@@ -167,8 +168,16 @@ class RoleDashboardLayout extends ConsumerWidget {
         selectedIndex: selectedIndex,
         onDestinationSelected: onNavDestinationSelected,
         destinations: navItems.map((item) {
+          final isNotif = item.label.toLowerCase() == 'notifikasi';
+          final unread = ref.watch(unreadNotificationCountProvider);
+
           return NavigationDestination(
-            icon: Icon(item.icon),
+            icon: isNotif
+                ? Badge(
+                    isLabelVisible: unread > 0,
+                    child: Icon(item.icon),
+                  )
+                : Icon(item.icon),
             label: item.label,
           );
         }).toList(),

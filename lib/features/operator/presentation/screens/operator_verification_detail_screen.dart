@@ -6,6 +6,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import '../../../../app/router/route_names.dart';
 import '../../../../app/theme/app_colors.dart';
 import '../../../../app/theme/app_spacing.dart';
 import '../../../mutation/domain/entities/mutation.dart';
@@ -31,7 +32,13 @@ class OperatorVerificationDetailScreen extends ConsumerWidget {
         title: const Text('Detail Verifikasi'),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
-          onPressed: () => context.pop(),
+          onPressed: () {
+            if (context.canPop()) {
+              context.pop();
+            } else {
+              context.go(RouteNames.operatorMutationsPath);
+            }
+          },
         ),
       ),
       body: asyncMutation.when(
@@ -180,18 +187,25 @@ class OperatorVerificationDetailScreen extends ConsumerWidget {
                   _buildDetailRow(
                     'Aset',
                     mutation.asset.name,
-                    subtext: 'Kode: ${mutation.asset.id}',
+                    subtext:
+                        'Kode: ${mutation.asset.id} • ${mutation.asset.category.name}',
                   ),
                   const Divider(height: AppSpacing.md, color: AppColors.border),
                   _buildDetailRow('Lokasi Asal', mutation.currentLocation),
                   const Divider(height: AppSpacing.md, color: AppColors.border),
                   _buildDetailRow('Lokasi Tujuan', mutation.targetLocation),
                   const Divider(height: AppSpacing.md, color: AppColors.border),
-                  _buildDetailRow('PIC Baru', mutation.targetPic),
+                  _buildDetailRow(
+                      'Pemakai Lama (PIC Asal)', mutation.currentPic),
+                  const Divider(height: AppSpacing.md, color: AppColors.border),
+                  _buildDetailRow('PIC Baru (Tujuan)', mutation.targetPic),
                   const Divider(height: AppSpacing.md, color: AppColors.border),
                   _buildDetailRow('Alasan Mutasi', mutation.reason),
                   const Divider(height: AppSpacing.md, color: AppColors.border),
                   _buildDocumentRow(mutation.documentName),
+                  const Divider(height: AppSpacing.md, color: AppColors.border),
+                  _buildDetailRow(
+                      'Waktu Pengajuan', _formatDateTime(mutation.createdAt)),
                 ]),
               ],
             ),
@@ -375,6 +389,19 @@ class OperatorVerificationDetailScreen extends ConsumerWidget {
     );
   }
 
+  String _formatDateTime(DateTime dt) {
+    const months = [
+      'Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun',
+      'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'
+    ];
+    final day = dt.day.toString().padLeft(2, '0');
+    final month = months[dt.month - 1];
+    final year = dt.year;
+    final hour = dt.hour.toString().padLeft(2, '0');
+    final minute = dt.minute.toString().padLeft(2, '0');
+    return '$day $month $year $hour:$minute';
+  }
+
   void _showVerifyConfirmDialog(
     BuildContext context,
     WidgetRef ref,
@@ -409,7 +436,13 @@ class OperatorVerificationDetailScreen extends ConsumerWidget {
                       backgroundColor: AppColors.success,
                     ),
                   );
-                  context.pop();
+                  if (Navigator.of(context).canPop()) {
+                    Navigator.of(context).pop();
+                  } else {
+                    try {
+                      context.pop();
+                    } catch (_) {}
+                  }
                 } else {
                   final err = ref.read(verificationActionProvider).error;
                   ScaffoldMessenger.of(context).showSnackBar(

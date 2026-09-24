@@ -6,6 +6,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import '../../../../app/router/route_names.dart';
 import '../../../../app/theme/app_colors.dart';
 import '../../../../app/theme/app_spacing.dart';
 import '../../../mutation/presentation/providers/mutation_provider.dart';
@@ -44,7 +45,13 @@ class _KabagRejectFormScreenState extends ConsumerState<KabagRejectFormScreen> {
         title: const Text('Tolak Pengajuan'),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
-          onPressed: () => context.pop(),
+          onPressed: () {
+            if (context.canPop()) {
+              context.pop();
+            } else {
+              context.go(RouteNames.kabagApprovalsPath);
+            }
+          },
         ),
       ),
       body: asyncMutation.when(
@@ -274,8 +281,21 @@ class _KabagRejectFormScreenState extends ConsumerState<KabagRejectFormScreen> {
           ),
         );
         // Pop back to list (pop KBG-004 and pop KBG-003 back to KBG-002 list)
-        context.pop();
-        context.pop();
+        if (Navigator.of(context).canPop()) {
+          Navigator.of(context).pop();
+          if (Navigator.of(context).canPop()) {
+            Navigator.of(context).pop();
+          }
+        } else {
+          try {
+            if (context.canPop()) {
+              context.pop();
+              if (context.canPop()) {
+                context.pop();
+              }
+            }
+          } catch (_) {}
+        }
       } else {
         final err = ref.read(kabagApprovalActionProvider).error;
         ScaffoldMessenger.of(context).showSnackBar(

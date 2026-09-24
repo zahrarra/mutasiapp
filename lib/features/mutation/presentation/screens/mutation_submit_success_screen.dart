@@ -101,16 +101,6 @@ class MutationSubmitSuccessScreen extends ConsumerWidget {
                     context.go(RouteNames.pemohonMutasiPath);
                   },
                 ),
-                const SizedBox(height: AppSpacing.sm),
-                CustomButton(
-                  label: 'Kembali ke Dashboard',
-                  variant: ButtonVariant.text,
-                  width: double.infinity,
-                  onPressed: () {
-                    ref.invalidate(mutationListProvider);
-                    context.go(RouteNames.pemohonDashboardPath);
-                  },
-                ),
               ],
             ),
           ),

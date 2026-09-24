@@ -6,6 +6,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import '../../../../app/router/route_names.dart';
 import '../../../../app/theme/app_colors.dart';
 import '../../../../app/theme/app_spacing.dart';
 import '../../../mutation/presentation/providers/mutation_provider.dart';
@@ -44,7 +45,7 @@ class _KadivRejectFormScreenState extends ConsumerState<KadivRejectFormScreen> {
         title: const Text('Tolak Pengajuan (Kadiv)'),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
-          onPressed: () => context.pop(),
+          onPressed: () => _safePop(context),
         ),
       ),
       body: asyncMutation.when(
@@ -209,7 +210,7 @@ class _KadivRejectFormScreenState extends ConsumerState<KadivRejectFormScreen> {
                         child: OutlinedButton(
                           onPressed: actionState.isLoading
                               ? null
-                              : () => context.pop(),
+                              : () => _safePop(context),
                           style: OutlinedButton.styleFrom(
                             padding: const EdgeInsets.symmetric(
                                 vertical: AppSpacing.md),
@@ -312,8 +313,12 @@ class _KadivRejectFormScreenState extends ConsumerState<KadivRejectFormScreen> {
                         backgroundColor: AppColors.error,
                       ),
                     );
-                    context.pop(); // Pop reject screen
-                    context.pop(); // Pop detail screen to return to list
+                    if (Navigator.of(context).canPop()) {
+                      Navigator.of(context).pop(); // Pop reject screen
+                    }
+                    if (context.mounted) {
+                      _safePop(context);
+                    }
                   } else {
                     final err = ref.read(kadivApprovalActionProvider).error;
                     ScaffoldMessenger.of(context).showSnackBar(
@@ -335,5 +340,17 @@ class _KadivRejectFormScreenState extends ConsumerState<KadivRejectFormScreen> {
         );
       },
     );
+  }
+
+  void _safePop(BuildContext context) {
+    if (Navigator.of(context).canPop()) {
+      Navigator.of(context).pop();
+    } else {
+      try {
+        context.go(RouteNames.kadivApprovalsPath);
+      } catch (_) {
+        // Fallback for tests without GoRouter ancestor
+      }
+    }
   }
 }

@@ -105,6 +105,9 @@ abstract final class RouteNames {
   static const String staffMutationsPath = '/staff-aset/mutations';
   static const String staffMutationsName = 'staffMutations';
 
+  static const String staffMutationDetailPath = '/staff-aset/mutations/:id';
+  static const String staffMutationDetailName = 'staffMutationDetail';
+
   static const String staffAssetsPath = '/staff-aset/assets';
   static const String staffAssetsName = 'staffAssets';
 

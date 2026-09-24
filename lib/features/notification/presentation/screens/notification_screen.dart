@@ -10,14 +10,43 @@
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
+import '../../../../app/router/route_names.dart';
 import '../../../../app/theme/app_colors.dart';
 import '../../../../app/theme/app_spacing.dart';
+import '../../../auth/domain/entities/user_role.dart';
+import '../../../auth/presentation/providers/auth_provider.dart';
 import '../../domain/entities/notification_item.dart';
 import '../providers/notification_provider.dart';
+import '../widgets/notification_tile.dart';
 
 class NotificationScreen extends ConsumerWidget {
   const NotificationScreen({super.key});
+
+  void _handleNotificationTap(
+    BuildContext context,
+    WidgetRef ref,
+    NotificationItem item,
+  ) {
+    ref.read(notificationProvider.notifier).markAsRead(item.id);
+
+    final mutationId = item.relatedMutationId;
+    if (mutationId != null && mutationId.isNotEmpty) {
+      final userRole = ref.read(authStateProvider).user?.role;
+      final targetPath = switch (userRole) {
+        UserRole.operator => '/operator/mutations/$mutationId',
+        UserRole.kabagAset => '/kabag/approvals/$mutationId',
+        UserRole.kadiv => '/kadiv/approvals/$mutationId',
+        UserRole.staffAset => '/staff-aset/tasks/$mutationId',
+        UserRole.pemohon => '/pemohon/mutasi/$mutationId',
+        _ => null,
+      };
+      if (targetPath != null) {
+        context.push(targetPath);
+      }
+    }
+  }
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -27,6 +56,20 @@ class NotificationScreen extends ConsumerWidget {
       backgroundColor: AppColors.background,
       appBar: AppBar(
         title: const Text('Notifikasi'),
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back),
+          tooltip: 'Kembali',
+          onPressed: () {
+            if (context.canPop()) {
+              context.pop();
+            } else {
+              final defaultRoute =
+                  ref.read(authStateProvider).user?.role.defaultRoute ??
+                      RouteNames.dashboardPath;
+              context.go(defaultRoute);
+            }
+          },
+        ),
         actions: [
           if (notifications.any((n) => !n.isRead))
             TextButton(
@@ -52,11 +95,9 @@ class NotificationScreen extends ConsumerWidget {
               separatorBuilder: (_, _) => const SizedBox(height: AppSpacing.sm),
               itemBuilder: (context, index) {
                 final item = notifications[index];
-                return _NotificationTile(
+                return NotificationTile(
                   item: item,
-                  onTap: () => ref
-                      .read(notificationProvider.notifier)
-                      .markAsRead(item.id),
+                  onTap: () => _handleNotificationTap(context, ref, item),
                 );
               },
             ),
@@ -64,108 +105,3 @@ class NotificationScreen extends ConsumerWidget {
   }
 }
 
-class _NotificationTile extends StatelessWidget {
-  final NotificationItem item;
-  final VoidCallback onTap;
-
-  const _NotificationTile({required this.item, required this.onTap});
-
-  @override
-  Widget build(BuildContext context) {
-    final (icon, color) = switch (item.type) {
-      NotificationType.info => (Icons.info_outline, AppColors.info),
-      NotificationType.success => (
-        Icons.check_circle_outline,
-        AppColors.success,
-      ),
-      NotificationType.warning => (
-        Icons.warning_amber_outlined,
-        AppColors.warning,
-      ),
-      NotificationType.action => (Icons.touch_app_outlined, AppColors.primary),
-    };
-
-    return Material(
-      color: item.isRead
-          ? AppColors.surface
-          : AppColors.infoContainer.withValues(alpha: 0.4),
-      borderRadius: BorderRadius.circular(AppRadius.card),
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(AppRadius.card),
-        child: Container(
-          padding: const EdgeInsets.all(AppSpacing.md),
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(AppRadius.card),
-            border: Border.all(color: AppColors.border),
-          ),
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Container(
-                padding: const EdgeInsets.all(AppSpacing.sm),
-                decoration: BoxDecoration(
-                  color: color.withValues(alpha: 0.12),
-                  shape: BoxShape.circle,
-                ),
-                child: Icon(icon, color: color, size: 20),
-              ),
-              const SizedBox(width: AppSpacing.sm),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      item.title,
-                      style: TextStyle(
-                        fontSize: 14,
-                        fontWeight: item.isRead
-                            ? FontWeight.w500
-                            : FontWeight.w700,
-                        color: AppColors.textPrimary,
-                      ),
-                    ),
-                    const SizedBox(height: 2),
-                    Text(
-                      item.message,
-                      style: const TextStyle(
-                        fontSize: 12,
-                        color: AppColors.textSecondary,
-                        height: 1.4,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      _relativeTime(item.createdAt),
-                      style: const TextStyle(
-                        fontSize: 11,
-                        color: AppColors.textDisabled,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              if (!item.isRead)
-                Container(
-                  margin: const EdgeInsets.only(top: 4),
-                  width: 8,
-                  height: 8,
-                  decoration: const BoxDecoration(
-                    color: AppColors.primary,
-                    shape: BoxShape.circle,
-                  ),
-                ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  String _relativeTime(DateTime date) {
-    final diff = DateTime.now().difference(date);
-    if (diff.inMinutes < 60) return '${diff.inMinutes} menit lalu';
-    if (diff.inHours < 24) return '${diff.inHours} jam lalu';
-    return '${diff.inDays} hari lalu';
-  }
-}

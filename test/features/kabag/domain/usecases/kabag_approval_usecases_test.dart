@@ -99,6 +99,7 @@ class FakeKabagMutationRepository implements MutationRepository {
   Future<Result<Mutation>> approveMutationKabag({
     required String mutationId,
     required String kabagName,
+    required bool requiresKadivApproval,
   }) async {
     final index = mutations.indexWhere((m) => m.id == mutationId);
     if (index == -1) {
@@ -106,8 +107,12 @@ class FakeKabagMutationRepository implements MutationRepository {
         NotFoundFailure(message: 'Pengajuan mutasi tidak ditemukan.'),
       );
     }
+    final nextStatus = requiresKadivApproval
+        ? MutationStatus.waitingKadivApproval
+        : MutationStatus.approved;
     final updated = mutations[index].copyWith(
-      status: MutationStatus.approved,
+      status: nextStatus,
+      requiresKadivApproval: requiresKadivApproval,
       approvedBy: kabagName,
       approvedAt: DateTime.now(),
     );
@@ -158,6 +163,16 @@ class FakeKabagMutationRepository implements MutationRepository {
   Future<Result<Mutation>> confirmMutation({
     required String mutationId,
     required String confirmedBy,
+  }) async {
+    throw UnimplementedError();
+  }
+
+  @override
+  Future<Result<Mutation>> processStaffAssetUpdate({
+    required String mutationId,
+    required String newLocation,
+    required String newPic,
+    required String staffName,
   }) async {
     throw UnimplementedError();
   }
@@ -212,6 +227,7 @@ void main() {
       final result = await useCase(
         mutationId: 'mut_kbg_1',
         kabagName: 'Pak Kabag',
+        requiresKadivApproval: false,
       );
 
       expect(result.isSuccess, true);
@@ -221,11 +237,32 @@ void main() {
       expect(updated.approvedAt, isNotNull);
     });
 
+    test('sets waitingKadivApproval when requiresKadivApproval is true', () async {
+      final fakeRepo = FakeKabagMutationRepository([
+        createDummyMutation(
+          id: 'mut_kbg_kadiv',
+          status: MutationStatus.waitingKabagApproval,
+        ),
+      ]);
+      final useCase = ApproveMutationKabagUseCase(repository: fakeRepo);
+
+      final result = await useCase(
+        mutationId: 'mut_kbg_kadiv',
+        kabagName: 'Pak Kabag',
+        requiresKadivApproval: true,
+      );
+
+      expect(result.isSuccess, true);
+      final updated = result.dataOrNull!;
+      expect(updated.status, MutationStatus.waitingKadivApproval);
+      expect(updated.requiresKadivApproval, true);
+    });
+
     test('fails if mutationId is empty', () async {
       final fakeRepo = FakeKabagMutationRepository([]);
       final useCase = ApproveMutationKabagUseCase(repository: fakeRepo);
 
-      final result = await useCase(mutationId: '   ', kabagName: 'Pak Kabag');
+      final result = await useCase(mutationId: '   ', kabagName: 'Pak Kabag', requiresKadivApproval: false);
 
       expect(result.isFailure, true);
       expect(result.failureOrNull, isA<ValidationFailure>());
@@ -238,6 +275,7 @@ void main() {
       final result = await useCase(
         mutationId: 'non_existent_id',
         kabagName: 'Pak Kabag',
+        requiresKadivApproval: false,
       );
 
       expect(result.isFailure, true);
@@ -258,6 +296,7 @@ void main() {
         final result = await useCase(
           mutationId: 'mut_kbg_1',
           kabagName: 'Pak Kabag',
+          requiresKadivApproval: false,
         );
 
         expect(result.isFailure, true);

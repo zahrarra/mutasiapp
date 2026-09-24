@@ -96,6 +96,7 @@ class _FakeMutationRepository implements MutationRepository {
   Future<Result<Mutation>> approveMutationKabag({
     required String mutationId,
     required String kabagName,
+    required bool requiresKadivApproval,
   }) async => throw UnimplementedError();
 
   @override
@@ -122,6 +123,14 @@ class _FakeMutationRepository implements MutationRepository {
   Future<Result<Mutation>> confirmMutation({
     required String mutationId,
     required String confirmedBy,
+  }) async => throw UnimplementedError();
+
+  @override
+  Future<Result<Mutation>> processStaffAssetUpdate({
+    required String mutationId,
+    required String newLocation,
+    required String newPic,
+    required String staffName,
   }) async => throw UnimplementedError();
 }
 

@@ -12,6 +12,7 @@ import '../../../auth/presentation/providers/auth_provider.dart';
 import '../../../mutation/domain/entities/mutation.dart';
 import '../../../mutation/domain/entities/mutation_status.dart';
 import '../../../mutation/presentation/providers/mutation_provider.dart';
+import '../../../notification/presentation/providers/notification_provider.dart';
 import '../widgets/mutation_filter_bottom_sheet.dart';
 
 /// Warna mengikuti mockup dashboard Pemohon.
@@ -62,7 +63,7 @@ class _PemohonDashboardScreenState
   }
 
   void _goNotifications() {
-    context.go(RouteNames.pemohonNotificationsPath);
+    context.push(RouteNames.pemohonNotificationsPath);
   }
 
   void _goProfile() {
@@ -403,6 +404,7 @@ class _PemohonDashboardScreenState
                             ),
                             child: TextField(
                               controller: _searchController,
+                              onChanged: (_) => setState(() {}),
                               style: const TextStyle(
                                 fontSize: 12,
                                 color: _C.textPrimary,
@@ -420,6 +422,19 @@ class _PemohonDashboardScreenState
                                   size: 20,
                                   color: _C.textSecondary,
                                 ),
+                                suffixIcon: _searchController.text.isNotEmpty
+                                    ? IconButton(
+                                        icon: const Icon(
+                                          Icons.clear,
+                                          size: 18,
+                                          color: _C.textSecondary,
+                                        ),
+                                        onPressed: () {
+                                          _searchController.clear();
+                                          setState(() {});
+                                        },
+                                      )
+                                    : null,
                                 border: InputBorder.none,
                                 contentPadding: const EdgeInsets.symmetric(
                                   vertical: 12,
@@ -515,11 +530,17 @@ class _PemohonDashboardScreenState
                     // ── Mutasi dalam proses ────────────────────────────
                     mutationsAsync.when(
                       data: (list) {
+                        final query = _searchController.text.trim().toLowerCase();
                         final aktif = list
                             .where(
                               (m) =>
                                   m.status != MutationStatus.completed &&
-                                  m.status != MutationStatus.rejected,
+                                  m.status != MutationStatus.rejected &&
+                                  (query.isEmpty ||
+                                      m.ticketNumber.toLowerCase().contains(query) ||
+                                      m.asset.name.toLowerCase().contains(query) ||
+                                      m.targetLocation.toLowerCase().contains(query) ||
+                                      m.targetPic.toLowerCase().contains(query)),
                             )
                             .toList();
 
@@ -560,7 +581,9 @@ class _PemohonDashboardScreenState
                             const SizedBox(height: 12),
                             if (fokus == null)
                               _EmptyCard(
-                                text: 'Belum ada mutasi aktif',
+                                text: query.isNotEmpty
+                                    ? 'Tidak ada mutasi aktif yang cocok'
+                                    : 'Belum ada mutasi aktif',
                                 actionLabel: 'Ajukan Mutasi',
                                 onAction: _goCreateMutation,
                               )
@@ -633,20 +656,37 @@ class _PemohonDashboardScreenState
 
                     mutationsAsync.when(
                       data: (list) {
-                        final filteredList = _dashboardFilterStatus != null
+                        final query = _searchController.text.trim().toLowerCase();
+                        var filteredList = _dashboardFilterStatus != null
                             ? list
                                 .where((m) => m.status == _dashboardFilterStatus)
                                 .toList()
                             : list;
+
+                        if (query.isNotEmpty) {
+                          filteredList = filteredList
+                              .where(
+                                (m) =>
+                                    m.ticketNumber.toLowerCase().contains(query) ||
+                                    m.asset.name.toLowerCase().contains(query) ||
+                                    m.targetLocation.toLowerCase().contains(query) ||
+                                    m.targetPic.toLowerCase().contains(query),
+                              )
+                              .toList();
+                        }
+
                         final recent = filteredList.take(5).toList();
 
                         if (recent.isEmpty) {
+                          final emptyMessage = query.isNotEmpty
+                              ? 'Tidak ada pengajuan yang cocok dengan "$query"'
+                              : (_dashboardFilterStatus != null
+                                  ? 'Tidak ada pengajuan dengan status "${_dashboardFilterStatus!.displayName}"'
+                                  : 'Belum ada pengajuan');
                           return Padding(
                             padding: const EdgeInsets.symmetric(vertical: 16),
                             child: Text(
-                              _dashboardFilterStatus != null
-                                  ? 'Tidak ada pengajuan dengan status "${_dashboardFilterStatus!.displayName}"'
-                                  : 'Belum ada pengajuan',
+                              emptyMessage,
                               style: const TextStyle(
                                 fontSize: 13,
                                 color: _C.textSecondary,
@@ -721,14 +761,16 @@ class _PemohonDashboardScreenState
 
 // ─── Header ────────────────────────────────────────────────────────────────
 
-class _Header extends StatelessWidget {
+class _Header extends ConsumerWidget {
   const _Header({required this.onNotif, required this.onProfile});
 
   final VoidCallback onNotif;
   final VoidCallback onProfile;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final unreadCount = ref.watch(unreadNotificationCountProvider);
+
     return Material(
       color: _C.surface.withValues(alpha: 0.92),
       elevation: 0,
@@ -780,19 +822,20 @@ class _Header extends StatelessWidget {
                       icon: const Icon(Icons.notifications_outlined),
                       color: _C.textSecondary,
                     ),
-                    Positioned(
-                      right: 10,
-                      top: 10,
-                      child: Container(
-                        width: 8,
-                        height: 8,
-                        decoration: BoxDecoration(
-                          color: _C.error,
-                          shape: BoxShape.circle,
-                          border: Border.all(color: _C.surface, width: 1.5),
+                    if (unreadCount > 0)
+                      Positioned(
+                        right: 10,
+                        top: 10,
+                        child: Container(
+                          width: 8,
+                          height: 8,
+                          decoration: BoxDecoration(
+                            color: _C.error,
+                            shape: BoxShape.circle,
+                            border: Border.all(color: _C.surface, width: 1.5),
+                          ),
                         ),
                       ),
-                    ),
                   ],
                 ),
                 IconButton(
@@ -1213,16 +1256,25 @@ class _EmptyCard extends StatelessWidget {
 
 // ─── Bottom Navigation ─────────────────────────────────────────────────────
 
-class _BottomPillNav extends StatelessWidget {
+class _BottomPillNav extends ConsumerWidget {
   const _BottomPillNav({required this.index, required this.onSelect});
 
   final int index;
   final ValueChanged<int> onSelect;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final unread = ref.watch(unreadNotificationCountProvider);
+
     Widget item(int i, IconData icon, String label) {
       final active = index == i;
+      final isNotif = i == 2;
+
+      final iconWidget = Icon(
+        icon,
+        size: 20,
+        color: active ? _C.primaryContainer : _C.textSecondary,
+      );
 
       return Expanded(
         child: InkWell(
@@ -1234,11 +1286,12 @@ class _BottomPillNav extends StatelessWidget {
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Icon(
-                    icon,
-                    size: 20,
-                    color: active ? _C.primaryContainer : _C.textSecondary,
-                  ),
+                  isNotif
+                      ? Badge(
+                          isLabelVisible: unread > 0,
+                          child: iconWidget,
+                        )
+                      : iconWidget,
                   const SizedBox(height: 2),
                   Text(
                     label,

@@ -28,13 +28,29 @@ class PemohonMutationListScreen extends ConsumerStatefulWidget {
 
 class _PemohonMutationListScreenState
     extends ConsumerState<PemohonMutationListScreen> {
+  final _searchController = TextEditingController();
   MutationStatus? _selectedStatus;
 
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
+
   List<Mutation> _applyFilter(List<Mutation> list) {
-    if (_selectedStatus == null) {
-      return list;
+    var result = list;
+    if (_selectedStatus != null) {
+      result = result.where((m) => m.status == _selectedStatus).toList();
     }
-    return list.where((m) => m.status == _selectedStatus).toList();
+    final query = _searchController.text.trim().toLowerCase();
+    if (query.isNotEmpty) {
+      result = result.where((m) =>
+          m.ticketNumber.toLowerCase().contains(query) ||
+          m.asset.name.toLowerCase().contains(query) ||
+          m.targetLocation.toLowerCase().contains(query) ||
+          m.targetPic.toLowerCase().contains(query)).toList();
+    }
+    return result;
   }
 
   Future<void> _openFilterBottomSheet(
@@ -98,11 +114,6 @@ class _PemohonMutationListScreenState
               });
             },
           ),
-          IconButton(
-            icon: const Icon(Icons.refresh),
-            tooltip: 'Segarkan',
-            onPressed: () => ref.invalidate(mutationListProvider),
-          ),
         ],
       ),
       floatingActionButton: FloatingActionButton.extended(
@@ -123,6 +134,61 @@ class _PemohonMutationListScreenState
 
           return Column(
             children: [
+              // ── Search Bar ────────────────────────────────────────
+              Padding(
+                padding: const EdgeInsets.fromLTRB(
+                  AppSpacing.lg,
+                  AppSpacing.sm,
+                  AppSpacing.lg,
+                  0,
+                ),
+                child: Container(
+                  height: 44,
+                  decoration: BoxDecoration(
+                    color: AppColors.surface,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: AppColors.border),
+                  ),
+                  child: TextField(
+                    controller: _searchController,
+                    onChanged: (_) => setState(() {}),
+                    style: const TextStyle(
+                      fontSize: 13,
+                      color: AppColors.textPrimary,
+                    ),
+                    decoration: InputDecoration(
+                      hintText: 'Cari tiket, aset, lokasi...',
+                      hintStyle: const TextStyle(
+                        fontSize: 13,
+                        color: AppColors.textSecondary,
+                      ),
+                      prefixIcon: const Icon(
+                        Icons.search,
+                        size: 20,
+                        color: AppColors.textSecondary,
+                      ),
+                      suffixIcon: _searchController.text.isNotEmpty
+                          ? IconButton(
+                              icon: const Icon(
+                                Icons.clear,
+                                size: 18,
+                                color: AppColors.textSecondary,
+                              ),
+                              onPressed: () {
+                                _searchController.clear();
+                                setState(() {});
+                              },
+                            )
+                          : null,
+                      border: InputBorder.none,
+                      contentPadding: const EdgeInsets.symmetric(
+                        vertical: 12,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+
               // ── Filter Chips Bar ──────────────────────────────────
               SingleChildScrollView(
                 scrollDirection: Axis.horizontal,
@@ -288,15 +354,27 @@ class _PemohonMutationListScreenState
                             ),
                             const SizedBox(height: 12),
                             Text(
-                              _selectedStatus != null
-                                  ? 'Tidak ada mutasi dengan status "${_selectedStatus!.displayName}"'
-                                  : 'Belum ada pengajuan mutasi',
+                              _searchController.text.trim().isNotEmpty
+                                  ? 'Tidak ada mutasi yang cocok dengan "${_searchController.text.trim()}"'
+                                  : (_selectedStatus != null
+                                      ? 'Tidak ada mutasi dengan status "${_selectedStatus!.displayName}"'
+                                      : 'Belum ada pengajuan mutasi'),
+                              textAlign: TextAlign.center,
                               style: const TextStyle(
                                 color: AppColors.textSecondary,
                                 fontSize: 14,
                               ),
                             ),
-                            if (_selectedStatus != null) ...[
+                            if (_searchController.text.trim().isNotEmpty) ...[
+                              const SizedBox(height: 8),
+                              TextButton(
+                                onPressed: () {
+                                  _searchController.clear();
+                                  setState(() {});
+                                },
+                                child: const Text('Hapus Pencarian'),
+                              ),
+                            ] else if (_selectedStatus != null) ...[
                               const SizedBox(height: 8),
                               TextButton(
                                 onPressed: () =>

@@ -17,6 +17,7 @@ class ApproveMutationKabagUseCase {
   Future<Result<Mutation>> call({
     required String mutationId,
     required String kabagName,
+    required bool requiresKadivApproval,
   }) async {
     if (mutationId.trim().isEmpty) {
       return const Result.failure(
@@ -49,6 +50,7 @@ class ApproveMutationKabagUseCase {
     return repository.approveMutationKabag(
       mutationId: mutationId,
       kabagName: kabagName,
+      requiresKadivApproval: requiresKadivApproval,
     );
   }
 }

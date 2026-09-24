@@ -19,6 +19,7 @@ class NotificationNotifier extends StateNotifier<List<NotificationItem>> {
         message: 'Pengajuan mutasi Anda telah diverifikasi oleh Operator dan menunggu approval Kabag Aset.',
         type: NotificationType.info,
         createdAt: now.subtract(const Duration(hours: 2)),
+        relatedMutationId: 'mut_004',
       ),
       NotificationItem(
         id: 'notif_2',
@@ -26,6 +27,7 @@ class NotificationNotifier extends StateNotifier<List<NotificationItem>> {
         message: 'Data aset telah diperbarui oleh Staff Aset. Silakan konfirmasi kesesuaian data.',
         type: NotificationType.action,
         createdAt: now.subtract(const Duration(days: 1)),
+        relatedMutationId: 'mut_006',
       ),
       NotificationItem(
         id: 'notif_3',
@@ -34,6 +36,7 @@ class NotificationNotifier extends StateNotifier<List<NotificationItem>> {
         type: NotificationType.success,
         createdAt: now.subtract(const Duration(days: 3)),
         isRead: true,
+        relatedMutationId: 'mut_001',
       ),
     ];
   }
@@ -47,6 +50,10 @@ class NotificationNotifier extends StateNotifier<List<NotificationItem>> {
 
   void markAllAsRead() {
     state = [for (final item in state) item.copyWith(isRead: true)];
+  }
+
+  void addNotification(NotificationItem item) {
+    state = [item, ...state];
   }
 }
 

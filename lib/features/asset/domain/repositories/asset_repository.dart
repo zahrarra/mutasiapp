@@ -26,4 +26,13 @@ abstract class AssetRepository {
 
   /// Ambil daftar kategori aset.
   Future<Result<List<AssetCategory>>> getCategories();
+
+  /// Update lokasi dan PIC aset oleh Staff Aset serta catat riwayat perubahan.
+  Future<Result<Asset>> updateAssetLocationAndPic({
+    required String assetId,
+    required String newLocation,
+    required String newPic,
+    required String ticketNumber,
+    required String updatedBy,
+  });
 }
