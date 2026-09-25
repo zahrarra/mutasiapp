@@ -1,29 +1,25 @@
 // lib/features/mutation/presentation/screens/mutation_detail_screen.dart
 //
-// Screen: Detail Pengajuan Mutasi milik Pemohon (REQ-007).
-// Sumber: SCREEN-SPEC.md REQ-007, ROLE-FLOW.md §3.
-//
-// Menampilkan detail lengkap satu pengajuan mutasi beserta aksi
-// kontekstual sesuai status:
-// - returned              -> tombol "Edit Pengajuan" (REQ-008)
-// - pendingConfirmation   -> tombol "Konfirmasi Sekarang" (REQ-009)
-// - status lain           -> read-only (tanpa aksi)
+// Screen: Detail Mutasi & Tracking (Enhanced UI).
+// Diadaptasi dari desain Stitch: 'MutasiKu — Detail Mutasi & Tracking (Enhanced UI)'.
+// Screen ID Stitch: 829242333f1343b685ced750b92f2fd3
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../app/router/route_names.dart';
 import '../../../../app/theme/app_colors.dart';
-import '../../../../app/theme/app_spacing.dart';
-import '../../../../core/widgets/custom_button.dart';
+import '../../../../core/widgets/document_preview_dialog.dart';
 import '../../../../core/widgets/error_view.dart';
 import '../../../../core/widgets/loading_indicator.dart';
+import '../../../auth/presentation/providers/auth_provider.dart';
 import '../../domain/entities/mutation.dart';
 import '../../domain/entities/mutation_status.dart';
 import '../providers/mutation_provider.dart';
 
-/// Screen detail pengajuan mutasi milik Pemohon.
+/// Screen detail pengajuan mutasi & pelacakan alur kerja (Enhanced UI).
 class MutationDetailScreen extends ConsumerWidget {
   final String mutationId;
 
@@ -34,378 +30,1713 @@ class MutationDetailScreen extends ConsumerWidget {
     final asyncMutation = ref.watch(mutationDetailProvider(mutationId));
 
     return Scaffold(
-      backgroundColor: AppColors.background,
-      appBar: AppBar(title: const Text('Detail Pengajuan')),
+      backgroundColor: const Color(0xFFF7F9FF),
+      appBar: AppBar(
+        title: const Text(
+          'Detail Mutasi',
+          style: TextStyle(
+            fontSize: 16,
+            fontWeight: FontWeight.bold,
+            color: Color(0xFF0F1D28),
+          ),
+        ),
+        backgroundColor: Colors.white,
+        elevation: 0.5,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back, color: Color(0xFF0F1D28)),
+          tooltip: 'Kembali',
+          onPressed: () {
+            if (Navigator.of(context).canPop()) {
+              Navigator.of(context).pop();
+            } else {
+              try {
+                context.go(RouteNames.pemohonMutasiPath);
+              } catch (_) {}
+            }
+          },
+        ),
+      ),
       body: asyncMutation.when(
-        data: (mutation) => _buildBody(context, ref, mutation),
+        data: (mutation) => RefreshIndicator(
+          onRefresh: () async {
+            ref.invalidate(mutationDetailProvider(mutationId));
+          },
+          child: _buildEnhancedBody(context, ref, mutation),
+        ),
         loading: () => const LoadingIndicator(),
         error: (err, _) => ErrorView(
-          message: 'Gagal memuat detail pengajuan.\n${err.toString()}',
+          message: 'Gagal memuat detail pengajuan.\n$err',
           onRetry: () => ref.invalidate(mutationDetailProvider(mutationId)),
         ),
       ),
     );
   }
 
-  Widget _buildBody(BuildContext context, WidgetRef ref, Mutation mutation) {
-    final showEdit = mutation.status == MutationStatus.returned;
-    final showConfirm = mutation.status == MutationStatus.pendingConfirmation;
+  Widget _buildEnhancedBody(
+    BuildContext context,
+    WidgetRef ref,
+    Mutation mutation,
+  ) {
+    return SingleChildScrollView(
+      physics: const AlwaysScrollableScrollPhysics(),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          // 1. Status & Ticket Hero Card (Navy Gradient)
+          _buildHeroCard(context, mutation),
+          const SizedBox(height: 16),
 
-    return Column(
-      children: [
-        Expanded(
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.all(AppSpacing.md),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                _buildHeader(mutation),
-                const SizedBox(height: AppSpacing.md),
+          // 2. Alert Banners (Returned / Rejected)
+          if (mutation.status == MutationStatus.returned) ...[
+            _buildReturnedAlertBanner(mutation),
+            const SizedBox(height: 16),
+          ],
+          if (mutation.status == MutationStatus.rejected) ...[
+            _buildRejectedAlertBanner(mutation),
+            const SizedBox(height: 16),
+          ],
 
-                if (mutation.status == MutationStatus.returned &&
-                    mutation.returnReason != null)
-                  _buildBanner(
-                    icon: Icons.info_outline,
-                    color: AppColors.warning,
-                    background: AppColors.warningContainer,
-                    text: 'Dikembalikan Operator: ${mutation.returnReason}',
-                  ),
-                if (mutation.status == MutationStatus.rejected &&
-                    mutation.rejectionReason != null)
-                  _buildBanner(
-                    icon: Icons.cancel_outlined,
-                    color: AppColors.error,
-                    background: AppColors.errorContainer,
-                    text: 'Ditolak Kabag Aset: ${mutation.rejectionReason}',
-                  ),
-                if (mutation.status == MutationStatus.rejected &&
-                    mutation.kadivRejectionReason != null)
-                  _buildBanner(
-                    icon: Icons.cancel_outlined,
-                    color: AppColors.error,
-                    background: AppColors.errorContainer,
-                    text: 'Ditolak Kadiv: ${mutation.kadivRejectionReason}',
-                  ),
-                if (showConfirm)
-                  _buildBanner(
-                    icon: Icons.touch_app_outlined,
-                    color: AppColors.info,
-                    background: AppColors.infoContainer,
-                    text: 'Data aset telah diperbarui. Silakan konfirmasi kesesuaiannya.',
-                  ),
-                const SizedBox(height: AppSpacing.md),
+          // 3. Pelacakan Alur Kerja (Workflow Timeline)
+          _buildTrackingTimelineCard(mutation),
+          const SizedBox(height: 16),
 
-                _sectionTitle('Detail Aset'),
-                const SizedBox(height: AppSpacing.sm),
-                _infoCard([
-                  _infoRow('Nama Aset', mutation.asset.name),
-                  _infoRow('Kode Aset', mutation.asset.assetCode),
-                  _infoRow(
-                    'Kategori',
-                    mutation.asset.category.name,
-                    isLast: true,
-                  ),
-                ]),
-                const SizedBox(height: AppSpacing.md),
+          // 4. Spesifikasi Aset Card
+          _buildAssetSpecificationCard(mutation),
+          const SizedBox(height: 16),
 
-                _sectionTitle('Perpindahan'),
-                const SizedBox(height: AppSpacing.sm),
-                _infoCard([
-                  _transferRow(
-                    'Lokasi',
-                    mutation.currentLocation,
-                    mutation.targetLocation,
-                  ),
-                  const SizedBox(height: AppSpacing.md),
-                  _transferRow('PIC', mutation.currentPic, mutation.targetPic),
-                ]),
-                const SizedBox(height: AppSpacing.md),
+          // 5. Rincian Perpindahan Card
+          _buildTransferDetailsCard(mutation),
+          const SizedBox(height: 16),
 
-                _sectionTitle('Alasan Mutasi'),
-                const SizedBox(height: AppSpacing.sm),
-                _infoCard([
-                  Text(
-                    mutation.reason,
-                    style: const TextStyle(
-                      fontSize: 13,
-                      color: AppColors.textPrimary,
-                      height: 1.5,
-                    ),
-                  ),
-                ]),
-                const SizedBox(height: AppSpacing.md),
+          // 6. Alasan & Dokumen Pendukung
+          _buildJustificationAndDocumentCard(context, mutation, ref),
+          const SizedBox(height: 16),
 
-                _sectionTitle('Tanggal Diajukan'),
-                const SizedBox(height: AppSpacing.sm),
-                _infoCard([
-                  Text(
-                    _formatDate(mutation.createdAt),
-                    style: const TextStyle(
-                      fontSize: 13,
-                      color: AppColors.textPrimary,
-                    ),
+          // 7. Status Info Card
+          _buildStatusInfoBanner(mutation),
+          const SizedBox(height: 24),
+
+          // 8. Bottom Action Buttons
+          if (mutation.status == MutationStatus.returned) ...[
+            ElevatedButton.icon(
+              onPressed: () async {
+                await context.push(
+                  RouteNames.pemohonMutasiEditPath.replaceFirst(
+                    ':id',
+                    mutation.id,
                   ),
-                ]),
-                const SizedBox(height: AppSpacing.giant),
-              ],
+                );
+                ref.invalidate(mutationDetailProvider(mutationId));
+              },
+              icon: const Icon(Icons.edit_outlined, color: Colors.white),
+              label: const Text(
+                'Edit & Ajukan Ulang',
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.white,
+                ),
+              ),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.warning,
+                minimumSize: const Size.fromHeight(48),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                elevation: 0,
+              ),
             ),
-          ),
-        ),
-        if (showEdit || showConfirm)
-          _buildActionBar(context, mutation, showEdit, showConfirm),
-      ],
+            const SizedBox(height: 24),
+          ],
+          if (mutation.status == MutationStatus.pendingConfirmation) ...[
+            ElevatedButton.icon(
+              onPressed: () {
+                context.push(
+                  RouteNames.pemohonConfirmationPath.replaceFirst(
+                    ':id',
+                    mutation.id,
+                  ),
+                );
+              },
+              icon: const Icon(Icons.check_circle_outline, color: Colors.white),
+              label: const Text(
+                'Konfirmasi Mutasi',
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.white,
+                ),
+              ),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.primary,
+                minimumSize: const Size.fromHeight(48),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                elevation: 0,
+              ),
+            ),
+            const SizedBox(height: 24),
+          ],
+        ],
+      ),
     );
   }
 
-  // ─── Header ─────────────────────────────────────────────────────────────
-
-  Widget _buildHeader(Mutation mutation) {
+  // ─────────────────────────────────────────────────────────────────────────
+  // 1. HERO CARD
+  // ─────────────────────────────────────────────────────────────────────────
+  Widget _buildHeroCard(BuildContext context, Mutation mutation) {
     return Container(
-      padding: const EdgeInsets.all(AppSpacing.md),
       decoration: BoxDecoration(
-        color: AppColors.surface,
-        borderRadius: BorderRadius.circular(AppRadius.card),
-        border: Border.all(color: AppColors.border),
+        gradient: const LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            Color(0xFF00273A),
+            Color(0xFF00344D),
+            Color(0xFF0A4866),
+          ],
+        ),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0xFF00273A).withValues(alpha: 0.25),
+            blurRadius: 16,
+            offset: const Offset(0, 8),
+          ),
+        ],
+      ),
+      padding: const EdgeInsets.all(20),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Tag Pill & Status Badge Row
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 3,
+                    ),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withValues(alpha: 0.12),
+                      borderRadius: BorderRadius.circular(6),
+                    ),
+                    child: const Text(
+                      'MUTASI ASET',
+                      style: TextStyle(
+                        fontSize: 10,
+                        fontWeight: FontWeight.bold,
+                        letterSpacing: 0.8,
+                        color: Color(0xFF67E8F9),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Text(
+                    mutation.ticketNumber,
+                    style: const TextStyle(
+                      fontFamily: 'monospace',
+                      fontSize: 14,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white,
+                      letterSpacing: 0.5,
+                    ),
+                  ),
+                  IconButton(
+                    icon: const Icon(
+                      Icons.copy_rounded,
+                      size: 15,
+                      color: Color(0xFFA5F3FC),
+                    ),
+                    tooltip: 'Salin Nomor Tiket',
+                    padding: EdgeInsets.zero,
+                    constraints: const BoxConstraints(),
+                    onPressed: () {
+                      Clipboard.setData(
+                        ClipboardData(text: mutation.ticketNumber),
+                      );
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text(
+                            'Nomor tiket ${mutation.ticketNumber} berhasil disalin!',
+                          ),
+                          duration: const Duration(seconds: 2),
+                        ),
+                      );
+                    },
+                  ),
+                ],
+              ),
+              _buildHeroStatusBadge(mutation.status),
+            ],
+          ),
+          const SizedBox(height: 16),
+
+          // 2-Column Info: Tanggal Pengajuan & Target SLA
+          Container(
+            padding: const EdgeInsets.only(top: 12),
+            decoration: BoxDecoration(
+              border: Border(
+                top: BorderSide(
+                  color: Colors.white.withValues(alpha: 0.12),
+                ),
+              ),
+            ),
+            child: Row(
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'TANGGAL PENGAJUAN',
+                        style: TextStyle(
+                          fontSize: 10,
+                          fontWeight: FontWeight.w600,
+                          color: const Color(0xFFA5F3FC).withValues(alpha: 0.7),
+                        ),
+                      ),
+                      const SizedBox(height: 3),
+                      Row(
+                        children: [
+                          const Icon(
+                            Icons.calendar_month_outlined,
+                            size: 13,
+                            color: Color(0xFF67E8F9),
+                          ),
+                          const SizedBox(width: 4),
+                          Expanded(
+                            child: Text(
+                              _formatDateShort(mutation.createdAt),
+                              style: const TextStyle(
+                                fontSize: 11,
+                                fontWeight: FontWeight.w500,
+                                color: Colors.white,
+                              ),
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'TARGET SLA SELESAI',
+                        style: TextStyle(
+                          fontSize: 10,
+                          fontWeight: FontWeight.w600,
+                          color: const Color(0xFFA5F3FC).withValues(alpha: 0.7),
+                        ),
+                      ),
+                      const SizedBox(height: 3),
+                      const Row(
+                        children: [
+                          Icon(
+                            Icons.timer_outlined,
+                            size: 13,
+                            color: Color(0xFFFDE047),
+                          ),
+                          SizedBox(width: 4),
+                          Text(
+                            '1x24 Jam (Sisa 18 Jam)',
+                            style: TextStyle(
+                              fontSize: 11,
+                              fontWeight: FontWeight.w500,
+                              color: Colors.white,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 14),
+
+          // Reviewer card
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: Colors.white.withValues(alpha: 0.1),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: Colors.white.withValues(alpha: 0.12)),
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Row(
+                  children: [
+                    Stack(
+                      children: [
+                        CircleAvatar(
+                          radius: 17,
+                          backgroundColor:
+                              const Color(0xFF06B6D4).withValues(alpha: 0.3),
+                          child: const Icon(
+                            Icons.person,
+                            size: 18,
+                            color: Color(0xFFA5F3FC),
+                          ),
+                        ),
+                        Positioned(
+                          right: 0,
+                          bottom: 0,
+                          child: Container(
+                            width: 8,
+                            height: 8,
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFFBBF24),
+                              shape: BoxShape.circle,
+                              border: Border.all(
+                                color: const Color(0xFF00273A),
+                                width: 1.5,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(width: 10),
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'PETUGAS PENINJAU',
+                          style: TextStyle(
+                            fontSize: 9,
+                            fontWeight: FontWeight.w600,
+                            letterSpacing: 0.5,
+                            color:
+                                const Color(0xFFA5F3FC).withValues(alpha: 0.8),
+                          ),
+                        ),
+                        Text(
+                          _getReviewerName(mutation),
+                          style: const TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white,
+                          ),
+                        ),
+                        Text(
+                          _getReviewerRole(mutation),
+                          style: TextStyle(
+                            fontSize: 11,
+                            color: Colors.white.withValues(alpha: 0.7),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 4,
+                  ),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFFBBF24).withValues(alpha: 0.15),
+                    borderRadius: BorderRadius.circular(6),
+                    border: Border.all(
+                      color: const Color(0xFFFBBF24).withValues(alpha: 0.3),
+                    ),
+                  ),
+                  child: const Row(
+                    children: [
+                      Icon(
+                        Icons.hourglass_top,
+                        size: 12,
+                        color: Color(0xFFFDE047),
+                      ),
+                      SizedBox(width: 4),
+                      Text(
+                        'Meninjau',
+                        style: TextStyle(
+                          fontSize: 10,
+                          fontWeight: FontWeight.bold,
+                          color: Color(0xFFFDE047),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildHeroStatusBadge(MutationStatus status) {
+    Color bg;
+    Color border;
+    Color text;
+
+    switch (status) {
+      case MutationStatus.submitted:
+      case MutationStatus.waitingKabagApproval:
+      case MutationStatus.waitingKadivApproval:
+        bg = const Color(0xFFF59E0B).withValues(alpha: 0.2);
+        border = const Color(0xFFF59E0B).withValues(alpha: 0.35);
+        text = const Color(0xFFFDE68A);
+      case MutationStatus.verified:
+      case MutationStatus.approved:
+      case MutationStatus.completed:
+        bg = const Color(0xFF10B981).withValues(alpha: 0.2);
+        border = const Color(0xFF10B981).withValues(alpha: 0.35);
+        text = const Color(0xFFA7F3D0);
+      case MutationStatus.returned:
+        bg = const Color(0xFFF97316).withValues(alpha: 0.2);
+        border = const Color(0xFFF97316).withValues(alpha: 0.35);
+        text = const Color(0xFFFED7AA);
+      case MutationStatus.rejected:
+        bg = const Color(0xFFEF4444).withValues(alpha: 0.2);
+        border = const Color(0xFFEF4444).withValues(alpha: 0.35);
+        text = const Color(0xFFFECACA);
+      case MutationStatus.pendingConfirmation:
+        bg = const Color(0xFF06B6D4).withValues(alpha: 0.2);
+        border = const Color(0xFF06B6D4).withValues(alpha: 0.35);
+        text = const Color(0xFFA5F3FC);
+    }
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+      decoration: BoxDecoration(
+        color: bg,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: border),
       ),
       child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        mainAxisSize: MainAxisSize.min,
         children: [
+          Container(
+            width: 6,
+            height: 6,
+            decoration: BoxDecoration(
+              color: text,
+              shape: BoxShape.circle,
+            ),
+          ),
+          const SizedBox(width: 5),
+          Text(
+            status.displayName,
+            style: TextStyle(
+              fontSize: 11,
+              fontWeight: FontWeight.bold,
+              color: text,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // 2. TIMELINE TRACKING
+  // ─────────────────────────────────────────────────────────────────────────
+  Widget _buildTrackingTimelineCard(Mutation mutation) {
+    final status = mutation.status;
+    final isDone1 = true;
+    final isDone2 = status != MutationStatus.submitted;
+    final isDone3 = isDone2 &&
+        status != MutationStatus.returned &&
+        status != MutationStatus.waitingKabagApproval;
+    final isDone4 = isDone3 && status != MutationStatus.waitingKadivApproval;
+    final isDone5 = isDone4 && status != MutationStatus.approved;
+    final isDone6 = status == MutationStatus.completed;
+
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: const Color(0xFFE2E8F0)),
+        boxShadow: const [
+          BoxShadow(
+            color: Color(0x08000000),
+            blurRadius: 8,
+            offset: Offset(0, 2),
+          ),
+        ],
+      ),
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Row(
+                children: [
+                  Container(
+                    width: 30,
+                    height: 30,
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF00273A),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: const Icon(
+                      Icons.alt_route,
+                      size: 17,
+                      color: Colors.white,
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  const Text(
+                    'Pelacakan Alur Kerja',
+                    style: TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.bold,
+                      color: Color(0xFF0F1D28),
+                    ),
+                  ),
+                ],
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFF1F5F9),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: const Color(0xFFE2E8F0)),
+                ),
+                child: Text(
+                  'Tahap ${_getStageIndex(status)} dari 6',
+                  style: const TextStyle(
+                    fontFamily: 'monospace',
+                    fontSize: 10,
+                    fontWeight: FontWeight.bold,
+                    color: Color(0xFF334155),
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+
+          // Vertical timeline tiles
+          _buildTimelineTile(
+            title: '1. Diajukan oleh Pemohon',
+            subtitle:
+                'Pemohon: ${mutation.applicantName} • ${_formatDateShort(mutation.createdAt)}',
+            isDone: isDone1,
+            isCurrent: status == MutationStatus.submitted,
+            isAlert: false,
+            badgeText: 'Tiket Dibuat',
+            isLast: false,
+          ),
+          _buildTimelineTile(
+            title: '2. Verifikasi Fisik & Dokumen',
+            subtitle: mutation.verifiedBy != null
+                ? 'Operator: ${mutation.verifiedBy}'
+                : 'Menunggu penugasan Operator',
+            isDone: isDone2,
+            isCurrent: status == MutationStatus.submitted,
+            isAlert: status == MutationStatus.returned,
+            badgeText: isDone2
+                ? 'Fisik & Dokumen Valid'
+                : (status == MutationStatus.returned
+                    ? 'Perlu Perbaikan'
+                    : 'Menunggu'),
+            isLast: false,
+          ),
+          _buildTimelineTile(
+            title: '3. Approval Kabag Aset',
+            subtitle: mutation.approvedBy != null
+                ? 'Kabag: ${mutation.approvedBy}'
+                : 'Menunggu peninjauan batas wewenang',
+            isDone: isDone3,
+            isCurrent: status == MutationStatus.waitingKabagApproval,
+            isAlert: status == MutationStatus.rejected &&
+                mutation.kadivRejectionReason == null,
+            badgeText: isDone3 ? 'Disetujui' : 'Pemeriksaan Wewenang',
+            isLast: false,
+          ),
+          _buildTimelineTile(
+            title: '4. Approval Kepala Divisi (Kadiv)',
+            subtitle: mutation.requiresKadivApproval
+                ? (isDone4
+                    ? 'Disetujui oleh Kadiv'
+                    : 'Menunggu persetujuan Kadiv')
+                : 'Kondisional — Tidak Diperlukan (< Rp50 Jt)',
+            isDone: isDone4,
+            isCurrent: status == MutationStatus.waitingKadivApproval,
+            isAlert: status == MutationStatus.rejected &&
+                mutation.kadivRejectionReason != null,
+            badgeText: mutation.requiresKadivApproval
+                ? (isDone4 ? 'Disetujui' : 'Menunggu Kadiv')
+                : 'Dilewati',
+            isLast: false,
+          ),
+          _buildTimelineTile(
+            title: '5. Pembaruan Fisik & Lokasi Aset',
+            subtitle: mutation.staffUpdatedBy != null
+                ? 'Diperbarui oleh Staff: ${mutation.staffUpdatedBy}'
+                : 'Menugaskan pemindahan fisik ke Staff Aset',
+            isDone: isDone5,
+            isCurrent: status == MutationStatus.approved,
+            isAlert: false,
+            badgeText: isDone5 ? 'Fisik Terpindah' : 'Dalam Proses',
+            isLast: false,
+          ),
+          _buildTimelineTile(
+            title: '6. Konfirmasi Penerimaan & Selesai',
+            subtitle: isDone6
+                ? 'Mutasi selesai dan terarsip ke buku besar aset'
+                : 'Pemeriksaan fisik unit di lokasi tujuan oleh Pemohon',
+            isDone: isDone6,
+            isCurrent: status == MutationStatus.pendingConfirmation,
+            isAlert: false,
+            badgeText: isDone6 ? 'Selesai' : 'Verifikasi Akhir',
+            isLast: true,
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildTimelineTile({
+    required String title,
+    required String subtitle,
+    required bool isDone,
+    required bool isCurrent,
+    required bool isAlert,
+    required String badgeText,
+    required bool isLast,
+  }) {
+    Color iconBg;
+    Color iconBorder;
+    Widget iconChild;
+
+    if (isAlert) {
+      iconBg = const Color(0xFFF97316);
+      iconBorder = const Color(0xFFFDBA74);
+      iconChild = const Icon(Icons.close, size: 14, color: Colors.white);
+    } else if (isDone) {
+      iconBg = const Color(0xFF059669);
+      iconBorder = const Color(0xFF6EE7B7);
+      iconChild = const Icon(Icons.check, size: 14, color: Colors.white);
+    } else if (isCurrent) {
+      iconBg = const Color(0xFFF59E0B);
+      iconBorder = const Color(0xFFFDE68A);
+      iconChild = Container(
+        width: 6,
+        height: 6,
+        decoration: const BoxDecoration(
+          color: Colors.white,
+          shape: BoxShape.circle,
+        ),
+      );
+    } else {
+      iconBg = const Color(0xFFE2E8F0);
+      iconBorder = const Color(0xFFCBD5E1);
+      iconChild = Container(
+        width: 4,
+        height: 4,
+        decoration: const BoxDecoration(
+          color: Color(0xFF94A3B8),
+          shape: BoxShape.circle,
+        ),
+      );
+    }
+
+    return IntrinsicHeight(
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Indicator column
+          Column(
+            children: [
+              Container(
+                width: 24,
+                height: 24,
+                decoration: BoxDecoration(
+                  color: iconBg,
+                  shape: BoxShape.circle,
+                  border: Border.all(color: iconBorder, width: 2),
+                ),
+                child: Center(child: iconChild),
+              ),
+              if (!isLast)
+                Expanded(
+                  child: Container(
+                    width: 2,
+                    color: isDone
+                        ? const Color(0xFF10B981)
+                        : const Color(0xFFE2E8F0),
+                  ),
+                ),
+            ],
+          ),
+          const SizedBox(width: 12),
+          // Content column
+          Expanded(
+            child: Padding(
+              padding: const EdgeInsets.only(bottom: 16),
+              child: Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: isCurrent
+                      ? const Color(0xFFFEF3C7).withValues(alpha: 0.35)
+                      : const Color(0xFFF8FAFC),
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(
+                    color: isCurrent
+                        ? const Color(0xFFFCD34D)
+                        : const Color(0xFFF1F5F9),
+                  ),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Expanded(
+                          child: Text(
+                            title,
+                            style: TextStyle(
+                              fontSize: 13,
+                              fontWeight: FontWeight.bold,
+                              color: isCurrent
+                                  ? const Color(0xFF92400E)
+                                  : const Color(0xFF1E293B),
+                            ),
+                          ),
+                        ),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 6,
+                            vertical: 2,
+                          ),
+                          decoration: BoxDecoration(
+                            color: isDone
+                                ? const Color(0xFFECFDF5)
+                                : const Color(0xFFF1F5F9),
+                            borderRadius: BorderRadius.circular(4),
+                            border: Border.all(
+                              color: isDone
+                                  ? const Color(0xFFA7F3D0)
+                                  : const Color(0xFFE2E8F0),
+                            ),
+                          ),
+                          child: Text(
+                            badgeText,
+                            style: TextStyle(
+                              fontSize: 9,
+                              fontWeight: FontWeight.w600,
+                              color: isDone
+                                  ? const Color(0xFF047857)
+                                  : const Color(0xFF64748B),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 3),
+                    Text(
+                      subtitle,
+                      style: const TextStyle(
+                        fontSize: 11,
+                        color: Color(0xFF64748B),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // 3. ASSET SPECIFICATION CARD
+  // ─────────────────────────────────────────────────────────────────────────
+  Widget _buildAssetSpecificationCard(Mutation mutation) {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: const Color(0xFFE2E8F0)),
+        boxShadow: const [
+          BoxShadow(
+            color: Color(0x08000000),
+            blurRadius: 8,
+            offset: Offset(0, 2),
+          ),
+        ],
+      ),
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                width: 30,
+                height: 30,
+                decoration: BoxDecoration(
+                  color: const Color(0xFF00273A),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: const Icon(
+                  Icons.devices_outlined,
+                  size: 17,
+                  color: Colors.white,
+                ),
+              ),
+              const SizedBox(width: 10),
+              const Text(
+                'Spesifikasi Aset',
+                style: TextStyle(
+                  fontSize: 15,
+                  fontWeight: FontWeight.bold,
+                  color: Color(0xFF0F1D28),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 14),
+
+          // Asset banner row
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: const Color(0xFFF8FAFC),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: const Color(0xFFE2E8F0)),
+            ),
+            child: Row(
+              children: [
+                Container(
+                  width: 56,
+                  height: 56,
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: const Color(0xFFCBD5E1)),
+                  ),
+                  child: const Center(
+                    child: Icon(
+                      Icons.laptop_chromebook,
+                      size: 28,
+                      color: Color(0xFF00273A),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 6,
+                              vertical: 2,
+                            ),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFECFEFF),
+                              borderRadius: BorderRadius.circular(4),
+                              border: Border.all(
+                                color: const Color(0xFFA5F3FC),
+                              ),
+                            ),
+                            child: Text(
+                              mutation.isUnregisteredAsset
+                                  ? 'ASET MANUAL'
+                                  : mutation.asset.category.name.toUpperCase(),
+                              style: const TextStyle(
+                                fontSize: 9,
+                                fontWeight: FontWeight.bold,
+                                color: Color(0xFF0E7490),
+                              ),
+                            ),
+                          ),
+                          if (mutation.isUnregisteredAsset) ...[
+                            const SizedBox(width: 6),
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 6,
+                                vertical: 2,
+                              ),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFFFFF7ED),
+                                borderRadius: BorderRadius.circular(4),
+                                border: Border.all(
+                                  color: const Color(0xFFFED7AA),
+                                ),
+                              ),
+                              child: const Text(
+                                'TIDAK TERDAFTAR',
+                                style: TextStyle(
+                                  fontSize: 9,
+                                  fontWeight: FontWeight.bold,
+                                  color: Color(0xFFC2410C),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ],
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        mutation.displayAssetName,
+                        style: const TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.bold,
+                          color: Color(0xFF0F172A),
+                        ),
+                      ),
+                      Text(
+                        'Kode: ${mutation.displayAssetCode}',
+                        style: const TextStyle(
+                          fontFamily: 'monospace',
+                          fontSize: 11,
+                          color: Color(0xFF64748B),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 12),
+
+          // Grid 2-column info
+          Row(
+            children: [
+              Expanded(
+                child: Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFF8FAFC),
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(color: const Color(0xFFF1F5F9)),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        'SERIAL NUMBER (SN)',
+                        style: TextStyle(
+                          fontSize: 9,
+                          fontWeight: FontWeight.w600,
+                          color: Color(0xFF64748B),
+                        ),
+                      ),
+                      const SizedBox(height: 3),
+                      Text(
+                        mutation.displayAssetCode,
+                        style: const TextStyle(
+                          fontFamily: 'monospace',
+                          fontSize: 12,
+                          fontWeight: FontWeight.bold,
+                          color: Color(0xFF1E293B),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFF8FAFC),
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(color: const Color(0xFFF1F5F9)),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        'KONDISI FISIK',
+                        style: TextStyle(
+                          fontSize: 9,
+                          fontWeight: FontWeight.w600,
+                          color: Color(0xFF64748B),
+                        ),
+                      ),
+                      const SizedBox(height: 3),
+                      Row(
+                        children: [
+                          Container(
+                            width: 6,
+                            height: 6,
+                            decoration: const BoxDecoration(
+                              color: Color(0xFF059669),
+                              shape: BoxShape.circle,
+                            ),
+                          ),
+                          const SizedBox(width: 5),
+                          Text(
+                            mutation.asset.condition,
+                            style: const TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.bold,
+                              color: Color(0xFF065F46),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // 4. TRANSFER DETAILS CARD
+  // ─────────────────────────────────────────────────────────────────────────
+  Widget _buildTransferDetailsCard(Mutation mutation) {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: const Color(0xFFE2E8F0)),
+        boxShadow: const [
+          BoxShadow(
+            color: Color(0x08000000),
+            blurRadius: 8,
+            offset: Offset(0, 2),
+          ),
+        ],
+      ),
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                width: 30,
+                height: 30,
+                decoration: BoxDecoration(
+                  color: const Color(0xFF00273A),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: const Icon(
+                  Icons.sync_alt,
+                  size: 17,
+                  color: Colors.white,
+                ),
+              ),
+              const SizedBox(width: 10),
+              const Text(
+                'Rincian Perpindahan',
+                style: TextStyle(
+                  fontSize: 15,
+                  fontWeight: FontWeight.bold,
+                  color: Color(0xFF0F1D28),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 14),
+
+          Container(
+            padding: const EdgeInsets.all(14),
+            decoration: BoxDecoration(
+              color: const Color(0xFFF8FAFC),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: const Color(0xFFE2E8F0)),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Origin location & PIC
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Container(
+                      width: 32,
+                      height: 32,
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFE2E8F0),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: const Icon(
+                        Icons.apartment,
+                        size: 18,
+                        color: Color(0xFF334155),
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text(
+                            'LOKASI ASAL (PENGIRIM)',
+                            style: TextStyle(
+                              fontSize: 9,
+                              fontWeight: FontWeight.bold,
+                              color: Color(0xFF64748B),
+                            ),
+                          ),
+                          Text(
+                            mutation.currentLocation,
+                            style: const TextStyle(
+                              fontSize: 13,
+                              fontWeight: FontWeight.bold,
+                              color: Color(0xFF0F172A),
+                            ),
+                          ),
+                          Text(
+                            'PIC: ${mutation.currentPic}',
+                            style: const TextStyle(
+                              fontSize: 11,
+                              color: Color(0xFF475569),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+
+                // Dashed connector
+                Padding(
+                  padding: const EdgeInsets.only(left: 15, top: 4, bottom: 4),
+                  child: Row(
+                    children: [
+                      Container(
+                        width: 2,
+                        height: 24,
+                        color: const Color(0xFF0D9488),
+                      ),
+                      const SizedBox(width: 12),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 2,
+                        ),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFF0FDFA),
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: const Color(0xFF99F6E4)),
+                        ),
+                        child: const Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(
+                              Icons.local_shipping_outlined,
+                              size: 12,
+                              color: Color(0xFF0F766E),
+                            ),
+                            SizedBox(width: 4),
+                            Text(
+                              'Mutasi Antar Wilayah',
+                              style: TextStyle(
+                                fontSize: 9,
+                                fontWeight: FontWeight.bold,
+                                color: Color(0xFF0F766E),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+
+                // Destination location & PIC
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Container(
+                      width: 32,
+                      height: 32,
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF00273A),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: const Icon(
+                        Icons.pin_drop,
+                        size: 18,
+                        color: Colors.white,
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text(
+                            'LOKASI TUJUAN (PENERIMA)',
+                            style: TextStyle(
+                              fontSize: 9,
+                              fontWeight: FontWeight.bold,
+                              color: Color(0xFF0D9488),
+                            ),
+                          ),
+                          Text(
+                            mutation.targetLocation,
+                            style: const TextStyle(
+                              fontSize: 13,
+                              fontWeight: FontWeight.bold,
+                              color: Color(0xFF0F172A),
+                            ),
+                          ),
+                          Text(
+                            'PIC: ${mutation.targetPic}',
+                            style: const TextStyle(
+                              fontSize: 11,
+                              color: Color(0xFF475569),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+          if (mutation.staffUpdatedBy != null) ...[
+            const SizedBox(height: 10),
+            Container(
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: const Color(0xFFECFDF5),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: const Color(0xFFA7F3D0)),
+              ),
+              child: Row(
+                children: [
+                  const Icon(
+                    Icons.verified_outlined,
+                    size: 16,
+                    color: Color(0xFF047857),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      'Fisik diperbarui oleh ${mutation.staffUpdatedBy}'
+                      '${mutation.staffUpdatedAt != null ? ' pada ${_formatDateShort(mutation.staffUpdatedAt!)}' : ''}',
+                      style: const TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w600,
+                        color: Color(0xFF065F46),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // 5. JUSTIFICATION & DOCUMENTS CARD
+  // ─────────────────────────────────────────────────────────────────────────
+  Widget _buildJustificationAndDocumentCard(
+    BuildContext context,
+    Mutation mutation,
+    WidgetRef ref,
+  ) {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: const Color(0xFFE2E8F0)),
+        boxShadow: const [
+          BoxShadow(
+            color: Color(0x08000000),
+            blurRadius: 8,
+            offset: Offset(0, 2),
+          ),
+        ],
+      ),
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                width: 30,
+                height: 30,
+                decoration: BoxDecoration(
+                  color: const Color(0xFF00273A),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: const Icon(
+                  Icons.description_outlined,
+                  size: 17,
+                  color: Colors.white,
+                ),
+              ),
+              const SizedBox(width: 10),
+              const Text(
+                'Alasan & Dokumen Pendukung',
+                style: TextStyle(
+                  fontSize: 15,
+                  fontWeight: FontWeight.bold,
+                  color: Color(0xFF0F1D28),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 14),
+
+          // Justification quote
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: const Color(0xFFF8FAFC),
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(color: const Color(0xFFF1F5F9)),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Row(
+                  children: [
+                    Icon(
+                      Icons.format_quote,
+                      size: 16,
+                      color: Color(0xFF64748B),
+                    ),
+                    SizedBox(width: 4),
+                    Text(
+                      'JUSTIFIKASI KEBUTUHAN',
+                      style: TextStyle(
+                        fontSize: 9,
+                        fontWeight: FontWeight.bold,
+                        color: Color(0xFF64748B),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  mutation.reason,
+                  style: const TextStyle(
+                    fontSize: 12,
+                    color: Color(0xFF334155),
+                    height: 1.45,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 12),
+
+          // Document attachment tile
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: const Color(0xFFF8FAFC),
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(color: const Color(0xFFE2E8F0)),
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Row(
+                  children: [
+                    Container(
+                      width: 36,
+                      height: 36,
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFFEE2E2),
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: const Color(0xFFFECACA)),
+                      ),
+                      child: const Center(
+                        child: Icon(
+                          Icons.picture_as_pdf,
+                          size: 20,
+                          color: Color(0xFFB91C1C),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          mutation.documentName ?? 'SK_Mutasi_Resmi.pdf',
+                          style: const TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.bold,
+                            color: Color(0xFF1E293B),
+                          ),
+                        ),
+                        const Row(
+                          children: [
+                            Icon(
+                              Icons.verified,
+                              size: 12,
+                              color: Color(0xFF059669),
+                            ),
+                            SizedBox(width: 4),
+                            Text(
+                              'Terverifikasi (1.8 MB)',
+                              style: TextStyle(
+                                fontSize: 10,
+                                color: Color(0xFF047857),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+                TextButton.icon(
+                  onPressed: () {
+                    DocumentPreviewDialog.show(
+                      context,
+                      mutation: mutation,
+                      currentUser: ref.read(authStateProvider).user,
+                    );
+                  },
+                  icon: const Icon(Icons.visibility, size: 14),
+                  label: const Text('Lihat'),
+                  style: TextButton.styleFrom(
+                    backgroundColor: Colors.white,
+                    foregroundColor: const Color(0xFF334155),
+                    textStyle: const TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.bold,
+                    ),
+                    side: const BorderSide(color: Color(0xFFCBD5E1)),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 10,
+                      vertical: 6,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // 6. STATUS BANNERS & NOTIFICATIONS
+  // ─────────────────────────────────────────────────────────────────────────
+  Widget _buildStatusInfoBanner(Mutation mutation) {
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: const Color(0xFFEFF6FF),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: const Color(0xFFBFDBFE)),
+      ),
+      child: const Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(
+            Icons.notifications_active,
+            size: 20,
+            color: Color(0xFF2563EB),
+          ),
+          SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Menunggu Peninjauan Selesai',
+                  style: TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.bold,
+                    color: Color(0xFF1E3A8A),
+                  ),
+                ),
+                SizedBox(height: 3),
+                Text(
+                  'Pengajuan sedang diproses sesuai alur kerja. Anda akan menerima notifikasi otomatis begitu status disetujui atau memerlukan konfirmasi.',
+                  style: TextStyle(
+                    fontSize: 11,
+                    color: Color(0xFF3B82F6),
+                    height: 1.4,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildReturnedAlertBanner(Mutation mutation) {
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: const Color(0xFFFFF7ED),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: const Color(0xFFFED7AA)),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Icon(
+            Icons.assignment_return_outlined,
+            size: 22,
+            color: Color(0xFFEA580C),
+          ),
+          const SizedBox(width: 10),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 const Text(
-                  'Nomor Tiket',
+                  'Pengajuan Dikembalikan untuk Diperbaiki',
                   style: TextStyle(
-                    fontSize: 11,
-                    color: AppColors.textSecondary,
+                    fontSize: 13,
+                    fontWeight: FontWeight.bold,
+                    color: Color(0xFF9A3412),
                   ),
                 ),
-                const SizedBox(height: 2),
+                const SizedBox(height: 4),
                 Text(
-                  mutation.ticketNumber,
+                  mutation.returnReason ??
+                      'Harap periksa catatan pengembalian dari Operator dan ajukan ulang.',
                   style: const TextStyle(
-                    fontSize: 15,
-                    fontWeight: FontWeight.w700,
+                    fontSize: 12,
+                    color: Color(0xFFC2410C),
                   ),
                 ),
               ],
             ),
           ),
-          Container(
-            padding: const EdgeInsets.symmetric(
-              horizontal: AppSpacing.sm,
-              vertical: 4,
-            ),
-            decoration: BoxDecoration(
-              color: mutation.status.backgroundColor,
-              borderRadius: BorderRadius.circular(AppRadius.pill),
-            ),
-            child: Text(
-              mutation.status.displayName,
-              style: TextStyle(
-                fontSize: 11,
-                fontWeight: FontWeight.w600,
-                color: mutation.status.color,
-              ),
-            ),
-          ),
         ],
       ),
     );
   }
 
-  Widget _buildBanner({
-    required IconData icon,
-    required Color color,
-    required Color background,
-    required String text,
-  }) {
-    return Padding(
-      padding: const EdgeInsets.only(top: AppSpacing.sm),
-      child: Container(
-        padding: const EdgeInsets.all(AppSpacing.sm),
-        decoration: BoxDecoration(
-          color: background,
-          borderRadius: BorderRadius.circular(AppRadius.card),
-        ),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Icon(icon, color: color, size: 18),
-            const SizedBox(width: AppSpacing.sm),
-            Expanded(
-              child: Text(
-                text,
-                style: TextStyle(fontSize: 13, color: color, height: 1.4),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  // ─── Sections ───────────────────────────────────────────────────────────
-
-  Widget _sectionTitle(String title) => Text(
-    title,
-    style: const TextStyle(
-      fontSize: 13,
-      fontWeight: FontWeight.w600,
-      color: AppColors.textSecondary,
-    ),
-  );
-
-  Widget _infoCard(List<Widget> children) => Container(
-    width: double.infinity,
-    padding: const EdgeInsets.all(AppSpacing.md),
-    decoration: BoxDecoration(
-      color: AppColors.surface,
-      borderRadius: BorderRadius.circular(AppRadius.card),
-      border: Border.all(color: AppColors.border),
-    ),
-    child: Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: children,
-    ),
-  );
-
-  Widget _infoRow(String label, String value, {bool isLast = false}) => Padding(
-    padding: EdgeInsets.only(bottom: isLast ? 0 : AppSpacing.sm),
-    child: Row(
-      children: [
-        SizedBox(
-          width: 100,
-          child: Text(
-            label,
-            style: const TextStyle(
-              fontSize: 12,
-              color: AppColors.textSecondary,
-            ),
-          ),
-        ),
-        Expanded(
-          child: Text(
-            value,
-            style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500),
-          ),
-        ),
-      ],
-    ),
-  );
-
-  Widget _transferRow(String label, String from, String to) => Column(
-    crossAxisAlignment: CrossAxisAlignment.start,
-    children: [
-      Text(
-        label,
-        style: const TextStyle(
-          fontSize: 12,
-          fontWeight: FontWeight.w600,
-          color: AppColors.textSecondary,
-        ),
-      ),
-      const SizedBox(height: AppSpacing.xs),
-      Row(
-        children: [
-          Expanded(
-            child: Container(
-              padding: const EdgeInsets.symmetric(
-                horizontal: AppSpacing.sm,
-                vertical: AppSpacing.xs,
-              ),
-              decoration: BoxDecoration(
-                color: AppColors.background,
-                borderRadius: BorderRadius.circular(AppRadius.small),
-              ),
-              child: Text(
-                from,
-                style: const TextStyle(fontSize: 12),
-                overflow: TextOverflow.ellipsis,
-              ),
-            ),
-          ),
-          const Padding(
-            padding: EdgeInsets.symmetric(horizontal: AppSpacing.xs),
-            child: Icon(
-              Icons.arrow_forward,
-              size: 14,
-              color: AppColors.secondary,
-            ),
-          ),
-          Expanded(
-            child: Container(
-              padding: const EdgeInsets.symmetric(
-                horizontal: AppSpacing.sm,
-                vertical: AppSpacing.xs,
-              ),
-              decoration: BoxDecoration(
-                color: AppColors.successContainer,
-                borderRadius: BorderRadius.circular(AppRadius.small),
-              ),
-              child: Text(
-                to,
-                style: const TextStyle(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w600,
-                  color: AppColors.secondary,
-                ),
-                overflow: TextOverflow.ellipsis,
-              ),
-            ),
-          ),
-        ],
-      ),
-    ],
-  );
-
-  // ─── Action Bar ─────────────────────────────────────────────────────────
-
-  Widget _buildActionBar(
-    BuildContext context,
-    Mutation mutation,
-    bool showEdit,
-    bool showConfirm,
-  ) {
+  Widget _buildRejectedAlertBanner(Mutation mutation) {
     return Container(
-      padding: const EdgeInsets.fromLTRB(
-        AppSpacing.md,
-        AppSpacing.sm,
-        AppSpacing.md,
-        AppSpacing.lg,
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: const Color(0xFFFEF2F2),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: const Color(0xFFFECACA)),
       ),
-      decoration: const BoxDecoration(
-        color: AppColors.surface,
-        border: Border(top: BorderSide(color: AppColors.border)),
-      ),
-      child: CustomButton(
-        label: showEdit ? 'Edit Pengajuan' : 'Konfirmasi Sekarang',
-        width: double.infinity,
-        icon: Icon(
-          showEdit ? Icons.edit_outlined : Icons.check_circle_outline,
-          size: 18,
-          color: Colors.white,
-        ),
-        onPressed: () {
-          if (showEdit) {
-            context.push(
-              RouteNames.pemohonMutasiEditPath.replaceFirst(':id', mutation.id),
-            );
-          } else {
-            context.push(
-              RouteNames.pemohonConfirmationPath.replaceFirst(
-                ':id',
-                mutation.id,
-              ),
-            );
-          }
-        },
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Icon(
+            Icons.cancel_outlined,
+            size: 22,
+            color: Color(0xFFDC2626),
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Pengajuan Ditolak',
+                  style: TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.bold,
+                    color: Color(0xFF991B1B),
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  mutation.kadivRejectionReason ??
+                      (mutation.rejectionReason ??
+                          'Pengajuan mutasi ini tidak disetujui.'),
+                  style: const TextStyle(
+                    fontSize: 12,
+                    color: Color(0xFFB91C1C),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }
 
-  String _formatDate(DateTime date) {
+  // ─────────────────────────────────────────────────────────────────────────
+  // HELPER METHODS
+  // ─────────────────────────────────────────────────────────────────────────
+  int _getStageIndex(MutationStatus status) {
+    return switch (status) {
+      MutationStatus.submitted => 1,
+      MutationStatus.returned => 2,
+      MutationStatus.verified => 2,
+      MutationStatus.waitingKabagApproval => 3,
+      MutationStatus.waitingKadivApproval => 4,
+      MutationStatus.approved => 5,
+      MutationStatus.pendingConfirmation => 6,
+      MutationStatus.completed => 6,
+      MutationStatus.rejected => 3,
+    };
+  }
+
+  String _getReviewerName(Mutation mutation) {
+    return switch (mutation.status) {
+      MutationStatus.submitted ||
+      MutationStatus.returned =>
+        mutation.verifiedBy ?? 'Siti Rahma',
+      MutationStatus.verified ||
+      MutationStatus.waitingKabagApproval =>
+        mutation.approvedBy ?? 'Bpk. Budi Santoso',
+      MutationStatus.waitingKadivApproval => 'Drs. Hendra',
+      MutationStatus.approved => mutation.staffUpdatedBy ?? 'Agus Pratama',
+      MutationStatus.pendingConfirmation => mutation.applicantName,
+      MutationStatus.completed => 'Sistem Terverifikasi',
+      MutationStatus.rejected =>
+        mutation.kadivRejectionReason != null ? 'Drs. Hendra' : 'Bpk. Budi Santoso',
+    };
+  }
+
+  String _getReviewerRole(Mutation mutation) {
+    return switch (mutation.status) {
+      MutationStatus.submitted ||
+      MutationStatus.returned =>
+        'Operator Aset & Logistik',
+      MutationStatus.verified ||
+      MutationStatus.waitingKabagApproval =>
+        'Kabag Aset & Logistik',
+      MutationStatus.waitingKadivApproval => 'Kepala Divisi (Kadiv)',
+      MutationStatus.approved => 'Staff Aset (Fisik & Inventaris)',
+      MutationStatus.pendingConfirmation => 'Pemohon (Konfirmasi Akhir)',
+      MutationStatus.completed => 'Siklus Mutasi Selesai',
+      MutationStatus.rejected => 'Peninjau Mutasi',
+    };
+  }
+
+  String _formatDateShort(DateTime date) {
     const months = [
       'Jan',
       'Feb',
@@ -420,6 +1751,8 @@ class MutationDetailScreen extends ConsumerWidget {
       'Nov',
       'Des',
     ];
-    return '${date.day} ${months[date.month - 1]} ${date.year}, ${date.hour.toString().padLeft(2, '0')}:${date.minute.toString().padLeft(2, '0')}';
+    final hour = date.hour.toString().padLeft(2, '0');
+    final minute = date.minute.toString().padLeft(2, '0');
+    return '${date.day} ${months[date.month - 1]} ${date.year}, $hour:$minute';
   }
 }

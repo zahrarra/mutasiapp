@@ -96,106 +96,100 @@ class _KadivApprovalsScreenState extends ConsumerState<KadivApprovalsScreen> {
                 ),
                 const SizedBox(height: AppSpacing.sm),
 
-                // Status Filter Chips: [ Menunggu ] [ Disetujui ] [ Ditolak ] [ Semua ]
-                SingleChildScrollView(
-                  scrollDirection: Axis.horizontal,
-                  child: Row(
-                    children: [
-                      const Text(
-                        'Status:',
-                        style: TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.w600,
-                          color: AppColors.textSecondary,
-                        ),
-                      ),
-                      const SizedBox(width: AppSpacing.sm),
-                      ChoiceChip(
-                        key: const Key('chip_filter_kadiv_menunggu'),
-                        label: const Text('Menunggu'),
-                        selected: statusFilter == KadivStatusFilter.waiting,
-                        onSelected: (selected) {
-                          if (selected) {
-                            ref.read(kadivStatusFilterProvider.notifier).state =
-                                KadivStatusFilter.waiting;
-                          }
-                        },
-                      ),
-                      const SizedBox(width: AppSpacing.xs),
-                      ChoiceChip(
-                        key: const Key('chip_filter_kadiv_disetujui'),
-                        label: const Text('Disetujui'),
-                        selected: statusFilter == KadivStatusFilter.approved,
-                        onSelected: (selected) {
-                          if (selected) {
-                            ref.read(kadivStatusFilterProvider.notifier).state =
-                                KadivStatusFilter.approved;
-                          }
-                        },
-                      ),
-                      const SizedBox(width: AppSpacing.xs),
-                      ChoiceChip(
-                        key: const Key('chip_filter_kadiv_ditolak'),
-                        label: const Text('Ditolak'),
-                        selected: statusFilter == KadivStatusFilter.rejected,
-                        onSelected: (selected) {
-                          if (selected) {
-                            ref.read(kadivStatusFilterProvider.notifier).state =
-                                KadivStatusFilter.rejected;
-                          }
-                        },
-                      ),
-                      const SizedBox(width: AppSpacing.xs),
-                      ChoiceChip(
-                        key: const Key('chip_filter_kadiv_semua'),
-                        label: const Text('Semua'),
-                        selected: statusFilter == KadivStatusFilter.all,
-                        onSelected: (selected) {
-                          if (selected) {
-                            ref.read(kadivStatusFilterProvider.notifier).state =
-                                KadivStatusFilter.all;
-                          }
-                        },
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: AppSpacing.xs),
-
-                // Sort Filter Chips: [ Terbaru ] [ Terlama ]
+                // Compact Filter Bar (Status & Sort)
                 Row(
                   children: [
-                    const Text(
-                      'Urutan:',
-                      style: TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w600,
-                        color: AppColors.textSecondary,
+                    // Status Filter Dropdown
+                    Expanded(
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 10,
+                          vertical: 2,
+                        ),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius:
+                              BorderRadius.circular(AppSpacing.radiusSm),
+                          border: Border.all(color: AppColors.border),
+                        ),
+                        child: DropdownButtonHideUnderline(
+                          child: DropdownButton<KadivStatusFilter>(
+                            key: const Key('dropdown_filter_kadiv_status'),
+                            value: statusFilter,
+                            isDense: true,
+                            isExpanded: true,
+                            icon: const Icon(
+                              Icons.filter_list,
+                              size: 16,
+                              color: AppColors.primary,
+                            ),
+                            items: KadivStatusFilter.values.map((s) {
+                              return DropdownMenuItem(
+                                value: s,
+                                child: Text(
+                                  s.displayName,
+                                  style: const TextStyle(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                ),
+                              );
+                            }).toList(),
+                            onChanged: (val) {
+                              if (val != null) {
+                                ref
+                                    .read(kadivStatusFilterProvider.notifier)
+                                    .state = val;
+                              }
+                            },
+                          ),
+                        ),
                       ),
                     ),
                     const SizedBox(width: AppSpacing.sm),
-                    ChoiceChip(
-                      key: const Key('chip_filter_kadiv_terbaru'),
-                      label: const Text('Terbaru'),
-                      selected: sortOrder == KadivSortOrder.newest,
-                      onSelected: (selected) {
-                        if (selected) {
-                          ref.read(kadivSortOrderProvider.notifier).state =
-                              KadivSortOrder.newest;
-                        }
-                      },
-                    ),
-                    const SizedBox(width: AppSpacing.xs),
-                    ChoiceChip(
-                      key: const Key('chip_filter_kadiv_terlama'),
-                      label: const Text('Terlama'),
-                      selected: sortOrder == KadivSortOrder.oldest,
-                      onSelected: (selected) {
-                        if (selected) {
-                          ref.read(kadivSortOrderProvider.notifier).state =
-                              KadivSortOrder.oldest;
-                        }
-                      },
+
+                    // Sort Dropdown
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 10,
+                        vertical: 2,
+                      ),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius:
+                            BorderRadius.circular(AppSpacing.radiusSm),
+                        border: Border.all(color: AppColors.border),
+                      ),
+                      child: DropdownButtonHideUnderline(
+                        child: DropdownButton<KadivSortOrder>(
+                          key: const Key('dropdown_filter_kadiv_sort'),
+                          value: sortOrder,
+                          isDense: true,
+                          icon: const Icon(
+                            Icons.sort,
+                            size: 16,
+                            color: AppColors.primary,
+                          ),
+                          items: KadivSortOrder.values.map((order) {
+                            return DropdownMenuItem(
+                              value: order,
+                              child: Text(
+                                order.displayName,
+                                style: const TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
+                            );
+                          }).toList(),
+                          onChanged: (val) {
+                            if (val != null) {
+                              ref.read(kadivSortOrderProvider.notifier).state =
+                                  val;
+                            }
+                          },
+                        ),
+                      ),
                     ),
                   ],
                 ),

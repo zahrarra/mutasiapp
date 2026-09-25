@@ -34,6 +34,8 @@ dependencies:
 
   # Font: Inter (DESIGN.md §6)
   google_fonts: ^6.2.1
+  file_picker: ^11.0.3
+  printing: ^5.15.1
 
 dev_dependencies:
   flutter_test:

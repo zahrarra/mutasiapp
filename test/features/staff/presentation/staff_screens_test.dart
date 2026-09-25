@@ -171,9 +171,8 @@ void main() {
 
     expect(find.text('Antrian Pembaruan Aset'), findsOneWidget);
     expect(find.byKey(const Key('input_search_staff_mutations')), findsOneWidget);
-    expect(find.text('Semua'), findsOneWidget);
-    expect(find.text('Terbaru'), findsOneWidget);
-    expect(find.text('Terlama'), findsOneWidget);
+    expect(find.byKey(const Key('dropdown_filter_staff_status')), findsOneWidget);
+    expect(find.byKey(const Key('dropdown_filter_staff_sort')), findsOneWidget);
     expect(find.text('ELK-2026-00099'), findsOneWidget);
     expect(find.text('ThinkPad X1 Carbon'), findsOneWidget);
     expect(find.text('Lantai 1 — IT → Lantai 4 — Finance'), findsOneWidget);

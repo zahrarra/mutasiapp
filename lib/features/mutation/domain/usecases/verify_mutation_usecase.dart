@@ -17,6 +17,7 @@ class VerifyMutationUseCase {
   Future<Result<Mutation>> call({
     required String mutationId,
     required String operatorName,
+    bool requiresKadivApproval = false,
   }) async {
     if (mutationId.trim().isEmpty) {
       return const Result.failure(
@@ -48,6 +49,7 @@ class VerifyMutationUseCase {
     return repository.verifyMutation(
       mutationId: mutationId,
       operatorName: operatorName,
+      requiresKadivApproval: requiresKadivApproval,
     );
   }
 }

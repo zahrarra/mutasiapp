@@ -15,7 +15,7 @@ class SubmitMutationParams {
   final String? applicantId;
   final String? applicantName;
 
-  final String assetId;
+  final String? assetId;
   final String assetName;
   final String sourceLocation;
   final String targetLocation;
@@ -23,18 +23,34 @@ class SubmitMutationParams {
   final String targetPic;
   final String reason;
   final String? documentName;
+  final String? documentPath;
+  final List<int>? documentBytes;
+
+  /// Menandakan apakah mutasi untuk aset yang belum terdaftar di database.
+  final bool isUnregisteredAsset;
+
+  /// Nama aset manual (jika [isUnregisteredAsset] true).
+  final String? customAssetName;
+
+  /// Nomor seri aset manual (jika [isUnregisteredAsset] true).
+  final String? customSerialNumber;
 
   const SubmitMutationParams({
     this.applicantId,
     this.applicantName,
-    required this.assetId,
-    required this.assetName,
+    this.assetId,
+    this.assetName = '',
     required this.sourceLocation,
     required this.targetLocation,
     this.currentPic,
     required this.targetPic,
     required this.reason,
     this.documentName,
+    this.documentPath,
+    this.documentBytes,
+    this.isUnregisteredAsset = false,
+    this.customAssetName,
+    this.customSerialNumber,
   });
 }
 
@@ -70,6 +86,7 @@ abstract class MutationRepository {
   Future<Result<Mutation>> verifyMutation({
     required String mutationId,
     required String operatorName,
+    bool requiresKadivApproval = false,
   });
 
   /// Kembalikan pengajuan mutasi ke Pemohon.

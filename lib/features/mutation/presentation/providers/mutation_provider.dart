@@ -22,6 +22,7 @@ import '../../domain/usecases/get_mutation_detail_usecase.dart';
 import '../../domain/usecases/get_mutations_usecase.dart';
 import '../../domain/usecases/submit_mutation_usecase.dart';
 import '../../domain/usecases/update_mutation_usecase.dart';
+import '../../../operator/presentation/providers/operator_verification_provider.dart';
 
 // ─── Repository & Use Case Providers ─────────────────────────────────────────
 
@@ -230,8 +231,10 @@ class SubmitMutationNotifier extends StateNotifier<SubmitMutationState> {
 
       state = SubmitMutationState(isLoading: false, result: result.data);
 
-      // Invalidate list agar mutationListProvider langsung diperbarui dengan data baru
+      // Invalidate list agar mutationListProvider dan operatorAllMutationsProvider langsung diperbarui dengan data baru
       ref.invalidate(mutationListProvider);
+      ref.invalidate(operatorAllMutationsProvider);
+      ref.invalidate(mutationDetailProvider(result.data.id));
 
       return result.data;
     }

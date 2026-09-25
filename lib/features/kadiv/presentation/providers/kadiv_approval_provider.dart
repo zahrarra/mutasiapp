@@ -12,6 +12,9 @@ import '../../../mutation/domain/usecases/approve_mutation_kadiv_usecase.dart';
 import '../../../mutation/domain/usecases/get_kadiv_approvals_usecase.dart';
 import '../../../mutation/domain/usecases/reject_mutation_kadiv_usecase.dart';
 import '../../../mutation/presentation/providers/mutation_provider.dart';
+import '../../../auth/domain/entities/user_role.dart';
+import '../../../notification/presentation/providers/notification_provider.dart';
+import '../../../staff/presentation/providers/staff_mutation_provider.dart';
 
 // ─── Use Case Providers ───────────────────────────────────────────────────────
 
@@ -95,14 +98,26 @@ class KadivApprovalStats {
   });
 }
 
+bool isWaitingKadivApproval(Mutation m) {
+  if (m.status == MutationStatus.waitingKadivApproval) return true;
+  if (m.requiresKadivApproval &&
+      (m.approvedBy != null || m.approvedAt != null) &&
+      m.kadivApprovedBy == null &&
+      m.kadivRejectedBy == null &&
+      m.status != MutationStatus.rejected) {
+    return true;
+  }
+  return false;
+}
+
+bool _isWaitingKadivApproval(Mutation m) => isWaitingKadivApproval(m);
+
 final kadivStatsProvider = Provider<KadivApprovalStats>((ref) {
   final asyncMutations = ref.watch(kadivAllMutationsProvider);
 
   return asyncMutations.when(
     data: (mutations) {
-      final waiting = mutations
-          .where((m) => m.status == MutationStatus.waitingKadivApproval)
-          .length;
+      final waiting = mutations.where(_isWaitingKadivApproval).length;
       final approved = mutations
           .where((m) =>
               (m.status == MutationStatus.approved ||
@@ -149,8 +164,7 @@ final filteredKadivApprovalsProvider =
     // 1. Filter berdasarkan status tab
     var list = mutations.where((m) {
       return switch (statusFilter) {
-        KadivStatusFilter.waiting =>
-          m.status == MutationStatus.waitingKadivApproval,
+        KadivStatusFilter.waiting => _isWaitingKadivApproval(m),
         KadivStatusFilter.approved =>
           (m.status == MutationStatus.approved ||
                   m.status == MutationStatus.pendingConfirmation ||
@@ -162,7 +176,7 @@ final filteredKadivApprovalsProvider =
                   m.kadivRejectedAt != null ||
                   m.kadivRejectionReason != null),
         KadivStatusFilter.all =>
-          m.status == MutationStatus.waitingKadivApproval ||
+          _isWaitingKadivApproval(m) ||
               m.kadivApprovedBy != null ||
               m.kadivRejectedBy != null,
       };
@@ -262,6 +276,20 @@ class KadivApprovalActionNotifier
       ref.invalidate(kadivAllMutationsProvider);
       ref.invalidate(mutationDetailProvider(mutationId));
       ref.invalidate(mutationListProvider);
+      ref.invalidate(staffAllMutationsProvider);
+
+      try {
+        final notifNotifier = ref.read(notificationProvider.notifier);
+        final notifs = ref.read(notificationProvider);
+        for (final n in notifs) {
+          if (n.relatedMutationId == mutationId &&
+              n.targetRole == UserRole.kadiv &&
+              !n.isRead) {
+            notifNotifier.markAsRead(n.id);
+          }
+        }
+      } catch (_) {}
+
       return true;
     } else if (result is AppFailure<Mutation>) {
       state = KadivApprovalActionState(
@@ -307,6 +335,19 @@ class KadivApprovalActionNotifier
       ref.invalidate(kadivAllMutationsProvider);
       ref.invalidate(mutationDetailProvider(mutationId));
       ref.invalidate(mutationListProvider);
+
+      try {
+        final notifNotifier = ref.read(notificationProvider.notifier);
+        final notifs = ref.read(notificationProvider);
+        for (final n in notifs) {
+          if (n.relatedMutationId == mutationId &&
+              n.targetRole == UserRole.kadiv &&
+              !n.isRead) {
+            notifNotifier.markAsRead(n.id);
+          }
+        }
+      } catch (_) {}
+
       return true;
     } else if (result is AppFailure<Mutation>) {
       state = KadivApprovalActionState(

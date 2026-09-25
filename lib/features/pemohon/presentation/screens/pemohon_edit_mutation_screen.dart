@@ -10,11 +10,14 @@ import 'package:go_router/go_router.dart';
 import '../../../../app/router/route_names.dart';
 import '../../../../app/theme/app_colors.dart';
 import '../../../../app/theme/app_spacing.dart';
+import '../../../../core/widgets/app_feedback.dart';
 import '../../../../core/widgets/error_view.dart';
+import '../../../../core/widgets/inline_searchable_dropdown.dart';
 import '../../../../core/widgets/loading_indicator.dart';
 import '../../../mutation/domain/entities/mutation.dart';
 import '../../../mutation/domain/entities/mutation_status.dart';
 import '../../../mutation/domain/usecases/update_mutation_usecase.dart';
+import '../../../mutation/presentation/providers/mutation_form_provider.dart';
 import '../../../mutation/presentation/providers/mutation_provider.dart';
 import '../../../operator/presentation/providers/operator_verification_provider.dart';
 
@@ -58,11 +61,9 @@ class _PemohonEditMutationScreenState
     final reason = _reasonController.text.trim();
 
     if (location.isEmpty || pic.isEmpty || reason.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Lokasi tujuan, PIC baru, dan alasan wajib diisi.'),
-          backgroundColor: AppColors.error,
-        ),
+      AppFeedback.showWarning(
+        context,
+        'Lokasi tujuan, PIC baru, dan alasan wajib diisi.',
       );
       return;
     }
@@ -86,11 +87,9 @@ class _PemohonEditMutationScreenState
       ref.invalidate(mutationDetailProvider(widget.mutationId));
       ref.invalidate(operatorAllMutationsProvider);
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Pengajuan berhasil diajukan ulang ke antrean verifikasi Operator.'),
-          backgroundColor: AppColors.success,
-        ),
+      AppFeedback.showSuccess(
+        context,
+        'Pengajuan berhasil diajukan ulang ke antrean verifikasi Operator.',
       );
 
       // Arahkan kembali ke Detail Mutasi atau Mutasi Saya
@@ -105,11 +104,9 @@ class _PemohonEditMutationScreenState
       }
     } else {
       final err = ref.read(updateMutationProvider).error;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(err ?? 'Gagal mengirim ulang pengajuan.'),
-          backgroundColor: AppColors.error,
-        ),
+      AppFeedback.showError(
+        context,
+        err ?? 'Gagal mengirim ulang pengajuan.',
       );
     }
   }
@@ -118,6 +115,7 @@ class _PemohonEditMutationScreenState
   Widget build(BuildContext context) {
     final asyncDetail = ref.watch(mutationDetailProvider(widget.mutationId));
     final submitState = ref.watch(updateMutationProvider);
+    final availableLocations = ref.watch(availableLocationsProvider);
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -374,16 +372,15 @@ class _PemohonEditMutationScreenState
                 const SizedBox(height: AppSpacing.sm),
 
                 // ── 4. Form Field ─────────────────────────────────────────────
-                TextField(
-                  key: const Key('input_edit_target_location'),
+                InlineSearchableDropdown(
+                  key: const Key('dropdown_edit_target_location'),
+                  fieldKey: const Key('input_edit_target_location'),
+                  labelText: 'Lokasi Tujuan *',
+                  hintText: 'Pilih lokasi tujuan',
                   controller: _locationController,
-                  decoration: const InputDecoration(
-                    labelText: 'Lokasi Tujuan *',
-                    hintText: 'Contoh: Kantor Cabang Bandung',
-                    border: OutlineInputBorder(),
-                    filled: true,
-                    fillColor: Colors.white,
-                  ),
+                  items: availableLocations,
+                  validator: (v) =>
+                      (v == null || v.trim().isEmpty) ? 'Wajib diisi' : null,
                 ),
                 const SizedBox(height: AppSpacing.md),
                 TextField(

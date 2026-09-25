@@ -18,10 +18,16 @@ import 'package:mutasiku/features/mutation/data/repositories/mutation_repository
 import 'package:mutasiku/features/mutation/presentation/providers/mutation_provider.dart';
 import 'package:mutasiku/features/notification/presentation/screens/notification_screen.dart';
 import 'package:mutasiku/features/notification/presentation/widgets/notification_tile.dart';
+import 'package:mutasiku/features/asset/domain/entities/asset.dart';
+import 'package:mutasiku/features/asset/domain/entities/asset_category.dart';
+import 'package:mutasiku/features/asset/domain/entities/asset_status.dart';
+import 'package:mutasiku/features/mutation/domain/entities/mutation.dart';
+import 'package:mutasiku/features/mutation/domain/entities/mutation_status.dart';
 import 'package:mutasiku/features/operator/presentation/screens/operator_dashboard_screen.dart';
 import 'package:mutasiku/features/operator/presentation/screens/operator_mutations_screen.dart';
 import 'package:mutasiku/features/operator/presentation/screens/operator_verification_detail_screen.dart';
 import 'package:mutasiku/features/operator/presentation/screens/operator_return_form_screen.dart';
+import 'package:mutasiku/features/pemohon/presentation/screens/pemohon_create_mutation_screen.dart';
 
 class FakeAuthRepository implements AuthRepository {
   final User? user;
@@ -49,6 +55,7 @@ class FakeAuthNotifier extends AuthNotifier {
           loginUseCase: LoginUseCase(repository: FakeAuthRepository(user: user)),
           logoutUseCase: LogoutUseCase(repository: FakeAuthRepository(user: user)),
           authRepository: FakeAuthRepository(user: user),
+          checkInitialStatus: false,
         ) {
     state = AuthState(isLoading: false, user: user);
   }
@@ -109,9 +116,9 @@ void main() {
     // Verifikasi search input
     expect(find.byKey(const Key('input_search_mutations')), findsOneWidget);
 
-    // Verifikasi sort chips
-    expect(find.byKey(const Key('chip_sort_terbaru')), findsOneWidget);
-    expect(find.byKey(const Key('chip_sort_terlama')), findsOneWidget);
+    // Verifikasi compact dropdown filters
+    expect(find.byKey(const Key('dropdown_filter_operator_status')), findsOneWidget);
+    expect(find.byKey(const Key('dropdown_filter_operator_sort')), findsOneWidget);
 
     // Verifikasi card pengajuan masuk berstatus Diajukan tampil
     expect(find.text('Diajukan'), findsWidgets);
@@ -202,8 +209,8 @@ void main() {
     // Dialog konfirmasi muncul
     expect(find.text('Konfirmasi Verifikasi'), findsOneWidget);
     expect(
-        find.text(
-            'Apakah Anda yakin data dan dokumen pengajuan ELEKTRONIK-2026-00124 sudah valid dan lengkap?\n\nPengajuan akan diteruskan ke Kabag Aset.'),
+        find.textContaining(
+            'Apakah Anda yakin data dan dokumen pengajuan ELEKTRONIK-2026-00124 sudah valid dan lengkap?'),
         findsOneWidget);
 
     // Konfirmasi Ya
@@ -317,5 +324,167 @@ void main() {
     // Verify navigation reached operator mutation detail route
     expect(navigatedPath, '/operator/mutations/mut_004');
     expect(find.text('Detail Screen: mut_004'), findsOneWidget);
+  });
+
+  testWidgets(
+      'OperatorVerificationDetailScreen displays Data Aset Master and Snapshot when isUnregisteredAsset is false',
+      (tester) async {
+    await tester.pumpWidget(createTestWidget(
+      const OperatorVerificationDetailScreen(mutationId: 'mut_001'),
+    ));
+    await tester.pumpAndSettle();
+
+    // 1. Data Aset Master card appears automatically
+    expect(find.byKey(const Key('card_master_asset_data')), findsOneWidget);
+    expect(find.text('Data Aset Master'), findsOneWidget);
+    expect(find.text('Database SIMAK BMN'), findsOneWidget);
+
+    // 2. Tampilkan semua field master: nama, kode/inventory, serial number, kategori, lokasi, PIC
+    expect(find.byKey(const Key('master_asset_name')), findsOneWidget);
+    expect(find.text('Laptop Dell Latitude'), findsWidgets);
+
+    expect(find.byKey(const Key('master_asset_code')), findsOneWidget);
+    expect(find.text('AST-ELK-2024-0124'), findsOneWidget);
+
+    expect(find.byKey(const Key('master_asset_sn')), findsOneWidget);
+    expect(find.text('DL-7490-X1'), findsOneWidget);
+
+    expect(find.byKey(const Key('master_asset_category')), findsOneWidget);
+    expect(find.text('Elektronik & IT'), findsOneWidget);
+
+    expect(find.byKey(const Key('master_asset_location')), findsOneWidget);
+    expect(find.text('Kantor Pusat (SIMAK BMN)'), findsOneWidget);
+
+    expect(find.byKey(const Key('master_asset_pic')), findsOneWidget);
+
+    // 3. Snapshot Saat Pengajuan card appears
+    expect(find.text('Snapshot Saat Pengajuan'), findsOneWidget);
+
+    // 4. Match indicators appear when location and PIC match
+    expect(find.byKey(const Key('indicator_match_location')), findsOneWidget);
+    expect(find.byKey(const Key('indicator_match_pic')), findsOneWidget);
+  });
+
+  testWidgets(
+      'OperatorVerificationDetailScreen displays difference indicators when master location and PIC differ from snapshot',
+      (tester) async {
+    // mut_002 has master location 'Gedung A — Parkir Operasional' vs snapshot 'Kantor Pusat'
+    // and master pic 'Driver Operasional General Affair' vs snapshot 'Budi Santoso'
+    await tester.pumpWidget(createTestWidget(
+      const OperatorVerificationDetailScreen(mutationId: 'mut_002'),
+    ));
+    await tester.pumpAndSettle();
+
+    // Verifikasi master card ada
+    expect(find.byKey(const Key('card_master_asset_data')), findsOneWidget);
+
+    // Verifikasi indikator perbedaan lokasi dan PIC tampil
+    expect(find.byKey(const Key('indicator_diff_location')), findsOneWidget);
+    expect(
+      find.textContaining('⚠️ Berbeda dengan Master (Master: Gedung A — Parkir Operasional)'),
+      findsOneWidget,
+    );
+
+    expect(find.byKey(const Key('indicator_diff_pic')), findsOneWidget);
+    expect(
+      find.textContaining('⚠️ Berbeda dengan Master (Master: Driver Operasional General Affair)'),
+      findsOneWidget,
+    );
+  });
+
+  testWidgets(
+      'OperatorVerificationDetailScreen displays Aset Tidak Terdaftar warning and manual data when isUnregisteredAsset is true',
+      (tester) async {
+    final unregMutation = Mutation(
+      id: 'mut_unreg_test',
+      ticketNumber: 'OTH-2026-99999',
+      asset: const Asset(
+        id: '',
+        assetCode: 'SN-MANUAL-777',
+        name: 'Speaker Meeting Portable',
+        category: AssetCategory(id: 'cat_oth', code: 'OTH', name: 'Lainnya'),
+        location: 'Ruang Rapat Utama',
+        pic: 'Ahmad PIC',
+        status: AssetStatus.inMutation,
+        condition: 'Baik',
+        acquisitionYear: 2026,
+      ),
+      applicantId: 'u_opr_01',
+      applicantName: 'Siti Operator',
+      currentLocation: 'Ruang Rapat Utama',
+      targetLocation: 'Cabang Solo',
+      currentPic: 'Ahmad PIC',
+      targetPic: 'Joko Solo',
+      reason: 'Pinjam pakai audio meeting.',
+      status: MutationStatus.submitted,
+      isUnregisteredAsset: true,
+      customAssetName: 'Speaker Meeting Portable',
+      customSerialNumber: 'SN-MANUAL-777',
+      createdAt: DateTime.now(),
+    );
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          authStateProvider.overrideWith(
+            (ref) => FakeAuthNotifier(operatorUser),
+          ),
+          mutationDetailProvider('mut_unreg_test').overrideWith(
+            (ref) => Future.value(unregMutation),
+          ),
+        ],
+        child: const MaterialApp(
+          home: OperatorVerificationDetailScreen(mutationId: 'mut_unreg_test'),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    // Warning Aset Tidak Terdaftar wajib tampil
+    expect(find.byKey(const Key('banner_unregistered_asset')), findsOneWidget);
+    expect(find.text('Aset Tidak Terdaftar'), findsOneWidget);
+
+    // Data Aset Master TIDAK boleh tampil
+    expect(find.byKey(const Key('card_master_asset_data')), findsNothing);
+
+    // Data manual pengajuan tampil
+    expect(find.text('Speaker Meeting Portable'), findsOneWidget);
+    expect(find.textContaining('SN-MANUAL-777'), findsOneWidget);
+  });
+
+  testWidgets(
+      'PemohonCreateMutationScreen fallback mode hides master asset search and restores on disable',
+      (tester) async {
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          authStateProvider.overrideWith(
+            (ref) => FakeAuthNotifier(operatorUser),
+          ),
+        ],
+        child: const MaterialApp(
+          home: PemohonCreateMutationScreen(),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    // Default: Mode Master aktif, tombol cari master tampil
+    expect(find.byKey(const Key('btn_search_master_asset')), findsOneWidget);
+
+    // Aktifkan Mode Fallback
+    await tester.tap(find.byKey(const Key('switch_fallback_mode')));
+    await tester.pumpAndSettle();
+
+    // Tombol cari master dinonaktifkan / disembunyikan
+    expect(find.byKey(const Key('btn_search_master_asset')), findsNothing);
+    expect(find.text('Mode Fallback: Aset Belum Terdaftar'), findsOneWidget);
+
+    // Nonaktifkan kembali Mode Fallback
+    await tester.tap(find.byKey(const Key('switch_fallback_mode')));
+    await tester.pumpAndSettle();
+
+    // Tombol cari master kembali aktif / muncul
+    expect(find.byKey(const Key('btn_search_master_asset')), findsOneWidget);
   });
 }

@@ -70,8 +70,11 @@ class AuthNotifier extends StateNotifier<AuthState> {
     required this.loginUseCase,
     required this.logoutUseCase,
     required this.authRepository,
+    bool checkInitialStatus = true,
   }) : super(const AuthState(isLoading: true)) {
-    _checkInitialAuthStatus();
+    if (checkInitialStatus) {
+      _checkInitialAuthStatus();
+    }
   }
 
   Future<void> _checkInitialAuthStatus() async {

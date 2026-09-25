@@ -33,10 +33,19 @@ class _KabagApprovalsScreenState extends ConsumerState<KabagApprovalsScreen> {
   Widget build(BuildContext context) {
     final asyncApprovals = ref.watch(filteredKabagApprovalsProvider);
     final sortOrder = ref.watch(kabagSortOrderProvider);
+    final statusFilter = ref.watch(kabagStatusFilterProvider);
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Menunggu Approval'),
+        title: Text(
+          statusFilter == KabagStatusFilter.waiting
+              ? 'Menunggu Approval'
+              : statusFilter == KabagStatusFilter.approved
+                  ? 'Riwayat Disetujui'
+                  : statusFilter == KabagStatusFilter.rejected
+                      ? 'Riwayat Ditolak'
+                      : 'Semua Pengajuan',
+        ),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
           onPressed: () {
@@ -94,52 +103,101 @@ class _KabagApprovalsScreenState extends ConsumerState<KabagApprovalsScreen> {
                 ),
                 const SizedBox(height: AppSpacing.sm),
 
-                // Sort Filter Chips: [ Semua ] [ Terbaru ] [ Terlama ]
+                // Compact Filter Bar (Status & Sort)
                 Row(
                   children: [
-                    const Text(
-                      'Filter:',
-                      style: TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w600,
-                        color: AppColors.textSecondary,
+                    // Status Filter Dropdown
+                    Expanded(
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 10,
+                          vertical: 2,
+                        ),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius:
+                              BorderRadius.circular(AppSpacing.radiusSm),
+                          border: Border.all(color: AppColors.border),
+                        ),
+                        child: DropdownButtonHideUnderline(
+                          child: DropdownButton<KabagStatusFilter>(
+                            key: const Key('dropdown_filter_kabag_status'),
+                            value: statusFilter,
+                            isDense: true,
+                            isExpanded: true,
+                            icon: const Icon(
+                              Icons.filter_list,
+                              size: 16,
+                              color: AppColors.primary,
+                            ),
+                            items: KabagStatusFilter.values.map((s) {
+                              return DropdownMenuItem(
+                                value: s,
+                                child: Text(
+                                  s.displayName,
+                                  style: const TextStyle(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                ),
+                              );
+                            }).toList(),
+                            onChanged: (val) {
+                              if (val != null) {
+                                ref
+                                    .read(kabagStatusFilterProvider.notifier)
+                                    .state = val;
+                              }
+                            },
+                          ),
+                        ),
                       ),
                     ),
                     const SizedBox(width: AppSpacing.sm),
-                    ChoiceChip(
-                      key: const Key('chip_filter_semua'),
-                      label: const Text('Semua'),
-                      selected: sortOrder == KabagSortOrder.all,
-                      onSelected: (selected) {
-                        if (selected) {
-                          ref.read(kabagSortOrderProvider.notifier).state =
-                              KabagSortOrder.all;
-                        }
-                      },
-                    ),
-                    const SizedBox(width: AppSpacing.xs),
-                    ChoiceChip(
-                      key: const Key('chip_filter_terbaru'),
-                      label: const Text('Terbaru'),
-                      selected: sortOrder == KabagSortOrder.newest,
-                      onSelected: (selected) {
-                        if (selected) {
-                          ref.read(kabagSortOrderProvider.notifier).state =
-                              KabagSortOrder.newest;
-                        }
-                      },
-                    ),
-                    const SizedBox(width: AppSpacing.xs),
-                    ChoiceChip(
-                      key: const Key('chip_filter_terlama'),
-                      label: const Text('Terlama'),
-                      selected: sortOrder == KabagSortOrder.oldest,
-                      onSelected: (selected) {
-                        if (selected) {
-                          ref.read(kabagSortOrderProvider.notifier).state =
-                              KabagSortOrder.oldest;
-                        }
-                      },
+
+                    // Sort Dropdown
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 10,
+                        vertical: 2,
+                      ),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius:
+                            BorderRadius.circular(AppSpacing.radiusSm),
+                        border: Border.all(color: AppColors.border),
+                      ),
+                      child: DropdownButtonHideUnderline(
+                        child: DropdownButton<KabagSortOrder>(
+                          key: const Key('dropdown_filter_kabag_sort'),
+                          value: sortOrder,
+                          isDense: true,
+                          icon: const Icon(
+                            Icons.sort,
+                            size: 16,
+                            color: AppColors.textSecondary,
+                          ),
+                          items: KabagSortOrder.values.map((order) {
+                            return DropdownMenuItem(
+                              value: order,
+                              child: Text(
+                                order.displayName,
+                                style: const TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
+                            );
+                          }).toList(),
+                          onChanged: (val) {
+                            if (val != null) {
+                              ref
+                                  .read(kabagSortOrderProvider.notifier)
+                                  .state = val;
+                            }
+                          },
+                        ),
+                      ),
                     ),
                   ],
                 ),

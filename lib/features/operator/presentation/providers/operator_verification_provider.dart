@@ -5,6 +5,8 @@
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/errors/result.dart';
+import '../../../asset/domain/entities/asset.dart';
+import '../../../asset/presentation/providers/asset_provider.dart';
 import '../../../auth/presentation/providers/auth_provider.dart';
 import '../../../mutation/domain/entities/mutation.dart';
 import '../../../mutation/domain/entities/mutation_status.dart';
@@ -12,6 +14,8 @@ import '../../../mutation/domain/usecases/get_pending_verifications_usecase.dart
 import '../../../mutation/domain/usecases/return_mutation_usecase.dart';
 import '../../../mutation/domain/usecases/verify_mutation_usecase.dart';
 import '../../../mutation/presentation/providers/mutation_provider.dart';
+import '../../../kabag/presentation/providers/kabag_approval_provider.dart';
+import '../../../kadiv/presentation/providers/kadiv_approval_provider.dart';
 
 // ─── Use Case Providers ───────────────────────────────────────────────────────
 
@@ -31,6 +35,26 @@ final getPendingVerificationsUseCaseProvider =
   return GetPendingVerificationsUseCase(repository: repo);
 });
 
+/// Otomatis load asset dari AssetRepository berdasarkan assetId (SIMAK BMN).
+final operatorMasterAssetProvider =
+    FutureProvider.family<Asset?, String>((ref, assetId) async {
+  final cleanId = assetId.trim();
+  if (cleanId.isEmpty) return null;
+  final assetRepo = ref.watch(assetRepositoryProvider);
+  final result = await assetRepo.getAssetById(cleanId);
+  if (result is Success<Asset>) {
+    return result.data;
+  }
+  final listResult = await assetRepo.getAssets(query: cleanId);
+  if (listResult is Success<List<Asset>> && listResult.data.isNotEmpty) {
+    return listResult.data.firstWhere(
+      (a) => a.id == cleanId || a.assetCode == cleanId,
+      orElse: () => listResult.data.first,
+    );
+  }
+  return null;
+});
+
 // ─── Filter & Search State ───────────────────────────────────────────────────
 
 enum MutationSortOrder {
@@ -43,10 +67,25 @@ enum MutationSortOrder {
       };
 }
 
+enum OperatorStatusFilter {
+  submitted,
+  returned,
+  all;
+
+  String get displayName => switch (this) {
+        OperatorStatusFilter.submitted => 'Menunggu Verifikasi',
+        OperatorStatusFilter.returned => 'Dikembalikan',
+        OperatorStatusFilter.all => 'Semua Status',
+      };
+}
+
 final operatorSearchQueryProvider = StateProvider<String>((ref) => '');
 
 final operatorSortOrderProvider =
     StateProvider<MutationSortOrder>((ref) => MutationSortOrder.newest);
+
+final operatorStatusFilterProvider = StateProvider<OperatorStatusFilter>(
+    (ref) => OperatorStatusFilter.submitted);
 
 // ─── Mutations Data Providers ────────────────────────────────────────────────
 
@@ -110,31 +149,42 @@ final verificationStatsProvider = Provider<VerificationStats>((ref) {
   );
 });
 
-/// Provider daftar pengajuan masuk (berstatus Diajukan) yang difilter dan di-sort
-/// untuk OPR-002.
+/// Provider daftar pengajuan masuk yang difilter dan di-sort untuk Operator.
 final filteredIncomingMutationsProvider = Provider<AsyncValue<List<Mutation>>>((ref) {
   final asyncAll = ref.watch(operatorAllMutationsProvider);
   final query = ref.watch(operatorSearchQueryProvider).toLowerCase().trim();
   final sortOrder = ref.watch(operatorSortOrderProvider);
+  final statusFilter = ref.watch(operatorStatusFilterProvider);
 
   return asyncAll.whenData((mutations) {
-    // 1. Filter status: hanya Diajukan (submitted) yang masuk antrean verifikasi OPR-002
-    var list = mutations
-        .where((m) => m.status == MutationStatus.submitted)
-        .toList();
+    // 1. Filter status
+    var list = mutations.where((m) {
+      return switch (statusFilter) {
+        OperatorStatusFilter.submitted => m.status == MutationStatus.submitted,
+        OperatorStatusFilter.returned => m.status == MutationStatus.returned,
+        OperatorStatusFilter.all => m.status == MutationStatus.submitted ||
+            m.status == MutationStatus.returned ||
+            m.status == MutationStatus.waitingKabagApproval,
+      };
+    }).toList();
 
-    // 2. Search query filter (No. Tiket, Nama Aset, Pemohon)
+    // 2. Search query filter (No. Tiket, Nama Aset, Pemohon, Lokasi)
     if (query.isNotEmpty) {
       list = list.where((m) {
         final matchTicket = m.ticketNumber.toLowerCase().contains(query);
-        final matchAsset = m.asset.name.toLowerCase().contains(query);
+        final matchAsset = m.asset.name.toLowerCase().contains(query) ||
+            m.displayAssetName.toLowerCase().contains(query) ||
+            m.asset.assetCode.toLowerCase().contains(query) ||
+            m.displayAssetCode.toLowerCase().contains(query) ||
+            (m.customAssetName?.toLowerCase().contains(query) ?? false) ||
+            (m.customSerialNumber?.toLowerCase().contains(query) ?? false);
         final matchApplicant = m.applicantName.toLowerCase().contains(query);
         final matchLocation = m.targetLocation.toLowerCase().contains(query);
         return matchTicket || matchAsset || matchApplicant || matchLocation;
       }).toList();
     }
 
-    // 3. Sort order
+    // 3. Sort order berdasarkan createdAt
     list.sort((a, b) {
       if (sortOrder == MutationSortOrder.newest) {
         return b.createdAt.compareTo(a.createdAt);
@@ -192,7 +242,10 @@ class VerificationActionNotifier extends StateNotifier<VerificationActionState> 
   }) : super(const VerificationActionState());
 
   /// Eksekusi Verifikasi Valid
-  Future<bool> verify({required String mutationId}) async {
+  Future<bool> verify({
+    required String mutationId,
+    bool requiresKadivApproval = false,
+  }) async {
     final authState = ref.read(authStateProvider);
     final operatorName = authState.user?.name ?? 'Operator';
 
@@ -205,6 +258,7 @@ class VerificationActionNotifier extends StateNotifier<VerificationActionState> 
     final result = await verifyUseCase(
       mutationId: mutationId,
       operatorName: operatorName,
+      requiresKadivApproval: requiresKadivApproval,
     );
 
     if (result is Success<Mutation>) {
@@ -217,6 +271,8 @@ class VerificationActionNotifier extends StateNotifier<VerificationActionState> 
       ref.invalidate(operatorAllMutationsProvider);
       ref.invalidate(mutationDetailProvider(mutationId));
       ref.invalidate(mutationListProvider);
+      ref.invalidate(kabagAllMutationsProvider);
+      ref.invalidate(kadivAllMutationsProvider);
       return true;
     } else if (result is AppFailure<Mutation>) {
       state = VerificationActionState(
@@ -262,6 +318,7 @@ class VerificationActionNotifier extends StateNotifier<VerificationActionState> 
       ref.invalidate(operatorAllMutationsProvider);
       ref.invalidate(mutationDetailProvider(mutationId));
       ref.invalidate(mutationListProvider);
+      ref.invalidate(kabagAllMutationsProvider);
       return true;
     } else if (result is AppFailure<Mutation>) {
       state = VerificationActionState(

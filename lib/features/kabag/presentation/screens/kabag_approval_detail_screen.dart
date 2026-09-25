@@ -9,9 +9,15 @@ import 'package:go_router/go_router.dart';
 import '../../../../app/router/route_names.dart';
 import '../../../../app/theme/app_colors.dart';
 import '../../../../app/theme/app_spacing.dart';
+import '../../../auth/domain/entities/user_role.dart';
 import '../../../mutation/domain/entities/mutation.dart';
 import '../../../mutation/domain/entities/mutation_status.dart';
 import '../../../mutation/presentation/providers/mutation_provider.dart';
+import '../../../notification/domain/entities/notification_item.dart';
+import '../../../notification/presentation/providers/notification_provider.dart';
+import '../../../../core/widgets/app_feedback.dart';
+import '../../../../core/widgets/document_preview_dialog.dart';
+import '../../../auth/presentation/providers/auth_provider.dart';
 import '../providers/kabag_approval_provider.dart';
 
 class KabagApprovalDetailScreen extends ConsumerWidget {
@@ -206,7 +212,7 @@ class KabagApprovalDetailScreen extends ConsumerWidget {
                   const Divider(height: AppSpacing.md, color: AppColors.border),
                   _buildDetailRow('Alasan Mutasi', mutation.reason),
                   const Divider(height: AppSpacing.md, color: AppColors.border),
-                  _buildDocumentRow(mutation.documentName),
+                  _buildDocumentRow(mutation, context, ref),
                   const Divider(height: AppSpacing.md, color: AppColors.border),
                   _buildDetailRow(
                       'Waktu Pengajuan', _formatDateTime(mutation.createdAt)),
@@ -547,7 +553,9 @@ class KabagApprovalDetailScreen extends ConsumerWidget {
     return '$day $month $year $hour:$minute';
   }
 
-  Widget _buildDocumentRow(String? documentName) {
+  Widget _buildDocumentRow(
+      Mutation mutation, BuildContext context, WidgetRef ref) {
+    final documentName = mutation.documentName;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -560,22 +568,44 @@ class KabagApprovalDetailScreen extends ConsumerWidget {
         ),
         const SizedBox(height: 4),
         if (documentName != null && documentName.isNotEmpty)
-          Row(
-            children: [
-              const Icon(Icons.picture_as_pdf_outlined,
-                  size: 20, color: AppColors.error),
-              const SizedBox(width: AppSpacing.xs),
-              Expanded(
-                child: Text(
-                  documentName,
-                  style: const TextStyle(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w500,
-                    color: AppColors.primary,
-                  ),
-                ),
+          InkWell(
+            onTap: () {
+              DocumentPreviewDialog.show(
+                context,
+                mutation: mutation,
+                currentUser: ref.read(authStateProvider).user,
+              );
+            },
+            borderRadius: BorderRadius.circular(8),
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+              decoration: BoxDecoration(
+                color: AppColors.primaryContainer.withValues(alpha: 0.3),
+                borderRadius: BorderRadius.circular(8),
+                border:
+                    Border.all(color: AppColors.primary.withValues(alpha: 0.2)),
               ),
-            ],
+              child: Row(
+                children: [
+                  const Icon(Icons.picture_as_pdf_outlined,
+                      size: 20, color: AppColors.error),
+                  const SizedBox(width: AppSpacing.xs),
+                  Expanded(
+                    child: Text(
+                      documentName,
+                      style: const TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                        color: AppColors.primary,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  const Icon(Icons.open_in_new,
+                      size: 16, color: AppColors.primary),
+                ],
+              ),
+            ),
           )
         else
           const Text(
@@ -595,61 +625,60 @@ class KabagApprovalDetailScreen extends ConsumerWidget {
     WidgetRef ref,
     Mutation mutation,
   ) {
-    bool requiresKadiv = false;
+    final requiresKadiv = mutation.requiresKadivApproval;
 
     showDialog(
       context: context,
-      builder: (dialogContext) => StatefulBuilder(
-        builder: (ctx, setState) => AlertDialog(
-          title: const Text('Konfirmasi Persetujuan'),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                'Apakah Anda yakin menyetujui pengajuan mutasi '
-                '${mutation.ticketNumber} untuk aset '
-                '"${mutation.asset.name}"?',
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Konfirmasi Persetujuan'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Apakah Anda yakin menyetujui pengajuan mutasi '
+              '${mutation.ticketNumber} untuk aset '
+              '"${mutation.asset.name}"?',
+              style: const TextStyle(fontSize: 14),
+            ),
+            const SizedBox(height: 16),
+            Container(
+              padding: const EdgeInsets.all(AppSpacing.sm),
+              decoration: BoxDecoration(
+                color: requiresKadiv
+                    ? AppColors.warningContainer
+                    : AppColors.infoContainer,
+                borderRadius: BorderRadius.circular(AppSpacing.radiusSm),
               ),
-              const SizedBox(height: 16),
-              const Text(
-                'Apakah mutasi ini memerlukan approval Kadiv?',
-                style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
-              ),
-              const SizedBox(height: 4),
-              Row(
+              child: Row(
                 children: [
-                  // ignore: deprecated_member_use
-                  Radio<bool>(
-                    value: true,
-                    // ignore: deprecated_member_use
-                    groupValue: requiresKadiv,
-                    // ignore: deprecated_member_use
-                    onChanged: (v) => setState(() => requiresKadiv = v!),
-                  ),
-                  InkWell(
-                    onTap: () => setState(() => requiresKadiv = true),
-                    child: const Text('Ya, butuh Kadiv',
-                        style: TextStyle(fontSize: 13)),
+                  Icon(
+                    requiresKadiv
+                        ? Icons.schedule_outlined
+                        : Icons.forward_outlined,
+                    color: requiresKadiv ? AppColors.warning : AppColors.info,
+                    size: 20,
                   ),
                   const SizedBox(width: 8),
-                  // ignore: deprecated_member_use
-                  Radio<bool>(
-                    value: false,
-                    // ignore: deprecated_member_use
-                    groupValue: requiresKadiv,
-                    // ignore: deprecated_member_use
-                    onChanged: (v) => setState(() => requiresKadiv = v!),
-                  ),
-                  InkWell(
-                    onTap: () => setState(() => requiresKadiv = false),
-                    child: const Text('Tidak perlu',
-                        style: TextStyle(fontSize: 13)),
+                  Expanded(
+                    child: Text(
+                      requiresKadiv
+                          ? 'Alur Bisnis: Memerlukan approval Kadiv (ditentukan oleh Operator saat verifikasi).'
+                          : 'Alur Bisnis: Tanpa approval Kadiv (langsung diteruskan ke antrean Staff Aset).',
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                        color: requiresKadiv
+                            ? AppColors.warning
+                            : AppColors.info,
+                      ),
+                    ),
                   ),
                 ],
               ),
-            ],
-          ),
+            ),
+          ],
+        ),
           actions: [
             TextButton(
               onPressed: () => Navigator.of(dialogContext).pop(),
@@ -668,16 +697,30 @@ class KabagApprovalDetailScreen extends ConsumerWidget {
 
                 if (context.mounted) {
                   if (success) {
+                    if (requiresKadiv) {
+                      ref.read(notificationProvider.notifier).notifyRole(
+                            targetRole: UserRole.kadiv,
+                            title: 'Menunggu Approval Kadiv',
+                            message:
+                                'Pengajuan mutasi ${mutation.ticketNumber} (${mutation.asset.name}) disetujui Kabag dan memerlukan persetujuan akhir Kadiv.',
+                            type: NotificationType.action,
+                            relatedMutationId: mutation.id,
+                          );
+                    } else {
+                      ref.read(notificationProvider.notifier).notifyRole(
+                            targetRole: UserRole.staffAset,
+                            title: 'Tugas Pembaruan Fisik Aset',
+                            message:
+                                'Pengajuan mutasi ${mutation.ticketNumber} (${mutation.asset.name}) disetujui Kabag. Silakan proses pembaruan fisik aset.',
+                            type: NotificationType.action,
+                            relatedMutationId: mutation.id,
+                          );
+                    }
                     ref.invalidate(mutationDetailProvider(mutation.id));
                     final msg = requiresKadiv
-                        ? 'Disetujui. Menunggu approval Kadiv.'
+                        ? 'Pengajuan berhasil disetujui (Menunggu approval Kadiv).'
                         : 'Pengajuan mutasi berhasil disetujui.';
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: Text(msg),
-                        backgroundColor: AppColors.success,
-                      ),
-                    );
+                    AppFeedback.showSuccess(context, msg);
                     if (Navigator.of(context).canPop()) {
                       Navigator.of(context).pop();
                     } else {
@@ -687,11 +730,9 @@ class KabagApprovalDetailScreen extends ConsumerWidget {
                     }
                   } else {
                     final err = ref.read(kabagApprovalActionProvider).error;
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: Text(err ?? 'Gagal menyetujui pengajuan.'),
-                        backgroundColor: AppColors.error,
-                      ),
+                    AppFeedback.showError(
+                      context,
+                      err ?? 'Gagal menyetujui pengajuan.',
                     );
                   }
                 }
@@ -704,7 +745,6 @@ class KabagApprovalDetailScreen extends ConsumerWidget {
             ),
           ],
         ),
-      ),
     );
   }
 }

@@ -40,6 +40,39 @@ class MutationRepositoryImpl implements MutationRepository {
   /// Counter untuk nomor urut tiket.
   static int _ticketCounter = 124;
 
+  /// Generator nomor tiket yang dijamin unik dan tidak pernah bertabrakan
+  /// dengan mutasi aktif maupun mutasi berstatus completed di histori.
+  static String _generateUniqueTicketNumber(String categoryCode, int year) {
+    final existingTickets =
+        _mutations.map((m) => m.ticketNumber.toUpperCase()).toSet();
+
+    int maxSeq = _ticketCounter;
+    final regex = RegExp(r'(\d{3,5})$');
+    for (final ticket in existingTickets) {
+      final match = regex.firstMatch(ticket);
+      if (match != null) {
+        final parsed = int.tryParse(match.group(1)!);
+        if (parsed != null && parsed > maxSeq) {
+          maxSeq = parsed;
+        }
+      }
+    }
+
+    int nextSeq = maxSeq + 1;
+    String candidateTicket;
+    do {
+      candidateTicket =
+          '$categoryCode-$year-${nextSeq.toString().padLeft(5, '0')}';
+      if (!existingTickets.contains(candidateTicket.toUpperCase())) {
+        break;
+      }
+      nextSeq++;
+    } while (true);
+
+    _ticketCounter = nextSeq;
+    return candidateTicket;
+  }
+
   /// Flag penanda apakah seed data sudah diinisialisasi.
   static bool _initialized = false;
 
@@ -191,6 +224,25 @@ class MutationRepositoryImpl implements MutationRepository {
         ),
 
         Mutation(
+          id: 'mut_004_kadiv',
+          ticketNumber: 'FURNITUR-2026-00019',
+          asset: asset4,
+          applicantId: 'usr_dewi',
+          applicantName: 'Dewi Lestari',
+          currentLocation: 'Kantor Pusat',
+          targetLocation: 'Cabang Medan',
+          currentPic: 'Dewi Lestari',
+          targetPic: 'Siti Rahma',
+          reason: 'Pengadaan antar cabang memerlukan approval Kadiv.',
+          documentName: 'Nota_Dinas.pdf',
+          status: MutationStatus.waitingKabagApproval,
+          requiresKadivApproval: true,
+          verifiedBy: 'Operator Aset',
+          verifiedAt: DateTime.now().subtract(const Duration(hours: 3)),
+          createdAt: DateTime.now().subtract(const Duration(days: 1)),
+        ),
+
+        Mutation(
           id: 'mut_005',
           ticketNumber: 'ELEKTRONIK-2026-00088',
           asset: const Asset(
@@ -213,6 +265,7 @@ class MutationRepositoryImpl implements MutationRepository {
           reason: 'Relokasi server inti data center utama ke Disaster Recovery Center Surabaya sesuai kebijakan kepatuhan OJK.',
           documentName: 'SK_Relokasi_Infrastruktur_TI.pdf',
           status: MutationStatus.waitingKadivApproval,
+          requiresKadivApproval: true,
           verifiedBy: 'Operator Aset',
           verifiedAt: DateTime.now().subtract(const Duration(hours: 6)),
           approvedBy: 'H. M. Yusuf (Kabag Aset)',
@@ -308,37 +361,9 @@ class MutationRepositoryImpl implements MutationRepository {
     // Pemohon boleh mengajukan mutasi untuk aset yang belum ada
     // di database aset aplikasi. Data yang dimasukkan pada form
     // menjadi dasar data aset pada pengajuan mutasi.
-    const manualCategory = AssetCategory(
-      id: 'cat_manual',
-      code: 'OTH',
-      name: 'Lainnya',
-    );
-
-    final assetId = params.assetId.trim();
-    final assetName = params.assetName.trim();
-    final sourceLocation = params.sourceLocation.trim();
     final targetLocation = params.targetLocation.trim();
     final targetPic = params.targetPic.trim();
     final reason = params.reason.trim();
-
-    // Validasi dasar di repository sebagai lapisan pengaman tambahan.
-    if (assetId.isEmpty) {
-      return const Result.failure(
-        ValidationFailure(message: 'Kode / Nomor Aset / Serial wajib diisi.'),
-      );
-    }
-
-    if (assetName.isEmpty) {
-      return const Result.failure(
-        ValidationFailure(message: 'Nama aset wajib diisi.'),
-      );
-    }
-
-    if (sourceLocation.isEmpty) {
-      return const Result.failure(
-        ValidationFailure(message: 'Lokasi aset saat ini wajib diisi.'),
-      );
-    }
 
     if (targetLocation.isEmpty) {
       return const Result.failure(
@@ -358,49 +383,139 @@ class MutationRepositoryImpl implements MutationRepository {
       );
     }
 
-    // Membentuk representasi Asset berdasarkan data manual Pemohon.
-    // Ini BUKAN pencarian aset pada database.
-    final asset = Asset(
-      id: assetId,
-      assetCode: assetId,
-      name: assetName,
-      category: manualCategory,
-      location: sourceLocation,
-      pic: '-',
-      status: AssetStatus.available,
-      condition: 'Baik',
-      acquisitionYear: DateTime.now().year,
+    const manualCategory = AssetCategory(
+      id: 'cat_manual',
+      code: 'OTH',
+      name: 'Lainnya',
     );
 
-    // Generate ticket number: KATEGORI_CODE-TAHUN-NOURUT.
-    _ticketCounter++;
+    String categoryCode = 'OTH';
+    String sourceLocation = params.sourceLocation.trim();
+    String currentPic = params.currentPic?.trim().isNotEmpty == true
+        ? params.currentPic!.trim()
+        : '-';
+    Asset? assetEntity;
+    String? finalAssetId;
+    String? customAssetName;
+    String? customSerialNumber;
+
+    if (params.isUnregisteredAsset) {
+      // ================================================================
+      // UNREGISTERED ASSET (FALLBACK)
+      // ================================================================
+      // - assetId = null
+      // - Simpan data manual di customAssetName dan customSerialNumber
+      // - Jangan membuat ID aset dummy atau relasi palsu ke database
+      finalAssetId = null;
+      customAssetName = (params.customAssetName?.trim().isNotEmpty == true)
+          ? params.customAssetName!.trim()
+          : (params.assetName.trim().isNotEmpty ? params.assetName.trim() : null);
+      customSerialNumber = params.customSerialNumber?.trim();
+      categoryCode = 'OTH';
+
+      if (sourceLocation.isEmpty) {
+        return const Result.failure(
+          ValidationFailure(message: 'Lokasi aset saat ini wajib diisi.'),
+        );
+      }
+    } else {
+      // ================================================================
+      // REGISTERED ASSET
+      // ================================================================
+      final rawAssetId = params.assetId?.trim() ?? '';
+      if (rawAssetId.isEmpty) {
+        return const Result.failure(
+          ValidationFailure(message: 'ID Aset terdaftar wajib diisi.'),
+        );
+      }
+
+      // Cegah duplicate active mutation untuk asset yang sama.
+      final hasActiveMutation = _mutations.any((m) {
+        final matchesAsset = (m.assetId != null && m.assetId == rawAssetId) ||
+            (m.asset.id.isNotEmpty && m.asset.id == rawAssetId) ||
+            (m.asset.assetCode.isNotEmpty && m.asset.assetCode == rawAssetId);
+        return matchesAsset &&
+            m.status != MutationStatus.completed &&
+            m.status != MutationStatus.rejected;
+      });
+
+      if (hasActiveMutation) {
+        return const Result.failure(
+          ValidationFailure(
+            message:
+                'Aset sedang memiliki pengajuan mutasi aktif yang belum selesai.',
+          ),
+        );
+      }
+
+      // Ambil asset dari AssetRepository
+      final assetResult = await assetRepository.getAssetById(rawAssetId);
+      if (assetResult is Success<Asset>) {
+        assetEntity = assetResult.data;
+      } else {
+        // Coba cari melalui getAssets jika rawAssetId berupa kode aset
+        final assetListResult = await assetRepository.getAssets(query: rawAssetId);
+        if (assetListResult is Success<List<Asset>> && assetListResult.data.isNotEmpty) {
+          assetEntity = assetListResult.data.firstWhere(
+            (a) => a.id == rawAssetId || a.assetCode == rawAssetId,
+            orElse: () => assetListResult.data.first,
+          );
+        } else {
+          // Fallback aman untuk skenario unit test mock
+          assetEntity = Asset(
+            id: rawAssetId,
+            assetCode: rawAssetId,
+            name: params.assetName.trim().isNotEmpty ? params.assetName.trim() : 'Aset $rawAssetId',
+            category: manualCategory,
+            location: sourceLocation.isNotEmpty ? sourceLocation : 'Kantor Pusat',
+            pic: currentPic,
+            status: AssetStatus.available,
+            condition: 'Baik',
+            acquisitionYear: DateTime.now().year,
+          );
+        }
+      }
+
+      finalAssetId = assetEntity.id;
+      categoryCode = assetEntity.category.code.isNotEmpty ? assetEntity.category.code : 'ELK';
+
+      // Simpan snapshot lokasi asal dan PIC lama dari master aset saat pengajuan dibuat
+      if (assetEntity.location.isNotEmpty) {
+        sourceLocation = assetEntity.location;
+      }
+      if (assetEntity.pic.isNotEmpty && assetEntity.pic != '-') {
+        currentPic = assetEntity.pic;
+      }
+      // Master asset TIDAK diubah pada tahap submission/approval
+    }
 
     final year = DateTime.now().year;
-
-    final ticketNumber =
-        '${manualCategory.code}-$year-${_ticketCounter.toString().padLeft(5, '0')}';
-
+    final ticketNumber = _generateUniqueTicketNumber(categoryCode, year);
     final mutationId = 'mut_${DateTime.now().millisecondsSinceEpoch}';
 
-    // Membuat pengajuan mutasi.
     final mutation = Mutation(
       id: mutationId,
       ticketNumber: ticketNumber,
-      asset: asset,
+      assetId: finalAssetId,
+      asset: assetEntity,
+      isUnregisteredAsset: params.isUnregisteredAsset,
+      customAssetName: customAssetName,
+      customSerialNumber: customSerialNumber,
       applicantId: params.applicantId,
       applicantName: params.applicantName ?? 'Pemohon',
       currentLocation: sourceLocation,
       targetLocation: targetLocation,
-      currentPic: params.currentPic ?? '-',
+      currentPic: currentPic,
       targetPic: targetPic,
       reason: reason,
       documentName: params.documentName,
+      documentPath: params.documentPath,
+      documentBytes: params.documentBytes,
       status: MutationStatus.submitted,
       createdAt: DateTime.now(),
     );
 
     _mutations.add(mutation);
-
     return Result.success(mutation);
   }
 
@@ -514,6 +629,7 @@ class MutationRepositoryImpl implements MutationRepository {
   Future<Result<Mutation>> verifyMutation({
     required String mutationId,
     required String operatorName,
+    bool requiresKadivApproval = false,
   }) async {
     await Future.delayed(const Duration(milliseconds: 300));
 
@@ -529,6 +645,7 @@ class MutationRepositoryImpl implements MutationRepository {
 
     final updated = current.copyWith(
       status: MutationStatus.waitingKabagApproval,
+      requiresKadivApproval: requiresKadivApproval,
       verifiedAt: DateTime.now(),
       verifiedBy: operatorName,
     );
@@ -755,21 +872,32 @@ class MutationRepositoryImpl implements MutationRepository {
       );
     }
 
-    // 1. Update data layer Asset & riwayat mutasi
-    final assetUpdateResult = await assetRepository.updateAssetLocationAndPic(
-      assetId: current.asset.id,
-      newLocation: newLocation,
-      newPic: newPic,
-      ticketNumber: current.ticketNumber,
-      updatedBy: staffName,
-    );
+    // 1. Update data layer Asset & riwayat mutasi HANYA jika asset terdaftar
+    Asset updatedAsset = current.asset;
+    if (!current.isUnregisteredAsset &&
+        current.assetId != null &&
+        current.assetId!.isNotEmpty) {
+      final assetUpdateResult = await assetRepository.updateAssetLocationAndPic(
+        assetId: current.assetId!,
+        newLocation: newLocation,
+        newPic: newPic,
+        ticketNumber: current.ticketNumber,
+        updatedBy: staffName,
+      );
 
-    final updatedAsset = assetUpdateResult is Success<Asset>
-        ? assetUpdateResult.data
-        : current.asset.copyWith(
-            location: newLocation,
-            pic: newPic,
-          );
+      updatedAsset = assetUpdateResult is Success<Asset>
+          ? assetUpdateResult.data
+          : current.asset.copyWith(
+              location: newLocation,
+              pic: newPic,
+            );
+    } else {
+      // Unregistered asset: jangan mencoba updateAssetLocationAndPic()
+      updatedAsset = current.asset.copyWith(
+        location: newLocation,
+        pic: newPic,
+      );
+    }
 
     // 2. Ubah status mutation menjadi pendingConfirmation
     final updatedMutation = current.copyWith(

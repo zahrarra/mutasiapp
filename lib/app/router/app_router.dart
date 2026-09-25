@@ -9,6 +9,8 @@ import 'package:go_router/go_router.dart';
 
 import '../../features/auth/presentation/screens/landing_screen.dart';
 import '../../features/admin/presentation/screens/admin_dashboard_screen.dart';
+import '../../features/admin/presentation/screens/admin_locations_screen.dart';
+import '../../features/admin/presentation/screens/admin_users_screen.dart';
 import '../../features/asset/presentation/screens/asset_category_screen.dart';
 import '../../features/asset/presentation/screens/asset_detail_screen.dart';
 import '../../features/asset/presentation/screens/asset_list_screen.dart';
@@ -125,6 +127,16 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         name: RouteNames.adminCategoriesName,
         builder: (context, state) => const AssetCategoryScreen(),
       ),
+      GoRoute(
+        path: RouteNames.adminLocationsPath,
+        name: RouteNames.adminLocationsName,
+        builder: (context, state) => const AdminLocationsScreen(),
+      ),
+      GoRoute(
+        path: RouteNames.adminUsersPath,
+        name: RouteNames.adminUsersName,
+        builder: (context, state) => const AdminUsersScreen(),
+      ),
 
       // ─── Pemohon ──────────────────────────────────────────────────────────
       GoRoute(
@@ -135,6 +147,10 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: RouteNames.pemohonMutasiCreatePath,
         name: RouteNames.pemohonMutasiCreateName,
+        builder: (context, state) => const PemohonCreateMutationScreen(),
+      ),
+      GoRoute(
+        path: '/pemohon/mutations/create',
         builder: (context, state) => const PemohonCreateMutationScreen(),
       ),
       GoRoute(
@@ -151,10 +167,29 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         name: RouteNames.pemohonMutasiName,
         builder: (context, state) => const PemohonMutationListScreen(),
       ),
+      GoRoute(
+        path: '/pemohon/mutations',
+        builder: (context, state) => const PemohonMutationListScreen(),
+      ),
+      GoRoute(
+        path: '/pemohon/history',
+        builder: (context, state) => const PemohonMutationListScreen(),
+      ),
+      GoRoute(
+        path: '/pemohon/mutation-history',
+        builder: (context, state) => const PemohonMutationListScreen(),
+      ),
       // Path lebih spesifik dulu (confirm & edit), baru detail :id
       GoRoute(
         path: RouteNames.pemohonConfirmationPath,
         name: RouteNames.pemohonConfirmationName,
+        builder: (context, state) {
+          final id = state.pathParameters['id'] ?? '';
+          return PemohonConfirmationScreen(mutationId: id);
+        },
+      ),
+      GoRoute(
+        path: '/pemohon/mutations/:id/confirm',
         builder: (context, state) {
           final id = state.pathParameters['id'] ?? '';
           return PemohonConfirmationScreen(mutationId: id);

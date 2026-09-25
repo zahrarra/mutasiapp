@@ -83,6 +83,7 @@ class _FakeMutationRepository implements MutationRepository {
   Future<Result<Mutation>> verifyMutation({
     required String mutationId,
     required String operatorName,
+    bool requiresKadivApproval = false,
   }) async => throw UnimplementedError();
 
   @override

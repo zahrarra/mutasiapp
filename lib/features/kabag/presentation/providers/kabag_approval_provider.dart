@@ -12,6 +12,11 @@ import '../../../mutation/domain/usecases/approve_mutation_kabag_usecase.dart';
 import '../../../mutation/domain/usecases/get_kabag_approvals_usecase.dart';
 import '../../../mutation/domain/usecases/reject_mutation_kabag_usecase.dart';
 import '../../../mutation/presentation/providers/mutation_provider.dart';
+import '../../../auth/domain/entities/user_role.dart';
+import '../../../kadiv/presentation/providers/kadiv_approval_provider.dart';
+import '../../../notification/domain/entities/notification_item.dart';
+import '../../../notification/presentation/providers/notification_provider.dart';
+import '../../../staff/presentation/providers/staff_mutation_provider.dart';
 
 // ─── Use Case Providers ───────────────────────────────────────────────────────
 
@@ -36,21 +41,36 @@ final getKabagApprovalsUseCaseProvider =
 // ─── Filter & Search State ───────────────────────────────────────────────────
 
 enum KabagSortOrder {
-  all,
   newest,
   oldest;
 
   String get displayName => switch (this) {
-        KabagSortOrder.all => 'Semua',
         KabagSortOrder.newest => 'Terbaru',
         KabagSortOrder.oldest => 'Terlama',
+      };
+}
+
+enum KabagStatusFilter {
+  waiting,
+  approved,
+  rejected,
+  all;
+
+  String get displayName => switch (this) {
+        KabagStatusFilter.waiting => 'Menunggu Approval',
+        KabagStatusFilter.approved => 'Disetujui',
+        KabagStatusFilter.rejected => 'Ditolak',
+        KabagStatusFilter.all => 'Semua',
       };
 }
 
 final kabagSearchQueryProvider = StateProvider<String>((ref) => '');
 
 final kabagSortOrderProvider =
-    StateProvider<KabagSortOrder>((ref) => KabagSortOrder.all);
+    StateProvider<KabagSortOrder>((ref) => KabagSortOrder.newest);
+
+final kabagStatusFilterProvider =
+    StateProvider<KabagStatusFilter>((ref) => KabagStatusFilter.waiting);
 
 // ─── Mutations Data Providers ────────────────────────────────────────────────
 
@@ -88,12 +108,18 @@ final kabagStatsProvider = Provider<KabagApprovalStats>((ref) {
       final waiting = mutations
           .where((m) => m.status == MutationStatus.waitingKabagApproval)
           .length;
-      final approved = mutations
-          .where((m) => m.status == MutationStatus.approved)
-          .length;
-      final rejected = mutations
-          .where((m) => m.status == MutationStatus.rejected)
-          .length;
+      final approved = mutations.where((m) {
+        return m.approvedBy != null ||
+            m.approvedAt != null ||
+            m.status == MutationStatus.waitingKadivApproval ||
+            m.status == MutationStatus.approved ||
+            m.status == MutationStatus.pendingConfirmation ||
+            m.status == MutationStatus.completed;
+      }).length;
+      final rejected = mutations.where((m) {
+        return m.status == MutationStatus.rejected &&
+            (m.rejectedBy != null || m.rejectionReason != null);
+      }).length;
 
       return KabagApprovalStats(
         waitingApprovalCount: waiting,
@@ -114,18 +140,38 @@ final kabagStatsProvider = Provider<KabagApprovalStats>((ref) {
   );
 });
 
-/// Provider antrean mutasi menunggu approval (KBG-002) dengan filter pencarian dan sorting.
+/// Provider antrean mutasi untuk Kabag Aset dengan filter status, pencarian, dan sorting.
 final filteredKabagApprovalsProvider =
     Provider<AsyncValue<List<Mutation>>>((ref) {
   final asyncAll = ref.watch(kabagAllMutationsProvider);
   final query = ref.watch(kabagSearchQueryProvider).toLowerCase().trim();
   final sortOrder = ref.watch(kabagSortOrderProvider);
+  final statusFilter = ref.watch(kabagStatusFilterProvider);
 
   return asyncAll.whenData((mutations) {
-    // 1. Hanya yang berstatus waitingKabagApproval
-    var list = mutations
-        .where((m) => m.status == MutationStatus.waitingKabagApproval)
-        .toList();
+    // 1. Filter status
+    var list = mutations.where((m) {
+      return switch (statusFilter) {
+        KabagStatusFilter.waiting =>
+          m.status == MutationStatus.waitingKabagApproval,
+        KabagStatusFilter.approved =>
+          m.approvedBy != null ||
+              m.approvedAt != null ||
+              m.status == MutationStatus.waitingKadivApproval ||
+              m.status == MutationStatus.approved ||
+              m.status == MutationStatus.pendingConfirmation ||
+              m.status == MutationStatus.completed,
+        KabagStatusFilter.rejected =>
+          m.status == MutationStatus.rejected &&
+              (m.rejectedBy != null || m.rejectionReason != null),
+        KabagStatusFilter.all =>
+          m.status == MutationStatus.waitingKabagApproval ||
+              m.approvedBy != null ||
+              m.rejectedBy != null ||
+              m.status == MutationStatus.waitingKadivApproval ||
+              m.status == MutationStatus.approved,
+      };
+    }).toList();
 
     // 2. Filter search query
     if (query.isNotEmpty) {
@@ -138,7 +184,7 @@ final filteredKabagApprovalsProvider =
       }).toList();
     }
 
-    // 3. Sorting
+    // 3. Sorting berdasarkan createdAt
     list.sort((a, b) {
       if (sortOrder == KabagSortOrder.oldest) {
         return a.createdAt.compareTo(b.createdAt);
@@ -225,8 +271,34 @@ class KabagApprovalActionNotifier
         result: result.data,
       );
       ref.invalidate(kabagAllMutationsProvider);
+      ref.invalidate(kadivAllMutationsProvider);
       ref.invalidate(mutationDetailProvider(mutationId));
       ref.invalidate(mutationListProvider);
+
+      if (requiresKadivApproval) {
+        try {
+          ref.read(notificationProvider.notifier).notifyRole(
+                targetRole: UserRole.kadiv,
+                title: 'Menunggu Approval Kadiv',
+                message:
+                    'Pengajuan mutasi ${result.data.ticketNumber} (${result.data.asset.name}) disetujui Kabag dan memerlukan persetujuan akhir Kadiv.',
+                type: NotificationType.action,
+                relatedMutationId: mutationId,
+              );
+        } catch (_) {}
+      } else {
+        try {
+          ref.read(notificationProvider.notifier).notifyRole(
+                targetRole: UserRole.staffAset,
+                title: 'Menunggu Pembaruan Aset',
+                message:
+                    'Pengajuan mutasi ${result.data.ticketNumber} (${result.data.asset.name}) telah disetujui Kabag dan siap diperbarui oleh Staff Aset.',
+                type: NotificationType.action,
+                relatedMutationId: mutationId,
+              );
+        } catch (_) {}
+        ref.invalidate(staffAllMutationsProvider);
+      }
       return true;
     } else if (result is AppFailure<Mutation>) {
       state = KabagApprovalActionState(
@@ -272,6 +344,20 @@ class KabagApprovalActionNotifier
       ref.invalidate(kabagAllMutationsProvider);
       ref.invalidate(mutationDetailProvider(mutationId));
       ref.invalidate(mutationListProvider);
+
+      try {
+        if (result.data.applicantId != null) {
+          ref.read(notificationProvider.notifier).notifyUser(
+                targetUserId: result.data.applicantId!,
+                targetRole: UserRole.pemohon,
+                title: 'Pengajuan Mutasi Ditolak Kabag',
+                message:
+                    'Pengajuan mutasi ${result.data.ticketNumber} ditolak oleh Kabag Aset dengan alasan: $reason',
+                type: NotificationType.warning,
+                relatedMutationId: mutationId,
+              );
+        }
+      } catch (_) {}
       return true;
     } else if (result is AppFailure<Mutation>) {
       state = KabagApprovalActionState(

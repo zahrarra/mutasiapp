@@ -51,9 +51,10 @@ class _FakeFullMutationRepository implements MutationRepository {
     final id = 'mut_$_counter';
     final ticketNumber = 'ELK-2026-000$_counter';
     const cat = AssetCategory(id: 'cat_1', code: 'ELK', name: 'Elektronik');
+    final resolvedAssetId = params.assetId ?? (params.isUnregisteredAsset ? '' : 'AST-PRN-009');
     final asset = Asset(
-      id: params.assetId,
-      assetCode: params.assetId,
+      id: resolvedAssetId,
+      assetCode: resolvedAssetId,
       name: params.assetName,
       category: cat,
       location: params.sourceLocation,
@@ -129,12 +130,14 @@ class _FakeFullMutationRepository implements MutationRepository {
   Future<Result<Mutation>> verifyMutation({
     required String mutationId,
     required String operatorName,
+    bool requiresKadivApproval = false,
   }) async {
     final current = _mutations[mutationId]!;
     final updated = current.copyWith(
       status: MutationStatus.waitingKabagApproval,
       verifiedBy: operatorName,
       verifiedAt: DateTime.now(),
+      requiresKadivApproval: requiresKadivApproval,
     );
     _mutations[mutationId] = updated;
     return Result.success(updated);

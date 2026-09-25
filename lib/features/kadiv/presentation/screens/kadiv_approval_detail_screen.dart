@@ -9,9 +9,15 @@ import 'package:go_router/go_router.dart';
 import '../../../../app/router/route_names.dart';
 import '../../../../app/theme/app_colors.dart';
 import '../../../../app/theme/app_spacing.dart';
+import '../../../auth/domain/entities/user_role.dart';
 import '../../../mutation/domain/entities/mutation.dart';
 import '../../../mutation/domain/entities/mutation_status.dart';
 import '../../../mutation/presentation/providers/mutation_provider.dart';
+import '../../../notification/domain/entities/notification_item.dart';
+import '../../../notification/presentation/providers/notification_provider.dart';
+import '../../../../core/widgets/app_feedback.dart';
+import '../../../../core/widgets/document_preview_dialog.dart';
+import '../../../auth/presentation/providers/auth_provider.dart';
 import '../providers/kadiv_approval_provider.dart';
 
 class KadivApprovalDetailScreen extends ConsumerWidget {
@@ -69,7 +75,12 @@ class KadivApprovalDetailScreen extends ConsumerWidget {
     KadivApprovalActionState actionState,
   ) {
     final isWaitingApproval =
-        mutation.status == MutationStatus.waitingKadivApproval;
+        mutation.status == MutationStatus.waitingKadivApproval ||
+        (mutation.requiresKadivApproval &&
+            (mutation.approvedBy != null || mutation.approvedAt != null) &&
+            mutation.kadivApprovedBy == null &&
+            mutation.kadivRejectedBy == null &&
+            mutation.status != MutationStatus.rejected);
 
     return Column(
       children: [
@@ -214,7 +225,7 @@ class KadivApprovalDetailScreen extends ConsumerWidget {
                   if (mutation.documentName != null) ...[
                     const Divider(
                         height: AppSpacing.md, color: AppColors.border),
-                    _buildDocumentRow(mutation.documentName!),
+                    _buildDocumentRow(mutation, context, ref),
                   ],
                 ]),
                 const SizedBox(height: AppSpacing.md),
@@ -345,7 +356,7 @@ class KadivApprovalDetailScreen extends ConsumerWidget {
                               ),
                             )
                           : const Text(
-                              'Setujui Pengajuan',
+                              'Setujui',
                               style: TextStyle(fontWeight: FontWeight.bold),
                             ),
                     ),
@@ -575,23 +586,45 @@ class KadivApprovalDetailScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildDocumentRow(String docName) {
-    return Row(
-      children: [
-        const Icon(Icons.attach_file, size: 16, color: AppColors.primary),
-        const SizedBox(width: AppSpacing.xs),
-        Expanded(
-          child: Text(
-            docName,
-            style: const TextStyle(
-              fontSize: 12,
-              fontWeight: FontWeight.w500,
-              color: AppColors.primary,
-              decoration: TextDecoration.underline,
-            ),
-          ),
+  Widget _buildDocumentRow(
+      Mutation mutation, BuildContext context, WidgetRef ref) {
+    final docName = mutation.documentName ?? 'Dokumen';
+    return InkWell(
+      onTap: () {
+        DocumentPreviewDialog.show(
+          context,
+          mutation: mutation,
+          currentUser: ref.read(authStateProvider).user,
+        );
+      },
+      borderRadius: BorderRadius.circular(8),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+        decoration: BoxDecoration(
+          color: AppColors.primaryContainer.withValues(alpha: 0.3),
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(color: AppColors.primary.withValues(alpha: 0.2)),
         ),
-      ],
+        child: Row(
+          children: [
+            const Icon(Icons.picture_as_pdf_outlined,
+                size: 18, color: AppColors.error),
+            const SizedBox(width: AppSpacing.xs),
+            Expanded(
+              child: Text(
+                docName,
+                style: const TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                  color: AppColors.primary,
+                ),
+              ),
+            ),
+            const SizedBox(width: 8),
+            const Icon(Icons.open_in_new, size: 15, color: AppColors.primary),
+          ],
+        ),
+      ),
     );
   }
 
@@ -743,22 +776,25 @@ class KadivApprovalDetailScreen extends ConsumerWidget {
 
                 if (context.mounted) {
                   if (success) {
+                    ref.read(notificationProvider.notifier).notifyRole(
+                          targetRole: UserRole.staffAset,
+                          title: 'Tugas Pembaruan Fisik Aset',
+                          message:
+                              'Pengajuan mutasi ${mutation.ticketNumber} (${mutation.asset.name}) telah disetujui Kadiv. Silakan perbarui fisik aset.',
+                          type: NotificationType.action,
+                          relatedMutationId: mutation.id,
+                        );
                     ref.invalidate(mutationDetailProvider(mutation.id));
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text(
-                            'Pengajuan mutasi berhasil disetujui oleh Kadiv.'),
-                        backgroundColor: AppColors.success,
-                      ),
+                    AppFeedback.showSuccess(
+                      context,
+                      'Pengajuan mutasi berhasil disetujui oleh Kadiv.',
                     );
                     _safePop(context);
                   } else {
                     final err = ref.read(kadivApprovalActionProvider).error;
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: Text(err ?? 'Gagal menyetujui mutasi.'),
-                        backgroundColor: AppColors.error,
-                      ),
+                    AppFeedback.showError(
+                      context,
+                      err ?? 'Gagal menyetujui mutasi.',
                     );
                   }
                 }

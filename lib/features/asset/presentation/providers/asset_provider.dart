@@ -12,6 +12,7 @@ import '../../domain/entities/asset_status.dart';
 import '../../domain/repositories/asset_repository.dart';
 import '../../domain/usecases/get_asset_detail_usecase.dart';
 import '../../domain/usecases/get_assets_usecase.dart';
+import '../../../auth/presentation/providers/auth_provider.dart';
 
 /// Provider untuk [AssetRepository].
 final assetRepositoryProvider = Provider<AssetRepository>((ref) {
@@ -86,3 +87,42 @@ final assetCategoriesProvider = FutureProvider<List<AssetCategory>>((ref) async 
   }
   return [];
 });
+
+/// AsyncProvider daftar aset tanggung jawab pengguna (PIC) yang sedang login.
+final userResponsibleAssetsProvider = FutureProvider<List<Asset>>((ref) async {
+  final user = ref.watch(authStateProvider).user;
+  if (user == null) return [];
+
+  final useCase = ref.watch(getAssetsUseCaseProvider);
+  final result = await useCase();
+  if (result is Success<List<Asset>>) {
+    return _filterAssetsByUser(result.data, user);
+  }
+  return [];
+});
+
+List<Asset> _filterAssetsByUser(List<Asset> assets, dynamic user) {
+  final userName = (user.name as String? ?? '').toLowerCase().trim();
+  final userUsername = (user.username as String? ?? '').toLowerCase().trim();
+  final isPemohon = user.role?.toString().toLowerCase().contains('pemohon') ?? false;
+
+  return assets.where((asset) {
+    // Hanya aset aktif yang belum dihapus/disposisi
+    if (asset.status == AssetStatus.disposed) return false;
+
+    final pic = asset.pic.toLowerCase().trim();
+    if (userName.isNotEmpty && (pic.contains(userName) || userName.contains(pic))) {
+      return true;
+    }
+    if (userUsername.isNotEmpty && pic.contains(userUsername)) {
+      return true;
+    }
+    // Skenario akun default demo pemohon (username/name "pemohon" merepresentasikan Budi Santoso)
+    if (isPemohon && (userUsername == 'pemohon' || userName.contains('pemohon'))) {
+      if (pic.contains('budi santoso')) {
+        return true;
+      }
+    }
+    return false;
+  }).toList();
+}

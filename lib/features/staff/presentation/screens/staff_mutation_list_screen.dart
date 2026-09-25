@@ -34,6 +34,7 @@ class _StaffMutationListScreenState
   @override
   Widget build(BuildContext context) {
     final asyncMutations = ref.watch(filteredStaffMutationsProvider);
+    final statusFilter = ref.watch(staffStatusFilterProvider);
     final sortOrder = ref.watch(staffSortOrderProvider);
 
     return Scaffold(
@@ -90,49 +91,101 @@ class _StaffMutationListScreenState
                 ),
                 const SizedBox(height: AppSpacing.sm),
 
-                // Sort Filter Chips
+                // Compact Filter Bar (Status & Sort)
                 Row(
                   children: [
-                    const Text(
-                      'Urutan:',
-                      style: TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w600,
-                        color: AppColors.textSecondary,
+                    // Status Filter Dropdown
+                    Expanded(
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 10,
+                          vertical: 2,
+                        ),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius:
+                              BorderRadius.circular(AppSpacing.radiusSm),
+                          border: Border.all(color: AppColors.border),
+                        ),
+                        child: DropdownButtonHideUnderline(
+                          child: DropdownButton<StaffStatusFilter>(
+                            key: const Key('dropdown_filter_staff_status'),
+                            value: statusFilter,
+                            isDense: true,
+                            isExpanded: true,
+                            icon: const Icon(
+                              Icons.filter_list,
+                              size: 16,
+                              color: AppColors.primary,
+                            ),
+                            items: StaffStatusFilter.values.map((s) {
+                              return DropdownMenuItem(
+                                value: s,
+                                child: Text(
+                                  s.displayName,
+                                  style: const TextStyle(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                ),
+                              );
+                            }).toList(),
+                            onChanged: (val) {
+                              if (val != null) {
+                                ref
+                                    .read(staffStatusFilterProvider.notifier)
+                                    .state = val;
+                              }
+                            },
+                          ),
+                        ),
                       ),
                     ),
                     const SizedBox(width: AppSpacing.sm),
-                    for (final order in StaffSortOrder.values) ...[
-                      Padding(
-                        padding: const EdgeInsets.only(right: AppSpacing.xs),
-                        child: ChoiceChip(
-                          label: Text(
-                            order.displayName,
-                            style: TextStyle(
-                              fontSize: 11,
-                              fontWeight: sortOrder == order
-                                  ? FontWeight.bold
-                                  : FontWeight.normal,
-                              color: sortOrder == order
-                                  ? Colors.white
-                                  : AppColors.textPrimary,
-                            ),
+
+                    // Sort Dropdown
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 10,
+                        vertical: 2,
+                      ),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius:
+                            BorderRadius.circular(AppSpacing.radiusSm),
+                        border: Border.all(color: AppColors.border),
+                      ),
+                      child: DropdownButtonHideUnderline(
+                        child: DropdownButton<StaffSortOrder>(
+                          key: const Key('dropdown_filter_staff_sort'),
+                          value: sortOrder,
+                          isDense: true,
+                          icon: const Icon(
+                            Icons.sort,
+                            size: 16,
+                            color: AppColors.primary,
                           ),
-                          selected: sortOrder == order,
-                          selectedColor: AppColors.primary,
-                          backgroundColor: AppColors.surface,
-                          side: BorderSide(
-                            color: sortOrder == order
-                                ? AppColors.primary
-                                : AppColors.border,
-                          ),
-                          onSelected: (_) {
-                            ref.read(staffSortOrderProvider.notifier).state =
-                                order;
+                          items: StaffSortOrder.values.map((order) {
+                            return DropdownMenuItem(
+                              value: order,
+                              child: Text(
+                                order.displayName,
+                                style: const TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
+                            );
+                          }).toList(),
+                          onChanged: (val) {
+                            if (val != null) {
+                              ref.read(staffSortOrderProvider.notifier).state =
+                                  val;
+                            }
                           },
                         ),
                       ),
-                    ],
+                    ),
                   ],
                 ),
               ],

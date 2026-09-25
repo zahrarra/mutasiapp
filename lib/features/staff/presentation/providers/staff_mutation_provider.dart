@@ -30,13 +30,25 @@ final processStaffAssetUpdateUseCaseProvider =
 
 // ─── Filter & Search State ───────────────────────────────────────────────────
 
+enum StaffStatusFilter {
+  waitingUpdate,
+  processed,
+  completed,
+  all;
+
+  String get displayName => switch (this) {
+        StaffStatusFilter.waitingUpdate => 'Menunggu Update',
+        StaffStatusFilter.processed => 'Menunggu Konfirmasi',
+        StaffStatusFilter.completed => 'Selesai',
+        StaffStatusFilter.all => 'Semua Riwayat Staff',
+      };
+}
+
 enum StaffSortOrder {
-  all,
   newest,
   oldest;
 
   String get displayName => switch (this) {
-        StaffSortOrder.all => 'Semua',
         StaffSortOrder.newest => 'Terbaru',
         StaffSortOrder.oldest => 'Terlama',
       };
@@ -44,18 +56,27 @@ enum StaffSortOrder {
 
 final staffSearchQueryProvider = StateProvider<String>((ref) => '');
 
+final staffStatusFilterProvider =
+    StateProvider<StaffStatusFilter>((ref) => StaffStatusFilter.waitingUpdate);
+
 final staffSortOrderProvider =
-    StateProvider<StaffSortOrder>((ref) => StaffSortOrder.all);
+    StateProvider<StaffSortOrder>((ref) => StaffSortOrder.newest);
 
 // ─── Data Providers ──────────────────────────────────────────────────────────
 
 /// Mengambil seluruh mutasi yang relevan untuk Staff Aset.
+/// Staff HANYA memproses mutasi yang sudah disetujui (tidak mencampur mutasi yang masih menunggu approval).
 final staffAllMutationsProvider = FutureProvider<List<Mutation>>((ref) async {
   final useCase = ref.watch(getStaffMutationsUseCaseProvider);
-  final result = await useCase(onlyWaitingUpdate: true);
+  final result = await useCase(onlyWaitingUpdate: false);
 
   if (result is Success<List<Mutation>>) {
-    return result.data;
+    // Hanya mutasi yang sudah melewati tahap approval
+    final staffScope = result.data.where((m) =>
+        m.status == MutationStatus.approved ||
+        m.status == MutationStatus.pendingConfirmation ||
+        m.status == MutationStatus.completed).toList();
+    return staffScope;
   } else if (result is AppFailure<List<Mutation>>) {
     throw Exception(result.failure.userMessage);
   }
@@ -65,8 +86,14 @@ final staffAllMutationsProvider = FutureProvider<List<Mutation>>((ref) async {
 /// Statistik ringkasan untuk Dashboard Staff Aset.
 class StaffStats {
   final int waitingUpdateCount;
+  final int processedCount;
+  final int completedCount;
 
-  const StaffStats({required this.waitingUpdateCount});
+  const StaffStats({
+    required this.waitingUpdateCount,
+    this.processedCount = 0,
+    this.completedCount = 0,
+  });
 }
 
 final staffStatsProvider = Provider<StaffStats>((ref) {
@@ -77,7 +104,17 @@ final staffStatsProvider = Provider<StaffStats>((ref) {
       final waiting = mutations
           .where((m) => m.status == MutationStatus.approved)
           .length;
-      return StaffStats(waitingUpdateCount: waiting);
+      final processed = mutations
+          .where((m) => m.status == MutationStatus.pendingConfirmation)
+          .length;
+      final completed = mutations
+          .where((m) => m.status == MutationStatus.completed)
+          .length;
+      return StaffStats(
+        waitingUpdateCount: waiting,
+        processedCount: processed,
+        completedCount: completed,
+      );
     },
     loading: () => const StaffStats(waitingUpdateCount: 0),
     error: (_, _) => const StaffStats(waitingUpdateCount: 0),
@@ -85,18 +122,30 @@ final staffStatsProvider = Provider<StaffStats>((ref) {
 });
 
 /// Provider antrean mutasi terfilter untuk Staff Aset.
-/// Staff Aset HANYA melihat pengajuan dengan status `approved` (menunggu pembaruan fisik aset).
+/// Staff Aset HANYA melihat pengajuan yang sudah disetujui dan relevan.
 final filteredStaffMutationsProvider =
     Provider<AsyncValue<List<Mutation>>>((ref) {
   final asyncMutations = ref.watch(staffAllMutationsProvider);
   final query = ref.watch(staffSearchQueryProvider).toLowerCase().trim();
+  final statusFilter = ref.watch(staffStatusFilterProvider);
   final sortOrder = ref.watch(staffSortOrderProvider);
 
   return asyncMutations.whenData((mutations) {
-    // 1. Pastikan hanya berstatus approved
-    var list = mutations
-        .where((m) => m.status == MutationStatus.approved)
-        .toList();
+    // 1. Filter status
+    var list = mutations.where((m) {
+      return switch (statusFilter) {
+        StaffStatusFilter.waitingUpdate =>
+          m.status == MutationStatus.approved,
+        StaffStatusFilter.processed =>
+          m.status == MutationStatus.pendingConfirmation,
+        StaffStatusFilter.completed =>
+          m.status == MutationStatus.completed,
+        StaffStatusFilter.all =>
+          m.status == MutationStatus.approved ||
+              m.status == MutationStatus.pendingConfirmation ||
+              m.status == MutationStatus.completed,
+      };
+    }).toList();
 
     // 2. Filter search query
     if (query.isNotEmpty) {
@@ -110,17 +159,14 @@ final filteredStaffMutationsProvider =
       }).toList();
     }
 
-    // 3. Sorting
-    switch (sortOrder) {
-      case StaffSortOrder.newest:
-        list.sort((a, b) => b.createdAt.compareTo(a.createdAt));
-        break;
-      case StaffSortOrder.oldest:
-        list.sort((a, b) => a.createdAt.compareTo(b.createdAt));
-        break;
-      case StaffSortOrder.all:
-        break;
-    }
+    // 3. Sorting berdasarkan tanggal pembuatan
+    list.sort((a, b) {
+      if (sortOrder == StaffSortOrder.oldest) {
+        return a.createdAt.compareTo(b.createdAt);
+      } else {
+        return b.createdAt.compareTo(a.createdAt);
+      }
+    });
 
     return list;
   });
@@ -196,6 +242,7 @@ class StaffAssetUpdateActionNotifier
       _ref.invalidate(pendingConfirmationsProvider);
       _ref.invalidate(assetListProvider);
       _ref.invalidate(assetDetailProvider(result.data.asset.id));
+      _ref.invalidate(userResponsibleAssetsProvider);
 
       return true;
     } else if (result is AppFailure<Mutation>) {

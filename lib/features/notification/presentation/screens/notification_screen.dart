@@ -29,7 +29,11 @@ class NotificationScreen extends ConsumerWidget {
     WidgetRef ref,
     NotificationItem item,
   ) {
-    ref.read(notificationProvider.notifier).markAsRead(item.id);
+    final currentUser = ref.read(authStateProvider).user;
+    ref.read(notificationProvider.notifier).markAsRead(
+          item.id,
+          userId: currentUser?.id,
+        );
 
     final mutationId = item.relatedMutationId;
     if (mutationId != null && mutationId.isNotEmpty) {
@@ -38,7 +42,7 @@ class NotificationScreen extends ConsumerWidget {
         UserRole.operator => '/operator/mutations/$mutationId',
         UserRole.kabagAset => '/kabag/approvals/$mutationId',
         UserRole.kadiv => '/kadiv/approvals/$mutationId',
-        UserRole.staffAset => '/staff-aset/tasks/$mutationId',
+        UserRole.staffAset => '/staff-aset/mutations/$mutationId',
         UserRole.pemohon => '/pemohon/mutasi/$mutationId',
         _ => null,
       };
@@ -50,7 +54,8 @@ class NotificationScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final notifications = ref.watch(notificationProvider);
+    final notifications = ref.watch(roleNotificationsProvider);
+    final currentUser = ref.watch(authStateProvider).user;
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -73,11 +78,18 @@ class NotificationScreen extends ConsumerWidget {
         actions: [
           if (notifications.any((n) => !n.isRead))
             TextButton(
-              onPressed: () =>
-                  ref.read(notificationProvider.notifier).markAllAsRead(),
+              onPressed: () => ref
+                  .read(notificationProvider.notifier)
+                  .markAllAsRead(
+                    role: currentUser?.role,
+                    userId: currentUser?.id,
+                  ),
               child: const Text(
                 'Tandai semua dibaca',
-                style: TextStyle(color: Colors.white),
+                style: TextStyle(
+                  color: AppColors.primary,
+                  fontWeight: FontWeight.w600,
+                ),
               ),
             ),
         ],

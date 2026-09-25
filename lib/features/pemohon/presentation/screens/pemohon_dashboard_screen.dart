@@ -13,6 +13,7 @@ import '../../../mutation/domain/entities/mutation.dart';
 import '../../../mutation/domain/entities/mutation_status.dart';
 import '../../../mutation/presentation/providers/mutation_provider.dart';
 import '../../../notification/presentation/providers/notification_provider.dart';
+import '../../../asset/presentation/providers/asset_provider.dart';
 import '../widgets/mutation_filter_bottom_sheet.dart';
 
 /// Warna mengikuti mockup dashboard Pemohon.
@@ -119,6 +120,7 @@ class _PemohonDashboardScreenState
     final unit = user?.email ?? 'Unit kerja';
 
     final mutationsAsync = ref.watch(mutationListProvider);
+    final responsibleAssetsAsync = ref.watch(userResponsibleAssetsProvider);
 
     return Scaffold(
       backgroundColor: _C.background,
@@ -279,17 +281,35 @@ class _PemohonDashboardScreenState
                                           CrossAxisAlignment.baseline,
                                       textBaseline: TextBaseline.alphabetic,
                                       children: [
-                                        const Text(
-                                          '8',
-                                          style: TextStyle(
-                                            fontSize: 24,
-                                            fontWeight: FontWeight.w700,
-                                            color: Colors.white,
+                                        responsibleAssetsAsync.when(
+                                          data: (assets) => Text(
+                                            '${assets.length}',
+                                            style: const TextStyle(
+                                              fontSize: 24,
+                                              fontWeight: FontWeight.w700,
+                                              color: Colors.white,
+                                            ),
+                                          ),
+                                          loading: () => const SizedBox(
+                                            width: 24,
+                                            height: 24,
+                                            child: CircularProgressIndicator(
+                                              strokeWidth: 2,
+                                              color: Colors.white,
+                                            ),
+                                          ),
+                                          error: (_, _) => const Text(
+                                            '0',
+                                            style: TextStyle(
+                                              fontSize: 24,
+                                              fontWeight: FontWeight.w700,
+                                              color: Colors.white,
+                                            ),
                                           ),
                                         ),
                                         const SizedBox(width: 6),
                                         Text(
-                                          'Aset Aktif Terdata',
+                                          'Aset Aktif (PIC)',
                                           style: TextStyle(
                                             fontSize: 14,
                                             color: _C.onPrimaryContainer,

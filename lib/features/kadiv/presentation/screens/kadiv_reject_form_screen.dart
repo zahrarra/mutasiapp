@@ -9,7 +9,11 @@ import 'package:go_router/go_router.dart';
 import '../../../../app/router/route_names.dart';
 import '../../../../app/theme/app_colors.dart';
 import '../../../../app/theme/app_spacing.dart';
+import '../../../auth/domain/entities/user_role.dart';
 import '../../../mutation/presentation/providers/mutation_provider.dart';
+import '../../../notification/domain/entities/notification_item.dart';
+import '../../../notification/presentation/providers/notification_provider.dart';
+import '../../../../core/widgets/app_feedback.dart';
 import '../providers/kadiv_approval_provider.dart';
 
 class KadivRejectFormScreen extends ConsumerStatefulWidget {
@@ -306,12 +310,22 @@ class _KadivRejectFormScreenState extends ConsumerState<KadivRejectFormScreen> {
 
                 if (context.mounted) {
                   if (success) {
+                    final currentMutation =
+                        ref.read(kadivApprovalActionProvider).result;
+                    ref.read(notificationProvider.notifier).notifyUser(
+                          targetUserId:
+                              currentMutation?.applicantId ?? 'usr_pemohon',
+                          targetRole: UserRole.pemohon,
+                          title: 'Pengajuan Ditolak Kadiv',
+                          message:
+                              'Pengajuan ${currentMutation?.ticketNumber ?? mutationId} ditolak oleh Kadiv: $reason',
+                          type: NotificationType.warning,
+                          relatedMutationId: mutationId,
+                        );
                     ref.invalidate(mutationDetailProvider(mutationId));
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text('Pengajuan mutasi berhasil ditolak.'),
-                        backgroundColor: AppColors.error,
-                      ),
+                    AppFeedback.showSuccess(
+                      context,
+                      'Pengajuan mutasi berhasil ditolak.',
                     );
                     if (Navigator.of(context).canPop()) {
                       Navigator.of(context).pop(); // Pop reject screen
@@ -321,11 +335,9 @@ class _KadivRejectFormScreenState extends ConsumerState<KadivRejectFormScreen> {
                     }
                   } else {
                     final err = ref.read(kadivApprovalActionProvider).error;
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: Text(err ?? 'Gagal menolak pengajuan.'),
-                        backgroundColor: AppColors.error,
-                      ),
+                    AppFeedback.showError(
+                      context,
+                      err ?? 'Gagal menolak pengajuan.',
                     );
                   }
                 }

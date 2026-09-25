@@ -9,7 +9,11 @@ import 'package:go_router/go_router.dart';
 import '../../../../app/router/route_names.dart';
 import '../../../../app/theme/app_colors.dart';
 import '../../../../app/theme/app_spacing.dart';
+import '../../../auth/domain/entities/user_role.dart';
 import '../../../mutation/presentation/providers/mutation_provider.dart';
+import '../../../notification/domain/entities/notification_item.dart';
+import '../../../notification/presentation/providers/notification_provider.dart';
+import '../../../../core/widgets/app_feedback.dart';
 import '../providers/operator_verification_provider.dart';
 
 class OperatorReturnFormScreen extends ConsumerStatefulWidget {
@@ -260,12 +264,20 @@ class _OperatorReturnFormScreenState
 
     if (context.mounted) {
       if (success) {
+        final currentMutation = ref.read(verificationActionProvider).result;
+        ref.read(notificationProvider.notifier).notifyUser(
+              targetUserId: currentMutation?.applicantId ?? 'usr_pemohon',
+              targetRole: UserRole.pemohon,
+              title: 'Pengajuan Dikembalikan Operator',
+              message:
+                  'Pengajuan ${currentMutation?.ticketNumber ?? widget.mutationId} dikembalikan oleh Operator: $reason',
+              type: NotificationType.warning,
+              relatedMutationId: widget.mutationId,
+            );
         ref.invalidate(mutationDetailProvider(widget.mutationId));
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Pengajuan berhasil dikembalikan ke Pemohon.'),
-            backgroundColor: AppColors.warning,
-          ),
+        AppFeedback.showSuccess(
+          context,
+          'Pengajuan berhasil dikembalikan ke Pemohon.',
         );
         // Pop back to list (pop return screen and pop detail screen)
         if (Navigator.of(context).canPop()) {
@@ -285,11 +297,9 @@ class _OperatorReturnFormScreenState
         }
       } else {
         final err = ref.read(verificationActionProvider).error;
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(err ?? 'Gagal mengembalikan pengajuan.'),
-            backgroundColor: AppColors.error,
-          ),
+        AppFeedback.showError(
+          context,
+          err ?? 'Gagal mengembalikan pengajuan.',
         );
       }
     }

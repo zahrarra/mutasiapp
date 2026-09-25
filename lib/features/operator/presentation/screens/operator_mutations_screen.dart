@@ -25,6 +25,16 @@ class _OperatorMutationsScreenState
   final _searchController = TextEditingController();
 
   @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        ref.invalidate(operatorAllMutationsProvider);
+      }
+    });
+  }
+
+  @override
   void dispose() {
     _searchController.dispose();
     super.dispose();
@@ -34,6 +44,7 @@ class _OperatorMutationsScreenState
   Widget build(BuildContext context) {
     final asyncIncoming = ref.watch(filteredIncomingMutationsProvider);
     final sortOrder = ref.watch(operatorSortOrderProvider);
+    final statusFilter = ref.watch(operatorStatusFilterProvider);
 
     return Scaffold(
       appBar: AppBar(
@@ -97,40 +108,103 @@ class _OperatorMutationsScreenState
                 ),
                 const SizedBox(height: AppSpacing.sm),
 
-                // Sort Chips: [ Terbaru ] [ Terlama ]
+                // Compact Filter Bar (Status & Sort)
                 Row(
                   children: [
-                    const Text(
-                      'Urutkan:',
-                      style: TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w600,
-                        color: AppColors.textSecondary,
+                    // Status Filter Dropdown
+                    Expanded(
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 10,
+                          vertical: 2,
+                        ),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius:
+                              BorderRadius.circular(AppSpacing.radiusSm),
+                          border: Border.all(color: AppColors.border),
+                        ),
+                        child: DropdownButtonHideUnderline(
+                          child: DropdownButton<OperatorStatusFilter>(
+                            key: const Key('dropdown_filter_operator_status'),
+                            value: statusFilter,
+                            isDense: true,
+                            isExpanded: true,
+                            icon: const Icon(
+                              Icons.filter_list,
+                              size: 16,
+                              color: AppColors.primary,
+                            ),
+                            items: OperatorStatusFilter.values.map((s) {
+                              return DropdownMenuItem(
+                                value: s,
+                                child: Text(
+                                  s.displayName,
+                                  style: const TextStyle(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                ),
+                              );
+                            }).toList(),
+                            onChanged: (val) {
+                              if (val != null) {
+                                ref
+                                    .read(
+                                      operatorStatusFilterProvider.notifier,
+                                    )
+                                    .state = val;
+                              }
+                            },
+                          ),
+                        ),
                       ),
                     ),
                     const SizedBox(width: AppSpacing.sm),
-                    ChoiceChip(
-                      key: const Key('chip_sort_terbaru'),
-                      label: const Text('Terbaru'),
-                      selected: sortOrder == MutationSortOrder.newest,
-                      onSelected: (selected) {
-                        if (selected) {
-                          ref.read(operatorSortOrderProvider.notifier).state =
-                              MutationSortOrder.newest;
-                        }
-                      },
-                    ),
-                    const SizedBox(width: AppSpacing.xs),
-                    ChoiceChip(
-                      key: const Key('chip_sort_terlama'),
-                      label: const Text('Terlama'),
-                      selected: sortOrder == MutationSortOrder.oldest,
-                      onSelected: (selected) {
-                        if (selected) {
-                          ref.read(operatorSortOrderProvider.notifier).state =
-                              MutationSortOrder.oldest;
-                        }
-                      },
+
+                    // Sort Dropdown
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 10,
+                        vertical: 2,
+                      ),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius:
+                            BorderRadius.circular(AppSpacing.radiusSm),
+                        border: Border.all(color: AppColors.border),
+                      ),
+                      child: DropdownButtonHideUnderline(
+                        child: DropdownButton<MutationSortOrder>(
+                          key: const Key('dropdown_filter_operator_sort'),
+                          value: sortOrder,
+                          isDense: true,
+                          icon: const Icon(
+                            Icons.sort,
+                            size: 16,
+                            color: AppColors.textSecondary,
+                          ),
+                          items: MutationSortOrder.values.map((order) {
+                            return DropdownMenuItem(
+                              value: order,
+                              child: Text(
+                                order.displayName,
+                                style: const TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
+                            );
+                          }).toList(),
+                          onChanged: (val) {
+                            if (val != null) {
+                              ref
+                                  .read(operatorSortOrderProvider.notifier)
+                                  .state = val;
+                            }
+                          },
+                        ),
+                      ),
                     ),
                   ],
                 ),

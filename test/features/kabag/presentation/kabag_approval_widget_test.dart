@@ -105,16 +105,15 @@ void main() {
     await tester.pumpWidget(createTestWidget(const KabagApprovalsScreen()));
     await tester.pumpAndSettle();
 
-    // Verifikasi appbar
-    expect(find.text('Menunggu Approval'), findsOneWidget);
+    // Verifikasi appbar & filter
+    expect(find.text('Menunggu Approval'), findsWidgets);
 
     // Verifikasi search input
     expect(find.byKey(const Key('input_search_approvals')), findsOneWidget);
 
-    // Verifikasi filter chips
-    expect(find.byKey(const Key('chip_filter_semua')), findsOneWidget);
-    expect(find.byKey(const Key('chip_filter_terbaru')), findsOneWidget);
-    expect(find.byKey(const Key('chip_filter_terlama')), findsOneWidget);
+    // Verifikasi filter dropdowns
+    expect(find.byKey(const Key('dropdown_filter_kabag_status')), findsOneWidget);
+    expect(find.byKey(const Key('dropdown_filter_kabag_sort')), findsOneWidget);
 
     // Verifikasi badge Menunggu Approval Kabag tampil
     expect(find.text('Menunggu Approval Kabag'), findsWidgets);
@@ -202,9 +201,9 @@ void main() {
     await tester.tap(find.byKey(const Key('btn_setujui_approval')));
     await tester.pumpAndSettle();
 
-    // Dialog konfirmasi muncul (default requiresKadiv = false / 'Tidak perlu')
+    // Dialog konfirmasi muncul (default requiresKadiv = false)
     expect(find.text('Konfirmasi Persetujuan'), findsOneWidget);
-    expect(find.text('Tidak perlu'), findsOneWidget);
+    expect(find.textContaining('Tanpa approval Kadiv'), findsOneWidget);
 
     // Tap Ya, Setujui
     await tester.tap(find.byKey(const Key('btn_confirm_setujui')));
@@ -233,7 +232,7 @@ void main() {
         builder: (context, ref, _) {
           containerRef = ref;
           return const MaterialApp(
-            home: KabagApprovalDetailScreen(mutationId: 'mut_004'),
+            home: KabagApprovalDetailScreen(mutationId: 'mut_004_kadiv'),
           );
         },
       ),
@@ -246,9 +245,9 @@ void main() {
     await tester.tap(find.byKey(const Key('btn_setujui_approval')));
     await tester.pumpAndSettle();
 
-    // Pilih Radio 'Ya, butuh Kadiv'
-    await tester.tap(find.text('Ya, butuh Kadiv'));
-    await tester.pumpAndSettle();
+    // Dialog konfirmasi menunjukkan bahwa perlu approval Kadiv
+    expect(find.text('Konfirmasi Persetujuan'), findsOneWidget);
+    expect(find.textContaining('Memerlukan approval Kadiv'), findsOneWidget);
 
     // Tap Ya, Setujui
     await tester.tap(find.byKey(const Key('btn_confirm_setujui')));
@@ -256,7 +255,7 @@ void main() {
 
     // Cek status mutasi terupdate ke waitingKadivApproval
     final detail =
-        await containerRef.read(mutationDetailProvider('mut_004').future);
+        await containerRef.read(mutationDetailProvider('mut_004_kadiv').future);
     expect(detail.status, MutationStatus.waitingKadivApproval);
     expect(detail.approvedBy, 'Bambang Kabag');
     expect(detail.requiresKadivApproval, true);

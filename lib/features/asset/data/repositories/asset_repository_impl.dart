@@ -31,6 +31,7 @@ class AssetRepositoryImpl implements AssetRepository {
       condition: 'Baik',
       serialNumber: 'PF-39X1A8',
       acquisitionYear: 2024,
+      estimatedValue: 18500000.0,
       hasActiveMutation: false,
       history: [
         AssetHistoryItem(
@@ -56,6 +57,7 @@ class AssetRepositoryImpl implements AssetRepository {
       condition: 'Sangat Baik',
       serialNumber: 'C02G9012MD6M',
       acquisitionYear: 2024,
+      estimatedValue: 35000000.0,
       hasActiveMutation: true,
       activeMutationTicket: 'MUT-2026-0042',
       history: [
@@ -82,6 +84,7 @@ class AssetRepositoryImpl implements AssetRepository {
       condition: 'Baik',
       serialNumber: 'EGO-8842-ID',
       acquisitionYear: 2023,
+      estimatedValue: 4500000.0,
       hasActiveMutation: false,
     ),
     Asset(
@@ -95,6 +98,7 @@ class AssetRepositoryImpl implements AssetRepository {
       condition: 'Perlu Perbaikan Fan',
       serialNumber: 'SN-CSC-994821',
       acquisitionYear: 2025,
+      estimatedValue: 65000000.0,
       hasActiveMutation: false,
     ),
     Asset(
@@ -108,6 +112,75 @@ class AssetRepositoryImpl implements AssetRepository {
       condition: 'Baik',
       serialNumber: 'B-1234-SDK',
       acquisitionYear: 2022,
+      estimatedValue: 180000000.0,
+      hasActiveMutation: false,
+    ),
+    Asset(
+      id: 'AST-PRN-009',
+      assetCode: 'AST-PRN-009',
+      name: 'Printer Epson L3210',
+      category: _mockCategories[0],
+      location: 'Ruang IT Pusat',
+      pic: 'Staff IT (Pusat)',
+      status: AssetStatus.available,
+      condition: 'Baik',
+      serialNumber: 'SN-EPS-009812',
+      acquisitionYear: 2024,
+      estimatedValue: 2800000.0,
+      hasActiveMutation: false,
+    ),
+    Asset(
+      id: 'AST-00124',
+      assetCode: 'AST-ELK-2024-0124',
+      name: 'Laptop Dell Latitude',
+      category: _mockCategories[0],
+      location: 'Kantor Pusat',
+      pic: 'Rina',
+      status: AssetStatus.available,
+      condition: 'Baik',
+      serialNumber: 'DL-7490-X1',
+      acquisitionYear: 2024,
+      estimatedValue: 14000000.0,
+    ),
+    Asset(
+      id: 'AST-00042',
+      assetCode: 'AST-VEH-2023-0042',
+      name: 'Toyota Avanza 1.3 G',
+      category: _mockCategories[2],
+      location: 'Gedung A — Parkir Operasional',
+      pic: 'Driver Operasional General Affair',
+      status: AssetStatus.available,
+      condition: 'Baik',
+      serialNumber: 'B-2891-KFG',
+      acquisitionYear: 2023,
+      estimatedValue: 165000000.0,
+    ),
+    Asset(
+      id: 'ast_6',
+      assetCode: 'AST-ELK-2024-006',
+      name: 'Monitor Dell UltraSharp 27 Inch 4K',
+      category: _mockCategories[0],
+      location: 'Lantai 3 — Ruang IT Developer',
+      pic: 'Budi Santoso (IT Dept)',
+      status: AssetStatus.available,
+      condition: 'Sangat Baik',
+      serialNumber: 'CN-0K382-74261',
+      acquisitionYear: 2024,
+      estimatedValue: 8500000.0,
+      hasActiveMutation: false,
+    ),
+    Asset(
+      id: 'ast_7',
+      assetCode: 'AST-FUR-2024-007',
+      name: 'Meja Kerja Ergonomis Standing Desk',
+      category: _mockCategories[1],
+      location: 'Lantai 3 — Ruang IT Developer',
+      pic: 'Budi Santoso (IT Dept)',
+      status: AssetStatus.available,
+      condition: 'Baik',
+      serialNumber: 'FUR-DSK-2024-01',
+      acquisitionYear: 2024,
+      estimatedValue: 5500000.0,
       hasActiveMutation: false,
     ),
   ];
@@ -145,7 +218,7 @@ class AssetRepositoryImpl implements AssetRepository {
   @override
   Future<Result<Asset>> getAssetById(String id) async {
     try {
-      final asset = _mockAssets.firstWhere((a) => a.id == id);
+      final asset = _mockAssets.firstWhere((a) => a.id == id || a.assetCode == id);
       return Result.success(asset);
     } catch (_) {
       return Result.failure(const NotFoundFailure(message: 'Aset tidak ditemukan.'));

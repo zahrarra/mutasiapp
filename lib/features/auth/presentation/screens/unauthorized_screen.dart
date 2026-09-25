@@ -53,9 +53,13 @@ class UnauthorizedScreen extends StatelessWidget {
               ),
               const SizedBox(height: AppSpacing.xl),
               CustomButton(
-                label: 'Kembali ke Dashboard',
+                label: 'Kembali',
                 onPressed: () {
-                  context.go(RouteNames.dashboardPath);
+                  if (context.canPop()) {
+                    context.pop();
+                  } else {
+                    context.go(RouteNames.dashboardPath);
+                  }
                 },
               ),
             ],

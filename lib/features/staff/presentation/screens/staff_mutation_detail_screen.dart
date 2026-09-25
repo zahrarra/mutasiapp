@@ -12,9 +12,15 @@ import '../../../../app/theme/app_colors.dart';
 import '../../../../app/theme/app_spacing.dart';
 import '../../../../core/widgets/custom_button.dart';
 import '../../../../core/widgets/custom_text_field.dart';
+import '../../../auth/domain/entities/user_role.dart';
 import '../../../mutation/domain/entities/mutation.dart';
 import '../../../mutation/domain/entities/mutation_status.dart';
 import '../../../mutation/presentation/providers/mutation_provider.dart';
+import '../../../notification/domain/entities/notification_item.dart';
+import '../../../notification/presentation/providers/notification_provider.dart';
+import '../../../../core/widgets/app_feedback.dart';
+import '../../../../core/widgets/document_preview_dialog.dart';
+import '../../../auth/presentation/providers/auth_provider.dart';
 import '../providers/staff_mutation_provider.dart';
 
 class StaffMutationDetailScreen extends ConsumerStatefulWidget {
@@ -131,22 +137,25 @@ class _StaffMutationDetailScreenState
     if (!mounted) return;
 
     if (success) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            'Lokasi & PIC aset ${mutation.asset.name} berhasil diperbarui. Status menjadi Menunggu Konfirmasi.',
-          ),
-          backgroundColor: AppColors.success,
-        ),
+      ref.read(notificationProvider.notifier).notifyUser(
+            targetUserId: mutation.applicantId ?? 'usr_pemohon',
+            targetRole: UserRole.pemohon,
+            title: 'Menunggu Konfirmasi Penerimaan',
+            message:
+                'Data fisik aset ${mutation.ticketNumber} (${mutation.asset.name}) telah diperbarui oleh Staff Aset. Silakan periksa dan konfirmasi penerimaan fisik.',
+            type: NotificationType.action,
+            relatedMutationId: mutation.id,
+          );
+      AppFeedback.showSuccess(
+        context,
+        'Lokasi & PIC aset ${mutation.asset.name} berhasil diperbarui. Status menjadi Menunggu Konfirmasi.',
       );
       _safePop(context);
     } else {
       final error = ref.read(staffAssetUpdateActionProvider).error;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(error ?? 'Gagal memperbarui data aset.'),
-          backgroundColor: AppColors.error,
-        ),
+      AppFeedback.showError(
+        context,
+        error ?? 'Gagal memperbarui data aset.',
       );
     }
   }
@@ -286,7 +295,7 @@ class _StaffMutationDetailScreenState
               _buildRow('Pemohon', mutation.applicantName),
               _buildRow('Alasan Mutasi', mutation.reason),
               if (mutation.documentName != null)
-                _buildRow('Dokumen', mutation.documentName!),
+                _buildDocumentRow(mutation),
               if (mutation.approvedBy != null)
                 _buildRow('Disetujui Kabag', mutation.approvedBy!),
               if (mutation.kadivApprovedBy != null)
@@ -570,6 +579,64 @@ class _StaffMutationDetailScreenState
                 fontSize: 12,
                 fontWeight: FontWeight.w600,
                 color: AppColors.textPrimary,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildDocumentRow(Mutation mutation) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const SizedBox(
+            width: 130,
+            child: Text(
+              'Dokumen',
+              style: TextStyle(
+                fontSize: 12,
+                color: AppColors.textSecondary,
+              ),
+            ),
+          ),
+          const Text(
+            ': ',
+            style: TextStyle(fontSize: 12, color: AppColors.textSecondary),
+          ),
+          Expanded(
+            child: InkWell(
+              onTap: () {
+                DocumentPreviewDialog.show(
+                  context,
+                  mutation: mutation,
+                  currentUser: ref.read(authStateProvider).user,
+                );
+              },
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Icon(Icons.picture_as_pdf_outlined,
+                      size: 16, color: AppColors.error),
+                  const SizedBox(width: 4),
+                  Flexible(
+                    child: Text(
+                      mutation.documentName!,
+                      style: const TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                        color: AppColors.primary,
+                        decoration: TextDecoration.underline,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 4),
+                  const Icon(Icons.open_in_new,
+                      size: 14, color: AppColors.primary),
+                ],
               ),
             ),
           ),

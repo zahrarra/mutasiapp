@@ -13,6 +13,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../../app/theme/app_colors.dart';
 import '../../../../app/theme/app_spacing.dart';
+import '../../../../core/widgets/app_feedback.dart';
 import '../../../../core/widgets/custom_button.dart';
 import '../../../../core/widgets/error_view.dart';
 import '../../../../core/widgets/loading_indicator.dart';
@@ -363,11 +364,9 @@ class _MutationEditScreenState extends ConsumerState<MutationEditScreen> {
     if (result != null) {
       ref.read(mutationFormProvider.notifier).reset();
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Pengajuan berhasil dikirim ulang untuk verifikasi.'),
-          backgroundColor: AppColors.success,
-        ),
+      AppFeedback.showSuccess(
+        context,
+        'Pengajuan berhasil dikirim ulang untuk verifikasi.',
       );
 
       context.pop();

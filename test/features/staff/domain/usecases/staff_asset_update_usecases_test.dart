@@ -54,6 +54,7 @@ class FakeStaffMutationRepository implements MutationRepository {
   Future<Result<Mutation>> verifyMutation({
     required String mutationId,
     required String operatorName,
+    bool requiresKadivApproval = false,
   }) async =>
       throw UnimplementedError();
 

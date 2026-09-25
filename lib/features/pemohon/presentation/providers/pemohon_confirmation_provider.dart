@@ -5,6 +5,7 @@
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/errors/result.dart';
+import '../../../auth/domain/entities/user_role.dart';
 import '../../../auth/presentation/providers/auth_provider.dart';
 import '../../../mutation/domain/entities/mutation.dart';
 import '../../../mutation/domain/entities/mutation_status.dart';
@@ -12,6 +13,7 @@ import '../../../mutation/domain/usecases/confirm_mutation_usecase.dart';
 import '../../../mutation/presentation/providers/mutation_provider.dart';
 import '../../../notification/domain/entities/notification_item.dart';
 import '../../../notification/presentation/providers/notification_provider.dart';
+import '../../../asset/presentation/providers/asset_provider.dart';
 
 // ─── Use Case Provider ────────────────────────────────────────────────────────
 
@@ -110,6 +112,8 @@ class PemohonConfirmationActionNotifier
       ref.invalidate(mutationListProvider);
       ref.invalidate(mutationDetailProvider(mutationId));
       ref.invalidate(pendingConfirmationsProvider);
+      ref.invalidate(assetListProvider);
+      ref.invalidate(userResponsibleAssetsProvider);
 
       // Perbarui notifikasi terkait
       try {
@@ -130,6 +134,8 @@ class PemohonConfirmationActionNotifier
             createdAt: DateTime.now(),
             isRead: false,
             relatedMutationId: mutationId,
+            targetRole: UserRole.pemohon,
+            targetUserId: result.data.applicantId,
           ),
         );
       } catch (_) {}
@@ -201,6 +207,8 @@ class PemohonConfirmationActionNotifier
             createdAt: DateTime.now(),
             isRead: false,
             relatedMutationId: mutationId,
+            targetRole: UserRole.pemohon,
+            targetUserId: result.data.applicantId,
           ),
         );
       } catch (_) {}

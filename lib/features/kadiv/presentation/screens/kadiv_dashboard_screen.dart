@@ -13,7 +13,6 @@ import '../../../../app/theme/app_spacing.dart';
 import '../../../auth/presentation/providers/auth_provider.dart';
 import '../../../auth/presentation/widgets/role_dashboard_layout.dart';
 import '../../../mutation/domain/entities/mutation.dart';
-import '../../../mutation/domain/entities/mutation_status.dart';
 import '../providers/kadiv_approval_provider.dart';
 
 class KadivDashboardScreen extends ConsumerWidget {
@@ -173,7 +172,7 @@ class KadivDashboardScreen extends ConsumerWidget {
             data: (mutations) {
               // Filter yang relevan untuk Kadiv: pengajuan yang menunggu keputusan Kadiv
               final relevant = mutations
-                  .where((m) => m.status == MutationStatus.waitingKadivApproval)
+                  .where(isWaitingKadivApproval)
                   .take(5)
                   .toList();
 

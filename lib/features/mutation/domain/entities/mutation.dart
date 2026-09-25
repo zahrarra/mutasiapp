@@ -4,6 +4,8 @@
 // Sumber: ROLE-FLOW.md §3, TECHNICAL-DESIGN.md §5, SCREEN-SPEC.md REQ-005.
 
 import '../../../asset/domain/entities/asset.dart';
+import '../../../asset/domain/entities/asset_category.dart';
+import '../../../asset/domain/entities/asset_status.dart';
 import 'mutation_status.dart';
 
 /// Entity domain permohonan pengajuan mutasi aset.
@@ -13,8 +15,54 @@ class Mutation {
   /// Nomor Tiket Server-Generated (Format: KATEGORI-TAHUN-NOURUT, misal: ELK-2026-00124)
   final String ticketNumber;
 
-  /// Aset yang dimutasi
-  final Asset asset;
+  /// ID Aset jika terdaftar di sistem master data.
+  /// Bernilai `null` jika aset belum terdaftar (fallback).
+  final String? _assetId;
+  String? get assetId => isUnregisteredAsset ? null : (_assetId ?? _asset?.id);
+
+  /// Aset yang dimutasi (internal snapshot)
+  final Asset? _asset;
+
+  /// Aset yang dimutasi.
+  /// Jika aset belum terdaftar, mengembalikan representasi fallback aman
+  /// tanpa membuat ID dummy palsu.
+  Asset get asset {
+    final existing = _asset;
+    if (existing != null) return existing;
+    return Asset(
+      id: '',
+      assetCode: customSerialNumber ?? '-',
+      name: customAssetName ?? 'Aset Tidak Terdaftar',
+      category: const AssetCategory(
+        id: 'cat_unregistered',
+        code: 'OTH',
+        name: 'Tidak Terdaftar',
+      ),
+      location: currentLocation,
+      pic: currentPic,
+      status: AssetStatus.available,
+      condition: 'Belum Terdaftar',
+      serialNumber: customSerialNumber,
+      acquisitionYear: createdAt.year,
+    );
+  }
+
+  /// Menandai apakah mutasi ini untuk aset yang belum terdaftar di database.
+  final bool isUnregisteredAsset;
+
+  /// Nama aset manual (jika [isUnregisteredAsset] true)
+  final String? customAssetName;
+
+  /// Nomor seri aset manual (jika [isUnregisteredAsset] true)
+  final String? customSerialNumber;
+
+  /// Getter helper untuk nama aset yang ditampilkan
+  String get displayAssetName =>
+      isUnregisteredAsset ? (customAssetName ?? 'Aset Tidak Terdaftar') : asset.name;
+
+  /// Getter helper untuk kode/nomor seri aset yang ditampilkan
+  String get displayAssetCode =>
+      isUnregisteredAsset ? (customSerialNumber ?? '-') : asset.assetCode;
 
   /// ID Pemohon (user login yang mengajukan)
   final String? applicantId;
@@ -39,6 +87,12 @@ class Mutation {
 
   /// Nama dokumen pendukung (opsional)
   final String? documentName;
+
+  /// Path lokal dokumen di perangkat (opsional)
+  final String? documentPath;
+
+  /// Raw byte array dokumen untuk rendering langsung (opsional)
+  final List<int>? documentBytes;
 
   /// Status pengajuan mutasi
   final MutationStatus status;
@@ -98,7 +152,11 @@ class Mutation {
   const Mutation({
     required this.id,
     required this.ticketNumber,
-    required this.asset,
+    String? assetId,
+    Asset? asset,
+    this.isUnregisteredAsset = false,
+    this.customAssetName,
+    this.customSerialNumber,
     this.applicantId,
     required this.applicantName,
     required this.currentLocation,
@@ -107,6 +165,8 @@ class Mutation {
     required this.targetPic,
     required this.reason,
     this.documentName,
+    this.documentPath,
+    this.documentBytes,
     required this.status,
     this.returnReason,
     this.requiresKadivApproval = false,
@@ -125,12 +185,19 @@ class Mutation {
     this.staffUpdatedAt,
     this.staffUpdatedBy,
     required this.createdAt,
-  });
+    // ignore: prefer_initializing_formals
+  })  : _assetId = assetId,
+        // ignore: prefer_initializing_formals
+        _asset = asset;
 
   Mutation copyWith({
     String? id,
     String? ticketNumber,
+    String? assetId,
     Asset? asset,
+    bool? isUnregisteredAsset,
+    String? customAssetName,
+    String? customSerialNumber,
     String? applicantId,
     String? applicantName,
     String? currentLocation,
@@ -139,6 +206,8 @@ class Mutation {
     String? targetPic,
     String? reason,
     String? documentName,
+    String? documentPath,
+    List<int>? documentBytes,
     MutationStatus? status,
     String? returnReason,
     bool? requiresKadivApproval,
@@ -161,7 +230,11 @@ class Mutation {
     return Mutation(
       id: id ?? this.id,
       ticketNumber: ticketNumber ?? this.ticketNumber,
-      asset: asset ?? this.asset,
+      assetId: assetId ?? this.assetId,
+      asset: asset ?? _asset,
+      isUnregisteredAsset: isUnregisteredAsset ?? this.isUnregisteredAsset,
+      customAssetName: customAssetName ?? this.customAssetName,
+      customSerialNumber: customSerialNumber ?? this.customSerialNumber,
       applicantId: applicantId ?? this.applicantId,
       applicantName: applicantName ?? this.applicantName,
       currentLocation: currentLocation ?? this.currentLocation,
@@ -170,6 +243,8 @@ class Mutation {
       targetPic: targetPic ?? this.targetPic,
       reason: reason ?? this.reason,
       documentName: documentName ?? this.documentName,
+      documentPath: documentPath ?? this.documentPath,
+      documentBytes: documentBytes ?? this.documentBytes,
       status: status ?? this.status,
       returnReason: returnReason ?? this.returnReason,
       requiresKadivApproval:

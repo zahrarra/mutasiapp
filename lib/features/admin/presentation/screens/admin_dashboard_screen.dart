@@ -31,11 +31,7 @@ class AdminDashboardScreen extends StatelessWidget {
             context.push(RouteNames.adminCategoriesPath);
             break;
           case 2:
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                content: Text('Fitur Manajemen User segera hadir'),
-              ),
-            );
+            context.push(RouteNames.adminUsersPath);
             break;
           case 3:
             context.push(RouteNames.profilePath);
@@ -45,7 +41,7 @@ class AdminDashboardScreen extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
+          const Text(
             'Pengelolaan Master Data Sistem',
             style: TextStyle(
               fontSize: 16,
@@ -53,30 +49,36 @@ class AdminDashboardScreen extends StatelessWidget {
               color: AppColors.primary,
             ),
           ),
-          SizedBox(height: AppSpacing.xs),
-          Text(
+          const SizedBox(height: AppSpacing.xs),
+          const Text(
             'Sebagai Admin, Anda memiliki wewenang penuh untuk mengelola User, Role, Lokasi, Kategori Aset, dan Kriteria Approval.',
             style: TextStyle(fontSize: 13, color: AppColors.textSecondary),
           ),
-          SizedBox(height: AppSpacing.md),
+          const SizedBox(height: AppSpacing.md),
 
           _AdminMenuCard(
+            key: const Key('card_admin_users'),
             title: 'User & Permission',
             subtitle: 'Kelola akun pengguna dan penugasan 6 role aktif',
             icon: Icons.manage_accounts_outlined,
+            onTap: () => context.push(RouteNames.adminUsersPath),
           ),
-          SizedBox(height: AppSpacing.sm),
+          const SizedBox(height: AppSpacing.sm),
           _AdminMenuCard(
+            key: const Key('card_admin_locations'),
             title: 'Lokasi & Unit',
             subtitle: 'Kelola daftar gedung, ruangan, dan unit organisasi',
             icon: Icons.location_city_outlined,
+            onTap: () => context.push(RouteNames.adminLocationsPath),
           ),
-          SizedBox(height: AppSpacing.sm),
+          const SizedBox(height: AppSpacing.sm),
           _AdminMenuCard(
+            key: const Key('card_admin_categories'),
             title: 'Kategori Aset & Kriteria Approval',
             subtitle:
                 'Atur threshold kriteria approval mutasi untuk level Kadiv',
             icon: Icons.tune_outlined,
+            onTap: () => context.push(RouteNames.adminCategoriesPath),
           ),
         ],
       ),
@@ -88,11 +90,14 @@ class _AdminMenuCard extends StatelessWidget {
   final String title;
   final String subtitle;
   final IconData icon;
+  final VoidCallback onTap;
 
   const _AdminMenuCard({
+    super.key,
     required this.title,
     required this.subtitle,
     required this.icon,
+    required this.onTap,
   });
 
   @override
@@ -117,7 +122,7 @@ class _AdminMenuCard extends StatelessWidget {
           Icons.chevron_right,
           color: AppColors.textDisabled,
         ),
-        onTap: () {},
+        onTap: onTap,
       ),
     );
   }

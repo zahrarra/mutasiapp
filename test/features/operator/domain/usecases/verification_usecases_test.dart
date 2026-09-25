@@ -82,6 +82,7 @@ class FakeMutationRepository implements MutationRepository {
   Future<Result<Mutation>> verifyMutation({
     required String mutationId,
     required String operatorName,
+    bool requiresKadivApproval = false,
   }) async {
     final index = mutations.indexWhere((m) => m.id == mutationId);
     if (index == -1) {
@@ -93,6 +94,7 @@ class FakeMutationRepository implements MutationRepository {
       status: MutationStatus.waitingKabagApproval,
       verifiedBy: operatorName,
       verifiedAt: DateTime.now(),
+      requiresKadivApproval: requiresKadivApproval,
     );
     mutations[index] = updated;
     return Result.success(updated);

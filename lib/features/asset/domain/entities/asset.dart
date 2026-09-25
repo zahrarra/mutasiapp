@@ -48,6 +48,9 @@ class Asset {
   /// Riwayat mutasi aset
   final List<AssetHistoryItem> history;
 
+  /// Estimasi nilai aset (Rupiah), digunakan untuk validasi kriteria approval Kadiv.
+  final double? estimatedValue;
+
   const Asset({
     required this.id,
     required this.assetCode,
@@ -59,6 +62,7 @@ class Asset {
     required this.condition,
     this.serialNumber,
     required this.acquisitionYear,
+    this.estimatedValue,
     this.hasActiveMutation = false,
     this.activeMutationTicket,
     this.history = const [],
@@ -78,6 +82,7 @@ class Asset {
     String? condition,
     String? serialNumber,
     int? acquisitionYear,
+    double? estimatedValue,
     bool? hasActiveMutation,
     String? activeMutationTicket,
     List<AssetHistoryItem>? history,
@@ -93,6 +98,7 @@ class Asset {
       condition: condition ?? this.condition,
       serialNumber: serialNumber ?? this.serialNumber,
       acquisitionYear: acquisitionYear ?? this.acquisitionYear,
+      estimatedValue: estimatedValue ?? this.estimatedValue,
       hasActiveMutation: hasActiveMutation ?? this.hasActiveMutation,
       activeMutationTicket: activeMutationTicket ?? this.activeMutationTicket,
       history: history ?? this.history,

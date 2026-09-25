@@ -140,15 +140,9 @@ void main() {
     // Verifikasi search input
     expect(find.byKey(const Key('input_search_kadiv_approvals')), findsOneWidget);
 
-    // Verifikasi status filter chips
-    expect(find.byKey(const Key('chip_filter_kadiv_menunggu')), findsOneWidget);
-    expect(find.byKey(const Key('chip_filter_kadiv_disetujui')), findsOneWidget);
-    expect(find.byKey(const Key('chip_filter_kadiv_ditolak')), findsOneWidget);
-    expect(find.byKey(const Key('chip_filter_kadiv_semua')), findsOneWidget);
-
-    // Verifikasi sort chips
-    expect(find.byKey(const Key('chip_filter_kadiv_terbaru')), findsOneWidget);
-    expect(find.byKey(const Key('chip_filter_kadiv_terlama')), findsOneWidget);
+    // Verifikasi compact filter dropdowns
+    expect(find.byKey(const Key('dropdown_filter_kadiv_status')), findsOneWidget);
+    expect(find.byKey(const Key('dropdown_filter_kadiv_sort')), findsOneWidget);
 
     // Verifikasi adanya item mut_005 yang berstatus Menunggu Approval Kadiv
     expect(find.text('Menunggu Approval Kadiv'), findsWidgets);

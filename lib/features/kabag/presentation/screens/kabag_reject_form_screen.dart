@@ -9,7 +9,11 @@ import 'package:go_router/go_router.dart';
 import '../../../../app/router/route_names.dart';
 import '../../../../app/theme/app_colors.dart';
 import '../../../../app/theme/app_spacing.dart';
+import '../../../auth/domain/entities/user_role.dart';
 import '../../../mutation/presentation/providers/mutation_provider.dart';
+import '../../../notification/domain/entities/notification_item.dart';
+import '../../../notification/presentation/providers/notification_provider.dart';
+import '../../../../core/widgets/app_feedback.dart';
 import '../providers/kabag_approval_provider.dart';
 
 class KabagRejectFormScreen extends ConsumerStatefulWidget {
@@ -273,12 +277,20 @@ class _KabagRejectFormScreenState extends ConsumerState<KabagRejectFormScreen> {
 
     if (context.mounted) {
       if (success) {
+        final currentMutation = ref.read(kabagApprovalActionProvider).result;
+        ref.read(notificationProvider.notifier).notifyUser(
+              targetUserId: currentMutation?.applicantId ?? 'usr_pemohon',
+              targetRole: UserRole.pemohon,
+              title: 'Pengajuan Ditolak Kabag Aset',
+              message:
+                  'Pengajuan ${currentMutation?.ticketNumber ?? widget.mutationId} ditolak oleh Kabag Aset: $reason',
+              type: NotificationType.warning,
+              relatedMutationId: widget.mutationId,
+            );
         ref.invalidate(mutationDetailProvider(widget.mutationId));
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Pengajuan mutasi berhasil ditolak.'),
-            backgroundColor: AppColors.error,
-          ),
+        AppFeedback.showSuccess(
+          context,
+          'Pengajuan mutasi berhasil ditolak.',
         );
         // Pop back to list (pop KBG-004 and pop KBG-003 back to KBG-002 list)
         if (Navigator.of(context).canPop()) {
@@ -298,11 +310,9 @@ class _KabagRejectFormScreenState extends ConsumerState<KabagRejectFormScreen> {
         }
       } else {
         final err = ref.read(kabagApprovalActionProvider).error;
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(err ?? 'Gagal menolak pengajuan.'),
-            backgroundColor: AppColors.error,
-          ),
+        AppFeedback.showError(
+          context,
+          err ?? 'Gagal menolak pengajuan.',
         );
       }
     }

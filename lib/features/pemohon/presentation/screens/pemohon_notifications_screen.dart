@@ -10,6 +10,9 @@ import 'package:go_router/go_router.dart';
 import '../../../../app/router/route_names.dart';
 import '../../../../app/theme/app_colors.dart';
 import '../../../../app/theme/app_spacing.dart';
+import '../../../auth/domain/entities/user.dart';
+import '../../../auth/domain/entities/user_role.dart';
+import '../../../auth/presentation/providers/auth_provider.dart';
 import '../../../notification/domain/entities/notification_item.dart';
 import '../../../notification/presentation/providers/notification_provider.dart';
 import '../../../notification/presentation/widgets/notification_tile.dart';
@@ -22,8 +25,12 @@ class PemohonNotificationsScreen extends ConsumerWidget {
     WidgetRef ref,
     NotificationItem item,
   ) {
-    // 1. Tandai notifikasi sebagai dibaca
-    ref.read(notificationProvider.notifier).markAsRead(item.id);
+    // 1. Tandai notifikasi sebagai dibaca oleh user yang sedang login
+    final currentUser = ref.read(authStateProvider).user;
+    ref.read(notificationProvider.notifier).markAsRead(
+          item.id,
+          userId: currentUser?.id ?? 'usr_pemohon',
+        );
 
     // 2. Jika notifikasi memiliki ID mutasi terkait, navigasi ke Detail Mutasi Pemohon
     final mutationId = item.relatedMutationId;
@@ -36,7 +43,10 @@ class PemohonNotificationsScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final notifications = ref.watch(notificationProvider);
+    final currentUser = ref.watch(authStateProvider).user;
+    final notifications = currentUser != null
+        ? ref.watch(roleNotificationsProvider)
+        : ref.watch(pemohonFallbackNotificationsProvider);
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -59,8 +69,20 @@ class PemohonNotificationsScreen extends ConsumerWidget {
         actions: [
           if (notifications.any((n) => !n.isRead))
             TextButton(
-              onPressed: () =>
-                  ref.read(notificationProvider.notifier).markAllAsRead(),
+              onPressed: () {
+                final user = currentUser ??
+                    const User(
+                      id: 'usr_pemohon',
+                      username: 'pemohon',
+                      name: 'Pemohon',
+                      email: 'pemohon@mutasiku.id',
+                      role: UserRole.pemohon,
+                    );
+                ref.read(notificationProvider.notifier).markAllAsRead(
+                      role: user.role,
+                      userId: user.id,
+                    );
+              },
               child: const Text(
                 'Tandai semua dibaca',
                 style: TextStyle(
