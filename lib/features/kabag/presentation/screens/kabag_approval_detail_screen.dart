@@ -9,12 +9,10 @@ import 'package:go_router/go_router.dart';
 import '../../../../app/router/route_names.dart';
 import '../../../../app/theme/app_colors.dart';
 import '../../../../app/theme/app_spacing.dart';
-import '../../../auth/domain/entities/user_role.dart';
 import '../../../mutation/domain/entities/mutation.dart';
 import '../../../mutation/domain/entities/mutation_status.dart';
 import '../../../mutation/presentation/providers/mutation_provider.dart';
-import '../../../notification/domain/entities/notification_item.dart';
-import '../../../notification/presentation/providers/notification_provider.dart';
+import '../../../mutation/presentation/models/mutation_tracking_step.dart';
 import '../../../../core/widgets/app_feedback.dart';
 import '../../../../core/widgets/document_preview_dialog.dart';
 import '../../../auth/presentation/providers/auth_provider.dart';
@@ -230,64 +228,28 @@ class KabagApprovalDetailScreen extends ConsumerWidget {
                     ),
                   ),
                   const SizedBox(height: AppSpacing.md),
-                  _buildTimelineItem(
-                    title: 'Diajukan',
-                    subtitle: 'Diajukan oleh ${mutation.applicantName}',
-                    isCompleted: true,
-                    isCurrent: false,
-                  ),
-                  _buildTimelineLine(),
-                  _buildTimelineItem(
-                    title: 'Verifikasi Operator',
-                    subtitle: mutation.verifiedBy != null
-                        ? 'Diverifikasi valid oleh ${mutation.verifiedBy}'
-                        : 'Lolos verifikasi kelengkapan dokumen',
-                    isCompleted: true,
-                    isCurrent: false,
-                  ),
-                  _buildTimelineLine(),
-                  _buildTimelineItem(
-                    title: 'Approval Kabag',
-                    subtitle: (mutation.status == MutationStatus.approved ||
-                                mutation.status ==
-                                    MutationStatus.waitingKadivApproval ||
-                                mutation.status ==
-                                    MutationStatus.pendingConfirmation ||
-                                mutation.status == MutationStatus.completed)
-                        ? 'Disetujui oleh ${mutation.approvedBy ?? "Kabag Aset"}'
-                        : mutation.status == MutationStatus.rejected
-                            ? 'Ditolak oleh ${mutation.rejectedBy ?? "Kabag Aset"}'
-                            : 'Menunggu keputusan Kabag Aset',
-                    isCompleted: mutation.status == MutationStatus.approved ||
-                        mutation.status ==
-                            MutationStatus.waitingKadivApproval ||
-                        mutation.status ==
-                            MutationStatus.pendingConfirmation ||
-                        mutation.status == MutationStatus.completed ||
-                        mutation.status == MutationStatus.rejected,
-                    isCurrent: isWaitingApproval,
-                    isRejected: mutation.status == MutationStatus.rejected,
-                  ),
-                  // Tampilkan step Kadiv jika mutasi memerlukan Kadiv approval
-                  if (mutation.requiresKadivApproval) ...[ 
-                    _buildTimelineLine(),
-                    _buildTimelineItem(
-                      title: 'Approval Kadiv',
-                      subtitle: mutation.status ==
-                                  MutationStatus.waitingKadivApproval
-                              ? 'Menunggu keputusan Kadiv'
-                              : mutation.kadivApprovedBy != null
-                                  ? 'Disetujui oleh ${mutation.kadivApprovedBy}'
-                                  : mutation.kadivRejectedBy != null
-                                      ? 'Ditolak oleh ${mutation.kadivRejectedBy}'
-                                      : 'Menunggu Kadiv',
-                      isCompleted: mutation.kadivApprovedBy != null ||
-                          mutation.kadivRejectedBy != null,
-                      isCurrent: mutation.status ==
-                          MutationStatus.waitingKadivApproval,
-                      isRejected: mutation.kadivRejectedBy != null,
-                    ),
-                  ],
+                  ...() {
+                    final trackingSteps =
+                        MutationTrackingHelper.getStepsForMutation(
+                      mutation.status,
+                      mutation: mutation,
+                    );
+                    final widgets = <Widget>[];
+                    for (var i = 0; i < trackingSteps.length; i++) {
+                      if (i > 0) widgets.add(_buildTimelineLine());
+                      final step = trackingSteps[i];
+                      widgets.add(
+                        _buildTimelineItem(
+                          title: step.title,
+                          subtitle: step.subtitle,
+                          isCompleted: step.isCompleted,
+                          isCurrent: step.isCurrent,
+                          isRejected: step.isAlert,
+                        ),
+                      );
+                    }
+                    return widgets;
+                  }(),
                 ]),
               ],
             ),
@@ -556,6 +518,10 @@ class KabagApprovalDetailScreen extends ConsumerWidget {
   Widget _buildDocumentRow(
       Mutation mutation, BuildContext context, WidgetRef ref) {
     final documentName = mutation.documentName;
+    final isPdf = documentName != null && documentName.toLowerCase().endsWith('.pdf');
+    final isImage = documentName != null &&
+        ['png', 'jpg', 'jpeg', 'webp'].any((ext) => documentName.toLowerCase().endsWith(ext));
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -587,8 +553,19 @@ class KabagApprovalDetailScreen extends ConsumerWidget {
               ),
               child: Row(
                 children: [
-                  const Icon(Icons.picture_as_pdf_outlined,
-                      size: 20, color: AppColors.error),
+                  Icon(
+                    isPdf
+                        ? Icons.picture_as_pdf_outlined
+                        : isImage
+                            ? Icons.image_outlined
+                            : Icons.description_outlined,
+                    size: 20,
+                    color: isPdf
+                        ? AppColors.error
+                        : isImage
+                            ? AppColors.primary
+                            : AppColors.textSecondary,
+                  ),
                   const SizedBox(width: AppSpacing.xs),
                   Expanded(
                     child: Text(
@@ -697,37 +674,11 @@ class KabagApprovalDetailScreen extends ConsumerWidget {
 
                 if (context.mounted) {
                   if (success) {
-                    if (requiresKadiv) {
-                      ref.read(notificationProvider.notifier).notifyRole(
-                            targetRole: UserRole.kadiv,
-                            title: 'Menunggu Approval Kadiv',
-                            message:
-                                'Pengajuan mutasi ${mutation.ticketNumber} (${mutation.asset.name}) disetujui Kabag dan memerlukan persetujuan akhir Kadiv.',
-                            type: NotificationType.action,
-                            relatedMutationId: mutation.id,
-                          );
-                    } else {
-                      ref.read(notificationProvider.notifier).notifyRole(
-                            targetRole: UserRole.staffAset,
-                            title: 'Tugas Pembaruan Fisik Aset',
-                            message:
-                                'Pengajuan mutasi ${mutation.ticketNumber} (${mutation.asset.name}) disetujui Kabag. Silakan proses pembaruan fisik aset.',
-                            type: NotificationType.action,
-                            relatedMutationId: mutation.id,
-                          );
-                    }
-                    ref.invalidate(mutationDetailProvider(mutation.id));
                     final msg = requiresKadiv
                         ? 'Pengajuan berhasil disetujui (Menunggu approval Kadiv).'
                         : 'Pengajuan mutasi berhasil disetujui.';
                     AppFeedback.showSuccess(context, msg);
-                    if (Navigator.of(context).canPop()) {
-                      Navigator.of(context).pop();
-                    } else {
-                      try {
-                        context.pop();
-                      } catch (_) {}
-                    }
+                    _safePop(context);
                   } else {
                     final err = ref.read(kabagApprovalActionProvider).error;
                     AppFeedback.showError(
@@ -746,5 +697,15 @@ class KabagApprovalDetailScreen extends ConsumerWidget {
           ],
         ),
     );
+  }
+
+  void _safePop(BuildContext context) {
+    if (Navigator.of(context).canPop()) {
+      Navigator.of(context).pop();
+    } else {
+      try {
+        context.go(RouteNames.kabagApprovalsPath);
+      } catch (_) {}
+    }
   }
 }

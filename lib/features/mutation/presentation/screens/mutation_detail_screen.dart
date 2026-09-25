@@ -14,9 +14,11 @@ import '../../../../app/theme/app_colors.dart';
 import '../../../../core/widgets/document_preview_dialog.dart';
 import '../../../../core/widgets/error_view.dart';
 import '../../../../core/widgets/loading_indicator.dart';
+import '../../../auth/domain/entities/user_role.dart';
 import '../../../auth/presentation/providers/auth_provider.dart';
 import '../../domain/entities/mutation.dart';
 import '../../domain/entities/mutation_status.dart';
+import '../models/mutation_tracking_step.dart';
 import '../providers/mutation_provider.dart';
 
 /// Screen detail pengajuan mutasi & pelacakan alur kerja (Enhanced UI).
@@ -77,6 +79,20 @@ class MutationDetailScreen extends ConsumerWidget {
     WidgetRef ref,
     Mutation mutation,
   ) {
+    final auth = ref.watch(authStateProvider);
+    final user = auth.user;
+    final isApplicantOwner = user == null ||
+        user.role != UserRole.pemohon ||
+        (mutation.applicantId == user.id ||
+            ((user.id == 'usr_pemohon' ||
+                    user.id == 'usr_101' ||
+                    user.id == 'user_pemohon') &&
+                (mutation.applicantId == 'usr_pemohon' ||
+                    mutation.applicantId == 'usr_101' ||
+                    mutation.applicantId == 'user_pemohon')) ||
+            mutation.applicantName.trim().toLowerCase() ==
+                user.name.trim().toLowerCase());
+
     return SingleChildScrollView(
       physics: const AlwaysScrollableScrollPhysics(),
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
@@ -149,7 +165,8 @@ class MutationDetailScreen extends ConsumerWidget {
             ),
             const SizedBox(height: 24),
           ],
-          if (mutation.status == MutationStatus.pendingConfirmation) ...[
+          if (mutation.status == MutationStatus.pendingConfirmation &&
+              isApplicantOwner) ...[
             ElevatedButton.icon(
               onPressed: () {
                 context.push(
@@ -551,14 +568,12 @@ class MutationDetailScreen extends ConsumerWidget {
   // ─────────────────────────────────────────────────────────────────────────
   Widget _buildTrackingTimelineCard(Mutation mutation) {
     final status = mutation.status;
-    final isDone1 = true;
-    final isDone2 = status != MutationStatus.submitted;
-    final isDone3 = isDone2 &&
-        status != MutationStatus.returned &&
-        status != MutationStatus.waitingKabagApproval;
-    final isDone4 = isDone3 && status != MutationStatus.waitingKadivApproval;
-    final isDone5 = isDone4 && status != MutationStatus.approved;
-    final isDone6 = status == MutationStatus.completed;
+    final steps = MutationTrackingHelper.getStepsForMutation(
+      status,
+      mutation: mutation,
+    );
+    final activeStage = MutationTrackingHelper.getActiveStageNumber(steps);
+    final totalStages = steps.length;
 
     return Container(
       decoration: BoxDecoration(
@@ -614,7 +629,7 @@ class MutationDetailScreen extends ConsumerWidget {
                   border: Border.all(color: const Color(0xFFE2E8F0)),
                 ),
                 child: Text(
-                  'Tahap ${_getStageIndex(status)} dari 6',
+                  'Tahap $activeStage dari $totalStages',
                   style: const TextStyle(
                     fontFamily: 'monospace',
                     fontSize: 10,
@@ -628,81 +643,18 @@ class MutationDetailScreen extends ConsumerWidget {
           const SizedBox(height: 16),
 
           // Vertical timeline tiles
-          _buildTimelineTile(
-            title: '1. Diajukan oleh Pemohon',
-            subtitle:
-                'Pemohon: ${mutation.applicantName} • ${_formatDateShort(mutation.createdAt)}',
-            isDone: isDone1,
-            isCurrent: status == MutationStatus.submitted,
-            isAlert: false,
-            badgeText: 'Tiket Dibuat',
-            isLast: false,
-          ),
-          _buildTimelineTile(
-            title: '2. Verifikasi Fisik & Dokumen',
-            subtitle: mutation.verifiedBy != null
-                ? 'Operator: ${mutation.verifiedBy}'
-                : 'Menunggu penugasan Operator',
-            isDone: isDone2,
-            isCurrent: status == MutationStatus.submitted,
-            isAlert: status == MutationStatus.returned,
-            badgeText: isDone2
-                ? 'Fisik & Dokumen Valid'
-                : (status == MutationStatus.returned
-                    ? 'Perlu Perbaikan'
-                    : 'Menunggu'),
-            isLast: false,
-          ),
-          _buildTimelineTile(
-            title: '3. Approval Kabag Aset',
-            subtitle: mutation.approvedBy != null
-                ? 'Kabag: ${mutation.approvedBy}'
-                : 'Menunggu peninjauan batas wewenang',
-            isDone: isDone3,
-            isCurrent: status == MutationStatus.waitingKabagApproval,
-            isAlert: status == MutationStatus.rejected &&
-                mutation.kadivRejectionReason == null,
-            badgeText: isDone3 ? 'Disetujui' : 'Pemeriksaan Wewenang',
-            isLast: false,
-          ),
-          _buildTimelineTile(
-            title: '4. Approval Kepala Divisi (Kadiv)',
-            subtitle: mutation.requiresKadivApproval
-                ? (isDone4
-                    ? 'Disetujui oleh Kadiv'
-                    : 'Menunggu persetujuan Kadiv')
-                : 'Kondisional — Tidak Diperlukan (< Rp50 Jt)',
-            isDone: isDone4,
-            isCurrent: status == MutationStatus.waitingKadivApproval,
-            isAlert: status == MutationStatus.rejected &&
-                mutation.kadivRejectionReason != null,
-            badgeText: mutation.requiresKadivApproval
-                ? (isDone4 ? 'Disetujui' : 'Menunggu Kadiv')
-                : 'Dilewati',
-            isLast: false,
-          ),
-          _buildTimelineTile(
-            title: '5. Pembaruan Fisik & Lokasi Aset',
-            subtitle: mutation.staffUpdatedBy != null
-                ? 'Diperbarui oleh Staff: ${mutation.staffUpdatedBy}'
-                : 'Menugaskan pemindahan fisik ke Staff Aset',
-            isDone: isDone5,
-            isCurrent: status == MutationStatus.approved,
-            isAlert: false,
-            badgeText: isDone5 ? 'Fisik Terpindah' : 'Dalam Proses',
-            isLast: false,
-          ),
-          _buildTimelineTile(
-            title: '6. Konfirmasi Penerimaan & Selesai',
-            subtitle: isDone6
-                ? 'Mutasi selesai dan terarsip ke buku besar aset'
-                : 'Pemeriksaan fisik unit di lokasi tujuan oleh Pemohon',
-            isDone: isDone6,
-            isCurrent: status == MutationStatus.pendingConfirmation,
-            isAlert: false,
-            badgeText: isDone6 ? 'Selesai' : 'Verifikasi Akhir',
-            isLast: true,
-          ),
+          ...List.generate(steps.length, (i) {
+            final step = steps[i];
+            return _buildTimelineTile(
+              title: '${i + 1}. ${step.title}',
+              subtitle: step.subtitle,
+              isDone: step.isCompleted,
+              isCurrent: step.isCurrent,
+              isAlert: step.isAlert,
+              badgeText: step.badgeText,
+              isLast: i == steps.length - 1,
+            );
+          }),
         ],
       ),
     );
@@ -1689,20 +1641,6 @@ class MutationDetailScreen extends ConsumerWidget {
   // ─────────────────────────────────────────────────────────────────────────
   // HELPER METHODS
   // ─────────────────────────────────────────────────────────────────────────
-  int _getStageIndex(MutationStatus status) {
-    return switch (status) {
-      MutationStatus.submitted => 1,
-      MutationStatus.returned => 2,
-      MutationStatus.verified => 2,
-      MutationStatus.waitingKabagApproval => 3,
-      MutationStatus.waitingKadivApproval => 4,
-      MutationStatus.approved => 5,
-      MutationStatus.pendingConfirmation => 6,
-      MutationStatus.completed => 6,
-      MutationStatus.rejected => 3,
-    };
-  }
-
   String _getReviewerName(Mutation mutation) {
     return switch (mutation.status) {
       MutationStatus.submitted ||

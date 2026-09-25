@@ -50,11 +50,19 @@ class NotificationItem {
 
   /// Mengecek apakah notifikasi ini sudah dibaca oleh user tertentu.
   bool isReadBy(String? userId) {
-    if (userId != null && readByUserIds.contains(userId)) {
+    if (userId == null) return isRead;
+    if (readByUserIds.contains(userId)) {
       return true;
     }
-    if (targetUserId != null && userId != null && targetUserId == userId) {
-      return isRead || readByUserIds.contains(userId);
+    if (isStandardPemohonId(userId) &&
+        readByUserIds.any(isStandardPemohonId)) {
+      return true;
+    }
+    if (targetUserId != null) {
+      if (matchesUserId(targetUserId, userId)) {
+        return isRead || readByUserIds.contains(userId);
+      }
+      return false;
     }
     return isRead;
   }
@@ -82,4 +90,20 @@ class NotificationItem {
         targetUserId: targetUserId ?? this.targetUserId,
         readByUserIds: readByUserIds ?? this.readByUserIds,
       );
+}
+
+/// Helper untuk mengenali ID default/alias Pemohon
+bool isStandardPemohonId(String id) {
+  return id == 'usr_pemohon' || id == 'usr_101' || id == 'user_pemohon';
+}
+
+/// Helper untuk mencocokkan target user ID dengan user ID saat ini,
+/// mendukung alias standar Pemohon dengan tetap menjaga isolasi antar pengguna riil.
+bool matchesUserId(String? targetId, String? currentId) {
+  if (targetId == null || currentId == null) return false;
+  if (targetId == currentId) return true;
+  if (isStandardPemohonId(targetId) && isStandardPemohonId(currentId)) {
+    return true;
+  }
+  return false;
 }

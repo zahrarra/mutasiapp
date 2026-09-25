@@ -38,13 +38,18 @@ class NotificationScreen extends ConsumerWidget {
 
     final mutationId = item.relatedMutationId;
     if (mutationId != null && mutationId.isNotEmpty) {
-      final userRole = ref.read(authStateProvider).user?.role;
-      final targetPath = switch (userRole) {
-        UserRole.operator => '/operator/mutations/$mutationId',
-        UserRole.kabagAset => '/kabag/approvals/$mutationId',
-        UserRole.kadiv => '/kadiv/approvals/$mutationId',
-        UserRole.staffAset => '/staff-aset/mutations/$mutationId',
-        UserRole.pemohon => '/pemohon/mutasi/$mutationId',
+      final role = currentUser?.role ?? item.targetRole;
+      final targetPath = switch (role) {
+        UserRole.operator => RouteNames.operatorVerificationDetailPath
+            .replaceFirst(':id', mutationId),
+        UserRole.kabagAset =>
+          RouteNames.kabagApprovalDetailPath.replaceFirst(':id', mutationId),
+        UserRole.kadiv =>
+          RouteNames.kadivApprovalDetailPath.replaceFirst(':id', mutationId),
+        UserRole.staffAset =>
+          RouteNames.staffMutationDetailPath.replaceFirst(':id', mutationId),
+        UserRole.pemohon =>
+          RouteNames.pemohonMutasiDetailPath.replaceFirst(':id', mutationId),
         _ => null,
       };
       if (targetPath != null) {

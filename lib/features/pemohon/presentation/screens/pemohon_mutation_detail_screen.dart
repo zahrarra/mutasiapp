@@ -21,6 +21,7 @@ import '../../../auth/presentation/providers/auth_provider.dart';
 import '../../../mutation/domain/entities/mutation.dart';
 import '../../../mutation/domain/entities/mutation_status.dart';
 import '../../../mutation/presentation/providers/mutation_provider.dart';
+import '../../../mutation/presentation/models/mutation_tracking_step.dart';
 import '../widgets/mutation_status_stepper.dart';
 
 /// Screen detail pengajuan mutasi & pelacakan alur kerja milik Pemohon (Enhanced UI).
@@ -39,7 +40,9 @@ class PemohonMutationDetailScreen extends ConsumerWidget {
     if ((user.id == 'usr_pemohon' ||
             user.id == 'usr_101' ||
             user.id == 'user_pemohon') &&
-        mutation.applicantId == 'usr_pemohon') {
+        (mutation.applicantId == 'usr_pemohon' ||
+            mutation.applicantId == 'usr_101' ||
+            mutation.applicantId == 'user_pemohon')) {
       return true;
     }
     if (mutation.applicantName.trim().toLowerCase() ==
@@ -642,14 +645,12 @@ class PemohonMutationDetailScreen extends ConsumerWidget {
   // ─────────────────────────────────────────────────────────────────────────
   Widget _buildTrackingTimelineCard(Mutation mutation) {
     final status = mutation.status;
-    final isDone1 = true;
-    final isDone2 = status != MutationStatus.submitted;
-    final isDone3 = isDone2 &&
-        status != MutationStatus.returned &&
-        status != MutationStatus.waitingKabagApproval;
-    final isDone4 = isDone3 && status != MutationStatus.waitingKadivApproval;
-    final isDone5 = isDone4 && status != MutationStatus.approved;
-    final isDone6 = status == MutationStatus.completed;
+    final steps = MutationTrackingHelper.getStepsForMutation(
+      status,
+      mutation: mutation,
+    );
+    final activeStage = MutationTrackingHelper.getActiveStageNumber(steps);
+    final totalStages = steps.length;
 
     return Container(
       decoration: BoxDecoration(
@@ -705,7 +706,7 @@ class PemohonMutationDetailScreen extends ConsumerWidget {
                   border: Border.all(color: const Color(0xFFE2E8F0)),
                 ),
                 child: Text(
-                  'Tahap ${_getStageIndex(status)} dari 6',
+                  'Tahap $activeStage dari $totalStages',
                   style: const TextStyle(
                     fontFamily: 'monospace',
                     fontSize: 10,
@@ -718,86 +719,23 @@ class PemohonMutationDetailScreen extends ConsumerWidget {
           ),
           const SizedBox(height: 16),
 
-          // Horizontal Status Stepper (Retained for test suite compatibility)
+          // Horizontal Status Stepper
           MutationStatusStepper(status: status, mutation: mutation),
           const SizedBox(height: 16),
 
           // Vertical timeline tiles
-          _buildTimelineTile(
-            title: '1. Diajukan oleh Pemohon',
-            subtitle:
-                'Pemohon: ${mutation.applicantName} • ${_formatDateShort(mutation.createdAt)}',
-            isDone: isDone1,
-            isCurrent: status == MutationStatus.submitted,
-            isAlert: false,
-            badgeText: 'Tiket Dibuat',
-            isLast: false,
-          ),
-          _buildTimelineTile(
-            title: '2. Verifikasi Fisik & Dokumen',
-            subtitle: mutation.verifiedBy != null
-                ? 'Operator: ${mutation.verifiedBy}'
-                : 'Menunggu penugasan Operator',
-            isDone: isDone2,
-            isCurrent: status == MutationStatus.submitted,
-            isAlert: status == MutationStatus.returned,
-            badgeText: isDone2
-                ? 'Fisik & Dokumen Valid'
-                : (status == MutationStatus.returned
-                    ? 'Perlu Perbaikan'
-                    : 'Menunggu'),
-            isLast: false,
-          ),
-          _buildTimelineTile(
-            title: '3. Approval Kabag Aset',
-            subtitle: mutation.approvedBy != null
-                ? 'Kabag: ${mutation.approvedBy}'
-                : 'Menunggu peninjauan batas wewenang',
-            isDone: isDone3,
-            isCurrent: status == MutationStatus.waitingKabagApproval,
-            isAlert: status == MutationStatus.rejected &&
-                mutation.kadivRejectionReason == null,
-            badgeText: isDone3 ? 'Disetujui' : 'Pemeriksaan Wewenang',
-            isLast: false,
-          ),
-          _buildTimelineTile(
-            title: '4. Approval Kepala Divisi (Kadiv)',
-            subtitle: mutation.requiresKadivApproval
-                ? (isDone4
-                    ? 'Disetujui oleh Kadiv'
-                    : 'Menunggu persetujuan Kadiv')
-                : 'Kondisional — Tidak Diperlukan (< Rp50 Jt)',
-            isDone: isDone4,
-            isCurrent: status == MutationStatus.waitingKadivApproval,
-            isAlert: status == MutationStatus.rejected &&
-                mutation.kadivRejectionReason != null,
-            badgeText: mutation.requiresKadivApproval
-                ? (isDone4 ? 'Disetujui' : 'Menunggu Kadiv')
-                : 'Dilewati',
-            isLast: false,
-          ),
-          _buildTimelineTile(
-            title: '5. Pembaruan Fisik & Lokasi Aset',
-            subtitle: mutation.staffUpdatedBy != null
-                ? 'Diperbarui oleh Staff: ${mutation.staffUpdatedBy}'
-                : 'Menugaskan pemindahan fisik ke Staff Aset',
-            isDone: isDone5,
-            isCurrent: status == MutationStatus.approved,
-            isAlert: false,
-            badgeText: isDone5 ? 'Fisik Terpindah' : 'Dalam Proses',
-            isLast: false,
-          ),
-          _buildTimelineTile(
-            title: '6. Konfirmasi Penerimaan & Selesai',
-            subtitle: isDone6
-                ? 'Mutasi selesai dan terarsip ke buku besar aset'
-                : 'Pemeriksaan fisik unit di lokasi tujuan oleh Pemohon',
-            isDone: isDone6,
-            isCurrent: status == MutationStatus.pendingConfirmation,
-            isAlert: false,
-            badgeText: isDone6 ? 'Selesai' : 'Verifikasi Akhir',
-            isLast: true,
-          ),
+          ...List.generate(steps.length, (i) {
+            final step = steps[i];
+            return _buildTimelineTile(
+              title: '${i + 1}. ${step.title}',
+              subtitle: step.subtitle,
+              isDone: step.isCompleted,
+              isCurrent: step.isCurrent,
+              isAlert: step.isAlert,
+              badgeText: step.badgeText,
+              isLast: i == steps.length - 1,
+            );
+          }),
         ],
       ),
     );
@@ -1554,28 +1492,53 @@ class PemohonMutationDetailScreen extends ConsumerWidget {
                 borderRadius: BorderRadius.circular(10),
                 border: Border.all(color: const Color(0xFFE2E8F0)),
               ),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Expanded(
-                    child: Row(
-                      children: [
-                        Container(
-                          width: 36,
-                          height: 36,
-                          decoration: BoxDecoration(
-                            color: const Color(0xFFFEE2E2),
-                            borderRadius: BorderRadius.circular(8),
-                            border: Border.all(color: const Color(0xFFFECACA)),
-                          ),
-                          child: const Center(
-                            child: Icon(
-                              Icons.picture_as_pdf,
-                              size: 20,
-                              color: Color(0xFFB91C1C),
+              child: Builder(
+                builder: (context) {
+                  final docName = mutation.documentName!;
+                  final isPdf = docName.toLowerCase().endsWith('.pdf');
+                  final isImage = ['png', 'jpg', 'jpeg', 'webp']
+                      .any((ext) => docName.toLowerCase().endsWith(ext));
+
+                  return Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Expanded(
+                        child: Row(
+                          children: [
+                            Container(
+                              width: 36,
+                              height: 36,
+                              decoration: BoxDecoration(
+                                color: isPdf
+                                    ? const Color(0xFFFEE2E2)
+                                    : isImage
+                                        ? const Color(0xFFDBEAF9)
+                                        : const Color(0xFFF1F5F9),
+                                borderRadius: BorderRadius.circular(8),
+                                border: Border.all(
+                                  color: isPdf
+                                      ? const Color(0xFFFECACA)
+                                      : isImage
+                                          ? const Color(0xFFBFDBFE)
+                                          : const Color(0xFFCBD5E1),
+                                ),
+                              ),
+                              child: Center(
+                                child: Icon(
+                                  isPdf
+                                      ? Icons.picture_as_pdf
+                                      : isImage
+                                          ? Icons.image
+                                          : Icons.description,
+                                  size: 20,
+                                  color: isPdf
+                                      ? const Color(0xFFB91C1C)
+                                      : isImage
+                                          ? const Color(0xFF1D4ED8)
+                                          : const Color(0xFF475569),
+                                ),
+                              ),
                             ),
-                          ),
-                        ),
                         const SizedBox(width: 10),
                         Expanded(
                           child: Column(
@@ -1634,8 +1597,10 @@ class PemohonMutationDetailScreen extends ConsumerWidget {
                     ),
                   ),
                 ],
-              ),
-            )
+              );
+            },
+          ),
+        )
           else
             Container(
               padding: const EdgeInsets.all(12),
@@ -1817,20 +1782,6 @@ class PemohonMutationDetailScreen extends ConsumerWidget {
   // ─────────────────────────────────────────────────────────────────────────
   // HELPER METHODS
   // ─────────────────────────────────────────────────────────────────────────
-  int _getStageIndex(MutationStatus status) {
-    return switch (status) {
-      MutationStatus.submitted => 1,
-      MutationStatus.returned => 2,
-      MutationStatus.verified => 2,
-      MutationStatus.waitingKabagApproval => 3,
-      MutationStatus.waitingKadivApproval => 4,
-      MutationStatus.approved => 5,
-      MutationStatus.pendingConfirmation => 6,
-      MutationStatus.completed => 6,
-      MutationStatus.rejected => 3,
-    };
-  }
-
   String _getReviewerName(Mutation mutation) {
     return switch (mutation.status) {
       MutationStatus.submitted ||

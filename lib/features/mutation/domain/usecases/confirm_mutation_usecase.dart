@@ -13,10 +13,12 @@ import '../repositories/mutation_repository.dart';
 class ConfirmMutationParams {
   final String mutationId;
   final String confirmedBy;
+  final String? userId;
 
   const ConfirmMutationParams({
     required this.mutationId,
     required this.confirmedBy,
+    this.userId,
   });
 }
 
@@ -36,7 +38,8 @@ class ConfirmMutationUseCase {
 
     if (detailResult.isFailure) {
       return Result.failure(
-        detailResult.failureOrNull ?? const NotFoundFailure(message: 'Pengajuan mutasi tidak ditemukan.'),
+        detailResult.failureOrNull ??
+            const NotFoundFailure(message: 'Pengajuan mutasi tidak ditemukan.'),
       );
     }
 
@@ -45,9 +48,30 @@ class ConfirmMutationUseCase {
     if (mutation.status != MutationStatus.pendingConfirmation) {
       return const Result.failure(
         ValidationFailure(
-          message: 'Konfirmasi hanya dapat dilakukan pada pengajuan berstatus "Menunggu Konfirmasi".',
+          message:
+              'Konfirmasi hanya dapat dilakukan pada pengajuan berstatus "Menunggu Konfirmasi".',
         ),
       );
+    }
+
+    // Validasi kepemilikan jika userId disertakan
+    if (params.userId != null) {
+      final uid = params.userId!;
+      final isOwner = mutation.applicantId == uid ||
+          ((uid == 'usr_pemohon' || uid == 'usr_101' || uid == 'user_pemohon') &&
+              (mutation.applicantId == 'usr_pemohon' ||
+                  mutation.applicantId == 'usr_101' ||
+                  mutation.applicantId == 'user_pemohon')) ||
+          (mutation.applicantName.trim().toLowerCase() ==
+              params.confirmedBy.trim().toLowerCase());
+      if (!isOwner) {
+        return const Result.failure(
+          ForbiddenFailure(
+            message:
+                'Anda tidak memiliki hak akses untuk mengonfirmasi mutasi ini.',
+          ),
+        );
+      }
     }
 
     return repository.confirmMutation(

@@ -17,7 +17,7 @@ class ApproveMutationKabagUseCase {
   Future<Result<Mutation>> call({
     required String mutationId,
     required String kabagName,
-    required bool requiresKadivApproval,
+    bool? requiresKadivApproval,
   }) async {
     if (mutationId.trim().isEmpty) {
       return const Result.failure(
@@ -25,7 +25,7 @@ class ApproveMutationKabagUseCase {
       );
     }
 
-    // Pastikan mutasi ada dan berstatus waitingKabagApproval
+    // 1. Pastikan mutasi ada dan berstatus waitingKabagApproval
     final existingResult = await repository.getMutationById(mutationId);
     if (existingResult is AppFailure<Mutation>) {
       return Result.failure(existingResult.failure);
@@ -47,10 +47,14 @@ class ApproveMutationKabagUseCase {
       );
     }
 
+    // 2. Gunakan requiresKadivApproval dari mutasi atau override jika disediakan
+    final effectiveRequiresKadiv =
+        requiresKadivApproval ?? mutation.requiresKadivApproval;
+
     return repository.approveMutationKabag(
       mutationId: mutationId,
       kabagName: kabagName,
-      requiresKadivApproval: requiresKadivApproval,
+      requiresKadivApproval: effectiveRequiresKadiv,
     );
   }
 }

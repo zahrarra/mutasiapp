@@ -616,27 +616,47 @@ class _StaffMutationDetailScreenState
                   currentUser: ref.read(authStateProvider).user,
                 );
               },
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  const Icon(Icons.picture_as_pdf_outlined,
-                      size: 16, color: AppColors.error),
-                  const SizedBox(width: 4),
-                  Flexible(
-                    child: Text(
-                      mutation.documentName!,
-                      style: const TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w600,
-                        color: AppColors.primary,
-                        decoration: TextDecoration.underline,
+              child: Builder(
+                builder: (context) {
+                  final docName = mutation.documentName!;
+                  final isPdf = docName.toLowerCase().endsWith('.pdf');
+                  final isImage = ['png', 'jpg', 'jpeg', 'webp']
+                      .any((ext) => docName.toLowerCase().endsWith(ext));
+
+                  return Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        isPdf
+                            ? Icons.picture_as_pdf_outlined
+                            : isImage
+                                ? Icons.image_outlined
+                                : Icons.description_outlined,
+                        size: 16,
+                        color: isPdf
+                            ? AppColors.error
+                            : isImage
+                                ? AppColors.primary
+                                : AppColors.textSecondary,
                       ),
-                    ),
-                  ),
-                  const SizedBox(width: 4),
-                  const Icon(Icons.open_in_new,
-                      size: 14, color: AppColors.primary),
-                ],
+                      const SizedBox(width: 4),
+                      Flexible(
+                        child: Text(
+                          docName,
+                          style: const TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                            color: AppColors.primary,
+                            decoration: TextDecoration.underline,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 4),
+                      const Icon(Icons.open_in_new,
+                          size: 14, color: AppColors.primary),
+                    ],
+                  );
+                },
               ),
             ),
           ),

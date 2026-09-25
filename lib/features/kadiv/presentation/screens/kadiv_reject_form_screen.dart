@@ -9,10 +9,7 @@ import 'package:go_router/go_router.dart';
 import '../../../../app/router/route_names.dart';
 import '../../../../app/theme/app_colors.dart';
 import '../../../../app/theme/app_spacing.dart';
-import '../../../auth/domain/entities/user_role.dart';
 import '../../../mutation/presentation/providers/mutation_provider.dart';
-import '../../../notification/domain/entities/notification_item.dart';
-import '../../../notification/presentation/providers/notification_provider.dart';
 import '../../../../core/widgets/app_feedback.dart';
 import '../providers/kadiv_approval_provider.dart';
 
@@ -310,29 +307,12 @@ class _KadivRejectFormScreenState extends ConsumerState<KadivRejectFormScreen> {
 
                 if (context.mounted) {
                   if (success) {
-                    final currentMutation =
-                        ref.read(kadivApprovalActionProvider).result;
-                    ref.read(notificationProvider.notifier).notifyUser(
-                          targetUserId:
-                              currentMutation?.applicantId ?? 'usr_pemohon',
-                          targetRole: UserRole.pemohon,
-                          title: 'Pengajuan Ditolak Kadiv',
-                          message:
-                              'Pengajuan ${currentMutation?.ticketNumber ?? mutationId} ditolak oleh Kadiv: $reason',
-                          type: NotificationType.warning,
-                          relatedMutationId: mutationId,
-                        );
                     ref.invalidate(mutationDetailProvider(mutationId));
                     AppFeedback.showSuccess(
                       context,
                       'Pengajuan mutasi berhasil ditolak.',
                     );
-                    if (Navigator.of(context).canPop()) {
-                      Navigator.of(context).pop(); // Pop reject screen
-                    }
-                    if (context.mounted) {
-                      _safePop(context);
-                    }
+                    _safePopBackToList(context);
                   } else {
                     final err = ref.read(kadivApprovalActionProvider).error;
                     AppFeedback.showError(
@@ -352,6 +332,23 @@ class _KadivRejectFormScreenState extends ConsumerState<KadivRejectFormScreen> {
         );
       },
     );
+  }
+
+  void _safePopBackToList(BuildContext context) {
+    if (Navigator.of(context).canPop()) {
+      Navigator.of(context).pop();
+      if (Navigator.of(context).canPop()) {
+        Navigator.of(context).pop();
+      } else {
+        try {
+          context.go(RouteNames.kadivApprovalsPath);
+        } catch (_) {}
+      }
+    } else {
+      try {
+        context.go(RouteNames.kadivApprovalsPath);
+      } catch (_) {}
+    }
   }
 
   void _safePop(BuildContext context) {

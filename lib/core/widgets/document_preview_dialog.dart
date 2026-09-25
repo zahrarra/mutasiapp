@@ -80,15 +80,10 @@ class DocumentPreviewDialog extends StatelessWidget {
       case UserRole.operator:
       case UserRole.kabagAset:
       case UserRole.staffAset:
-        // Role operasional dan manajerial memiliki akses ke dokumen pengajuan
-        return true;
-
       case UserRole.kadiv:
-        // Kadiv memiliki akses ke mutasi
+      case UserRole.admin:
+        // Role operasional, manajerial, dan peninjau memiliki akses ke dokumen pengajuan
         return true;
-
-      default:
-        return false;
     }
   }
 
@@ -288,9 +283,9 @@ class DocumentPreviewDialog extends StatelessWidget {
         return _buildFallbackCard(
           icon: Icons.picture_as_pdf_outlined,
           iconColor: AppColors.error,
-          title: 'File PDF Tidak Tersedia di Cache Lokal',
+          title: 'File PDF Tidak Tersedia',
           description:
-              'Dokumen "$docName" tercatat pada pengajuan mutasi ini, namun file fisik dokumen belum tersimpan di memori perangkat ini.',
+              'Dokumen "$docName" tidak tersedia atau gagal dimuat dari penyimpanan.',
         );
       }
     }
@@ -319,9 +314,9 @@ class DocumentPreviewDialog extends StatelessWidget {
         return _buildFallbackCard(
           icon: Icons.image_not_supported_outlined,
           iconColor: AppColors.primary,
-          title: 'File Gambar Tidak Tersedia di Cache Lokal',
+          title: 'File Gambar Tidak Tersedia',
           description:
-              'Gambar lampiran "$docName" tercatat pada mutasi ini, namun file fisik gambar belum tersimpan di memori perangkat ini.',
+              'Gambar lampiran "$docName" tidak tersedia atau gagal dimuat dari penyimpanan.',
         );
       }
     }

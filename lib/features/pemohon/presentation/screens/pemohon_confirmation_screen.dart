@@ -62,7 +62,9 @@ class _PemohonConfirmationScreenState
     if ((user.id == 'usr_pemohon' ||
             user.id == 'usr_101' ||
             user.id == 'user_pemohon') &&
-        mutation.applicantId == 'usr_pemohon') {
+        (mutation.applicantId == 'usr_pemohon' ||
+            mutation.applicantId == 'usr_101' ||
+            mutation.applicantId == 'user_pemohon')) {
       return true;
     }
     if (mutation.applicantName.trim().toLowerCase() ==
@@ -1595,26 +1597,6 @@ class _PemohonConfirmationScreenState
     if (!context.mounted) return;
 
     if (success) {
-      final currentMutation =
-          ref.read(mutationDetailProvider(widget.mutationId)).valueOrNull;
-      ref.read(notificationProvider.notifier).notifyRole(
-            targetRole: UserRole.staffAset,
-            title: 'Mutasi Selesai',
-            message:
-                'Pemohon telah mengonfirmasi penerimaan aset untuk pengajuan ${currentMutation?.ticketNumber ?? widget.mutationId}.',
-            type: NotificationType.success,
-            relatedMutationId: widget.mutationId,
-          );
-      ref.read(notificationProvider.notifier).notifyUser(
-            targetUserId: currentMutation?.applicantId ?? 'usr_pemohon',
-            targetRole: UserRole.pemohon,
-            title: 'Mutasi Berhasil Diselesaikan',
-            message:
-                'Mutasi aset ${currentMutation?.ticketNumber ?? widget.mutationId} telah selesai dan terkonfirmasi.',
-            type: NotificationType.success,
-            relatedMutationId: widget.mutationId,
-          );
-      ref.invalidate(mutationDetailProvider(widget.mutationId));
       AppFeedback.showSuccess(
         context,
         'Konfirmasi berhasil. Mutasi aset telah selesai.',

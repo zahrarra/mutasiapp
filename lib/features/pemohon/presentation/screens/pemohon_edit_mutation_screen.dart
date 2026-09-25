@@ -14,11 +14,16 @@ import '../../../../core/widgets/app_feedback.dart';
 import '../../../../core/widgets/error_view.dart';
 import '../../../../core/widgets/inline_searchable_dropdown.dart';
 import '../../../../core/widgets/loading_indicator.dart';
+import '../../../auth/domain/entities/user.dart';
+import '../../../auth/domain/entities/user_role.dart';
+import '../../../auth/presentation/providers/auth_provider.dart';
 import '../../../mutation/domain/entities/mutation.dart';
 import '../../../mutation/domain/entities/mutation_status.dart';
 import '../../../mutation/domain/usecases/update_mutation_usecase.dart';
 import '../../../mutation/presentation/providers/mutation_form_provider.dart';
 import '../../../mutation/presentation/providers/mutation_provider.dart';
+import '../../../notification/domain/entities/notification_item.dart';
+import '../../../notification/presentation/providers/notification_provider.dart';
 import '../../../operator/presentation/providers/operator_verification_provider.dart';
 
 class PemohonEditMutationScreen extends ConsumerStatefulWidget {
@@ -44,6 +49,28 @@ class _PemohonEditMutationScreenState
     _picController.dispose();
     _reasonController.dispose();
     super.dispose();
+  }
+
+  bool _isMutationOwnedBy(Mutation mutation, User? user) {
+    if (user == null) return true;
+    if (user.role != UserRole.pemohon) return true;
+
+    if (mutation.applicantId != null && mutation.applicantId == user.id) {
+      return true;
+    }
+    if ((user.id == 'usr_pemohon' ||
+            user.id == 'usr_101' ||
+            user.id == 'user_pemohon') &&
+        (mutation.applicantId == 'usr_pemohon' ||
+            mutation.applicantId == 'usr_101' ||
+            mutation.applicantId == 'user_pemohon')) {
+      return true;
+    }
+    if (mutation.applicantName.trim().toLowerCase() ==
+        user.name.trim().toLowerCase()) {
+      return true;
+    }
+    return false;
   }
 
   void _prefillData(Mutation m) {
@@ -86,6 +113,31 @@ class _PemohonEditMutationScreenState
       ref.invalidate(mutationListProvider);
       ref.invalidate(mutationDetailProvider(widget.mutationId));
       ref.invalidate(operatorAllMutationsProvider);
+
+      // Notifikasi ke antrean Operator bahwa mutasi telah diajukan ulang
+      try {
+        ref.read(notificationProvider.notifier).notifyRole(
+              targetRole: UserRole.operator,
+              title: 'Pengajuan Diajukan Ulang',
+              message:
+                  'Pengajuan mutasi ${mutation.ticketNumber} (${mutation.asset.name}) telah diperbaiki oleh Pemohon dan siap diverifikasi.',
+              type: NotificationType.action,
+              relatedMutationId: mutation.id,
+            );
+      } catch (_) {}
+
+      // Tandai notifikasi return sebelumnya sebagai telah dibaca
+      try {
+        final notifNotifier = ref.read(notificationProvider.notifier);
+        final notifs = ref.read(notificationProvider);
+        for (final n in notifs) {
+          if (n.relatedMutationId == widget.mutationId &&
+              n.type == NotificationType.warning &&
+              !n.isRead) {
+            notifNotifier.markAsRead(n.id);
+          }
+        }
+      } catch (_) {}
 
       AppFeedback.showSuccess(
         context,
@@ -140,6 +192,58 @@ class _PemohonEditMutationScreenState
         loading: () => const LoadingIndicator(),
         error: (e, _) => ErrorView(message: e.toString()),
         data: (m) {
+          // Ownership guard: Pemohon hanya bisa edit mutation miliknya sendiri
+          final currentUser = ref.watch(authStateProvider).user;
+          if (!_isMutationOwnedBy(m, currentUser)) {
+            return Center(
+              child: Padding(
+                padding: const EdgeInsets.all(AppSpacing.xl),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Icon(
+                      Icons.lock_outline,
+                      size: 64,
+                      color: AppColors.error,
+                    ),
+                    const SizedBox(height: AppSpacing.md),
+                    const Text(
+                      'Akses Ditolak',
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                        color: AppColors.textPrimary,
+                      ),
+                    ),
+                    const SizedBox(height: AppSpacing.sm),
+                    const Text(
+                      'Anda hanya dapat mengedit pengajuan mutasi milik Anda sendiri.',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        fontSize: 14,
+                        color: AppColors.textSecondary,
+                      ),
+                    ),
+                    const SizedBox(height: AppSpacing.lg),
+                    OutlinedButton.icon(
+                      onPressed: () {
+                        if (Navigator.of(context).canPop()) {
+                          Navigator.of(context).pop();
+                        } else {
+                          try {
+                            context.go(RouteNames.pemohonMutasiPath);
+                          } catch (_) {}
+                        }
+                      },
+                      icon: const Icon(Icons.arrow_back),
+                      label: const Text('Kembali'),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          }
+
           if (m.status != MutationStatus.returned) {
             return Center(
               child: Padding(

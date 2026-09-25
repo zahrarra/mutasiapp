@@ -5,21 +5,24 @@
 // Form pengajuan mutasi aset dengan alur terstruktur 3-tahap, protokol kepatuhan BMN,
 // pemilih PIC dinamis, serta integrasi input manual dan dropdown lokasi.
 
-import 'dart:io';
-
-import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../app/router/route_names.dart';
+import '../../../../core/services/document_picker_service.dart';
 import '../../../../core/widgets/app_feedback.dart';
+import '../../../../core/widgets/document_preview_dialog.dart';
 import '../../../../core/widgets/inline_searchable_dropdown.dart';
 import '../../../../core/widgets/searchable_picker_bottom_sheet.dart';
+import '../../../asset/domain/entities/asset.dart';
+import '../../../asset/domain/entities/asset_category.dart';
+import '../../../asset/domain/entities/asset_status.dart';
 import '../../../asset/presentation/providers/asset_provider.dart';
 import '../../../auth/domain/entities/user_role.dart';
 import '../../../auth/presentation/providers/auth_provider.dart';
+import '../../../mutation/domain/entities/mutation.dart';
+import '../../../mutation/domain/entities/mutation_status.dart';
 import '../../../mutation/domain/repositories/mutation_repository.dart';
 import '../../../mutation/presentation/providers/mutation_form_provider.dart';
 import '../../../mutation/presentation/providers/mutation_provider.dart';
@@ -54,58 +57,35 @@ class _PemohonCreateMutationScreenState
   String? _selectedAssetId;
 
   Future<void> _pickDocument() async {
-    try {
-      FilePickerResult? result;
-      try {
-        result = await FilePicker.pickFiles(
-          type: FileType.custom,
-          allowedExtensions: ['pdf', 'doc', 'docx', 'jpg', 'jpeg', 'png'],
-        );
-      } on MissingPluginException {
-        // Fallback jika platform channel custom belum terlink
-        result = await FilePicker.pickFiles();
-      } catch (_) {
-        // Fallback untuk perangkat yang menolak MIME filter kustom
-        result = await FilePicker.pickFiles();
-      }
+    final result = await DocumentPickerService.pickDocument();
 
-      if (result != null && result.files.isNotEmpty) {
-        final file = result.files.first;
-        List<int>? bytes = file.bytes;
-        if (bytes == null && file.path != null) {
-          try {
-            final f = File(file.path!);
-            if (await f.exists()) {
-              bytes = await f.readAsBytes();
-            }
-          } catch (_) {}
-        }
+    if (!mounted) return;
 
-        setState(() {
-          _documentName = file.name;
-          _documentSize = file.size;
-          _documentPath = file.path;
-          _documentBytes = bytes;
-        });
+    if (result.isCanceled) {
+      return;
+    }
 
-        if (mounted) {
-          AppFeedback.showSuccess(
-            context,
-            'Dokumen berhasil diunggah: ${file.name}',
-          );
-        }
-      }
-    } on MissingPluginException {
-      if (mounted) {
-        AppFeedback.showError(
-          context,
-          'Plugin file picker belum terpasang di proses aplikasi. Silakan restart/rebuild aplikasi.',
-        );
-      }
-    } catch (e) {
-      if (mounted) {
-        AppFeedback.showError(context, 'Gagal memilih file: $e');
-      }
+    if (result.isFailure) {
+      AppFeedback.showError(
+        context,
+        result.errorMessage ?? 'Gagal mengunggah dokumen.',
+      );
+      return;
+    }
+
+    final doc = result.document;
+    if (doc != null) {
+      setState(() {
+        _documentName = doc.name;
+        _documentSize = doc.size;
+        _documentPath = doc.path;
+        _documentBytes = doc.bytes;
+      });
+
+      AppFeedback.showSuccess(
+        context,
+        'Dokumen berhasil diunggah: ${doc.name}',
+      );
     }
   }
 
@@ -1195,70 +1175,142 @@ class _PemohonCreateMutationScreenState
                   ),
                   const SizedBox(height: 8),
 
-                  if (_documentName != null)
-                    Container(
-                      padding: const EdgeInsets.all(10),
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(10),
-                        border: Border.all(color: const Color(0xFFDBEAF9)),
-                      ),
-                      child: Row(
-                        children: [
-                          Container(
-                            width: 34,
-                            height: 34,
-                            decoration: BoxDecoration(
-                              color: const Color(0xFFFFDAD6),
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                            child: const Icon(
-                              Icons.picture_as_pdf,
-                              color: Color(0xFFBA1A1A),
-                              size: 18,
-                            ),
+                  if (_documentName != null) ...[
+                    Builder(
+                      builder: (context) {
+                        final isPdf = _documentName!.toLowerCase().endsWith('.pdf');
+                        final isImage = ['png', 'jpg', 'jpeg', 'webp']
+                            .any((ext) => _documentName!.toLowerCase().endsWith(ext));
+
+                        return Container(
+                          padding: const EdgeInsets.all(10),
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(10),
+                            border: Border.all(color: const Color(0xFFDBEAF9)),
                           ),
-                          const SizedBox(width: 10),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  _documentName!,
-                                  style: const TextStyle(
-                                    fontSize: 12,
-                                    fontWeight: FontWeight.bold,
-                                    color: Color(0xFF0F1D28),
-                                  ),
-                                  overflow: TextOverflow.ellipsis,
+                          child: Row(
+                            children: [
+                              Container(
+                                width: 34,
+                                height: 34,
+                                decoration: BoxDecoration(
+                                  color: isPdf
+                                      ? const Color(0xFFFFDAD6)
+                                      : isImage
+                                          ? const Color(0xFFDBEAF9)
+                                          : const Color(0xFFE2E8F0),
+                                  borderRadius: BorderRadius.circular(8),
                                 ),
-                                Text(
-                                  _formatFileSize(_documentSize),
-                                  style: const TextStyle(
-                                    fontSize: 10,
-                                    color: Color(0xFF52606D),
-                                  ),
+                                child: Icon(
+                                  isPdf
+                                      ? Icons.picture_as_pdf
+                                      : isImage
+                                          ? Icons.image
+                                          : Icons.description,
+                                  color: isPdf
+                                      ? const Color(0xFFBA1A1A)
+                                      : isImage
+                                          ? const Color(0xFF006399)
+                                          : const Color(0xFF475569),
+                                  size: 18,
                                 ),
-                              ],
-                            ),
+                              ),
+                              const SizedBox(width: 10),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      _documentName!,
+                                      style: const TextStyle(
+                                        fontSize: 12,
+                                        fontWeight: FontWeight.bold,
+                                        color: Color(0xFF0F1D28),
+                                      ),
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                    Text(
+                                      _formatFileSize(_documentSize),
+                                      style: const TextStyle(
+                                        fontSize: 10,
+                                        color: Color(0xFF52606D),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              IconButton(
+                                icon: const Icon(
+                                  Icons.visibility_outlined,
+                                  color: Color(0xFF006399),
+                                  size: 18,
+                                ),
+                                tooltip: 'Pratinjau Dokumen',
+                                onPressed: () {
+                                  final user = ref.read(authStateProvider).user;
+                                  final tempMutation = Mutation(
+                                    id: 'draft_preview',
+                                    ticketNumber: 'DRAFT',
+                                    asset: Asset(
+                                      id: _selectedAssetId ?? 'draft_asset',
+                                      assetCode: _assetCodeController.text.trim().isNotEmpty
+                                          ? _assetCodeController.text.trim()
+                                          : 'DRAFT-CODE',
+                                      name: _assetNameController.text.trim().isNotEmpty
+                                          ? _assetNameController.text.trim()
+                                          : 'Aset',
+                                      category: const AssetCategory(
+                                          id: 'cat_draft', code: 'DFT', name: 'Draft'),
+                                      location: _sourceLocationController.text.trim(),
+                                      pic: _currentPicController.text.trim(),
+                                      status: AssetStatus.available,
+                                      condition: 'Baik',
+                                      acquisitionYear: DateTime.now().year,
+                                      estimatedValue: 0,
+                                    ),
+                                    applicantId: user?.id,
+                                    applicantName: user?.name ?? 'Pemohon',
+                                    currentLocation: _sourceLocationController.text.trim(),
+                                    targetLocation: _locationController.text.trim(),
+                                    currentPic: _currentPicController.text.trim(),
+                                    targetPic: _picController.text.trim(),
+                                    reason: _reasonController.text.trim(),
+                                    documentName: _documentName,
+                                    documentPath: _documentPath,
+                                    documentBytes: _documentBytes,
+                                    status: MutationStatus.submitted,
+                                    createdAt: DateTime.now(),
+                                  );
+                                  DocumentPreviewDialog.show(
+                                    context,
+                                    mutation: tempMutation,
+                                    currentUser: user,
+                                  );
+                                },
+                              ),
+                              IconButton(
+                                icon: const Icon(
+                                  Icons.delete_outline,
+                                  color: Color(0xFFBA1A1A),
+                                  size: 18,
+                                ),
+                                tooltip: 'Hapus Dokumen',
+                                onPressed: () {
+                                  setState(() {
+                                    _documentName = null;
+                                    _documentSize = null;
+                                    _documentPath = null;
+                                    _documentBytes = null;
+                                  });
+                                },
+                              ),
+                            ],
                           ),
-                          IconButton(
-                            icon: const Icon(
-                              Icons.delete_outline,
-                              color: Color(0xFFBA1A1A),
-                              size: 18,
-                            ),
-                            tooltip: 'Hapus Dokumen',
-                            onPressed: () {
-                              setState(() {
-                                _documentName = null;
-                                _documentSize = null;
-                              });
-                            },
-                          ),
-                        ],
-                      ),
-                    )
+                        );
+                      },
+                    ),
+                  ]
                   else
                     OutlinedButton.icon(
                       onPressed: _pickDocument,

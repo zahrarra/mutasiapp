@@ -57,7 +57,11 @@ class KabagDashboardScreen extends ConsumerWidget {
                   icon: Icons.pending_actions_rounded,
                   color: AppColors.warning,
                   bgColor: AppColors.warningContainer,
-                  onTap: () => context.push(RouteNames.kabagApprovalsPath),
+                  onTap: () {
+                    ref.read(kabagStatusFilterProvider.notifier).state =
+                        KabagStatusFilter.waiting;
+                    context.push(RouteNames.kabagApprovalsPath);
+                  },
                 ),
               ),
               const SizedBox(width: AppSpacing.sm),
@@ -68,7 +72,11 @@ class KabagDashboardScreen extends ConsumerWidget {
                   icon: Icons.check_circle_outline,
                   color: AppColors.success,
                   bgColor: AppColors.successContainer,
-                  onTap: () => context.push(RouteNames.kabagApprovalsPath),
+                  onTap: () {
+                    ref.read(kabagStatusFilterProvider.notifier).state =
+                        KabagStatusFilter.approved;
+                    context.push(RouteNames.kabagApprovalsPath);
+                  },
                 ),
               ),
               const SizedBox(width: AppSpacing.sm),
@@ -79,7 +87,11 @@ class KabagDashboardScreen extends ConsumerWidget {
                   icon: Icons.cancel_outlined,
                   color: AppColors.error,
                   bgColor: AppColors.errorContainer,
-                  onTap: () => context.push(RouteNames.kabagApprovalsPath),
+                  onTap: () {
+                    ref.read(kabagStatusFilterProvider.notifier).state =
+                        KabagStatusFilter.rejected;
+                    context.push(RouteNames.kabagApprovalsPath);
+                  },
                 ),
               ),
             ],
@@ -91,7 +103,11 @@ class KabagDashboardScreen extends ConsumerWidget {
             width: double.infinity,
             child: ElevatedButton.icon(
               key: const Key('btn_lihat_approval'),
-              onPressed: () => context.push(RouteNames.kabagApprovalsPath),
+              onPressed: () {
+                ref.read(kabagStatusFilterProvider.notifier).state =
+                    KabagStatusFilter.waiting;
+                context.push(RouteNames.kabagApprovalsPath);
+              },
               icon: const Icon(Icons.how_to_reg_outlined),
               label: const Text(
                 'Lihat Daftar Approval',
@@ -122,7 +138,11 @@ class KabagDashboardScreen extends ConsumerWidget {
                 ),
               ),
               TextButton(
-                onPressed: () => context.push(RouteNames.kabagApprovalsPath),
+                onPressed: () {
+                  ref.read(kabagStatusFilterProvider.notifier).state =
+                      KabagStatusFilter.all;
+                  context.push(RouteNames.kabagApprovalsPath);
+                },
                 child: const Text('Lihat Semua'),
               ),
             ],

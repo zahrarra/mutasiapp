@@ -84,12 +84,42 @@ class NotificationTile extends StatelessWidget {
                       ),
                     ),
                     const SizedBox(height: 4),
-                    Text(
-                      _relativeTime(item.createdAt),
-                      style: const TextStyle(
-                        fontSize: 11,
-                        color: AppColors.textDisabled,
-                      ),
+                    Row(
+                      children: [
+                        Text(
+                          _relativeTime(item.createdAt),
+                          style: const TextStyle(
+                            fontSize: 11,
+                            color: AppColors.textDisabled,
+                          ),
+                        ),
+                        if (item.relatedMutationId != null &&
+                            item.relatedMutationId!.isNotEmpty) ...[
+                          const SizedBox(width: 6),
+                          const Text(
+                            '•',
+                            style: TextStyle(
+                              fontSize: 11,
+                              color: AppColors.textDisabled,
+                            ),
+                          ),
+                          const SizedBox(width: 6),
+                          const Icon(
+                            Icons.receipt_long_outlined,
+                            size: 12,
+                            color: AppColors.textDisabled,
+                          ),
+                          const SizedBox(width: 3),
+                          Text(
+                            item.relatedMutationId!,
+                            style: const TextStyle(
+                              fontSize: 11,
+                              fontWeight: FontWeight.w500,
+                              color: AppColors.textSecondary,
+                            ),
+                          ),
+                        ],
+                      ],
                     ),
                   ],
                 ),

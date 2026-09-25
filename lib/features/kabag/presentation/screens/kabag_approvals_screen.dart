@@ -214,7 +214,7 @@ class _KabagApprovalsScreenState extends ConsumerState<KabagApprovalsScreen> {
             child: asyncApprovals.when(
               data: (mutations) {
                 if (mutations.isEmpty) {
-                  return _buildEmptyState();
+                  return _buildEmptyState(statusFilter);
                 }
 
                 return RefreshIndicator(
@@ -374,7 +374,24 @@ class _KabagApprovalsScreenState extends ConsumerState<KabagApprovalsScreen> {
     );
   }
 
-  Widget _buildEmptyState() {
+  Widget _buildEmptyState(KabagStatusFilter statusFilter) {
+    final title = switch (statusFilter) {
+      KabagStatusFilter.waiting => 'Tidak Ada Pengajuan Menunggu',
+      KabagStatusFilter.approved => 'Belum Ada Pengajuan Disetujui',
+      KabagStatusFilter.rejected => 'Belum Ada Pengajuan Ditolak',
+      KabagStatusFilter.all => 'Tidak Ada Pengajuan Ditemukan',
+    };
+    final subtitle = switch (statusFilter) {
+      KabagStatusFilter.waiting =>
+        'Seluruh permohonan mutasi yang masuk telah selesai ditinjau.',
+      KabagStatusFilter.approved =>
+        'Belum ada permohonan mutasi yang disetujui.',
+      KabagStatusFilter.rejected =>
+        'Belum ada permohonan mutasi yang ditolak.',
+      KabagStatusFilter.all =>
+        'Tidak ada pengajuan mutasi yang sesuai dengan kriteria.',
+    };
+
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(AppSpacing.xl),
@@ -383,19 +400,19 @@ class _KabagApprovalsScreenState extends ConsumerState<KabagApprovalsScreen> {
           children: [
             const Icon(Icons.task_alt, size: 56, color: AppColors.success),
             const SizedBox(height: AppSpacing.md),
-            const Text(
-              'Tidak Ada Pengajuan Menunggu',
-              style: TextStyle(
+            Text(
+              title,
+              style: const TextStyle(
                 fontSize: 16,
                 fontWeight: FontWeight.bold,
                 color: AppColors.textPrimary,
               ),
             ),
             const SizedBox(height: AppSpacing.xs),
-            const Text(
-              'Seluruh permohonan mutasi yang masuk telah selesai ditinjau.',
+            Text(
+              subtitle,
               textAlign: TextAlign.center,
-              style: TextStyle(
+              style: const TextStyle(
                 fontSize: 13,
                 color: AppColors.textSecondary,
               ),

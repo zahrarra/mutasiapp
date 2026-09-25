@@ -13,6 +13,7 @@ import '../../../mutation/domain/usecases/get_kadiv_approvals_usecase.dart';
 import '../../../mutation/domain/usecases/reject_mutation_kadiv_usecase.dart';
 import '../../../mutation/presentation/providers/mutation_provider.dart';
 import '../../../auth/domain/entities/user_role.dart';
+import '../../../notification/domain/entities/notification_item.dart';
 import '../../../notification/presentation/providers/notification_provider.dart';
 import '../../../staff/presentation/providers/staff_mutation_provider.dart';
 
@@ -99,25 +100,17 @@ class KadivApprovalStats {
 }
 
 bool isWaitingKadivApproval(Mutation m) {
-  if (m.status == MutationStatus.waitingKadivApproval) return true;
-  if (m.requiresKadivApproval &&
-      (m.approvedBy != null || m.approvedAt != null) &&
-      m.kadivApprovedBy == null &&
-      m.kadivRejectedBy == null &&
-      m.status != MutationStatus.rejected) {
-    return true;
-  }
-  return false;
+  return m.status == MutationStatus.waitingKadivApproval;
 }
-
-bool _isWaitingKadivApproval(Mutation m) => isWaitingKadivApproval(m);
 
 final kadivStatsProvider = Provider<KadivApprovalStats>((ref) {
   final asyncMutations = ref.watch(kadivAllMutationsProvider);
 
   return asyncMutations.when(
     data: (mutations) {
-      final waiting = mutations.where(_isWaitingKadivApproval).length;
+      final waiting = mutations
+          .where((m) => m.status == MutationStatus.waitingKadivApproval)
+          .length;
       final approved = mutations
           .where((m) =>
               (m.status == MutationStatus.approved ||
@@ -164,7 +157,8 @@ final filteredKadivApprovalsProvider =
     // 1. Filter berdasarkan status tab
     var list = mutations.where((m) {
       return switch (statusFilter) {
-        KadivStatusFilter.waiting => _isWaitingKadivApproval(m),
+        KadivStatusFilter.waiting =>
+          m.status == MutationStatus.waitingKadivApproval,
         KadivStatusFilter.approved =>
           (m.status == MutationStatus.approved ||
                   m.status == MutationStatus.pendingConfirmation ||
@@ -176,9 +170,14 @@ final filteredKadivApprovalsProvider =
                   m.kadivRejectedAt != null ||
                   m.kadivRejectionReason != null),
         KadivStatusFilter.all =>
-          _isWaitingKadivApproval(m) ||
+          m.status == MutationStatus.waitingKadivApproval ||
               m.kadivApprovedBy != null ||
-              m.kadivRejectedBy != null,
+              m.kadivRejectedBy != null ||
+              (m.requiresKadivApproval &&
+                  (m.status == MutationStatus.approved ||
+                      m.status == MutationStatus.rejected ||
+                      m.status == MutationStatus.pendingConfirmation ||
+                      m.status == MutationStatus.completed)),
       };
     }).toList();
 
@@ -279,6 +278,17 @@ class KadivApprovalActionNotifier
       ref.invalidate(staffAllMutationsProvider);
 
       try {
+        ref.read(notificationProvider.notifier).notifyRole(
+              targetRole: UserRole.staffAset,
+              title: 'Tugas Pembaruan Fisik Aset',
+              message:
+                  'Pengajuan mutasi ${result.data.ticketNumber} (${result.data.asset.name}) telah disetujui Kadiv. Silakan perbarui fisik aset.',
+              type: NotificationType.action,
+              relatedMutationId: mutationId,
+            );
+      } catch (_) {}
+
+      try {
         final notifNotifier = ref.read(notificationProvider.notifier);
         final notifs = ref.read(notificationProvider);
         for (final n in notifs) {
@@ -335,6 +345,20 @@ class KadivApprovalActionNotifier
       ref.invalidate(kadivAllMutationsProvider);
       ref.invalidate(mutationDetailProvider(mutationId));
       ref.invalidate(mutationListProvider);
+
+      try {
+        if (result.data.applicantId != null) {
+          ref.read(notificationProvider.notifier).notifyUser(
+                targetUserId: result.data.applicantId!,
+                targetRole: UserRole.pemohon,
+                title: 'Pengajuan Mutasi Ditolak Kadiv',
+                message:
+                    'Pengajuan mutasi ${result.data.ticketNumber} ditolak oleh Kadiv dengan alasan: $reason',
+                type: NotificationType.warning,
+                relatedMutationId: mutationId,
+              );
+        }
+      } catch (_) {}
 
       try {
         final notifNotifier = ref.read(notificationProvider.notifier);

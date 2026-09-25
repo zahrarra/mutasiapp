@@ -128,7 +128,9 @@ class NotificationNotifier extends StateNotifier<List<NotificationItem>> {
       for (final item in state)
         if (item.id == id)
           item.copyWith(
-            isRead: userId == null || item.targetUserId == userId ? true : item.isRead,
+            isRead: userId == null || matchesUserId(item.targetUserId, userId)
+                ? true
+                : item.isRead,
             readByUserIds: userId != null
                 ? {...item.readByUserIds, userId}
                 : item.readByUserIds,
@@ -143,7 +145,9 @@ class NotificationNotifier extends StateNotifier<List<NotificationItem>> {
       for (final item in state)
         if (_isTargetedFor(item, role: role, userId: userId))
           item.copyWith(
-            isRead: userId == null || item.targetUserId == userId ? true : item.isRead,
+            isRead: userId == null || matchesUserId(item.targetUserId, userId)
+                ? true
+                : item.isRead,
             readByUserIds: userId != null
                 ? {...item.readByUserIds, userId}
                 : item.readByUserIds,
@@ -159,7 +163,7 @@ class NotificationNotifier extends StateNotifier<List<NotificationItem>> {
     String? userId,
   }) {
     if (item.targetUserId != null) {
-      if (userId != null && item.targetUserId != userId) {
+      if (userId != null && !matchesUserId(item.targetUserId, userId)) {
         return false;
       }
       if (role != null && item.targetRole != null && item.targetRole != role) {
@@ -229,7 +233,7 @@ bool isNotificationVisibleToUser(NotificationItem item, dynamic user) {
 
   // 1. Jika notifikasi ditujukan ke user spesifik:
   if (item.targetUserId != null) {
-    if (item.targetUserId != userId) {
+    if (!matchesUserId(item.targetUserId, userId)) {
       return false; // Notifikasi user A tidak pernah tampil untuk user B
     }
     if (item.targetRole != null && item.targetRole != userRole) {

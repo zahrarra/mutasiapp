@@ -9,12 +9,9 @@ import 'package:go_router/go_router.dart';
 import '../../../../app/router/route_names.dart';
 import '../../../../app/theme/app_colors.dart';
 import '../../../../app/theme/app_spacing.dart';
-import '../../../auth/domain/entities/user_role.dart';
 import '../../../mutation/domain/entities/mutation.dart';
 import '../../../mutation/domain/entities/mutation_status.dart';
 import '../../../mutation/presentation/providers/mutation_provider.dart';
-import '../../../notification/domain/entities/notification_item.dart';
-import '../../../notification/presentation/providers/notification_provider.dart';
 import '../../../../core/widgets/app_feedback.dart';
 import '../../../../core/widgets/document_preview_dialog.dart';
 import '../../../auth/presentation/providers/auth_provider.dart';
@@ -75,12 +72,7 @@ class KadivApprovalDetailScreen extends ConsumerWidget {
     KadivApprovalActionState actionState,
   ) {
     final isWaitingApproval =
-        mutation.status == MutationStatus.waitingKadivApproval ||
-        (mutation.requiresKadivApproval &&
-            (mutation.approvedBy != null || mutation.approvedAt != null) &&
-            mutation.kadivApprovedBy == null &&
-            mutation.kadivRejectedBy == null &&
-            mutation.status != MutationStatus.rejected);
+        mutation.status == MutationStatus.waitingKadivApproval;
 
     return Column(
       children: [
@@ -222,6 +214,17 @@ class KadivApprovalDetailScreen extends ConsumerWidget {
                   ),
                   const Divider(height: AppSpacing.md, color: AppColors.border),
                   _buildDetailRow('Alasan Mutasi', mutation.reason),
+                  if (mutation.verifiedBy != null) ...[
+                    const Divider(
+                        height: AppSpacing.md, color: AppColors.border),
+                    _buildDetailRow(
+                      'Verifikasi Operator',
+                      'Diverifikasi oleh ${mutation.verifiedBy}',
+                      subtext: mutation.verifiedAt != null
+                          ? 'Waktu: ${_formatDate(mutation.verifiedAt!)}'
+                          : null,
+                    ),
+                  ],
                   if (mutation.documentName != null) ...[
                     const Divider(
                         height: AppSpacing.md, color: AppColors.border),
@@ -589,6 +592,9 @@ class KadivApprovalDetailScreen extends ConsumerWidget {
   Widget _buildDocumentRow(
       Mutation mutation, BuildContext context, WidgetRef ref) {
     final docName = mutation.documentName ?? 'Dokumen';
+    final isPdf = docName.toLowerCase().endsWith('.pdf');
+    final isImage = ['png', 'jpg', 'jpeg', 'webp'].any((ext) => docName.toLowerCase().endsWith(ext));
+
     return InkWell(
       onTap: () {
         DocumentPreviewDialog.show(
@@ -607,8 +613,19 @@ class KadivApprovalDetailScreen extends ConsumerWidget {
         ),
         child: Row(
           children: [
-            const Icon(Icons.picture_as_pdf_outlined,
-                size: 18, color: AppColors.error),
+            Icon(
+              isPdf
+                  ? Icons.picture_as_pdf_outlined
+                  : isImage
+                      ? Icons.image_outlined
+                      : Icons.description_outlined,
+              size: 18,
+              color: isPdf
+                  ? AppColors.error
+                  : isImage
+                      ? AppColors.primary
+                      : AppColors.textSecondary,
+            ),
             const SizedBox(width: AppSpacing.xs),
             Expanded(
               child: Text(
@@ -776,14 +793,6 @@ class KadivApprovalDetailScreen extends ConsumerWidget {
 
                 if (context.mounted) {
                   if (success) {
-                    ref.read(notificationProvider.notifier).notifyRole(
-                          targetRole: UserRole.staffAset,
-                          title: 'Tugas Pembaruan Fisik Aset',
-                          message:
-                              'Pengajuan mutasi ${mutation.ticketNumber} (${mutation.asset.name}) telah disetujui Kadiv. Silakan perbarui fisik aset.',
-                          type: NotificationType.action,
-                          relatedMutationId: mutation.id,
-                        );
                     ref.invalidate(mutationDetailProvider(mutation.id));
                     AppFeedback.showSuccess(
                       context,

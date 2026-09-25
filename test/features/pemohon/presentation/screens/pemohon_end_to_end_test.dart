@@ -496,9 +496,9 @@ void main() {
       expect(find.text('Pengajuan Dikembalikan untuk Diperbaiki'), findsOneWidget);
       expect(find.text('Harap perbaiki lokasi tujuan dan sertakan surat tugas.'), findsOneWidget);
 
-      // Stepper should have 'Diajukan' and 'Verifikasi Operator'
+      // Stepper should have 'Diajukan' and 'Approval Kabag'
       expect(find.text('Diajukan'), findsOneWidget);
-      expect(find.text('Verifikasi Operator'), findsOneWidget);
+      expect(find.text('Approval Kabag'), findsOneWidget);
 
       // Edit & Ajukan Ulang button should be visible
       expect(find.text('Edit & Ajukan Ulang'), findsOneWidget);

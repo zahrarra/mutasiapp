@@ -593,8 +593,9 @@ class MutationRepositoryImpl implements MutationRepository {
     final userMutations = _mutations.where((m) {
       if (m.applicantId == userId) return true;
       // Mendukung alias ID pemohon standar (usr_pemohon, usr_101, user_pemohon)
-      if ((userId == 'usr_pemohon' || userId == 'usr_101' || userId == 'user_pemohon') &&
-          m.applicantId == 'usr_pemohon') {
+      final isUserStdPemohon = (userId == 'usr_pemohon' || userId == 'usr_101' || userId == 'user_pemohon');
+      final isMutationStdPemohon = (m.applicantId == 'usr_pemohon' || m.applicantId == 'usr_101' || m.applicantId == 'user_pemohon');
+      if (isUserStdPemohon && isMutationStdPemohon) {
         return true;
       }
       return false;
@@ -829,14 +830,21 @@ class MutationRepositoryImpl implements MutationRepository {
 
     final current = _mutations[index];
 
-    final updatedAsset = current.asset.copyWith(
-      status: AssetStatus.available,
-      location: current.targetLocation,
-      pic: current.targetPic,
-    );
+    // Validasi ketat: hanya mutasi dengan status pendingConfirmation yang dapat dikonfirmasi
+    if (current.status != MutationStatus.pendingConfirmation) {
+      return const Result.failure(
+        ValidationFailure(
+          message:
+              'Konfirmasi hanya dapat dilakukan pada mutasi berstatus Menunggu Konfirmasi.',
+        ),
+      );
+    }
 
+    // Staff Aset sudah memperbarui master aset (lokasi & PIC) saat proses update.
+    // Konfirmasi Pemohon HANYA memvalidasi & memfinalisasi mutasi ke status completed.
+    // Tidak menimpa master aset, tidak merubah ketersediaan tanpa perlu,
+    // tidak membuat update aset baru, dan mempertahankan lokasi & PIC dari Staff Aset.
     final updated = current.copyWith(
-      asset: updatedAsset,
       status: MutationStatus.completed,
     );
 

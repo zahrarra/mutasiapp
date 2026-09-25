@@ -769,6 +769,10 @@ class OperatorVerificationDetailScreen extends ConsumerWidget {
   Widget _buildDocumentRow(
       Mutation mutation, BuildContext context, WidgetRef ref) {
     final documentName = mutation.documentName;
+    final isPdf = documentName != null && documentName.toLowerCase().endsWith('.pdf');
+    final isImage = documentName != null &&
+        ['png', 'jpg', 'jpeg', 'webp'].any((ext) => documentName.toLowerCase().endsWith(ext));
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -800,8 +804,19 @@ class OperatorVerificationDetailScreen extends ConsumerWidget {
               ),
               child: Row(
                 children: [
-                  const Icon(Icons.picture_as_pdf_outlined,
-                      size: 20, color: AppColors.error),
+                  Icon(
+                    isPdf
+                        ? Icons.picture_as_pdf_outlined
+                        : isImage
+                            ? Icons.image_outlined
+                            : Icons.description_outlined,
+                    size: 20,
+                    color: isPdf
+                        ? AppColors.error
+                        : isImage
+                            ? AppColors.primary
+                            : AppColors.textSecondary,
+                  ),
                   const SizedBox(width: AppSpacing.xs),
                   Expanded(
                     child: Text(

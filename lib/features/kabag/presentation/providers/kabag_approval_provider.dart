@@ -117,8 +117,7 @@ final kabagStatsProvider = Provider<KabagApprovalStats>((ref) {
             m.status == MutationStatus.completed;
       }).length;
       final rejected = mutations.where((m) {
-        return m.status == MutationStatus.rejected &&
-            (m.rejectedBy != null || m.rejectionReason != null);
+        return m.status == MutationStatus.rejected;
       }).length;
 
       return KabagApprovalStats(
@@ -162,14 +161,16 @@ final filteredKabagApprovalsProvider =
               m.status == MutationStatus.pendingConfirmation ||
               m.status == MutationStatus.completed,
         KabagStatusFilter.rejected =>
-          m.status == MutationStatus.rejected &&
-              (m.rejectedBy != null || m.rejectionReason != null),
+          m.status == MutationStatus.rejected,
         KabagStatusFilter.all =>
           m.status == MutationStatus.waitingKabagApproval ||
-              m.approvedBy != null ||
-              m.rejectedBy != null ||
               m.status == MutationStatus.waitingKadivApproval ||
-              m.status == MutationStatus.approved,
+              m.status == MutationStatus.approved ||
+              m.status == MutationStatus.rejected ||
+              m.status == MutationStatus.pendingConfirmation ||
+              m.status == MutationStatus.completed ||
+              m.approvedBy != null ||
+              m.rejectedBy != null,
       };
     }).toList();
 
@@ -245,7 +246,7 @@ class KabagApprovalActionNotifier
   /// Eksekusi Approve oleh Kabag Aset
   Future<bool> approve({
     required String mutationId,
-    required bool requiresKadivApproval,
+    bool? requiresKadivApproval,
   }) async {
     final authState = ref.read(authStateProvider);
     final kabagName = authState.user?.name ?? 'Kabag Aset';
@@ -263,19 +264,20 @@ class KabagApprovalActionNotifier
     );
 
     if (result is Success<Mutation>) {
+      final isKadiv = result.data.requiresKadivApproval;
       state = KabagApprovalActionState(
         isLoading: false,
-        successMessage: requiresKadivApproval
+        successMessage: isKadiv
             ? 'Pengajuan disetujui dan diteruskan ke Kadiv.'
             : 'Pengajuan mutasi berhasil disetujui.',
         result: result.data,
       );
       ref.invalidate(kabagAllMutationsProvider);
-      ref.invalidate(kadivAllMutationsProvider);
       ref.invalidate(mutationDetailProvider(mutationId));
       ref.invalidate(mutationListProvider);
 
-      if (requiresKadivApproval) {
+      if (isKadiv) {
+        ref.invalidate(kadivAllMutationsProvider);
         try {
           ref.read(notificationProvider.notifier).notifyRole(
                 targetRole: UserRole.kadiv,
@@ -287,6 +289,7 @@ class KabagApprovalActionNotifier
               );
         } catch (_) {}
       } else {
+        ref.invalidate(staffAllMutationsProvider);
         try {
           ref.read(notificationProvider.notifier).notifyRole(
                 targetRole: UserRole.staffAset,
@@ -297,7 +300,6 @@ class KabagApprovalActionNotifier
                 relatedMutationId: mutationId,
               );
         } catch (_) {}
-        ref.invalidate(staffAllMutationsProvider);
       }
       return true;
     } else if (result is AppFailure<Mutation>) {

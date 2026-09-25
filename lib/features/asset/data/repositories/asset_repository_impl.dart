@@ -19,7 +19,7 @@ class AssetRepositoryImpl implements AssetRepository {
     const AssetCategory(id: 'cat_4', code: 'NET', name: 'Perangkat Jaringan', description: 'Switch, Router, Access Point', isActive: true),
   ];
 
-  static final List<Asset> _mockAssets = [
+  static List<Asset> _generateInitialMockAssets() => [
     Asset(
       id: 'ast_1',
       assetCode: 'AST-ELK-2024-001',
@@ -184,6 +184,13 @@ class AssetRepositoryImpl implements AssetRepository {
       hasActiveMutation: false,
     ),
   ];
+
+  static List<Asset> _mockAssets = _generateInitialMockAssets();
+
+  /// Reset state untuk testing.
+  static void resetForTesting() {
+    _mockAssets = _generateInitialMockAssets();
+  }
 
   @override
   Future<Result<List<Asset>>> getAssets({

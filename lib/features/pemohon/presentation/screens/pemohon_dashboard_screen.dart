@@ -111,7 +111,7 @@ class _PemohonDashboardScreenState
 
   String _statusLabel(MutationStatus? s) {
     if (s == null) return '-';
-    return s.name;
+    return s.displayName;
   }
 
   @override
@@ -548,6 +548,102 @@ class _PemohonDashboardScreenState
 
                     const SizedBox(height: 20),
 
+                    // ── Banner Menunggu Konfirmasi (jika ada) ──────────
+                    mutationsAsync.when(
+                      data: (list) {
+                        final pending = list
+                            .where((m) => m.status == MutationStatus.pendingConfirmation)
+                            .toList();
+                        if (pending.isEmpty) return const SizedBox.shrink();
+
+                        return Container(
+                          margin: const EdgeInsets.only(bottom: 16),
+                          padding: const EdgeInsets.all(16),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFFEF0C7),
+                            borderRadius: BorderRadius.circular(16),
+                            border: Border.all(color: const Color(0xFFFEDF89)),
+                          ),
+                          child: Row(
+                            children: [
+                              Container(
+                                width: 40,
+                                height: 40,
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFFF79009),
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                child: const Icon(
+                                  Icons.assignment_turned_in,
+                                  color: Colors.white,
+                                  size: 22,
+                                ),
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      '${pending.length} Mutasi Menunggu Konfirmasi',
+                                      style: const TextStyle(
+                                        fontSize: 13,
+                                        fontWeight: FontWeight.bold,
+                                        color: Color(0xFFB45309),
+                                      ),
+                                    ),
+                                    const SizedBox(height: 2),
+                                    const Text(
+                                      'Staff Aset telah selesai update data fisik. Silakan periksa & konfirmasi penerimaan.',
+                                      style: TextStyle(
+                                        fontSize: 11,
+                                        color: Color(0xFF7A2E0E),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                              ElevatedButton(
+                                onPressed: () {
+                                  if (pending.length == 1) {
+                                    context.push(
+                                      RouteNames.pemohonConfirmationPath
+                                          .replaceFirst(':id', pending.first.id),
+                                    );
+                                  } else {
+                                    context.push(RouteNames.pemohonMutasiPath);
+                                  }
+                                },
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: const Color(0xFFB45309),
+                                  foregroundColor: Colors.white,
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 12,
+                                    vertical: 8,
+                                  ),
+                                  minimumSize: Size.zero,
+                                  elevation: 0,
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
+                                ),
+                                child: const Text(
+                                  'Periksa',
+                                  style: TextStyle(
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        );
+                      },
+                      loading: () => const SizedBox.shrink(),
+                      error: (_, _) => const SizedBox.shrink(),
+                    ),
+
                     // ── Mutasi dalam proses ────────────────────────────
                     mutationsAsync.when(
                       data: (list) {
@@ -618,6 +714,14 @@ class _PemohonDashboardScreenState
                                     ? 'Asal terdata'
                                     : '-',
                                 toLoc: fokus.targetLocation,
+                                onConfirm: fokus.status == MutationStatus.pendingConfirmation
+                                    ? () {
+                                        context.push(
+                                          RouteNames.pemohonConfirmationPath
+                                              .replaceFirst(':id', fokus.id),
+                                        );
+                                      }
+                                    : null,
                                 onDetail: () {
                                   context.push(
                                     RouteNames.pemohonMutasiDetailPath
@@ -860,6 +964,7 @@ class _ActiveMutationCard extends StatelessWidget {
     required this.fromLoc,
     required this.toLoc,
     required this.onDetail,
+    this.onConfirm,
   });
 
   final String ticket;
@@ -869,6 +974,7 @@ class _ActiveMutationCard extends StatelessWidget {
   final String fromLoc;
   final String toLoc;
   final VoidCallback onDetail;
+  final VoidCallback? onConfirm;
 
   @override
   Widget build(BuildContext context) {
@@ -1017,7 +1123,28 @@ class _ActiveMutationCard extends StatelessWidget {
           ),
           const SizedBox(height: 12),
           const _MiniStepper(currentStep: 2),
-          const SizedBox(height: 12),
+          if (onConfirm != null) ...[
+            SizedBox(
+              width: double.infinity,
+              height: 44,
+              child: ElevatedButton.icon(
+                onPressed: onConfirm,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF00273A),
+                  foregroundColor: Colors.white,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+                icon: const Icon(Icons.check_circle_outline, size: 18),
+                label: const Text(
+                  'Konfirmasi Penerimaan Aset',
+                  style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
+                ),
+              ),
+            ),
+            const SizedBox(height: 8),
+          ],
           SizedBox(
             width: double.infinity,
             height: 44,

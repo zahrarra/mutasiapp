@@ -88,6 +88,7 @@ class PemohonConfirmationActionNotifier
   Future<bool> confirm({required String mutationId}) async {
     final authState = ref.read(authStateProvider);
     final confirmedBy = authState.user?.name ?? 'Pemohon';
+    final userId = authState.user?.id;
 
     state = state.copyWith(
       isLoading: true,
@@ -99,6 +100,7 @@ class PemohonConfirmationActionNotifier
       ConfirmMutationParams(
         mutationId: mutationId,
         confirmedBy: confirmedBy,
+        userId: userId,
       ),
     );
 
@@ -124,19 +126,22 @@ class PemohonConfirmationActionNotifier
             notifNotifier.markAsRead(n.id);
           }
         }
-        notifNotifier.addNotification(
-          NotificationItem(
-            id: 'notif_${DateTime.now().millisecondsSinceEpoch}',
-            title: 'Mutasi Selesai',
-            message:
-                'Mutasi aset ${result.data.ticketNumber} telah dikonfirmasi dan berstatus Selesai.',
-            type: NotificationType.success,
-            createdAt: DateTime.now(),
-            isRead: false,
-            relatedMutationId: mutationId,
-            targetRole: UserRole.pemohon,
-            targetUserId: result.data.applicantId,
-          ),
+        notifNotifier.notifyRole(
+          targetRole: UserRole.staffAset,
+          title: 'Mutasi Selesai',
+          message:
+              'Pemohon telah mengonfirmasi penerimaan aset untuk pengajuan ${result.data.ticketNumber}.',
+          type: NotificationType.success,
+          relatedMutationId: mutationId,
+        );
+        notifNotifier.notifyUser(
+          targetUserId: result.data.applicantId ?? 'usr_pemohon',
+          targetRole: UserRole.pemohon,
+          title: 'Mutasi Selesai',
+          message:
+              'Mutasi aset ${result.data.ticketNumber} telah dikonfirmasi dan selesai.',
+          type: NotificationType.success,
+          relatedMutationId: mutationId,
         );
       } catch (_) {}
 

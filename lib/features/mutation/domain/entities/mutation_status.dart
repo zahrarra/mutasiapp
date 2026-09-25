@@ -42,7 +42,7 @@ enum MutationStatus {
         MutationStatus.waitingKabagApproval => 'Menunggu Approval Kabag',
         MutationStatus.waitingKadivApproval => 'Menunggu Approval Kadiv',
         MutationStatus.verified => 'Terverifikasi',
-        MutationStatus.approved => 'Disetujui',
+        MutationStatus.approved => 'Disetujui — Menunggu Update Aset',
         MutationStatus.rejected => 'Ditolak',
         MutationStatus.pendingConfirmation => 'Menunggu Konfirmasi',
         MutationStatus.completed => 'Selesai',
