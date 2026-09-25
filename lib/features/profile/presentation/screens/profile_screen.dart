@@ -10,6 +10,7 @@ import 'package:go_router/go_router.dart';
 import '../../../../app/router/route_names.dart';
 import '../../../../app/theme/app_colors.dart';
 import '../../../../app/theme/app_spacing.dart';
+import '../../../../core/widgets/custom_floating_nav_bar.dart';
 import '../../../auth/presentation/providers/auth_provider.dart';
 
 class ProfileScreen extends ConsumerWidget {
@@ -74,8 +75,14 @@ class ProfileScreen extends ConsumerWidget {
           },
         ),
       ),
+      extendBody: true,
       body: SingleChildScrollView(
-        padding: const EdgeInsets.all(AppSpacing.lg),
+        padding: const EdgeInsets.fromLTRB(
+          AppSpacing.lg,
+          AppSpacing.lg,
+          AppSpacing.lg,
+          100,
+        ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
@@ -231,6 +238,11 @@ class ProfileScreen extends ConsumerWidget {
           ],
         ),
       ),
+      bottomNavigationBar: user?.role != null
+          ? CustomFloatingNavBar.scaffoldBottomBar(
+              items: RoleNavConfig.getNavItemsForRole(user!.role),
+            )
+          : null,
     );
   }
 

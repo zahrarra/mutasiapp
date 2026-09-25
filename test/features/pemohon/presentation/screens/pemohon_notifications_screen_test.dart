@@ -19,8 +19,8 @@ void main() {
         ),
       );
 
-      // Verify AppBar title
-      expect(find.text('Notifikasi'), findsOneWidget);
+      // Verify AppBar title (and bottom nav item)
+      expect(find.text('Notifikasi'), findsWidgets);
 
       // Verify notification tiles exist
       expect(find.byType(NotificationTile), findsWidgets);

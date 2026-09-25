@@ -27,26 +27,6 @@ class KadivDashboardScreen extends ConsumerWidget {
 
     return RoleDashboardLayout(
       title: 'Dashboard Kadiv',
-      selectedIndex: 0,
-      onNavDestinationSelected: (index) {
-        switch (index) {
-          case 1:
-            context.push(RouteNames.kadivApprovalsPath);
-            break;
-          case 2:
-            context.push(RouteNames.kadivNotificationsPath);
-            break;
-          case 3:
-            context.push(RouteNames.profilePath);
-            break;
-        }
-      },
-      navItems: const [
-        RoleNavItem(label: 'Home', icon: Icons.home_outlined),
-        RoleNavItem(label: 'Approval', icon: Icons.verified_user_outlined),
-        RoleNavItem(label: 'Notifikasi', icon: Icons.notifications_outlined),
-        RoleNavItem(label: 'Profil', icon: Icons.person_outline),
-      ],
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [

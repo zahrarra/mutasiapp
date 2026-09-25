@@ -13,10 +13,82 @@ import '../../domain/repositories/auth_repository.dart';
 import '../../domain/usecases/login_usecase.dart';
 import '../../domain/usecases/logout_usecase.dart';
 
+import '../../data/repositories/user_repository_impl.dart';
+import '../../domain/repositories/user_repository.dart';
+
+/// Provider untuk [UserRepository].
+final userRepositoryProvider = Provider<UserRepository>((ref) {
+  return UserRepositoryImpl.instance;
+});
+
 /// Provider untuk [AuthRepository].
 final authRepositoryProvider = Provider<AuthRepository>((ref) {
   final secureStorage = ref.watch(secureStorageProvider);
-  return AuthRepositoryImpl(secureStorage: secureStorage);
+  final userRepo = ref.watch(userRepositoryProvider);
+  return AuthRepositoryImpl(
+    secureStorage: secureStorage,
+    userRepository: userRepo,
+  );
+});
+
+/// Notifier untuk manajemen Master User oleh Admin.
+class MasterUsersNotifier extends StateNotifier<AsyncValue<List<User>>> {
+  final UserRepository _repository;
+
+  MasterUsersNotifier(this._repository) : super(const AsyncValue.loading()) {
+    loadUsers();
+  }
+
+  Future<void> loadUsers() async {
+    state = const AsyncValue.loading();
+    final result = await _repository.getAllUsers();
+    if (result is Success<List<User>>) {
+      state = AsyncValue.data(result.data);
+    } else if (result is AppFailure<List<User>>) {
+      state = AsyncValue.error(
+        result.failure.message ?? 'Terjadi kesalahan',
+        StackTrace.current,
+      );
+    }
+  }
+
+  Future<Result<User>> createUser(User user) async {
+    final result = await _repository.createUser(user);
+    if (result is Success<User>) {
+      await loadUsers();
+    }
+    return result;
+  }
+
+  Future<Result<User>> updateUser(User user) async {
+    final result = await _repository.updateUser(user);
+    if (result is Success<User>) {
+      await loadUsers();
+    }
+    return result;
+  }
+
+  Future<Result<void>> toggleActive(String id, bool isActive) async {
+    final result = await _repository.toggleUserActive(id, isActive);
+    if (result is Success<void>) {
+      await loadUsers();
+    }
+    return result;
+  }
+
+  Future<Result<void>> deleteUser(String id) async {
+    final result = await _repository.deleteUser(id);
+    if (result is Success<void>) {
+      await loadUsers();
+    }
+    return result;
+  }
+}
+
+final masterUsersProvider =
+    StateNotifierProvider<MasterUsersNotifier, AsyncValue<List<User>>>((ref) {
+  final repo = ref.watch(userRepositoryProvider);
+  return MasterUsersNotifier(repo);
 });
 
 /// Provider untuk [LoginUseCase].

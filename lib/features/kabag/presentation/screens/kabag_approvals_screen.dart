@@ -9,6 +9,8 @@ import 'package:go_router/go_router.dart';
 import '../../../../app/router/route_names.dart';
 import '../../../../app/theme/app_colors.dart';
 import '../../../../app/theme/app_spacing.dart';
+import '../../../auth/domain/entities/user_role.dart';
+import '../../../../core/widgets/custom_floating_nav_bar.dart';
 import '../../../mutation/domain/entities/mutation.dart';
 import '../providers/kabag_approval_provider.dart';
 
@@ -36,6 +38,7 @@ class _KabagApprovalsScreenState extends ConsumerState<KabagApprovalsScreen> {
     final statusFilter = ref.watch(kabagStatusFilterProvider);
 
     return Scaffold(
+      extendBody: true,
       appBar: AppBar(
         title: Text(
           statusFilter == KabagStatusFilter.waiting
@@ -219,7 +222,12 @@ class _KabagApprovalsScreenState extends ConsumerState<KabagApprovalsScreen> {
                     ref.invalidate(kabagAllMutationsProvider);
                   },
                   child: ListView.separated(
-                    padding: const EdgeInsets.all(AppSpacing.md),
+                    padding: const EdgeInsets.fromLTRB(
+                      AppSpacing.md,
+                      AppSpacing.md,
+                      AppSpacing.md,
+                      100,
+                    ),
                     itemCount: mutations.length,
                     separatorBuilder: (_, _) =>
                         const SizedBox(height: AppSpacing.sm),
@@ -255,6 +263,9 @@ class _KabagApprovalsScreenState extends ConsumerState<KabagApprovalsScreen> {
             ),
           ),
         ],
+      ),
+      bottomNavigationBar: CustomFloatingNavBar.scaffoldBottomBar(
+        items: RoleNavConfig.getNavItemsForRole(UserRole.kabagAset),
       ),
     );
   }

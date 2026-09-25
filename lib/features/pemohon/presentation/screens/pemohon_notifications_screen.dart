@@ -16,6 +16,7 @@ import '../../../auth/presentation/providers/auth_provider.dart';
 import '../../../notification/domain/entities/notification_item.dart';
 import '../../../notification/presentation/providers/notification_provider.dart';
 import '../../../notification/presentation/widgets/notification_tile.dart';
+import '../../../../core/widgets/custom_floating_nav_bar.dart';
 
 class PemohonNotificationsScreen extends ConsumerWidget {
   const PemohonNotificationsScreen({super.key});
@@ -115,7 +116,12 @@ class PemohonNotificationsScreen extends ConsumerWidget {
               ),
             )
           : ListView.separated(
-              padding: const EdgeInsets.all(AppSpacing.md),
+              padding: const EdgeInsets.fromLTRB(
+                AppSpacing.md,
+                AppSpacing.md,
+                AppSpacing.md,
+                100,
+              ),
               itemCount: notifications.length,
               separatorBuilder: (_, _) =>
                   const SizedBox(height: AppSpacing.sm),
@@ -127,6 +133,10 @@ class PemohonNotificationsScreen extends ConsumerWidget {
                 );
               },
             ),
+      extendBody: true,
+      bottomNavigationBar: CustomFloatingNavBar.scaffoldBottomBar(
+        items: RoleNavConfig.getNavItemsForRole(UserRole.pemohon),
+      ),
     );
   }
 }

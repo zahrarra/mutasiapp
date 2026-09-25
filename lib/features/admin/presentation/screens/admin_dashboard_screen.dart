@@ -18,26 +18,6 @@ class AdminDashboardScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return RoleDashboardLayout(
       title: 'Dashboard Admin',
-      selectedIndex: 0,
-      navItems: const [
-        RoleNavItem(label: 'Home', icon: Icons.dashboard_outlined),
-        RoleNavItem(label: 'Master Data', icon: Icons.storage_outlined),
-        RoleNavItem(label: 'Users', icon: Icons.people_outline),
-        RoleNavItem(label: 'Profil', icon: Icons.person_outline),
-      ],
-      onNavDestinationSelected: (index) {
-        switch (index) {
-          case 1:
-            context.push(RouteNames.adminCategoriesPath);
-            break;
-          case 2:
-            context.push(RouteNames.adminUsersPath);
-            break;
-          case 3:
-            context.push(RouteNames.profilePath);
-            break;
-        }
-      },
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [

@@ -28,26 +28,6 @@ class OperatorDashboardScreen extends ConsumerWidget {
 
     return RoleDashboardLayout(
       title: 'Dashboard Operator',
-      selectedIndex: 0,
-      navItems: const [
-        RoleNavItem(label: 'Home', icon: Icons.home_outlined),
-        RoleNavItem(label: 'Pengajuan', icon: Icons.fact_check_outlined),
-        RoleNavItem(label: 'Notifikasi', icon: Icons.notifications_outlined),
-        RoleNavItem(label: 'Profil', icon: Icons.person_outline),
-      ],
-      onNavDestinationSelected: (index) {
-        switch (index) {
-          case 1:
-            context.push(RouteNames.operatorMutationsPath);
-            break;
-          case 2:
-            context.push(RouteNames.operatorNotificationsPath);
-            break;
-          case 3:
-            context.push(RouteNames.profilePath);
-            break;
-        }
-      },
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [

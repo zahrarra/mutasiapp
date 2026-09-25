@@ -27,6 +27,18 @@ abstract class AssetRepository {
   /// Ambil daftar kategori aset.
   Future<Result<List<AssetCategory>>> getCategories();
 
+  /// Menambah kategori aset baru oleh Admin.
+  Future<Result<AssetCategory>> addCategory(AssetCategory category);
+
+  /// Memperbarui informasi kategori aset oleh Admin.
+  Future<Result<AssetCategory>> updateCategory(AssetCategory category);
+
+  /// Mengaktifkan atau menonaktifkan kategori aset oleh Admin.
+  Future<Result<void>> toggleCategoryActive(String id, bool isActive);
+
+  /// Menghapus kategori aset jika tidak digunakan oleh aset terdaftar.
+  Future<Result<void>> deleteCategory(String id);
+
   /// Update lokasi dan PIC aset oleh Staff Aset serta catat riwayat perubahan.
   Future<Result<Asset>> updateAssetLocationAndPic({
     required String assetId,

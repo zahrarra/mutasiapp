@@ -859,8 +859,8 @@ class OperatorVerificationDetailScreen extends ConsumerWidget {
         mutation.currentLocation.trim().toLowerCase() !=
             mutation.targetLocation.trim().toLowerCase();
 
-    // Nilai aset berasal dari master asset. Jika memenuhi threshold -> true, jika tidak -> false (kecuali ada flag mutasi aktif)
-    bool requiresKadiv = mutation.requiresKadivApproval || meetsValueThreshold || isCrossLocation;
+    // Nilai aset berasal dari master asset: jika nilai aset >= threshold -> true, jika < threshold -> false (kecuali mutasi antar-lokasi)
+    bool requiresKadiv = meetsValueThreshold || isCrossLocation;
 
     showDialog(
       context: context,

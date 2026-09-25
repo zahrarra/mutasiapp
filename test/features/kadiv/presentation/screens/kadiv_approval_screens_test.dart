@@ -327,7 +327,7 @@ void main() {
     await tester.pumpWidget(createTestWidget(const ProfileScreen()));
     await tester.pumpAndSettle();
 
-    expect(find.text('Profil'), findsOneWidget);
+    expect(find.text('Profil'), findsWidgets);
     expect(find.text('Drs. Ahmad Dahlan (Kadiv)'), findsOneWidget);
     expect(find.text('kadiv@mutasiku.id'), findsOneWidget);
     expect(find.text('Kadiv'), findsWidgets);

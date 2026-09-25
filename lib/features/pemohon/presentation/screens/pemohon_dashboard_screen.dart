@@ -14,6 +14,8 @@ import '../../../mutation/domain/entities/mutation_status.dart';
 import '../../../mutation/presentation/providers/mutation_provider.dart';
 import '../../../notification/presentation/providers/notification_provider.dart';
 import '../../../asset/presentation/providers/asset_provider.dart';
+import '../../../auth/domain/entities/user_role.dart';
+import '../../../../core/widgets/custom_floating_nav_bar.dart';
 import '../widgets/mutation_filter_bottom_sheet.dart';
 
 /// Warna mengikuti mockup dashboard Pemohon.
@@ -124,9 +126,8 @@ class _PemohonDashboardScreenState
 
     return Scaffold(
       backgroundColor: _C.background,
-      body: Stack(
-        children: [
-          Column(
+      extendBody: true,
+      body: Column(
             children: [
               // Header
               _Header(onNotif: _goNotifications, onProfile: _goProfile),
@@ -745,37 +746,10 @@ class _PemohonDashboardScreenState
               ),
             ],
           ),
-
-          // ── Bottom nav pill ────────────────────────────────────────
-          Positioned(
-            left: 16,
-            right: 16,
-            bottom: 12,
-            child: SafeArea(
-              top: false,
-              child: _BottomPillNav(
-                index: 0,
-                onSelect: (i) {
-                  switch (i) {
-                    case 0:
-                      break;
-                    case 1:
-                      _goMutasiList();
-                      break;
-                    case 2:
-                      _goNotifications();
-                      break;
-                    case 3:
-                      _goProfile();
-                      break;
-                  }
-                },
-              ),
-            ),
+          bottomNavigationBar: CustomFloatingNavBar.scaffoldBottomBar(
+            items: RoleNavConfig.getNavItemsForRole(UserRole.pemohon),
           ),
-        ],
-      ),
-    );
+        );
   }
 }
 
@@ -1268,89 +1242,6 @@ class _EmptyCard extends StatelessWidget {
           Text(text, style: const TextStyle(color: _C.textSecondary)),
           const SizedBox(height: 12),
           TextButton(onPressed: onAction, child: Text(actionLabel)),
-        ],
-      ),
-    );
-  }
-}
-
-// ─── Bottom Navigation ─────────────────────────────────────────────────────
-
-class _BottomPillNav extends ConsumerWidget {
-  const _BottomPillNav({required this.index, required this.onSelect});
-
-  final int index;
-  final ValueChanged<int> onSelect;
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final unread = ref.watch(unreadNotificationCountProvider);
-
-    Widget item(int i, IconData icon, String label) {
-      final active = index == i;
-      final isNotif = i == 2;
-
-      final iconWidget = Icon(
-        icon,
-        size: 20,
-        color: active ? _C.primaryContainer : _C.textSecondary,
-      );
-
-      return Expanded(
-        child: InkWell(
-          onTap: () => onSelect(i),
-          borderRadius: BorderRadius.circular(999),
-          child: Center(
-            child: Padding(
-              padding: const EdgeInsets.symmetric(vertical: 8),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  isNotif
-                      ? Badge(
-                          isLabelVisible: unread > 0,
-                          child: iconWidget,
-                        )
-                      : iconWidget,
-                  const SizedBox(height: 2),
-                  Text(
-                    label,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                      fontSize: 10,
-                      height: 1.0,
-                      fontWeight: active ? FontWeight.w600 : FontWeight.w500,
-                      color: active ? _C.primaryContainer : _C.textSecondary,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ),
-      );
-    }
-
-    return Container(
-      height: 64,
-      decoration: BoxDecoration(
-        color: _C.surface.withValues(alpha: 0.95),
-        borderRadius: BorderRadius.circular(999),
-        boxShadow: [
-          BoxShadow(
-            color: const Color(0xFF0F3D56).withValues(alpha: 0.12),
-            blurRadius: 24,
-            offset: const Offset(0, 8),
-          ),
-        ],
-      ),
-      child: Row(
-        children: [
-          item(0, Icons.home_outlined, 'Beranda'),
-          item(1, Icons.sync_alt, 'Mutasi Saya'),
-          item(2, Icons.notifications_outlined, 'Notifikasi'),
-          item(3, Icons.person_outline, 'Profil'),
         ],
       ),
     );

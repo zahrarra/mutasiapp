@@ -20,6 +20,7 @@ import '../../../auth/presentation/providers/auth_provider.dart';
 import '../../domain/entities/notification_item.dart';
 import '../providers/notification_provider.dart';
 import '../widgets/notification_tile.dart';
+import '../../../../core/widgets/custom_floating_nav_bar.dart';
 
 class NotificationScreen extends ConsumerWidget {
   const NotificationScreen({super.key});
@@ -59,6 +60,7 @@ class NotificationScreen extends ConsumerWidget {
 
     return Scaffold(
       backgroundColor: AppColors.background,
+      extendBody: true,
       appBar: AppBar(
         title: const Text('Notifikasi'),
         leading: IconButton(
@@ -102,7 +104,12 @@ class NotificationScreen extends ConsumerWidget {
               ),
             )
           : ListView.separated(
-              padding: const EdgeInsets.all(AppSpacing.md),
+              padding: const EdgeInsets.fromLTRB(
+                AppSpacing.md,
+                AppSpacing.md,
+                AppSpacing.md,
+                100,
+              ),
               itemCount: notifications.length,
               separatorBuilder: (_, _) => const SizedBox(height: AppSpacing.sm),
               itemBuilder: (context, index) {
@@ -113,6 +120,11 @@ class NotificationScreen extends ConsumerWidget {
                 );
               },
             ),
+      bottomNavigationBar: currentUser?.role != null
+          ? CustomFloatingNavBar.scaffoldBottomBar(
+              items: RoleNavConfig.getNavItemsForRole(currentUser!.role),
+            )
+          : null,
     );
   }
 }

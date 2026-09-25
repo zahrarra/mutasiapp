@@ -12,11 +12,11 @@ import '../../domain/entities/asset_status.dart';
 import '../../domain/repositories/asset_repository.dart';
 
 class AssetRepositoryImpl implements AssetRepository {
-  static const List<AssetCategory> _mockCategories = [
-    AssetCategory(id: 'cat_1', code: 'ELK', name: 'Elektronik & IT', description: 'Laptop, Monitor, Printer'),
-    AssetCategory(id: 'cat_2', code: 'FUR', name: 'Furniture & Mebel', description: 'Meja Kerja, Kursi Kantor, Lemari'),
-    AssetCategory(id: 'cat_3', code: 'VEH', name: 'Kendaraan Operasional', description: 'Mobil Dinas, Sepeda Motor'),
-    AssetCategory(id: 'cat_4', code: 'NET', name: 'Perangkat Jaringan', description: 'Switch, Router, Access Point'),
+  static final List<AssetCategory> _mockCategories = [
+    const AssetCategory(id: 'cat_1', code: 'ELK', name: 'Elektronik & IT', description: 'Laptop, Monitor, Printer', isActive: true),
+    const AssetCategory(id: 'cat_2', code: 'FUR', name: 'Furniture & Mebel', description: 'Meja Kerja, Kursi Kantor, Lemari', isActive: true),
+    const AssetCategory(id: 'cat_3', code: 'VEH', name: 'Kendaraan Operasional', description: 'Mobil Dinas, Sepeda Motor', isActive: true),
+    const AssetCategory(id: 'cat_4', code: 'NET', name: 'Perangkat Jaringan', description: 'Switch, Router, Access Point', isActive: true),
   ];
 
   static final List<Asset> _mockAssets = [
@@ -237,7 +237,118 @@ class AssetRepositoryImpl implements AssetRepository {
 
   @override
   Future<Result<List<AssetCategory>>> getCategories() async {
-    return Result.success(_mockCategories);
+    return Result.success(List.unmodifiable(_mockCategories));
+  }
+
+  @override
+  Future<Result<AssetCategory>> addCategory(AssetCategory category) async {
+    final cleanName = category.name.trim();
+    final cleanCode = category.code.trim().toUpperCase();
+    if (cleanName.isEmpty || cleanCode.isEmpty) {
+      return Result.failure(
+        const ValidationFailure(message: 'Kode dan nama kategori wajib diisi.'),
+      );
+    }
+
+    final exists = _mockCategories.any(
+      (c) =>
+          c.code.toUpperCase() == cleanCode ||
+          c.name.toLowerCase() == cleanName.toLowerCase(),
+    );
+    if (exists) {
+      return Result.failure(
+        ValidationFailure(
+          message:
+              'Kategori dengan kode "$cleanCode" atau nama "$cleanName" sudah ada.',
+        ),
+      );
+    }
+
+    final newId = category.id.isNotEmpty
+        ? category.id
+        : 'cat_${DateTime.now().millisecondsSinceEpoch}';
+
+    final newCategory = category.copyWith(
+      id: newId,
+      code: cleanCode,
+      name: cleanName,
+      description: category.description?.trim(),
+      isActive: true,
+    );
+
+    _mockCategories.add(newCategory);
+    return Result.success(newCategory);
+  }
+
+  @override
+  Future<Result<AssetCategory>> updateCategory(AssetCategory category) async {
+    final index = _mockCategories.indexWhere((c) => c.id == category.id);
+    if (index == -1) {
+      return Result.failure(
+          const NotFoundFailure(message: 'Kategori tidak ditemukan.'));
+    }
+
+    final cleanName = category.name.trim();
+    final cleanCode = category.code.trim().toUpperCase();
+    if (cleanName.isEmpty || cleanCode.isEmpty) {
+      return Result.failure(
+        const ValidationFailure(message: 'Kode dan nama kategori wajib diisi.'),
+      );
+    }
+
+    final duplicate = _mockCategories.any(
+      (c) =>
+          c.id != category.id &&
+          (c.code.toUpperCase() == cleanCode ||
+              c.name.toLowerCase() == cleanName.toLowerCase()),
+    );
+    if (duplicate) {
+      return Result.failure(
+        ValidationFailure(
+          message:
+              'Kode "$cleanCode" atau nama "$cleanName" sudah digunakan.',
+        ),
+      );
+    }
+
+    final updated = category.copyWith(
+      code: cleanCode,
+      name: cleanName,
+      description: category.description?.trim(),
+    );
+
+    _mockCategories[index] = updated;
+    return Result.success(updated);
+  }
+
+  @override
+  Future<Result<void>> toggleCategoryActive(String id, bool isActive) async {
+    final index = _mockCategories.indexWhere((c) => c.id == id);
+    if (index == -1) {
+      return Result.failure(
+          const NotFoundFailure(message: 'Kategori tidak ditemukan.'));
+    }
+
+    _mockCategories[index] =
+        _mockCategories[index].copyWith(isActive: isActive);
+    return Result.success(null);
+  }
+
+  @override
+  Future<Result<void>> deleteCategory(String id) async {
+    final isUsed = _mockAssets.any(
+        (a) => a.category.id == id || a.category.code == id);
+    if (isUsed) {
+      return Result.failure(
+        const ValidationFailure(
+          message:
+              'Kategori tidak dapat dihapus permanen karena masih digunakan oleh aset terdaftar. Silakan nonaktifkan kategori.',
+        ),
+      );
+    }
+
+    _mockCategories.removeWhere((c) => c.id == id);
+    return Result.success(null);
   }
 
   @override

@@ -448,7 +448,7 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    expect(find.text('Profil'), findsOneWidget);
+    expect(find.text('Profil'), findsWidgets);
     expect(find.text('Rizky Staff Aset'), findsOneWidget);
     expect(find.text('rizky.staff@bankjateng.co.id'), findsOneWidget);
     expect(find.text('Staff Aset'), findsWidgets);

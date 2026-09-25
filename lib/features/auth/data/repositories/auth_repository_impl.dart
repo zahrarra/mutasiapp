@@ -10,12 +10,19 @@ import '../../domain/entities/user.dart';
 import '../../domain/entities/user_role.dart';
 import '../../domain/repositories/auth_repository.dart';
 
-/// Implementasi in-memory & secure storage skeleton untuk [AuthRepository].
+import '../../domain/repositories/user_repository.dart';
+import 'user_repository_impl.dart';
+
+/// Implementasi in-memory & secure storage untuk [AuthRepository].
 class AuthRepositoryImpl implements AuthRepository {
   final SecureStorage secureStorage;
+  final UserRepository userRepository;
   User? _currentUser;
 
-  AuthRepositoryImpl({required this.secureStorage});
+  AuthRepositoryImpl({
+    required this.secureStorage,
+    UserRepository? userRepository,
+  }) : userRepository = userRepository ?? UserRepositoryImpl.instance;
 
   @override
   Future<Result<User>> login({
@@ -28,36 +35,51 @@ class AuthRepositoryImpl implements AuthRepository {
       );
     }
 
-    // Determine role based on username prefix for testing convenience
-    UserRole role = UserRole.pemohon;
-    final lower = username.toLowerCase();
-    if (lower.contains('admin')) {
-      role = UserRole.admin;
-    } else if (lower.contains('operator')) {
-      role = UserRole.operator;
-    } else if (lower.contains('kabag')) {
-      role = UserRole.kabagAset;
-    } else if (lower.contains('kadiv')) {
-      role = UserRole.kadiv;
-    } else if (lower.contains('staff')) {
-      role = UserRole.staffAset;
+    final userResult = await userRepository.getUserByUsername(username);
+    User user;
+    if (userResult is Success<User>) {
+      final found = userResult.data;
+      if (!found.isActive) {
+        return Result.failure(
+          const UnauthorizedFailure(
+            message: 'Akun Anda telah dinonaktifkan oleh Administrator. Silakan hubungi Admin.',
+          ),
+        );
+      }
+      user = found;
+    } else {
+      // Determine role based on username prefix for testing convenience
+      UserRole role = UserRole.pemohon;
+      final lower = username.toLowerCase();
+      if (lower.contains('admin')) {
+        role = UserRole.admin;
+      } else if (lower.contains('operator')) {
+        role = UserRole.operator;
+      } else if (lower.contains('kabag')) {
+        role = UserRole.kabagAset;
+      } else if (lower.contains('kadiv')) {
+        role = UserRole.kadiv;
+      } else if (lower.contains('staff')) {
+        role = UserRole.staffAset;
+      }
+
+      final userId = role == UserRole.pemohon
+          ? 'usr_pemohon'
+          : 'usr_${DateTime.now().millisecondsSinceEpoch}';
+
+      user = User(
+        id: userId,
+        username: username,
+        name: username.toUpperCase(),
+        email: '$lower@mutasiku.id',
+        role: role,
+        department: 'Aset & Logistik',
+        isActive: true,
+      );
     }
 
-    final userId = role == UserRole.pemohon
-        ? 'usr_pemohon'
-        : 'usr_${DateTime.now().millisecondsSinceEpoch}';
-
-    final user = User(
-      id: userId,
-      username: username,
-      name: username.toUpperCase(),
-      email: '$lower@mutasiku.id',
-      role: role,
-      department: 'Aset & Logistik',
-    );
-
     _currentUser = user;
-    await secureStorage.saveAuthToken('dummy_foundation_token_${user.id}');
+    await secureStorage.saveAuthToken('token_${user.id}');
     await secureStorage.saveUserId(user.id);
 
     return Result.success(user);
@@ -79,14 +101,19 @@ class AuthRepositoryImpl implements AuthRepository {
     final userId = await secureStorage.getUserId();
     if (userId == null) return Result.success(null);
 
-    _currentUser = User(
-      id: userId,
-      username: 'user_mutasiku',
-      name: 'User MutasiKu',
-      email: 'user@mutasiku.id',
-      role: UserRole.pemohon,
-      department: 'Umum',
-    );
+    final userResult = await userRepository.getUserById(userId);
+    if (userResult is Success<User>) {
+      _currentUser = userResult.data;
+    } else {
+      _currentUser = User(
+        id: userId,
+        username: 'user_mutasiku',
+        name: 'User MutasiKu',
+        email: 'user@mutasiku.id',
+        role: UserRole.pemohon,
+        department: 'Umum',
+      );
+    }
     return Result.success(_currentUser);
   }
 }

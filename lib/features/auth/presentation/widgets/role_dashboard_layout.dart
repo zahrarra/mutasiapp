@@ -11,21 +11,17 @@ import '../../../../app/theme/app_spacing.dart';
 import '../../../../core/providers/core_providers.dart';
 import '../../../../core/services/connectivity_service.dart';
 import '../../../../core/widgets/status_badge.dart';
-import '../../../notification/presentation/providers/notification_provider.dart';
+import '../../../../core/widgets/custom_floating_nav_bar.dart';
+import '../../domain/entities/user_role.dart';
 import '../providers/auth_provider.dart';
 
-/// Item navigasi bottom bar per role.
-class RoleNavItem {
-  final String label;
-  final IconData icon;
-
-  const RoleNavItem({required this.label, required this.icon});
-}
+/// Item navigasi bottom bar per role (alias untuk [CustomNavItem]).
+typedef RoleNavItem = CustomNavItem;
 
 /// Layout dashboard standar role MutasiKu.
 class RoleDashboardLayout extends ConsumerWidget {
   final String title;
-  final List<RoleNavItem> navItems;
+  final List<CustomNavItem>? navItems;
   final int selectedIndex;
   final ValueChanged<int>? onNavDestinationSelected;
   final Widget child;
@@ -33,7 +29,7 @@ class RoleDashboardLayout extends ConsumerWidget {
   const RoleDashboardLayout({
     super.key,
     required this.title,
-    required this.navItems,
+    this.navItems,
     this.selectedIndex = 0,
     this.onNavDestinationSelected,
     required this.child,
@@ -44,6 +40,8 @@ class RoleDashboardLayout extends ConsumerWidget {
     final authState = ref.watch(authStateProvider);
     final connectivityAsync = ref.watch(connectivityStatusProvider);
     final user = authState.user;
+    final activeNavItems = navItems ??
+        RoleNavConfig.getNavItemsForRole(user?.role ?? UserRole.operator);
 
     return Scaffold(
       appBar: AppBar(
@@ -59,7 +57,12 @@ class RoleDashboardLayout extends ConsumerWidget {
         ],
       ),
       body: SingleChildScrollView(
-        padding: const EdgeInsets.all(AppSpacing.md),
+        padding: const EdgeInsets.fromLTRB(
+          AppSpacing.md,
+          AppSpacing.md,
+          AppSpacing.md,
+          100,
+        ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -164,23 +167,17 @@ class RoleDashboardLayout extends ConsumerWidget {
           ],
         ),
       ),
-      bottomNavigationBar: NavigationBar(
-        selectedIndex: selectedIndex,
-        onDestinationSelected: onNavDestinationSelected,
-        destinations: navItems.map((item) {
-          final isNotif = item.label.toLowerCase() == 'notifikasi';
-          final unread = ref.watch(unreadNotificationCountProvider);
-
-          return NavigationDestination(
-            icon: isNotif
-                ? Badge(
-                    isLabelVisible: unread > 0,
-                    child: Icon(item.icon),
-                  )
-                : Icon(item.icon),
-            label: item.label,
-          );
-        }).toList(),
+      extendBody: true,
+      bottomNavigationBar: CustomFloatingNavBar.scaffoldBottomBar(
+        items: activeNavItems,
+        onItemTap: onNavDestinationSelected != null
+            ? (item) {
+                final idx = activeNavItems.indexOf(item);
+                if (idx != -1) {
+                  onNavDestinationSelected!(idx);
+                }
+              }
+            : null,
       ),
     );
   }

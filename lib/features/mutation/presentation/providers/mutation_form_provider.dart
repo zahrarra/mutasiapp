@@ -5,6 +5,11 @@
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../../core/errors/result.dart';
+import '../../../admin/data/repositories/location_repository_impl.dart';
+import '../../../admin/domain/entities/location_item.dart';
+import '../../../admin/domain/repositories/location_repository.dart';
+
 /// State form pengajuan mutasi.
 class MutationFormState {
   /// Nama aset yang akan dimutasi.
@@ -183,21 +188,95 @@ final mutationFormProvider =
       return MutationFormNotifier();
     });
 
-// ─── Mock Data untuk Dropdown ────────────────────────────────────────────────
+// ─── Master Data Lokasi ──────────────────────────────────────────────────────
 
-/// Daftar lokasi mock (production: dari API/master data).
+/// Provider untuk [LocationRepository].
+final locationRepositoryProvider = Provider<LocationRepository>((ref) {
+  return LocationRepositoryImpl.instance;
+});
+
+/// Notifier untuk manajemen master lokasi oleh Admin.
+class MasterLocationsNotifier
+    extends StateNotifier<AsyncValue<List<LocationItem>>> {
+  final LocationRepository _repository;
+
+  MasterLocationsNotifier(this._repository)
+      : super(AsyncValue.data(_repository.currentLocations)) {
+    loadLocations();
+  }
+
+  Future<void> loadLocations() async {
+    state = const AsyncValue.loading();
+    final result = await _repository.getAllLocations();
+    if (result is Success<List<LocationItem>>) {
+      state = AsyncValue.data(result.data);
+    } else if (result is AppFailure<List<LocationItem>>) {
+      state = AsyncValue.error(
+        result.failure.message ?? 'Terjadi kesalahan',
+        StackTrace.current,
+      );
+    }
+  }
+
+  Future<Result<LocationItem>> addLocation(LocationItem item) async {
+    final result = await _repository.addLocation(item);
+    if (result is Success<LocationItem>) {
+      await loadLocations();
+    }
+    return result;
+  }
+
+  Future<Result<LocationItem>> updateLocation(LocationItem item) async {
+    final result = await _repository.updateLocation(item);
+    if (result is Success<LocationItem>) {
+      await loadLocations();
+    }
+    return result;
+  }
+
+  Future<Result<void>> toggleActive(String id, bool isActive) async {
+    final result = await _repository.toggleLocationActive(id, isActive);
+    if (result is Success<void>) {
+      await loadLocations();
+    }
+    return result;
+  }
+
+  Future<Result<void>> deleteLocation(String id) async {
+    final result = await _repository.deleteLocation(id);
+    if (result is Success<void>) {
+      await loadLocations();
+    }
+    return result;
+  }
+}
+
+final masterLocationsProvider = StateNotifierProvider<
+    MasterLocationsNotifier, AsyncValue<List<LocationItem>>>((ref) {
+  final repo = ref.watch(locationRepositoryProvider);
+  return MasterLocationsNotifier(repo);
+});
+
+/// Daftar lokasi aktif untuk formulir pengajuan mutasi dan filter
 final availableLocationsProvider = Provider<List<String>>((ref) {
-  return [
-    'Lantai 1 — Lobby & Reception',
-    'Lantai 2 — Ruang Keuangan',
-    'Lantai 3 — Ruang IT Developer',
-    'Lantai 4 — Ruang Kadiv Aset',
-    'Lantai Server — Server Room B',
-    'Gedung A — Parkir Operasional',
-    'Cabang Surabaya',
-    'Cabang Bandung',
-    'Cabang Semarang',
-  ];
+  final locationsAsync = ref.watch(masterLocationsProvider);
+  return locationsAsync.maybeWhen(
+    data: (list) => list
+        .where((loc) => loc.isActive)
+        .map((loc) => loc.name)
+        .toList(),
+    orElse: () => [
+      'Lantai 1 — Lobby & Reception',
+      'Lantai 2 — Ruang Keuangan',
+      'Lantai 3 — Ruang IT Developer',
+      'Lantai 4 — Ruang Kadiv Aset',
+      'Lantai Server — Server Room B',
+      'Gedung A — Parkir Operasional',
+      'Cabang Surabaya',
+      'Cabang Bandung',
+      'Cabang Semarang',
+    ],
+  );
 });
 
 /// Daftar PIC mock (production: dari API/master data).

@@ -15,6 +15,7 @@ class User {
     required this.role,
     this.email,
     this.department,
+    this.isActive = true,
   });
 
   /// Identifier unik user (dari backend).
@@ -35,6 +36,9 @@ class User {
   /// Departemen user (opsional).
   final String? department;
 
+  /// Status aktif user (true = aktif, false = dinonaktifkan).
+  final bool isActive;
+
   /// Periksa apakah user memiliki permission tertentu melalui rolenya.
   bool hasPermission(UserPermission permission) => role.hasPermission(permission);
 
@@ -50,7 +54,8 @@ class User {
           name == other.name &&
           role == other.role &&
           email == other.email &&
-          department == other.department;
+          department == other.department &&
+          isActive == other.isActive;
 
   @override
   int get hashCode =>
@@ -59,7 +64,8 @@ class User {
       name.hashCode ^
       role.hashCode ^
       email.hashCode ^
-      department.hashCode;
+      department.hashCode ^
+      isActive.hashCode;
 
   // ─── Copy ─────────────────────────────────────────────────────────────────
 
@@ -70,6 +76,7 @@ class User {
     UserRole? role,
     String? email,
     String? department,
+    bool? isActive,
   }) {
     return User(
       id: id ?? this.id,
@@ -78,10 +85,11 @@ class User {
       role: role ?? this.role,
       email: email ?? this.email,
       department: department ?? this.department,
+      isActive: isActive ?? this.isActive,
     );
   }
 
   @override
   String toString() =>
-      'User(id: $id, username: $username, name: $name, role: ${role.displayName})';
+      'User(id: $id, username: $username, name: $name, role: ${role.displayName}, active: $isActive)';
 }

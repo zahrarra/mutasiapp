@@ -9,6 +9,8 @@ import 'package:go_router/go_router.dart';
 import '../../../../app/router/route_names.dart';
 import '../../../../app/theme/app_colors.dart';
 import '../../../../app/theme/app_spacing.dart';
+import '../../../auth/domain/entities/user_role.dart';
+import '../../../../core/widgets/custom_floating_nav_bar.dart';
 import '../../../mutation/domain/entities/mutation.dart';
 import '../providers/operator_verification_provider.dart';
 
@@ -47,6 +49,7 @@ class _OperatorMutationsScreenState
     final statusFilter = ref.watch(operatorStatusFilterProvider);
 
     return Scaffold(
+      extendBody: true,
       appBar: AppBar(
         title: const Text('Pengajuan Masuk'),
         leading: IconButton(
@@ -226,7 +229,12 @@ class _OperatorMutationsScreenState
                     ref.invalidate(operatorAllMutationsProvider);
                   },
                   child: ListView.separated(
-                    padding: const EdgeInsets.all(AppSpacing.md),
+                    padding: const EdgeInsets.fromLTRB(
+                      AppSpacing.md,
+                      AppSpacing.md,
+                      AppSpacing.md,
+                      100,
+                    ),
                     itemCount: mutations.length,
                     separatorBuilder: (_, _) =>
                         const SizedBox(height: AppSpacing.sm),
@@ -262,6 +270,9 @@ class _OperatorMutationsScreenState
             ),
           ),
         ],
+      ),
+      bottomNavigationBar: CustomFloatingNavBar.scaffoldBottomBar(
+        items: RoleNavConfig.getNavItemsForRole(UserRole.operator),
       ),
     );
   }

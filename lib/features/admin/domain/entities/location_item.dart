@@ -1,35 +1,35 @@
-// lib/features/asset/domain/entities/asset_category.dart
+// lib/features/admin/domain/entities/location_item.dart
 //
-// Entity domain: AssetCategory.
-// Sumber: PROJECT-SETUP.md, TECHNICAL-DESIGN.md.
+// Entity domain: Lokasi & Unit Kerja Master.
+// Sumber: PRD.md §5, ROLE-FLOW.md §2.
 
-class AssetCategory {
+class LocationItem {
   final String id;
-  final String code;
   final String name;
   final String? description;
+  final bool isBranch;
   final bool isActive;
 
-  const AssetCategory({
+  const LocationItem({
     required this.id,
-    required this.code,
     required this.name,
     this.description,
+    this.isBranch = false,
     this.isActive = true,
   });
 
-  AssetCategory copyWith({
+  LocationItem copyWith({
     String? id,
-    String? code,
     String? name,
     String? description,
+    bool? isBranch,
     bool? isActive,
   }) {
-    return AssetCategory(
+    return LocationItem(
       id: id ?? this.id,
-      code: code ?? this.code,
       name: name ?? this.name,
       description: description ?? this.description,
+      isBranch: isBranch ?? this.isBranch,
       isActive: isActive ?? this.isActive,
     );
   }
@@ -37,18 +37,23 @@ class AssetCategory {
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
-      other is AssetCategory &&
+      other is LocationItem &&
           runtimeType == other.runtimeType &&
           id == other.id &&
-          code == other.code &&
           name == other.name &&
+          description == other.description &&
+          isBranch == other.isBranch &&
           isActive == other.isActive;
 
   @override
   int get hashCode =>
-      id.hashCode ^ code.hashCode ^ name.hashCode ^ isActive.hashCode;
+      id.hashCode ^
+      name.hashCode ^
+      description.hashCode ^
+      isBranch.hashCode ^
+      isActive.hashCode;
 
   @override
   String toString() =>
-      'AssetCategory(id: $id, code: $code, name: $name, active: $isActive)';
+      'LocationItem(id: $id, name: $name, isBranch: $isBranch, active: $isActive)';
 }

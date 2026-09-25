@@ -10,6 +10,8 @@ import 'package:go_router/go_router.dart';
 import '../../../../app/router/route_names.dart';
 import '../../../../app/theme/app_colors.dart';
 import '../../../../app/theme/app_spacing.dart';
+import '../../../auth/domain/entities/user_role.dart';
+import '../../../../core/widgets/custom_floating_nav_bar.dart';
 import '../../../mutation/domain/entities/mutation.dart';
 import '../providers/staff_mutation_provider.dart';
 
@@ -38,6 +40,7 @@ class _StaffMutationListScreenState
     final sortOrder = ref.watch(staffSortOrderProvider);
 
     return Scaffold(
+      extendBody: true,
       appBar: AppBar(
         title: const Text('Antrian Pembaruan Aset'),
         leading: IconButton(
@@ -240,7 +243,12 @@ class _StaffMutationListScreenState
                     ref.invalidate(staffAllMutationsProvider);
                   },
                   child: ListView.separated(
-                    padding: const EdgeInsets.all(AppSpacing.md),
+                    padding: const EdgeInsets.fromLTRB(
+                      AppSpacing.md,
+                      AppSpacing.md,
+                      AppSpacing.md,
+                      100,
+                    ),
                     itemCount: mutations.length,
                     separatorBuilder: (_, _) =>
                         const SizedBox(height: AppSpacing.sm),
@@ -278,6 +286,9 @@ class _StaffMutationListScreenState
             ),
           ),
         ],
+      ),
+      bottomNavigationBar: CustomFloatingNavBar.scaffoldBottomBar(
+        items: RoleNavConfig.getNavItemsForRole(UserRole.staffAset),
       ),
     );
   }

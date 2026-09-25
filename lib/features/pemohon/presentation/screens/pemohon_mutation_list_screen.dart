@@ -16,7 +16,8 @@ import '../../../auth/presentation/providers/auth_provider.dart';
 import '../../../mutation/domain/entities/mutation.dart';
 import '../../../mutation/domain/entities/mutation_status.dart';
 import '../../../mutation/presentation/providers/mutation_provider.dart';
-import '../../../notification/presentation/providers/notification_provider.dart';
+import '../../../auth/domain/entities/user_role.dart';
+import '../../../../core/widgets/custom_floating_nav_bar.dart';
 import '../widgets/mutation_filter_bottom_sheet.dart';
 import '../widgets/pemohon_mutation_card.dart';
 
@@ -207,7 +208,6 @@ class _PemohonMutationListScreenState
     final asyncList = ref.watch(mutationListProvider);
     final authState = ref.watch(authStateProvider);
     final user = authState.user;
-    final unreadCount = ref.watch(unreadNotificationCountProvider);
 
     return Scaffold(
       backgroundColor: const Color(0xFFF6F8FA),
@@ -400,60 +400,9 @@ class _PemohonMutationListScreenState
         ),
       ),
 
-      // ── Bottom Navigation Bar ───────────────────────────────────────
-      bottomNavigationBar: Container(
-        decoration: const BoxDecoration(
-          color: Colors.white,
-          border: Border(
-            top: BorderSide(color: Color(0xFFE4E7EC), width: 1),
-          ),
-          boxShadow: [
-            BoxShadow(
-              color: Color(0x0A000000),
-              blurRadius: 8,
-              offset: Offset(0, -1),
-            ),
-          ],
-        ),
-        child: SafeArea(
-          child: SizedBox(
-            height: 60,
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceAround,
-              children: [
-                _navItem(
-                  icon: Icons.dashboard_outlined,
-                  selectedIcon: Icons.dashboard,
-                  label: 'Beranda',
-                  isSelected: false,
-                  onTap: () => _handleBack(context),
-                ),
-                _navItem(
-                  icon: Icons.swap_horiz,
-                  selectedIcon: Icons.swap_horiz,
-                  label: 'Mutasi',
-                  isSelected: true,
-                  onTap: () {},
-                ),
-                _navItem(
-                  icon: Icons.notifications_outlined,
-                  selectedIcon: Icons.notifications,
-                  label: 'Notifikasi',
-                  isSelected: false,
-                  badgeCount: unreadCount,
-                  onTap: () => _safePush(context, RouteNames.pemohonNotificationsPath),
-                ),
-                _navItem(
-                  icon: Icons.account_circle_outlined,
-                  selectedIcon: Icons.account_circle,
-                  label: 'Profil',
-                  isSelected: false,
-                  onTap: () => _safePush(context, RouteNames.pemohonProfilePath),
-                ),
-              ],
-            ),
-          ),
-        ),
+      extendBody: true,
+      bottomNavigationBar: CustomFloatingNavBar.scaffoldBottomBar(
+        items: RoleNavConfig.getNavItemsForRole(UserRole.pemohon),
       ),
 
       body: asyncList.when(
@@ -946,79 +895,6 @@ class _PemohonMutationListScreenState
                           ? const Color(0xFFB45309)
                           : const Color(0xFF00273A)),
                 ),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _navItem({
-    required IconData icon,
-    required IconData selectedIcon,
-    required String label,
-    required bool isSelected,
-    required VoidCallback onTap,
-    int badgeCount = 0,
-  }) {
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(8),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Stack(
-              clipBehavior: Clip.none,
-              children: [
-                if (isSelected)
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 12,
-                      vertical: 2,
-                    ),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFE1F0FF),
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Icon(
-                      selectedIcon,
-                      size: 22,
-                      color: const Color(0xFF00273A),
-                    ),
-                  )
-                else
-                  Icon(
-                    icon,
-                    size: 22,
-                    color: const Color(0xFF52606D),
-                  ),
-                if (badgeCount > 0)
-                  Positioned(
-                    top: -2,
-                    right: -4,
-                    child: Container(
-                      width: 8,
-                      height: 8,
-                      decoration: const BoxDecoration(
-                        color: Color(0xFFB42318),
-                        shape: BoxShape.circle,
-                      ),
-                    ),
-                  ),
-              ],
-            ),
-            const SizedBox(height: 2),
-            Text(
-              label,
-              style: TextStyle(
-                fontSize: 10,
-                fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
-                color: isSelected
-                    ? const Color(0xFF00273A)
-                    : const Color(0xFF52606D),
               ),
             ),
           ],

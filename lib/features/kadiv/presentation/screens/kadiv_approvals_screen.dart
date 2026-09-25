@@ -9,6 +9,8 @@ import 'package:go_router/go_router.dart';
 import '../../../../app/router/route_names.dart';
 import '../../../../app/theme/app_colors.dart';
 import '../../../../app/theme/app_spacing.dart';
+import '../../../auth/domain/entities/user_role.dart';
+import '../../../../core/widgets/custom_floating_nav_bar.dart';
 import '../../../mutation/domain/entities/mutation.dart';
 import '../providers/kadiv_approval_provider.dart';
 
@@ -36,6 +38,7 @@ class _KadivApprovalsScreenState extends ConsumerState<KadivApprovalsScreen> {
     final sortOrder = ref.watch(kadivSortOrderProvider);
 
     return Scaffold(
+      extendBody: true,
       appBar: AppBar(
         title: const Text('Approval Kadiv'),
         leading: IconButton(
@@ -211,7 +214,12 @@ class _KadivApprovalsScreenState extends ConsumerState<KadivApprovalsScreen> {
                     ref.invalidate(kadivAllMutationsProvider);
                   },
                   child: ListView.separated(
-                    padding: const EdgeInsets.all(AppSpacing.md),
+                    padding: const EdgeInsets.fromLTRB(
+                      AppSpacing.md,
+                      AppSpacing.md,
+                      AppSpacing.md,
+                      100,
+                    ),
                     itemCount: mutations.length,
                     separatorBuilder: (_, _) =>
                         const SizedBox(height: AppSpacing.sm),
@@ -247,6 +255,9 @@ class _KadivApprovalsScreenState extends ConsumerState<KadivApprovalsScreen> {
             ),
           ),
         ],
+      ),
+      bottomNavigationBar: CustomFloatingNavBar.scaffoldBottomBar(
+        items: RoleNavConfig.getNavItemsForRole(UserRole.kadiv),
       ),
     );
   }

@@ -27,26 +27,6 @@ class StaffAsetDashboardScreen extends ConsumerWidget {
 
     return RoleDashboardLayout(
       title: 'Dashboard Staff Aset',
-      selectedIndex: 0,
-      onNavDestinationSelected: (index) {
-        switch (index) {
-          case 1:
-            context.push(RouteNames.staffMutationsPath);
-            break;
-          case 2:
-            context.push(RouteNames.staffNotificationsPath);
-            break;
-          case 3:
-            context.push(RouteNames.profilePath);
-            break;
-        }
-      },
-      navItems: const [
-        RoleNavItem(label: 'Home', icon: Icons.home_outlined),
-        RoleNavItem(label: 'Update Aset', icon: Icons.edit_location_alt_outlined),
-        RoleNavItem(label: 'Notifikasi', icon: Icons.notifications_outlined),
-        RoleNavItem(label: 'Profil', icon: Icons.person_outline),
-      ],
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
