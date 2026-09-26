@@ -8,6 +8,7 @@
 // - Menyediakan hook pengujian (testPicker) untuk widget/unit test tanpa flakiness
 
 import 'dart:io';
+
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
@@ -43,13 +44,11 @@ class DocumentPickerResult {
   final String? errorMessage;
 
   const DocumentPickerResult.success(PickedDocument this.document)
-      : errorMessage = null;
+    : errorMessage = null;
 
   const DocumentPickerResult.failure(this.errorMessage) : document = null;
 
-  const DocumentPickerResult.canceled()
-      : document = null,
-        errorMessage = null;
+  const DocumentPickerResult.canceled() : document = null, errorMessage = null;
 
   bool get isSuccess => document != null;
   bool get isFailure => errorMessage != null;
@@ -81,7 +80,7 @@ class DocumentPickerService {
     }
 
     try {
-      FilePickerResult? result;
+      var result;
 
       if (kIsWeb) {
         // Coba FilePicker platform terlebih dahulu di Web
@@ -208,12 +207,7 @@ class DocumentPickerService {
       }
 
       return DocumentPickerResult.success(
-        PickedDocument(
-          name: name,
-          size: size,
-          bytes: bytes,
-          path: null,
-        ),
+        PickedDocument(name: name, size: size, bytes: bytes, path: null),
       );
     } catch (e) {
       return DocumentPickerResult.failure('Gagal memilih file di browser: $e');

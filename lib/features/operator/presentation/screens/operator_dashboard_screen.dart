@@ -1,8 +1,7 @@
 // lib/features/operator/presentation/screens/operator_dashboard_screen.dart
 //
-// Dashboard Screen untuk Role: Operator (OPR-001).
-// Sumber: ROLE-FLOW.md §4, SCREEN-SPEC.md OPR-001.
-// UI: Premium Stitch design — hero 2-col action cards, improved recent list.
+// Dashboard Operator — UI mengikuti Stitch (greeting, search, hero cards,
+// kategori, list verifikasi, floating nav lewat RoleDashboardLayout).
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -15,24 +14,64 @@ import '../../../mutation/domain/entities/mutation.dart';
 import '../../../mutation/domain/entities/mutation_status.dart';
 import '../providers/operator_verification_provider.dart';
 
-/// Warna lokal — mengikuti Stitch design tokens.
 class _C {
   static const navy = Color(0xFF0F3D56);
+  static const darkCard = Color(0xFF082838);
   static const teal = Color(0xFF0F766E);
-  static const surface = Color(0xFFFFFFFF);
   static const textPrimary = Color(0xFF172B4D);
   static const textSecondary = Color(0xFF52606D);
   static const border = Color(0xFFE2E8F0);
-  static const error = Color(0xFFEF4444);
+  static const surface = Color(0xFFFFFFFF);
 }
 
-class OperatorDashboardScreen extends ConsumerWidget {
+class OperatorDashboardScreen extends ConsumerStatefulWidget {
   const OperatorDashboardScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final authState = ref.watch(authStateProvider);
-    final userName = authState.user?.name ?? 'Operator';
+  ConsumerState<OperatorDashboardScreen> createState() =>
+      _OperatorDashboardScreenState();
+}
+
+class _OperatorDashboardScreenState
+    extends ConsumerState<OperatorDashboardScreen> {
+  final _searchController = TextEditingController();
+  String _query = '';
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
+
+  List<Mutation> _filter(List<Mutation> list) {
+    final q = _query.trim().toLowerCase();
+    var result = list.where((m) => m.status == MutationStatus.submitted);
+    if (q.isEmpty) return result.toList();
+    return result.where((m) {
+      final ticket = m.ticketNumber.toLowerCase();
+      final asset = m.asset.name.toLowerCase();
+      final code = m.asset.assetCode.toLowerCase();
+      final name = m.applicantName.toLowerCase();
+      return ticket.contains(q) ||
+          asset.contains(q) ||
+          code.contains(q) ||
+          name.contains(q);
+    }).toList();
+  }
+
+  String _initials(String name) {
+    final parts = name.trim().split(RegExp(r'\s+'));
+    if (parts.isEmpty || parts.first.isEmpty) return '?';
+    if (parts.length == 1) {
+      return parts.first.substring(0, 1).toUpperCase();
+    }
+    return (parts[0][0] + parts[1][0]).toUpperCase();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final user = ref.watch(authStateProvider).user;
+    final userName = user?.name ?? 'Operator';
     final stats = ref.watch(verificationStatsProvider);
     final asyncMutations = ref.watch(operatorAllMutationsProvider);
 
@@ -41,242 +80,270 @@ class OperatorDashboardScreen extends ConsumerWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // ── Greeting ──────────────────────────────────────────────────
-          Text(
-            'Halo, $userName! 👋',
-            style: const TextStyle(
-              fontSize: 22,
-              fontWeight: FontWeight.w700,
-              color: _C.textPrimary,
-              height: 1.2,
+            // ── Greeting ─────────────────────────────────────────────
+            Text(
+              'Halo, $userName!',
+              style: const TextStyle(
+                fontSize: 24,
+                fontWeight: FontWeight.w800,
+                color: _C.textPrimary,
+                letterSpacing: -0.3,
+              ),
             ),
-          ),
-          const SizedBox(height: 4),
-          const Text(
-            'Verifikasi & Periksa Mutasi Aset',
-            style: TextStyle(
-              fontSize: 13,
-              color: _C.textSecondary,
-              fontWeight: FontWeight.w500,
+            const SizedBox(height: 2),
+            const Text(
+              'Verifikasi & Periksa Mutasi Aset',
+              style: TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.w500,
+                color: _C.textSecondary,
+              ),
             ),
-          ),
-          const SizedBox(height: 20),
+            const SizedBox(height: 16),
 
-          // ── Hero Action Cards (2-kolom) ────────────────────────────────
-          Row(
-            children: [
-              // Card 1: Pengajuan Masuk (teal)
-              Expanded(
-                child: _HeroCard(
-                  key: const Key('hero_pengajuan_masuk'),
-                  icon: Icons.assignment_outlined,
-                  title: 'Pengajuan Masuk',
-                  subtitle: 'Perlu diverifikasi segera',
-                  badgeText: '${stats.pendingCount} Menunggu',
-                  badgeColor: Colors.white.withValues(alpha: 0.25),
-                  badgeTextColor: Colors.white,
-                  gradient: const LinearGradient(
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                    colors: [Color(0xFF0F766E), Color(0xFF0D9488)],
+            // ── Search (benar-benar filter list di bawah) ─────────────
+            TextField(
+              controller: _searchController,
+              onChanged: (v) => setState(() => _query = v),
+              style: const TextStyle(fontSize: 13, color: _C.textPrimary),
+              decoration: InputDecoration(
+                hintText: 'Cari No. Tiket, Kode Aset, Pemohon...',
+                hintStyle: TextStyle(
+                  fontSize: 12,
+                  color: _C.textSecondary.withValues(alpha: 0.7),
+                ),
+                prefixIcon: const Icon(Icons.search, color: _C.textSecondary),
+                filled: true,
+                fillColor: _C.surface,
+                contentPadding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 14,
+                ),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(16),
+                  borderSide: const BorderSide(color: _C.border),
+                ),
+                enabledBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(16),
+                  borderSide: const BorderSide(color: _C.border),
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(16),
+                  borderSide: const BorderSide(color: _C.teal, width: 2),
+                ),
+              ),
+            ),
+            const SizedBox(height: 16),
+
+            // ── Hero cards 2 kolom ───────────────────────────────────
+            Row(
+              children: [
+                Expanded(
+                  child: _HeroCard(
+                    title: 'Pengajuan Masuk',
+                    subtitle: 'Perlu diverifikasi segera',
+                    badge: '${stats.pendingCount} Menunggu',
+                    icon: Icons.fact_check_outlined,
+                    background: _C.teal,
+                    onTap: () => context.push(RouteNames.operatorMutationsPath),
                   ),
-                  glowColor: const Color(0xFF0F766E),
-                  onTap: () => context.push(RouteNames.operatorMutationsPath),
                 ),
-              ),
-              const SizedBox(width: 12),
-              // Card 2: Riwayat Verifikasi (navy)
-              Expanded(
-                child: _HeroCard(
-                  key: const Key('hero_riwayat_verifikasi'),
-                  icon: Icons.history_rounded,
-                  title: 'Dikembalikan',
-                  subtitle: 'Perlu tindak lanjut',
-                  badgeText: '${stats.returnedCount} Item',
-                  badgeColor: Colors.white.withValues(alpha: 0.15),
-                  badgeTextColor: const Color(0xFF6EE7B7),
-                  gradient: const LinearGradient(
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                    colors: [Color(0xFF0F3D56), Color(0xFF1A5276)],
+                const SizedBox(width: 12),
+                Expanded(
+                  child: _HeroCard(
+                    title: 'Riwayat Verifikasi',
+                    subtitle: 'Sudah diproses',
+                    badge: '${stats.waitingKabagCount} Menunggu',
+                    icon: Icons.history_rounded,
+                    background: _C.darkCard,
+                    badgeHighlight: true,
+                    onTap: () {
+                      // Pakai history path jika ada di router; fallback list
+                      try {
+                        context.push(RouteNames.operatorHistoryPath);
+                      } catch (_) {
+                        context.push(RouteNames.operatorMutationsPath);
+                      }
+                    },
                   ),
-                  glowColor: const Color(0xFF0F3D56),
-                  onTap: () => context.push(RouteNames.operatorMutationsPath),
                 ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 20),
-
-          // ── Primary Action Button ─────────────────────────────────────
-          SizedBox(
-            width: double.infinity,
-            child: ElevatedButton.icon(
-              key: const Key('btn_lihat_pengajuan'),
-              onPressed: () => context.push(RouteNames.operatorMutationsPath),
-              icon: const Icon(Icons.fact_check_outlined, size: 18),
-              label: const Text(
-                'Lihat Pengajuan Masuk',
-                style: TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
-              ),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: _C.navy,
-                foregroundColor: Colors.white,
-                padding:
-                    const EdgeInsets.symmetric(vertical: 14, horizontal: 20),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(14),
-                ),
-                elevation: 0,
-              ),
+              ],
             ),
-          ),
-          const SizedBox(height: 24),
+            const SizedBox(height: 20),
 
-          // ── Pengajuan Terbaru ─────────────────────────────────────────
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              const Text(
-                'Pengajuan Terbaru',
-                style: TextStyle(
-                  fontSize: 15,
-                  fontWeight: FontWeight.w700,
-                  color: _C.textPrimary,
-                ),
-              ),
-              GestureDetector(
-                onTap: () => context.push(RouteNames.operatorMutationsPath),
-                child: const Text(
-                  'Lihat Semua →',
+            // ── Kategori (opsional / visual; tap → list) ──────────────
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const Text(
+                  'KATEGORI ASET PRIORITAS',
                   style: TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w600,
+                    fontSize: 11,
+                    fontWeight: FontWeight.w700,
+                    letterSpacing: 0.8,
+                    color: _C.textSecondary,
+                  ),
+                ),
+                GestureDetector(
+                  onTap: () => context.push(RouteNames.operatorMutationsPath),
+                  child: const Text(
+                    'Filter Lengkap',
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                      color: _C.teal,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 10),
+            Row(
+              children: [
+                Expanded(
+                  child: _CategoryChip(
+                    icon: Icons.laptop_mac,
+                    iconBg: const Color(0xFFEFF6FF),
+                    iconColor: const Color(0xFF1D4ED8),
+                    title: 'Laptop & PC',
+                    subtitle: 'Antrian verifikasi',
+                    onTap: () => context.push(RouteNames.operatorMutationsPath),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: _CategoryChip(
+                    icon: Icons.print_outlined,
+                    iconBg: const Color(0xFFECFDF5),
+                    iconColor: const Color(0xFF047857),
+                    title: 'Printer & Scan',
+                    subtitle: 'Antrian verifikasi',
+                    onTap: () => context.push(RouteNames.operatorMutationsPath),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 20),
+
+            // ── List pengajuan perlu verifikasi ──────────────────────
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const Text(
+                  'Pengajuan Perlu Verifikasi',
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w700,
+                    color: _C.textPrimary,
+                  ),
+                ),
+                GestureDetector(
+                  onTap: () => context.push(RouteNames.operatorMutationsPath),
+                  child: const Row(
+                    children: [
+                      Text(
+                        'Lihat Semua',
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w700,
+                          color: _C.teal,
+                        ),
+                      ),
+                      Icon(Icons.chevron_right, size: 16, color: _C.teal),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+
+            asyncMutations.when(
+              loading: () => const Padding(
+                padding: EdgeInsets.all(32),
+                child: Center(
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
                     color: _C.teal,
                   ),
                 ),
               ),
-            ],
-          ),
-          const SizedBox(height: 12),
-
-          asyncMutations.when(
-            data: (mutations) {
-              final incomingList = mutations
-                  .where((m) => m.status == MutationStatus.submitted)
-                  .take(5)
-                  .toList();
-
-              if (incomingList.isEmpty) {
-                return _buildEmptyState();
-              }
-
-              return Column(
-                children: incomingList
-                    .map((item) => Padding(
-                          padding: const EdgeInsets.only(bottom: 10),
-                          child: _RecentCard(
-                            mutation: item,
-                            onTap: () => context
-                                .push('/operator/mutations/${item.id}'),
-                          ),
-                        ))
-                    .toList(),
-              );
-            },
-            loading: () => const Center(
-              child: Padding(
-                padding: EdgeInsets.all(32),
-                child: CircularProgressIndicator(
-                  strokeWidth: 2,
-                  color: _C.teal,
-                ),
+              error: (e, _) => Text(
+                'Gagal memuat: $e',
+                style: const TextStyle(color: Colors.red),
               ),
-            ),
-            error: (err, _) => Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: const Color(0xFFFEF2F2),
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: const Color(0xFFFECACA)),
-              ),
-              child: Row(
-                children: [
-                  const Icon(Icons.error_outline, color: _C.error, size: 18),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: Text(
-                      'Gagal memuat pengajuan: $err',
-                      style: const TextStyle(
-                        color: _C.error,
-                        fontSize: 13,
-                      ),
+              data: (all) {
+                final list = _filter(all).take(10).toList();
+                if (list.isEmpty) {
+                  return Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.symmetric(vertical: 36),
+                    decoration: BoxDecoration(
+                      color: _C.surface,
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(color: _C.border),
                     ),
-                  ),
-                ],
-              ),
+                    child: const Column(
+                      children: [
+                        Icon(Icons.inbox_outlined, size: 40, color: _C.border),
+                        SizedBox(height: 8),
+                        Text(
+                          'Tidak ada pengajuan menunggu',
+                          style: TextStyle(
+                            fontWeight: FontWeight.w600,
+                            color: _C.textSecondary,
+                          ),
+                        ),
+                      ],
+                    ),
+                  );
+                }
+                return Column(
+                  children: list
+                      .map(
+                        (m) => Padding(
+                          padding: const EdgeInsets.only(bottom: 12),
+                          child: _QueueCard(
+                            mutation: m,
+                            initials: _initials(m.applicantName),
+                            onInspect: () {
+                              context.push(
+                                RouteNames.operatorVerificationDetailPath
+                                    .replaceFirst(':id', m.id),
+                              );
+                            },
+                          ),
+                        ),
+                      )
+                      .toList(),
+                );
+              },
             ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildEmptyState() {
-    return Container(
-      padding: const EdgeInsets.symmetric(vertical: 40, horizontal: 24),
-      decoration: BoxDecoration(
-        color: _C.surface,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: _C.border),
-      ),
-      child: const Column(
-        children: [
-          Icon(Icons.inbox_outlined, size: 44, color: _C.border),
-          SizedBox(height: 12),
-          Text(
-            'Belum ada pengajuan masuk',
-            style: TextStyle(
-              fontSize: 14,
-              fontWeight: FontWeight.w600,
-              color: _C.textSecondary,
-            ),
-          ),
-          SizedBox(height: 4),
-          Text(
-            'Pengajuan baru akan muncul di sini',
-            style: TextStyle(fontSize: 12, color: _C.textSecondary),
-          ),
-        ],
-      ),
-    );
+          ],
+        ),
+      );
   }
 }
 
-/// Hero card dengan gradient background (2-kolom).
-class _HeroCard extends StatelessWidget {
-  final IconData icon;
-  final String title;
-  final String subtitle;
-  final String badgeText;
-  final Color badgeColor;
-  final Color badgeTextColor;
-  final LinearGradient gradient;
-  final Color glowColor;
-  final VoidCallback onTap;
+// ─── Widgets ───────────────────────────────────────────────────────────────
 
+class _HeroCard extends StatelessWidget {
   const _HeroCard({
-    super.key,
-    required this.icon,
     required this.title,
     required this.subtitle,
-    required this.badgeText,
-    required this.badgeColor,
-    required this.badgeTextColor,
-    required this.gradient,
-    required this.glowColor,
+    required this.badge,
+    required this.icon,
+    required this.background,
     required this.onTap,
+    this.badgeHighlight = false,
   });
+
+  final String title;
+  final String subtitle;
+  final String badge;
+  final IconData icon;
+  final Color background;
+  final VoidCallback onTap;
+  final bool badgeHighlight;
 
   @override
   Widget build(BuildContext context) {
@@ -285,229 +352,353 @@ class _HeroCard extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          gradient: gradient,
-          borderRadius: BorderRadius.circular(20),
+          color: background,
+          borderRadius: BorderRadius.circular(24),
           boxShadow: [
             BoxShadow(
-              color: glowColor.withValues(alpha: 0.30),
+              color: background.withValues(alpha: 0.25),
               blurRadius: 16,
               offset: const Offset(0, 6),
             ),
           ],
         ),
         child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Icon container
-            Container(
-              width: 40,
-              height: 40,
-              decoration: BoxDecoration(
-                color: Colors.white.withValues(alpha: 0.15),
-                borderRadius: BorderRadius.circular(12),
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Container(
+                width: 40,
+                height: 40,
+                decoration: BoxDecoration(
+                  color: Colors.white.withValues(alpha: 0.15),
+                  borderRadius: BorderRadius.circular(14),
+                ),
+                child: Icon(icon, color: Colors.white, size: 20),
               ),
-              child: Icon(icon, color: Colors.white, size: 20),
-            ),
-            const SizedBox(height: 12),
-            // Title
-            Text(
-              title,
-              style: const TextStyle(
-                fontSize: 14,
-                fontWeight: FontWeight.w700,
-                color: Colors.white,
-                height: 1.2,
+              const SizedBox(height: 12),
+              Text(
+                title,
+                style: const TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w700,
+                  color: Colors.white,
+                ),
               ),
-            ),
-            const SizedBox(height: 3),
-            Text(
-              subtitle,
-              style: TextStyle(
-                fontSize: 11,
-                color: Colors.white.withValues(alpha: 0.75),
+              const SizedBox(height: 2),
+              Text(
+                subtitle,
+                style: TextStyle(
+                  fontSize: 11,
+                  color: Colors.white.withValues(alpha: 0.75),
+                ),
               ),
-            ),
-            const SizedBox(height: 12),
-            // Divider
-            Divider(
-              height: 1,
-              color: Colors.white.withValues(alpha: 0.20),
-            ),
-            const SizedBox(height: 10),
-            // Badge + arrow
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 8,
-                    vertical: 3,
-                  ),
-                  decoration: BoxDecoration(
-                    color: badgeColor,
-                    borderRadius: BorderRadius.circular(999),
-                  ),
-                  child: Text(
-                    badgeText,
-                    style: TextStyle(
-                      fontSize: 10,
-                      fontWeight: FontWeight.w600,
-                      color: badgeTextColor,
+              const SizedBox(height: 12),
+              Divider(height: 1, color: Colors.white.withValues(alpha: 0.15)),
+              const SizedBox(height: 10),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 3,
+                    ),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withValues(alpha: 0.18),
+                      borderRadius: BorderRadius.circular(999),
+                    ),
+                    child: Text(
+                      badge,
+                      style: TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w600,
+                        color: badgeHighlight
+                            ? const Color(0xFF6EE7B7)
+                            : Colors.white,
+                      ),
                     ),
                   ),
-                ),
-                Icon(
-                  Icons.arrow_forward_rounded,
-                  size: 14,
-                  color: Colors.white.withValues(alpha: 0.60),
-                ),
-              ],
-            ),
-          ],
+                  Icon(
+                    Icons.chevron_right,
+                    size: 16,
+                    color: Colors.white.withValues(alpha: 0.7),
+                  ),
+                ],
+              ),
+            ],
+          ),
         ),
-      ),
-    );
+      );
   }
 }
 
-/// Card item mutasi terbaru untuk dashboard Operator.
-class _RecentCard extends StatelessWidget {
-  final Mutation mutation;
-  final VoidCallback? onTap;
+class _CategoryChip extends StatelessWidget {
+  const _CategoryChip({
+    required this.icon,
+    required this.iconBg,
+    required this.iconColor,
+    required this.title,
+    required this.subtitle,
+    required this.onTap,
+  });
 
-  const _RecentCard({required this.mutation, this.onTap});
+  final IconData icon;
+  final Color iconBg;
+  final Color iconColor;
+  final String title;
+  final String subtitle;
+  final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        padding: const EdgeInsets.all(14),
+        padding: const EdgeInsets.all(12),
         decoration: BoxDecoration(
           color: _C.surface,
-          borderRadius: BorderRadius.circular(14),
+          borderRadius: BorderRadius.circular(16),
           border: Border.all(color: _C.border),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.04),
-              blurRadius: 8,
-              offset: const Offset(0, 2),
-            ),
-          ],
         ),
-        child: Row(
-          children: [
-            // Left accent
-            Container(
-              width: 3,
-              height: 44,
-              decoration: BoxDecoration(
-                color: _C.teal,
-                borderRadius: BorderRadius.circular(999),
+          child: Row(
+            children: [
+              Container(
+                width: 40,
+                height: 40,
+                decoration: BoxDecoration(
+                  color: iconBg,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Icon(icon, color: iconColor, size: 20),
               ),
-            ),
-            const SizedBox(width: 12),
-            // Content
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text(
-                        mutation.ticketNumber,
-                        style: const TextStyle(
-                          fontSize: 11,
-                          fontWeight: FontWeight.w700,
-                          fontFamily: 'monospace',
-                          color: _C.navy,
-                        ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      title,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w700,
+                        color: _C.textPrimary,
                       ),
-                      _StatusPill(status: mutation.status),
-                    ],
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    mutation.asset.name,
-                    style: const TextStyle(
-                      fontSize: 13,
-                      fontWeight: FontWeight.w600,
-                      color: _C.textPrimary,
                     ),
+                    Text(
+                      subtitle,
+                      style: const TextStyle(
+                        fontSize: 11,
+                        color: _C.textSecondary,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+  }
+}
+
+class _QueueCard extends StatelessWidget {
+  const _QueueCard({
+    required this.mutation,
+    required this.initials,
+    required this.onInspect,
+  });
+
+  final Mutation mutation;
+  final String initials;
+  final VoidCallback onInspect;
+
+  @override
+  Widget build(BuildContext context) {
+    final m = mutation;
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: _C.surface,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: _C.border),
+        boxShadow: [
+          BoxShadow(
+            color: _C.navy.withValues(alpha: 0.05),
+            blurRadius: 12,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFF1F5F9),
+                  borderRadius: BorderRadius.circular(6),
+                  border: Border.all(color: const Color(0xFFE2E8F0)),
+                ),
+                child: Text(
+                  m.ticketNumber,
+                  style: const TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w700,
+                    fontFamily: 'monospace',
+                    color: _C.navy,
+                  ),
+                ),
+              ),
+              const Spacer(),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFFFFBEB),
+                  borderRadius: BorderRadius.circular(999),
+                  border: Border.all(color: const Color(0xFFFDE68A)),
+                ),
+                child: const Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(Icons.circle, size: 6, color: Color(0xFFF59E0B)),
+                    SizedBox(width: 4),
+                    Text(
+                      'Menunggu Verifikasi',
+                      style: TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w600,
+                        color: Color(0xFFB45309),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              CircleAvatar(
+                radius: 20,
+                backgroundColor: const Color(0xFFCCFBF1),
+                child: Text(
+                  initials,
+                  style: const TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w700,
+                    color: Color(0xFF115E59),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      m.applicantName,
+                      style: const TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w700,
+                        color: _C.textPrimary,
+                      ),
+                    ),
+                    Text(
+                      m.asset.name,
+                      style: const TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                        color: _C.navy,
+                      ),
+                    ),
+                    Text(
+                      'Kode: ${m.asset.assetCode}',
+                      style: const TextStyle(
+                        fontSize: 10,
+                        fontFamily: 'monospace',
+                        color: _C.textSecondary,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+            decoration: BoxDecoration(
+              color: const Color(0xFFF8FAFC),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: const Color(0xFFF1F5F9)),
+            ),
+            child: Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    m.currentLocation,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    'Pemohon: ${mutation.applicantName}',
                     style: const TextStyle(
                       fontSize: 11,
                       color: _C.textSecondary,
                     ),
                   ),
+                ),
+                const Padding(
+                  padding: EdgeInsets.symmetric(horizontal: 6),
+                  child: Icon(Icons.arrow_forward, size: 14, color: _C.teal),
+                ),
+                Expanded(
+                  child: Text(
+                    m.targetLocation,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    textAlign: TextAlign.right,
+                    style: const TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w700,
+                      color: _C.navy,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 10),
+          Align(
+            alignment: Alignment.centerRight,
+            child: OutlinedButton(
+              onPressed: onInspect,
+              style: OutlinedButton.styleFrom(
+                foregroundColor: _C.navy,
+                side: const BorderSide(color: _C.navy, width: 1.5),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 14,
+                  vertical: 8,
+                ),
+              ),
+              child: const Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    'Periksa Dokumen',
+                    style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700),
+                  ),
+                  SizedBox(width: 4),
+                  Icon(Icons.chevron_right, size: 16),
                 ],
               ),
             ),
-            const SizedBox(width: 8),
-            const Icon(
-              Icons.chevron_right_rounded,
-              size: 18,
-              color: _C.border,
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _StatusPill extends StatelessWidget {
-  final MutationStatus status;
-
-  const _StatusPill({required this.status});
-
-  @override
-  Widget build(BuildContext context) {
-    Color bg;
-    Color fg;
-    String label;
-
-    switch (status) {
-      case MutationStatus.submitted:
-        bg = const Color(0xFFEFF6FF);
-        fg = const Color(0xFF3B82F6);
-        label = 'Masuk';
-        break;
-      case MutationStatus.returned:
-        bg = const Color(0xFFFEF3C7);
-        fg = const Color(0xFFD97706);
-        label = 'Dikembalikan';
-        break;
-      case MutationStatus.verified:
-        bg = const Color(0xFFECFDF5);
-        fg = const Color(0xFF10B981);
-        label = 'Terverifikasi';
-        break;
-      default:
-        bg = const Color(0xFFF1F5F9);
-        fg = const Color(0xFF52606D);
-        label = status.displayName;
-    }
-
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-      decoration: BoxDecoration(
-        color: bg,
-        borderRadius: BorderRadius.circular(999),
-      ),
-      child: Text(
-        label,
-        style: TextStyle(
-          fontSize: 10,
-          fontWeight: FontWeight.w600,
-          color: fg,
-        ),
+          ),
+        ],
       ),
     );
   }
