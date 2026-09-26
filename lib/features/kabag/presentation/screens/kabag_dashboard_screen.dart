@@ -2,19 +2,33 @@
 //
 // Dashboard Screen untuk Role: Kabag Aset (KBG-001).
 // Sumber: ROLE-FLOW.md §5, SCREEN-SPEC.md KBG-001, WIREFRAME.md §7.
+// UI: Premium Stitch design — stat cards dengan icon pill, hero CTA, recent list.
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../app/router/route_names.dart';
-import '../../../../app/theme/app_colors.dart';
-import '../../../../app/theme/app_spacing.dart';
 import '../../../auth/presentation/providers/auth_provider.dart';
 import '../../../auth/presentation/widgets/role_dashboard_layout.dart';
 import '../../../mutation/domain/entities/mutation.dart';
 import '../../../mutation/domain/entities/mutation_status.dart';
 import '../providers/kabag_approval_provider.dart';
+
+class _C {
+  static const navy = Color(0xFF0F3D56);
+  static const teal = Color(0xFF0F766E);
+  static const surface = Color(0xFFFFFFFF);
+  static const textPrimary = Color(0xFF172B4D);
+  static const textSecondary = Color(0xFF52606D);
+  static const border = Color(0xFFE2E8F0);
+  static const success = Color(0xFF10B981);
+  static const successLight = Color(0xFFECFDF5);
+  static const warning = Color(0xFFD97706);
+  static const warningLight = Color(0xFFFEF3C7);
+  static const error = Color(0xFFEF4444);
+  static const errorLight = Color(0xFFFEF2F2);
+}
 
 class KabagDashboardScreen extends ConsumerWidget {
   const KabagDashboardScreen({super.key});
@@ -31,32 +45,39 @@ class KabagDashboardScreen extends ConsumerWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Greeting Header
+          // ── Greeting ────────────────────────────────────────────────
           Text(
-            'Halo, $userName',
+            'Halo, $userName! 👋',
             style: const TextStyle(
-              fontSize: 20,
-              fontWeight: FontWeight.bold,
-              color: AppColors.textPrimary,
+              fontSize: 22,
+              fontWeight: FontWeight.w700,
+              color: _C.textPrimary,
+              height: 1.2,
             ),
           ),
-          const SizedBox(height: AppSpacing.xs),
+          const SizedBox(height: 4),
           const Text(
-            'Tinjau dan berikan persetujuan atas pengajuan mutasi aset.',
-            style: TextStyle(fontSize: 13, color: AppColors.textSecondary),
+            'Tinjau dan berikan persetujuan mutasi aset',
+            style: TextStyle(
+              fontSize: 13,
+              color: _C.textSecondary,
+              fontWeight: FontWeight.w500,
+            ),
           ),
-          const SizedBox(height: AppSpacing.lg),
+          const SizedBox(height: 20),
 
-          // Stat Cards (Menunggu Approval, Disetujui, Ditolak)
+          // ── Stat Cards (3 kolom) ─────────────────────────────────────
           Row(
             children: [
               Expanded(
-                child: _buildStatCard(
-                  title: 'Menunggu Approval',
-                  count: stats.waitingApprovalCount,
+                child: _StatCard(
+                  key: const Key('stat_waiting'),
                   icon: Icons.pending_actions_rounded,
-                  color: AppColors.warning,
-                  bgColor: AppColors.warningContainer,
+                  label: 'Menunggu',
+                  count: stats.waitingApprovalCount,
+                  iconColor: _C.warning,
+                  iconBg: _C.warningLight,
+                  countColor: _C.warning,
                   onTap: () {
                     ref.read(kabagStatusFilterProvider.notifier).state =
                         KabagStatusFilter.waiting;
@@ -64,14 +85,16 @@ class KabagDashboardScreen extends ConsumerWidget {
                   },
                 ),
               ),
-              const SizedBox(width: AppSpacing.sm),
+              const SizedBox(width: 10),
               Expanded(
-                child: _buildStatCard(
-                  title: 'Disetujui',
-                  count: stats.approvedCount,
+                child: _StatCard(
+                  key: const Key('stat_approved'),
                   icon: Icons.check_circle_outline,
-                  color: AppColors.success,
-                  bgColor: AppColors.successContainer,
+                  label: 'Disetujui',
+                  count: stats.approvedCount,
+                  iconColor: _C.success,
+                  iconBg: _C.successLight,
+                  countColor: _C.success,
                   onTap: () {
                     ref.read(kabagStatusFilterProvider.notifier).state =
                         KabagStatusFilter.approved;
@@ -79,14 +102,16 @@ class KabagDashboardScreen extends ConsumerWidget {
                   },
                 ),
               ),
-              const SizedBox(width: AppSpacing.sm),
+              const SizedBox(width: 10),
               Expanded(
-                child: _buildStatCard(
-                  title: 'Ditolak',
-                  count: stats.rejectedCount,
+                child: _StatCard(
+                  key: const Key('stat_rejected'),
                   icon: Icons.cancel_outlined,
-                  color: AppColors.error,
-                  bgColor: AppColors.errorContainer,
+                  label: 'Ditolak',
+                  count: stats.rejectedCount,
+                  iconColor: _C.error,
+                  iconBg: _C.errorLight,
+                  countColor: _C.error,
                   onTap: () {
                     ref.read(kabagStatusFilterProvider.notifier).state =
                         KabagStatusFilter.rejected;
@@ -96,9 +121,9 @@ class KabagDashboardScreen extends ConsumerWidget {
               ),
             ],
           ),
-          const SizedBox(height: AppSpacing.xl),
+          const SizedBox(height: 20),
 
-          // Primary Action Button
+          // ── Primary Action Button ─────────────────────────────────────
           SizedBox(
             width: double.infinity,
             child: ElevatedButton.icon(
@@ -108,80 +133,100 @@ class KabagDashboardScreen extends ConsumerWidget {
                     KabagStatusFilter.waiting;
                 context.push(RouteNames.kabagApprovalsPath);
               },
-              icon: const Icon(Icons.how_to_reg_outlined),
+              icon: const Icon(Icons.how_to_reg_outlined, size: 18),
               label: const Text(
-                'Lihat Daftar Approval',
-                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                'Lihat Antrean Approval',
+                style: TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
               ),
               style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.primary,
+                backgroundColor: _C.navy,
                 foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(vertical: AppSpacing.md),
+                padding:
+                    const EdgeInsets.symmetric(vertical: 14, horizontal: 20),
                 shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(AppRadius.button),
+                  borderRadius: BorderRadius.circular(14),
                 ),
+                elevation: 0,
               ),
             ),
           ),
-          const SizedBox(height: AppSpacing.xl),
+          const SizedBox(height: 24),
 
-          // Section Pengajuan Terbaru
+          // ── Pengajuan Terbaru ─────────────────────────────────────────
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               const Text(
-                'Pengajuan Terbaru',
+                'Antrean Persetujuan',
                 style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
-                  color: AppColors.textPrimary,
+                  fontSize: 15,
+                  fontWeight: FontWeight.w700,
+                  color: _C.textPrimary,
                 ),
               ),
-              TextButton(
-                onPressed: () {
+              GestureDetector(
+                onTap: () {
                   ref.read(kabagStatusFilterProvider.notifier).state =
                       KabagStatusFilter.all;
                   context.push(RouteNames.kabagApprovalsPath);
                 },
-                child: const Text('Lihat Semua'),
+                child: const Text(
+                  'Lihat Semua →',
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                    color: _C.teal,
+                  ),
+                ),
               ),
             ],
           ),
-          const SizedBox(height: AppSpacing.sm),
+          const SizedBox(height: 12),
 
           asyncMutations.when(
             data: (mutations) {
               final recentMutations = mutations
-                  .where((m) => m.status == MutationStatus.waitingKabagApproval)
-                  .take(3)
+                  .where(
+                      (m) => m.status == MutationStatus.waitingKabagApproval)
+                  .take(5)
                   .toList();
 
               if (recentMutations.isEmpty) {
-                return _buildEmptyState();
+                return _EmptyApprovalState();
               }
 
-              return ListView.separated(
-                shrinkWrap: true,
-                physics: const NeverScrollableScrollPhysics(),
-                itemCount: recentMutations.length,
-                separatorBuilder: (_, _) =>
-                    const SizedBox(height: AppSpacing.sm),
-                itemBuilder: (context, index) {
-                  final item = recentMutations[index];
-                  return _buildRecentCard(context, item);
-                },
+              return Column(
+                children: recentMutations
+                    .map((item) => Padding(
+                          padding: const EdgeInsets.only(bottom: 10),
+                          child: _ApprovalCard(
+                            mutation: item,
+                            onTap: () => context
+                                .push('/kabag/approvals/${item.id}'),
+                          ),
+                        ))
+                    .toList(),
               );
             },
             loading: () => const Center(
               child: Padding(
-                padding: EdgeInsets.all(AppSpacing.xl),
-                child: CircularProgressIndicator(),
+                padding: EdgeInsets.all(32),
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  color: _C.teal,
+                ),
               ),
             ),
-            error: (err, _) => Center(
+            error: (err, _) => Container(
+              padding: const EdgeInsets.all(14),
+              decoration: BoxDecoration(
+                color: _C.errorLight,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: const Color(0xFFFECACA)),
+              ),
               child: Text(
                 'Gagal memuat pengajuan: $err',
-                style: const TextStyle(color: AppColors.error),
+                style: const TextStyle(color: _C.error, fontSize: 13),
               ),
             ),
           ),
@@ -189,138 +234,223 @@ class KabagDashboardScreen extends ConsumerWidget {
       ),
     );
   }
+}
 
-  Widget _buildStatCard({
-    required String title,
-    required int count,
-    required IconData icon,
-    required Color color,
-    required Color bgColor,
-    required VoidCallback onTap,
-  }) {
-    return InkWell(
+/// Stat card untuk 3-kolom statistik Kabag.
+class _StatCard extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final int count;
+  final Color iconColor;
+  final Color iconBg;
+  final Color countColor;
+  final VoidCallback onTap;
+
+  const _StatCard({
+    super.key,
+    required this.icon,
+    required this.label,
+    required this.count,
+    required this.iconColor,
+    required this.iconBg,
+    required this.countColor,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
       onTap: onTap,
-      borderRadius: BorderRadius.circular(AppRadius.card),
       child: Container(
-        padding: const EdgeInsets.all(AppSpacing.sm),
+        padding: const EdgeInsets.all(12),
         decoration: BoxDecoration(
-          color: bgColor.withValues(alpha: 0.3),
-          borderRadius: BorderRadius.circular(AppRadius.card),
-          border: Border.all(color: color.withValues(alpha: 0.4)),
+          color: _C.surface,
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: _C.border),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.04),
+              blurRadius: 8,
+              offset: const Offset(0, 2),
+            ),
+          ],
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Icon(icon, color: color, size: 20),
-                Text(
-                  count.toString(),
-                  style: TextStyle(
-                    fontSize: 22,
-                    fontWeight: FontWeight.bold,
-                    color: color,
-                  ),
-                ),
-              ],
+            Container(
+              width: 36,
+              height: 36,
+              decoration: BoxDecoration(
+                color: iconBg,
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Icon(icon, color: iconColor, size: 18),
             ),
-            const SizedBox(height: AppSpacing.xs),
+            const SizedBox(height: 10),
             Text(
-              title,
-              maxLines: 2,
+              count.toString(),
+              style: TextStyle(
+                fontSize: 24,
+                fontWeight: FontWeight.w700,
+                color: countColor,
+                height: 1.0,
+              ),
+            ),
+            const SizedBox(height: 3),
+            Text(
+              label,
+              maxLines: 1,
               overflow: TextOverflow.ellipsis,
               style: const TextStyle(
                 fontSize: 11,
-                fontWeight: FontWeight.w600,
-                color: AppColors.textPrimary,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildRecentCard(BuildContext context, Mutation item) {
-    return Card(
-      elevation: 0,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(AppRadius.card),
-        side: const BorderSide(color: AppColors.border),
-      ),
-      child: ListTile(
-        contentPadding: const EdgeInsets.symmetric(
-          horizontal: AppSpacing.md,
-          vertical: AppSpacing.xs,
-        ),
-        title: Text(
-          item.ticketNumber,
-          style: const TextStyle(
-            fontSize: 13,
-            fontWeight: FontWeight.bold,
-            color: AppColors.primary,
-          ),
-        ),
-        subtitle: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const SizedBox(height: 2),
-            Text(
-              item.asset.name,
-              style: const TextStyle(
-                fontSize: 13,
+                color: _C.textSecondary,
                 fontWeight: FontWeight.w500,
-                color: AppColors.textPrimary,
-              ),
-            ),
-            Text(
-              'Pemohon: ${item.applicantName}',
-              style: const TextStyle(
-                fontSize: 12,
-                color: AppColors.textSecondary,
               ),
             ),
           ],
         ),
-        trailing: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-          decoration: BoxDecoration(
-            color: item.status.backgroundColor,
-            borderRadius: BorderRadius.circular(AppRadius.pill),
-          ),
-          child: Text(
-            item.status.displayName,
-            style: TextStyle(
-              fontSize: 11,
-              fontWeight: FontWeight.w600,
-              color: item.status.color,
-            ),
-          ),
-        ),
-        onTap: () {
-          context.push('/kabag/approvals/${item.id}');
-        },
       ),
     );
   }
+}
 
-  Widget _buildEmptyState() {
+/// Card item antrean approval Kabag.
+class _ApprovalCard extends StatelessWidget {
+  final Mutation mutation;
+  final VoidCallback? onTap;
+
+  const _ApprovalCard({required this.mutation, this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          color: _C.surface,
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: _C.border),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.04),
+              blurRadius: 8,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+        child: Row(
+          children: [
+            // Left accent
+            Container(
+              width: 3,
+              height: 48,
+              decoration: BoxDecoration(
+                color: _C.warning,
+                borderRadius: BorderRadius.circular(999),
+              ),
+            ),
+            const SizedBox(width: 12),
+            // Content
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        mutation.ticketNumber,
+                        style: const TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w700,
+                          fontFamily: 'monospace',
+                          color: _C.navy,
+                        ),
+                      ),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 3,
+                        ),
+                        decoration: BoxDecoration(
+                          color: _C.warningLight,
+                          borderRadius: BorderRadius.circular(999),
+                        ),
+                        child: const Text(
+                          'Menunggu',
+                          style: TextStyle(
+                            fontSize: 10,
+                            fontWeight: FontWeight.w600,
+                            color: _C.warning,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    mutation.asset.name,
+                    style: const TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                      color: _C.textPrimary,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    'Pemohon: ${mutation.applicantName}',
+                    style: const TextStyle(
+                      fontSize: 11,
+                      color: _C.textSecondary,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(width: 8),
+            const Icon(
+              Icons.chevron_right_rounded,
+              size: 18,
+              color: _C.border,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _EmptyApprovalState extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.all(AppSpacing.xl),
-      alignment: Alignment.center,
+      padding: const EdgeInsets.symmetric(vertical: 36, horizontal: 24),
       decoration: BoxDecoration(
-        color: AppColors.surface,
-        borderRadius: BorderRadius.circular(AppRadius.card),
-        border: Border.all(color: AppColors.border),
+        color: _C.surface,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: _C.border),
       ),
       child: const Column(
         children: [
-          Icon(Icons.inbox_outlined, size: 40, color: AppColors.textSecondary),
-          SizedBox(height: AppSpacing.sm),
+          Icon(Icons.check_circle_outline, size: 44, color: _C.success),
+          SizedBox(height: 12),
           Text(
-            'Belum ada pengajuan',
-            style: TextStyle(fontSize: 14, color: AppColors.textSecondary),
+            'Tidak Ada Antrean Approval',
+            style: TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.w600,
+              color: _C.textPrimary,
+            ),
+          ),
+          SizedBox(height: 4),
+          Text(
+            'Semua pengajuan telah diproses.',
+            textAlign: TextAlign.center,
+            style: TextStyle(fontSize: 12, color: _C.textSecondary),
           ),
         ],
       ),

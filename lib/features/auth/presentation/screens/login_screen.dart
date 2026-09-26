@@ -1,27 +1,34 @@
 // lib/features/auth/presentation/screens/login_screen.dart
-// UI mendekati mockup HTML login MutasiKu.
+//
+// Screen: Halaman Login (Clean Minimalist).
+// Baseline: Stitch “MutasiKu — Halaman Login (Clean Minimalist)”
+// UI: Header dengan compact emblem badge, Hello Again heading, input card rounded-2xl,
+// elevated brand-navy button, enterprise trust card, dan demo preset pills.
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
+import 'package:google_fonts/google_fonts.dart';
 
+import '../../../../app/router/route_names.dart';
 import '../../domain/entities/user_role.dart';
 import '../providers/auth_provider.dart';
 
-/// Token warna mengikuti mockup HTML (bukan layout login lama).
-class _C {
-  static const background = Color(0xFFF6F8FA);
-  static const primary = Color(0xFF00273A);
-  static const primaryContainer = Color(0xFF0F3D56);
-  static const secondary = Color(0xFF006A63);
-  static const secondaryFixed = Color(0xFF9CF2E8);
-  static const textPrimary = Color(0xFF172B4D);
-  static const textSecondary = Color(0xFF52606D);
-  static const surface = Color(0xFFFFFFFF);
-  static const success = Color(0xFF15803D);
-  static const disabled = Color(0xFF98A2B3);
-  static const surfaceLow = Color(0xFFECF4FF);
-  static const error = Color(0xFFB42318);
-  static const errorContainer = Color(0xFFFFDAD6);
+/// Design tokens sesuai baseline Stitch Halaman Login
+abstract final class _LoginTheme {
+  static const Color navy = Color(0xFF0F3D56);
+
+  static const Color teal = Color(0xFF0F766E);
+  static const Color background = Color(0xFFF8FAFC);
+  static const Color surface = Color(0xFFFFFFFF);
+  static const Color textHeading = Color(0xFF0F172A);
+  static const Color textBody = Color(0xFF1E293B);
+  static const Color textMuted = Color(0xFF64748B);
+  static const Color textPlaceholder = Color(0xFF94A3B8);
+  static const Color border = Color(0xFFE2E8F0);
+  static const Color error = Color(0xFFB42318);
+  static const Color errorContainer = Color(0xFFFEE2E2);
+
 }
 
 class LoginScreen extends ConsumerStatefulWidget {
@@ -59,102 +66,81 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     });
   }
 
-  void _ssoHelp() {
+  void _showHelpdeskDialog() {
     showDialog<void>(
       context: context,
-      barrierColor: _C.primary.withValues(alpha: 0.40),
+      barrierColor: Colors.black.withValues(alpha: 0.4),
       builder: (ctx) => Dialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
         child: Padding(
-          padding: const EdgeInsets.all(20),
+          padding: const EdgeInsets.all(24),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              const Row(
+              Row(
                 children: [
-                  Icon(Icons.help_outline, color: _C.primary),
-                  SizedBox(width: 8),
+                  Container(
+                    width: 36,
+                    height: 36,
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFF0FDFA),
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(color: const Color(0xFFCCFBF1)),
+                    ),
+                    child: const Icon(
+                      Icons.help_outline_rounded,
+                      color: _LoginTheme.teal,
+                      size: 20,
+                    ),
+                  ),
+                  const SizedBox(width: 12),
                   Expanded(
                     child: Text(
-                      'Bantuan Kata Sandi SSO',
-                      style: TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w600,
-                        color: _C.textPrimary,
+                      'Bantuan Akses MutasiKu',
+                      style: GoogleFonts.inter(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w700,
+                        color: _LoginTheme.textHeading,
                       ),
                     ),
                   ),
                 ],
               ),
-              const SizedBox(height: 12),
-              const Text(
-                'Sandi akun terintegrasi dengan Portal Pusat Pegawai. '
-                'Untuk pembaruan atau reset sandi, hubungi Helpdesk TI '
-                'atau kunjungi Pusat Dukungan Internal.',
-                style: TextStyle(
+              const SizedBox(height: 14),
+              Text(
+                'Akun MutasiKu terintegrasi dengan kredensial Single Sign-On (SSO) pegawai internal.\n\nJika mengalami kendala masuk, pembaruan kata sandi, atau mutasi divisi tugas, silakan hubungi Helpdesk TI di ext. 1404 atau melalui portal dukungan internal.',
+                style: GoogleFonts.inter(
                   fontSize: 13,
-                  height: 1.45,
-                  color: _C.textSecondary,
+                  height: 1.5,
+                  color: _LoginTheme.textMuted,
                 ),
               ),
-              const SizedBox(height: 16),
+              const SizedBox(height: 20),
               SizedBox(
-                height: 40,
-                child: TextButton(
-                  style: TextButton.styleFrom(
-                    backgroundColor: _C.surfaceLow,
-                    foregroundColor: _C.textPrimary,
+                height: 44,
+                child: ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: _LoginTheme.navy,
+                    foregroundColor: Colors.white,
+                    elevation: 0,
                     shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(8),
+                      borderRadius: BorderRadius.circular(12),
                     ),
                   ),
                   onPressed: () => Navigator.pop(ctx),
-                  child: const Text('Mengerti'),
+                  child: Text(
+                    'Mengerti',
+                    style: GoogleFonts.inter(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
                 ),
               ),
             ],
           ),
         ),
-      ),
-    );
-  }
-
-  InputDecoration _dec({
-    required String hint,
-    required IconData icon,
-    Widget? suffix,
-  }) {
-    return InputDecoration(
-      hintText: hint,
-      hintStyle: TextStyle(
-        color: _C.textSecondary.withValues(alpha: 0.50),
-        fontSize: 14,
-      ),
-      filled: true,
-      fillColor: _C.surface,
-      prefixIcon: Icon(icon, size: 20, color: _C.textSecondary),
-      suffixIcon: suffix,
-      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-      border: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(8),
-        borderSide: BorderSide.none,
-      ),
-      enabledBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(8),
-        borderSide: BorderSide.none,
-      ),
-      focusedBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(8),
-        borderSide: const BorderSide(color: _C.primaryContainer, width: 1),
-      ),
-      errorBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(8),
-        borderSide: const BorderSide(color: _C.error),
-      ),
-      focusedErrorBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(8),
-        borderSide: const BorderSide(color: _C.error),
       ),
     );
   }
@@ -165,429 +151,656 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     final loading = auth.isLoading;
 
     return Scaffold(
-      backgroundColor: _C.background,
-      body: SafeArea(
-        child: LayoutBuilder(
-          builder: (context, constraints) {
-            return SingleChildScrollView(
-              padding: const EdgeInsets.fromLTRB(24, 32, 24, 24),
-              child: ConstrainedBox(
-                constraints: BoxConstraints(
-                  minHeight: constraints.maxHeight - 16,
-                  maxWidth: 448,
+      backgroundColor: _LoginTheme.background,
+      body: Stack(
+        children: [
+          // ── Background Ambient Blobs ───────────────────────────────────────
+          Positioned(
+            top: -40,
+            right: -60,
+            child: Container(
+              width: 280,
+              height: 280,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: const Color(0xFFE2E8F0).withValues(alpha: 0.45),
+              ),
+            ),
+          ),
+          Positioned(
+            top: 100,
+            right: 16,
+            child: Container(
+              width: 180,
+              height: 180,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                gradient: RadialGradient(
+                  colors: [
+                    const Color(0xFF0F766E).withValues(alpha: 0.10),
+                    Colors.transparent,
+                  ],
                 ),
-                child: IntrinsicHeight(
+              ),
+            ),
+          ),
+
+          // ── Main Scrollable Canvas ─────────────────────────────────────────
+          SafeArea(
+            child: Center(
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 440),
+                child: SingleChildScrollView(
+                  physics: const ClampingScrollPhysics(),
+                  padding: const EdgeInsets.fromLTRB(28, 12, 28, 24),
                   child: Form(
                     key: _formKey,
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
-                        // ===== TOP: brand + form (seperti HTML) =====
-                        const SizedBox(height: 8),
+                        // ── Top Bar: Back Button & Compact Emblem Badge ──────
+                        _buildTopHeader(),
 
-                        // Logo + wordmark
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Container(
-                              width: 40,
-                              height: 40,
-                              decoration: BoxDecoration(
-                                color: _C.primaryContainer,
-                                borderRadius: BorderRadius.circular(12),
-                                boxShadow: [
-                                  BoxShadow(
-                                    color: _C.textPrimary.withValues(
-                                      alpha: 0.06,
-                                    ),
-                                    blurRadius: 6,
-                                    offset: const Offset(0, 2),
-                                  ),
-                                ],
-                              ),
-                              child: const Icon(
-                                Icons.sync_alt,
-                                color: _C.secondaryFixed,
-                                size: 22,
-                              ),
-                            ),
-                            const SizedBox(width: 10),
-                            RichText(
-                              text: const TextSpan(
-                                children: [
-                                  TextSpan(
-                                    text: 'Mutasi',
-                                    style: TextStyle(
-                                      fontSize: 24,
-                                      fontWeight: FontWeight.w700,
-                                      color: _C.primary,
-                                      height: 1.2,
-                                      letterSpacing: -0.5,
-                                    ),
-                                  ),
-                                  TextSpan(
-                                    text: 'Ku',
-                                    style: TextStyle(
-                                      fontSize: 24,
-                                      fontWeight: FontWeight.w700,
-                                      color: _C.secondary,
-                                      height: 1.2,
-                                      letterSpacing: -0.5,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ],
-                        ),
+                        const SizedBox(height: 28),
 
-                        const SizedBox(height: 40),
+                        // ── Heading Section: Hello Again! ────────────────────
+                        _buildHeadingSection(),
 
-                        const Align(
-                          alignment: Alignment.centerLeft,
-                          child: Text(
-                            'Masuk ke Akun',
-                            style: TextStyle(
-                              fontSize: 20,
-                              fontWeight: FontWeight.w600,
-                              color: _C.textPrimary,
-                              letterSpacing: -0.2,
-                            ),
-                          ),
-                        ),
-                        const SizedBox(height: 4),
-                        const Align(
-                          alignment: Alignment.centerLeft,
-                          child: Text(
-                            'Sistem Tata Kelola & Mutasi Aset Internal',
-                            style: TextStyle(
-                              fontSize: 12,
-                              color: _C.textSecondary,
-                            ),
-                          ),
-                        ),
+                        const SizedBox(height: 28),
 
-                        const SizedBox(height: 24),
-
+                        // ── Error Alert Banner (jika login gagal) ────────────
                         if (auth.failure != null) ...[
                           Container(
-                            padding: const EdgeInsets.all(12),
-                            decoration: BoxDecoration(
-                              color: _C.errorContainer,
-                              borderRadius: BorderRadius.circular(8),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 14,
+                              vertical: 12,
                             ),
-                            child: Text(
-                              auth.failure!.userMessage,
-                              style: const TextStyle(
-                                color: _C.error,
-                                fontSize: 12,
+                            decoration: BoxDecoration(
+                              color: _LoginTheme.errorContainer,
+                              borderRadius: BorderRadius.circular(14),
+                              border: Border.all(
+                                color: _LoginTheme.error.withValues(alpha: 0.3),
                               ),
+                            ),
+                            child: Row(
+                              children: [
+                                const Icon(
+                                  Icons.error_outline_rounded,
+                                  color: _LoginTheme.error,
+                                  size: 18,
+                                ),
+                                const SizedBox(width: 10),
+                                Expanded(
+                                  child: Text(
+                                    auth.failure!.userMessage,
+                                    style: GoogleFonts.inter(
+                                      color: _LoginTheme.error,
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.w500,
+                                    ),
+                                  ),
+                                ),
+                              ],
                             ),
                           ),
                           const SizedBox(height: 16),
                         ],
 
-                        // Username
-                        const Text(
-                          'Username atau NIP',
-                          style: TextStyle(
-                            fontSize: 12,
-                            fontWeight: FontWeight.w600,
-                            color: _C.textPrimary,
-                          ),
-                        ),
-                        const SizedBox(height: 6),
-                        TextFormField(
-                          controller: _usernameController,
-                          textInputAction: TextInputAction.next,
-                          style: const TextStyle(
-                            fontSize: 14,
-                            color: _C.textPrimary,
-                          ),
-                          decoration: _dec(
-                            hint: 'Contoh: 1988031201',
-                            icon: Icons.badge_outlined,
-                          ),
-                          validator: (v) => (v == null || v.trim().isEmpty)
-                              ? 'Wajib diisi'
-                              : null,
-                        ),
+                        // ── Field 1: Email Address / NIP Input Card ──────────
+                        _buildUsernameField(),
 
                         const SizedBox(height: 16),
 
-                        // Password header
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            const Text(
-                              'Kata Sandi',
-                              style: TextStyle(
-                                fontSize: 12,
-                                fontWeight: FontWeight.w600,
-                                color: _C.textPrimary,
-                              ),
-                            ),
-                            GestureDetector(
-                              onTap: _ssoHelp,
-                              child: const Text(
-                                'Lupa Sandi SSO?',
-                                style: TextStyle(
-                                  fontSize: 11,
-                                  fontWeight: FontWeight.w500,
-                                  color: _C.secondary,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 6),
-                        TextFormField(
-                          controller: _passwordController,
-                          obscureText: _obscure,
-                          textInputAction: TextInputAction.done,
-                          onFieldSubmitted: (_) => _login(),
-                          style: const TextStyle(
-                            fontSize: 14,
-                            color: _C.textPrimary,
-                          ),
-                          decoration: _dec(
-                            hint: '••••••••',
-                            icon: Icons.lock_outline,
-                            suffix: IconButton(
-                              onPressed: () =>
-                                  setState(() => _obscure = !_obscure),
-                              icon: Icon(
-                                _obscure
-                                    ? Icons.visibility_outlined
-                                    : Icons.visibility_off_outlined,
-                                size: 20,
-                                color: _C.textSecondary,
-                              ),
-                            ),
-                          ),
-                          validator: (v) =>
-                              (v == null || v.isEmpty) ? 'Wajib diisi' : null,
-                        ),
+                        // ── Field 2: Password Input Card ─────────────────────
+                        _buildPasswordField(),
 
-                        const SizedBox(height: 12),
+                        const SizedBox(height: 14),
 
-                        // Remember + LDAP
-                        Row(
-                          children: [
-                            SizedBox(
-                              width: 22,
-                              height: 22,
-                              child: Checkbox(
-                                value: _remember,
-                                activeColor: _C.primaryContainer,
-                                side: const BorderSide(color: _C.disabled),
-                                onChanged: (v) =>
-                                    setState(() => _remember = v ?? false),
-                              ),
-                            ),
-                            const SizedBox(width: 8),
-                            const Expanded(
-                              child: Text(
-                                'Ingat workstation ini',
-                                style: TextStyle(
-                                  fontSize: 12,
-                                  color: _C.textSecondary,
-                                ),
-                              ),
-                            ),
-                            Container(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 8,
-                                vertical: 2,
-                              ),
-                              decoration: BoxDecoration(
-                                color: _C.surfaceLow,
-                                borderRadius: BorderRadius.circular(4),
-                              ),
-                              child: const Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  Icon(
-                                    Icons.circle,
-                                    size: 6,
-                                    color: _C.success,
-                                  ),
-                                  SizedBox(width: 4),
-                                  Text(
-                                    'LDAP Aktif',
-                                    style: TextStyle(
-                                      fontSize: 11,
-                                      fontWeight: FontWeight.w600,
-                                      color: _C.textSecondary,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ],
-                        ),
+                        // ── Utility Row: Remember Me & Forgot Password ───────
+                        _buildUtilityRow(),
+
+                        const SizedBox(height: 18),
+
+                        // ── Primary CTA: Elevated Login Button ───────────────
+                        _buildSubmitButton(loading),
 
                         const SizedBox(height: 20),
 
-                        // CTA — sama HTML
-                        SizedBox(
-                          height: 48,
-                          child: ElevatedButton(
-                            onPressed: loading ? null : _login,
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: _C.primaryContainer,
-                              foregroundColor: Colors.white,
-                              disabledBackgroundColor: _C.primaryContainer
-                                  .withValues(alpha: 0.75),
-                              elevation: 1,
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(8),
-                              ),
-                            ),
-                            child: loading
-                                ? const SizedBox(
-                                    width: 22,
-                                    height: 22,
-                                    child: CircularProgressIndicator(
-                                      strokeWidth: 2,
-                                      color: Colors.white,
-                                    ),
-                                  )
-                                : const Row(
-                                    mainAxisAlignment: MainAxisAlignment.center,
-                                    children: [
-                                      Text(
-                                        'Masuk ke Sistem',
-                                        style: TextStyle(
-                                          fontSize: 14,
-                                          fontWeight: FontWeight.w600,
-                                        ),
-                                      ),
-                                      SizedBox(width: 8),
-                                      Icon(Icons.login, size: 20),
-                                    ],
-                                  ),
-                          ),
-                        ),
+                        // ── Enterprise Trust & Security Card ─────────────────
+                        _buildEnterpriseTrustCard(),
 
-                        // Preset demo — kecil, di bawah tombol (tidak di mockup,
-                        // tapi wajib untuk uji 6 role)
-                        const SizedBox(height: 20),
-                        const Text(
-                          'Quick Role (Demo)',
-                          style: TextStyle(
-                            fontSize: 11,
-                            fontWeight: FontWeight.w600,
-                            color: _C.textSecondary,
-                          ),
-                        ),
-                        const SizedBox(height: 8),
-                        Wrap(
-                          spacing: 6,
-                          runSpacing: 6,
-                          children: UserRole.values.map((role) {
-                            final selected =
-                                _usernameController.text.toLowerCase() ==
-                                role.apiValue;
-                            return GestureDetector(
-                              onTap: () => _preset(role),
-                              child: Container(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 10,
-                                  vertical: 6,
-                                ),
-                                decoration: BoxDecoration(
-                                  color: selected
-                                      ? _C.primaryContainer
-                                      : _C.surface,
-                                  borderRadius: BorderRadius.circular(999),
-                                  border: Border.all(
-                                    color: selected
-                                        ? _C.primaryContainer
-                                        : const Color(0xFFD0D5DD),
-                                  ),
-                                ),
-                                child: Text(
-                                  role.displayName,
-                                  style: TextStyle(
-                                    fontSize: 11,
-                                    fontWeight: FontWeight.w600,
-                                    color: selected
-                                        ? Colors.white
-                                        : _C.textPrimary,
-                                  ),
-                                ),
-                              ),
-                            );
-                          }).toList(),
-                        ),
+                        const SizedBox(height: 14),
 
-                        const Spacer(),
+                        // ── Helpdesk Link ────────────────────────────────────
+                        _buildHelpdeskLink(),
 
-                        // ===== BOTTOM: seperti HTML =====
-                        const SizedBox(height: 32),
-                        Center(
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 12,
-                              vertical: 6,
-                            ),
-                            decoration: BoxDecoration(
-                              color: _C.surface,
-                              borderRadius: BorderRadius.circular(999),
-                              boxShadow: [
-                                BoxShadow(
-                                  color: _C.textPrimary.withValues(alpha: 0.06),
-                                  blurRadius: 4,
-                                ),
-                              ],
-                            ),
-                            child: const Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Icon(
-                                  Icons.verified_user,
-                                  size: 15,
-                                  color: _C.success,
-                                ),
-                                SizedBox(width: 6),
-                                Text(
-                                  'Koneksi Terenkripsi TLS 1.3 • Akses Internal',
-                                  style: TextStyle(
-                                    fontSize: 11,
-                                    fontWeight: FontWeight.w500,
-                                    color: _C.textSecondary,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
-                        const SizedBox(height: 12),
-                        const Text(
-                          'Divisi TI & Tata Kelola Aset Perusahaan',
-                          textAlign: TextAlign.center,
-                          style: TextStyle(
-                            fontSize: 11,
-                            fontWeight: FontWeight.w500,
-                            color: _C.textSecondary,
-                          ),
-                        ),
-                        const SizedBox(height: 4),
-                        const Text(
-                          'Akses dibatasi hanya untuk staf inventaris, auditor, dan penanggung jawab unit berwenang.',
-                          textAlign: TextAlign.center,
-                          style: TextStyle(fontSize: 10, color: _C.disabled),
-                        ),
+                        const SizedBox(height: 22),
+
+                        // ── Quick Role Presets (Testing & Demo) ──────────────
+                        _buildQuickRolePresets(),
+
+                        const SizedBox(height: 24),
+
+                        // ── Bottom Footer ────────────────────────────────────
+                        _buildFooter(),
                       ],
                     ),
                   ),
                 ),
               ),
-            );
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildTopHeader() {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        // Minimalist Back Button
+        InkWell(
+          onTap: () {
+            if (context.canPop()) {
+              context.pop();
+            } else {
+              context.go(RouteNames.landingPath);
+            }
           },
+          borderRadius: BorderRadius.circular(999),
+          child: Container(
+            width: 40,
+            height: 40,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: Colors.white.withValues(alpha: 0.6),
+            ),
+            child: const Icon(
+              Icons.arrow_back_rounded,
+              color: _LoginTheme.textBody,
+              size: 20,
+            ),
+          ),
+        ),
+
+        // MutasiKu Compact Emblem Badge
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+          decoration: BoxDecoration(
+            color: Colors.white.withValues(alpha: 0.85),
+            borderRadius: BorderRadius.circular(999),
+            border: Border.all(color: _LoginTheme.border),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.03),
+                blurRadius: 6,
+                offset: const Offset(0, 2),
+              ),
+            ],
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 18,
+                height: 18,
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(5),
+                  gradient: const LinearGradient(
+                    colors: [_LoginTheme.navy, _LoginTheme.teal],
+                  ),
+                ),
+                child: const Icon(
+                  Icons.sync_alt_rounded,
+                  size: 11,
+                  color: Colors.white,
+                ),
+              ),
+              const SizedBox(width: 6),
+              Text(
+                'MutasiKu',
+                style: GoogleFonts.inter(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w700,
+                  color: _LoginTheme.navy,
+                  letterSpacing: -0.2,
+                ),
+              ),
+              const SizedBox(width: 6),
+              Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFF0FDFA),
+                  borderRadius: BorderRadius.circular(999),
+                ),
+                child: Text(
+                  'Internal',
+                  style: GoogleFonts.inter(
+                    fontSize: 10,
+                    fontWeight: FontWeight.w600,
+                    color: _LoginTheme.teal,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildHeadingSection() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Hello Again!',
+          style: GoogleFonts.inter(
+            fontSize: 32,
+            fontWeight: FontWeight.w700,
+            color: _LoginTheme.textHeading,
+            letterSpacing: -0.5,
+            height: 1.15,
+          ),
+        ),
+        const SizedBox(height: 8),
+        Text(
+          "Welcome back you've\nbeen missed.",
+          style: GoogleFonts.inter(
+            fontSize: 15,
+            fontWeight: FontWeight.w400,
+            color: _LoginTheme.textMuted,
+            height: 1.35,
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildUsernameField() {
+    return Container(
+      decoration: BoxDecoration(
+        color: _LoginTheme.surface,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: _LoginTheme.border),
+        boxShadow: [
+          BoxShadow(
+            color: _LoginTheme.navy.withValues(alpha: 0.04),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: TextFormField(
+        key: const Key('login_username_field'),
+        controller: _usernameController,
+        textInputAction: TextInputAction.next,
+        style: GoogleFonts.inter(
+          fontSize: 15,
+          fontWeight: FontWeight.w400,
+          color: _LoginTheme.textBody,
+        ),
+        decoration: InputDecoration(
+          hintText: 'Email Address',
+          hintStyle: GoogleFonts.inter(
+            fontSize: 15,
+            color: _LoginTheme.textPlaceholder,
+          ),
+          prefixIcon: const Icon(
+            Icons.person_outline_rounded,
+            size: 20,
+            color: _LoginTheme.textPlaceholder,
+          ),
+          border: InputBorder.none,
+          contentPadding:
+              const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+        ),
+        validator: (v) =>
+            (v == null || v.trim().isEmpty) ? 'Email / NIP wajib diisi' : null,
+      ),
+    );
+  }
+
+  Widget _buildPasswordField() {
+    return Container(
+      decoration: BoxDecoration(
+        color: _LoginTheme.surface,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: _LoginTheme.border),
+        boxShadow: [
+          BoxShadow(
+            color: _LoginTheme.navy.withValues(alpha: 0.04),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: TextFormField(
+        key: const Key('login_password_field'),
+        controller: _passwordController,
+        obscureText: _obscure,
+        textInputAction: TextInputAction.done,
+        onFieldSubmitted: (_) => _login(),
+        style: GoogleFonts.inter(
+          fontSize: 15,
+          fontWeight: FontWeight.w400,
+          color: _LoginTheme.textBody,
+        ),
+        decoration: InputDecoration(
+          hintText: 'Password',
+          hintStyle: GoogleFonts.inter(
+            fontSize: 15,
+            color: _LoginTheme.textPlaceholder,
+          ),
+          prefixIcon: const Icon(
+            Icons.lock_outline_rounded,
+            size: 20,
+            color: _LoginTheme.textPlaceholder,
+          ),
+          suffixIcon: IconButton(
+            icon: Icon(
+              _obscure
+                  ? Icons.visibility_outlined
+                  : Icons.visibility_off_outlined,
+              size: 20,
+              color: _obscure ? _LoginTheme.textPlaceholder : _LoginTheme.navy,
+            ),
+            onPressed: () => setState(() => _obscure = !_obscure),
+          ),
+          border: InputBorder.none,
+          contentPadding:
+              const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+        ),
+        validator: (v) =>
+            (v == null || v.isEmpty) ? 'Password wajib diisi' : null,
+      ),
+    );
+  }
+
+  Widget _buildUtilityRow() {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        // Remember Me
+        InkWell(
+          onTap: () => setState(() => _remember = !_remember),
+          borderRadius: BorderRadius.circular(6),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              SizedBox(
+                width: 20,
+                height: 20,
+                child: Checkbox(
+                  value: _remember,
+                  activeColor: _LoginTheme.navy,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                  side: const BorderSide(color: Color(0xFFCBD5E1), width: 1.5),
+                  onChanged: (v) => setState(() => _remember = v ?? false),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Text(
+                'Remember me',
+                style: GoogleFonts.inter(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w400,
+                  color: _LoginTheme.textMuted,
+                ),
+              ),
+            ],
+          ),
+        ),
+
+        // Forgot Password
+        GestureDetector(
+          onTap: _showHelpdeskDialog,
+          child: Text(
+            'Forgot Password?',
+            style: GoogleFonts.inter(
+              fontSize: 13,
+              fontWeight: FontWeight.w600,
+              color: _LoginTheme.textHeading,
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildSubmitButton(bool loading) {
+    return SizedBox(
+      height: 52,
+      child: ElevatedButton(
+        key: const Key('login_submit_button'),
+        onPressed: loading ? null : _login,
+        style: ElevatedButton.styleFrom(
+          backgroundColor: _LoginTheme.navy,
+          foregroundColor: Colors.white,
+          disabledBackgroundColor: _LoginTheme.navy.withValues(alpha: 0.7),
+          elevation: 6,
+          shadowColor: _LoginTheme.navy.withValues(alpha: 0.35),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
+        ),
+        child: loading
+            ? const SizedBox(
+                width: 22,
+                height: 22,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  color: Colors.white,
+                ),
+              )
+            : Text(
+                'Login',
+                style: GoogleFonts.inter(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600,
+                  letterSpacing: 0.5,
+                ),
+              ),
+      ),
+    );
+  }
+
+  Widget _buildEnterpriseTrustCard() {
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF8FAFC),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: _LoginTheme.border),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            width: 32,
+            height: 32,
+            decoration: BoxDecoration(
+              color: const Color(0xFFF0FDFA),
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(color: const Color(0xFFCCFBF1)),
+            ),
+            child: const Icon(
+              Icons.shield_outlined,
+              color: _LoginTheme.teal,
+              size: 16,
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Sistem Terotentikasi & Terproteksi',
+                  style: GoogleFonts.inter(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                    color: _LoginTheme.textBody,
+                  ),
+                ),
+                const SizedBox(height: 3),
+                Text(
+                  'Akses hanya diperuntukkan bagi pegawai resmi. Setiap aktivitas pencatatan mutasi aset diawasi oleh audit log SIPA.',
+                  style: GoogleFonts.inter(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w400,
+                    color: _LoginTheme.textMuted,
+                    height: 1.4,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildHelpdeskLink() {
+    return Center(
+      child: InkWell(
+        onTap: _showHelpdeskDialog,
+        borderRadius: BorderRadius.circular(999),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(
+                Icons.help_outline_rounded,
+                size: 14,
+                color: _LoginTheme.textMuted,
+              ),
+              const SizedBox(width: 6),
+              RichText(
+                text: TextSpan(
+                  children: [
+                    TextSpan(
+                      text: 'Butuh bantuan akses? ',
+                      style: GoogleFonts.inter(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w400,
+                        color: _LoginTheme.textMuted,
+                      ),
+                    ),
+                    TextSpan(
+                      text: 'Hubungi Helpdesk TI',
+                      style: GoogleFonts.inter(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                        color: _LoginTheme.navy,
+                        decoration: TextDecoration.underline,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
         ),
       ),
+    );
+  }
+
+  Widget _buildQuickRolePresets() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            const Icon(
+              Icons.group_outlined,
+              size: 14,
+              color: _LoginTheme.textMuted,
+            ),
+            const SizedBox(width: 6),
+            Text(
+              'Quick Role Switch (Demo & Testing)',
+              style: GoogleFonts.inter(
+                fontSize: 11,
+                fontWeight: FontWeight.w600,
+                color: _LoginTheme.textMuted,
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 8),
+        Wrap(
+          spacing: 6,
+          runSpacing: 6,
+          children: UserRole.values.map((role) {
+            final selected =
+                _usernameController.text.toLowerCase() == role.apiValue;
+            return GestureDetector(
+              onTap: () => _preset(role),
+              child: Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 5,
+                ),
+                decoration: BoxDecoration(
+                  color: selected ? _LoginTheme.navy : Colors.white,
+                  borderRadius: BorderRadius.circular(999),
+                  border: Border.all(
+                    color: selected ? _LoginTheme.navy : _LoginTheme.border,
+                  ),
+                ),
+                child: Text(
+                  role.displayName,
+                  style: GoogleFonts.inter(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w600,
+                    color: selected ? Colors.white : _LoginTheme.textBody,
+                  ),
+                ),
+              ),
+            );
+          }).toList(),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildFooter() {
+    return Column(
+      children: [
+        Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Icon(
+              Icons.lock_outline_rounded,
+              size: 12,
+              color: _LoginTheme.textPlaceholder,
+            ),
+            const SizedBox(width: 4),
+            Text(
+              'Sistem Pengelolaan Mutasi & Inventaris Aset',
+              style: GoogleFonts.inter(
+                fontSize: 11,
+                fontWeight: FontWeight.w500,
+                color: _LoginTheme.textPlaceholder,
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 4),
+        Text(
+          'MutasiKu v2.4.0 • Divisi Operasional TI',
+          style: GoogleFonts.inter(
+            fontSize: 10,
+            color: _LoginTheme.textPlaceholder.withValues(alpha: 0.8),
+          ),
+        ),
+      ],
     );
   }
 }

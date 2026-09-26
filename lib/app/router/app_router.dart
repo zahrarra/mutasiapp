@@ -83,12 +83,31 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: RouteNames.landingPath,
         name: RouteNames.landingName,
-        builder: (context, state) => const LandingScreen(),
+        // Gunakan CustomTransitionPage dengan durasi nol supaya GoRouter
+        // tidak menambah animasi bawaan. Semua animasi dikendalikan
+        // sepenuhnya oleh LandingScreen (fade-out controller).
+        pageBuilder: (context, state) => CustomTransitionPage<void>(
+          key: state.pageKey,
+          child: const LandingScreen(),
+          transitionsBuilder:
+              (context, animation, secondaryAnimation, child) => child,
+          transitionDuration: Duration.zero,
+          reverseTransitionDuration: Duration.zero,
+        ),
       ),
       GoRoute(
         path: RouteNames.loginPath,
         name: RouteNames.loginName,
-        builder: (context, state) => const LoginScreen(),
+        // Fade-in Login selama 500 ms agar melanjutkan fade-out Landing
+        // secara mulus tanpa layar kosong/flash.
+        pageBuilder: (context, state) => CustomTransitionPage<void>(
+          key: state.pageKey,
+          child: const LoginScreen(),
+          transitionsBuilder: (context, animation, secondaryAnimation, child) =>
+              FadeTransition(opacity: animation, child: child),
+          transitionDuration: const Duration(milliseconds: 300),
+          reverseTransitionDuration: const Duration(milliseconds: 200),
+        ),
       ),
       GoRoute(
         path: RouteNames.dashboardPath,

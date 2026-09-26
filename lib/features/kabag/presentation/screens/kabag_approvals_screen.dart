@@ -2,17 +2,35 @@
 //
 // Screen: Daftar Pengajuan Menunggu Approval Kabag (KBG-002).
 // Sumber: SCREEN-SPEC.md KBG-002, ROLE-FLOW.md §5, WIREFRAME.md §7.
+// UI: Premium Stitch design — custom top bar, filter panel, styled list cards.
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+
 import '../../../../app/router/route_names.dart';
-import '../../../../app/theme/app_colors.dart';
-import '../../../../app/theme/app_spacing.dart';
 import '../../../auth/domain/entities/user_role.dart';
 import '../../../../core/widgets/custom_floating_nav_bar.dart';
 import '../../../mutation/domain/entities/mutation.dart';
 import '../providers/kabag_approval_provider.dart';
+
+class _C {
+  static const navy = Color(0xFF0F3D56);
+  static const teal = Color(0xFF0F766E);
+  static const surface = Color(0xFFFFFFFF);
+  static const background = Color(0xFFF6F8FA);
+  static const textPrimary = Color(0xFF172B4D);
+  static const textSecondary = Color(0xFF52606D);
+  static const border = Color(0xFFE2E8F0);
+  static const success = Color(0xFF10B981);
+  static const successLight = Color(0xFFECFDF5);
+  static const warning = Color(0xFFD97706);
+  static const warningLight = Color(0xFFFEF3C7);
+  static const error = Color(0xFFEF4444);
+  static const errorLight = Color(0xFFFEF2F2);
+  static const info = Color(0xFF3B82F6);
+  static const infoLight = Color(0xFFEFF6FF);
+}
 
 class KabagApprovalsScreen extends ConsumerStatefulWidget {
   const KabagApprovalsScreen({super.key});
@@ -37,114 +55,76 @@ class _KabagApprovalsScreenState extends ConsumerState<KabagApprovalsScreen> {
     final sortOrder = ref.watch(kabagSortOrderProvider);
     final statusFilter = ref.watch(kabagStatusFilterProvider);
 
+    final title = switch (statusFilter) {
+      KabagStatusFilter.waiting => 'Menunggu Approval',
+      KabagStatusFilter.approved => 'Disetujui',
+      KabagStatusFilter.rejected => 'Ditolak',
+      KabagStatusFilter.all => 'Semua Pengajuan',
+    };
+
     return Scaffold(
+      backgroundColor: _C.background,
       extendBody: true,
-      appBar: AppBar(
-        title: Text(
-          statusFilter == KabagStatusFilter.waiting
-              ? 'Menunggu Approval'
-              : statusFilter == KabagStatusFilter.approved
-                  ? 'Riwayat Disetujui'
-                  : statusFilter == KabagStatusFilter.rejected
-                      ? 'Riwayat Ditolak'
-                      : 'Semua Pengajuan',
-        ),
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
-          onPressed: () {
-            if (context.canPop()) {
-              context.pop();
-            } else {
-              context.go(RouteNames.kabagDashboardPath);
-            }
-          },
-        ),
-      ),
       body: Column(
         children: [
-          // Search & Filter Bar
+          // ── Custom Top Bar ──────────────────────────────────────────
+          _ApprovalsTopBar(
+            title: title,
+            subtitle: 'Antrean Approval Kabag Aset',
+            onBack: () {
+              if (context.canPop()) {
+                context.pop();
+              } else {
+                context.go(RouteNames.kabagDashboardPath);
+              }
+            },
+          ),
+
+          // ── Search & Filter ─────────────────────────────────────────
           Container(
-            padding: const EdgeInsets.all(AppSpacing.md),
-            color: AppColors.surface,
+            padding: const EdgeInsets.fromLTRB(16, 14, 16, 10),
+            color: _C.surface,
             child: Column(
               children: [
-                // Search Field
-                TextField(
-                  key: const Key('input_search_approvals'),
+                // Search
+                _SearchField(
+                  searchKey: const Key('input_search_approvals'),
                   controller: _searchController,
-                  decoration: InputDecoration(
-                    hintText: 'Cari no. tiket, aset, pemohon, lokasi...',
-                    prefixIcon: const Icon(Icons.search, size: 20),
-                    suffixIcon: _searchController.text.isNotEmpty
-                        ? IconButton(
-                            icon: const Icon(Icons.clear, size: 18),
-                            onPressed: () {
-                              _searchController.clear();
-                              ref.read(kabagSearchQueryProvider.notifier).state =
-                                  '';
-                            },
-                          )
-                        : null,
-                    filled: true,
-                    fillColor: Colors.white,
-                    contentPadding: const EdgeInsets.symmetric(
-                      horizontal: AppSpacing.md,
-                      vertical: AppSpacing.sm,
-                    ),
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
-                      borderSide: const BorderSide(color: AppColors.border),
-                    ),
-                    enabledBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
-                      borderSide: const BorderSide(color: AppColors.border),
-                    ),
-                  ),
-                  onChanged: (value) {
-                    ref.read(kabagSearchQueryProvider.notifier).state = value;
+                  hintText: 'Cari no. tiket, aset, pemohon, lokasi...',
+                  onChanged: (v) {
+                    ref.read(kabagSearchQueryProvider.notifier).state = v;
+                    setState(() {});
                   },
+                  onClear: () {
+                    _searchController.clear();
+                    ref.read(kabagSearchQueryProvider.notifier).state = '';
+                    setState(() {});
+                  },
+                  showClear: _searchController.text.isNotEmpty,
                 ),
-                const SizedBox(height: AppSpacing.sm),
+                const SizedBox(height: 10),
 
-                // Compact Filter Bar (Status & Sort)
+                // Filter row
                 Row(
                   children: [
-                    // Status Filter Dropdown
                     Expanded(
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 10,
-                          vertical: 2,
-                        ),
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius:
-                              BorderRadius.circular(AppSpacing.radiusSm),
-                          border: Border.all(color: AppColors.border),
-                        ),
+                      child: _DropdownFilter(
                         child: DropdownButtonHideUnderline(
                           child: DropdownButton<KabagStatusFilter>(
                             key: const Key('dropdown_filter_kabag_status'),
                             value: statusFilter,
                             isDense: true,
                             isExpanded: true,
-                            icon: const Icon(
-                              Icons.filter_list,
-                              size: 16,
-                              color: AppColors.primary,
-                            ),
-                            items: KabagStatusFilter.values.map((s) {
-                              return DropdownMenuItem(
-                                value: s,
-                                child: Text(
-                                  s.displayName,
-                                  style: const TextStyle(
-                                    fontSize: 12,
-                                    fontWeight: FontWeight.w500,
-                                  ),
-                                ),
-                              );
-                            }).toList(),
+                            icon: const Icon(Icons.filter_list_rounded,
+                                size: 16, color: _C.teal),
+                            style: const TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w500,
+                                color: _C.textPrimary),
+                            items: KabagStatusFilter.values
+                                .map((s) => DropdownMenuItem(
+                                    value: s, child: Text(s.displayName)))
+                                .toList(),
                             onChanged: (val) {
                               if (val != null) {
                                 ref
@@ -156,42 +136,23 @@ class _KabagApprovalsScreenState extends ConsumerState<KabagApprovalsScreen> {
                         ),
                       ),
                     ),
-                    const SizedBox(width: AppSpacing.sm),
-
-                    // Sort Dropdown
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 10,
-                        vertical: 2,
-                      ),
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius:
-                            BorderRadius.circular(AppSpacing.radiusSm),
-                        border: Border.all(color: AppColors.border),
-                      ),
+                    const SizedBox(width: 10),
+                    _DropdownFilter(
                       child: DropdownButtonHideUnderline(
                         child: DropdownButton<KabagSortOrder>(
-                          key: const Key('dropdown_filter_kabag_sort'),
+                          key: const Key('dropdown_sort_kabag'),
                           value: sortOrder,
                           isDense: true,
-                          icon: const Icon(
-                            Icons.sort,
-                            size: 16,
-                            color: AppColors.textSecondary,
-                          ),
-                          items: KabagSortOrder.values.map((order) {
-                            return DropdownMenuItem(
-                              value: order,
-                              child: Text(
-                                order.displayName,
-                                style: const TextStyle(
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.w500,
-                                ),
-                              ),
-                            );
-                          }).toList(),
+                          icon: const Icon(Icons.sort_rounded,
+                              size: 16, color: _C.textSecondary),
+                          style: const TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w500,
+                              color: _C.textPrimary),
+                          items: KabagSortOrder.values
+                              .map((s) => DropdownMenuItem(
+                                  value: s, child: Text(s.displayName)))
+                              .toList(),
                           onChanged: (val) {
                             if (val != null) {
                               ref
@@ -207,58 +168,38 @@ class _KabagApprovalsScreenState extends ConsumerState<KabagApprovalsScreen> {
               ],
             ),
           ),
-          const Divider(height: 1, thickness: 1, color: AppColors.border),
+          const Divider(height: 1, color: _C.border),
 
-          // Content List
+          // ── List ────────────────────────────────────────────────────
           Expanded(
             child: asyncApprovals.when(
               data: (mutations) {
                 if (mutations.isEmpty) {
                   return _buildEmptyState(statusFilter);
                 }
-
                 return RefreshIndicator(
-                  onRefresh: () async {
-                    ref.invalidate(kabagAllMutationsProvider);
-                  },
+                  color: _C.teal,
+                  onRefresh: () async =>
+                      ref.invalidate(kabagAllMutationsProvider),
                   child: ListView.separated(
-                    padding: const EdgeInsets.fromLTRB(
-                      AppSpacing.md,
-                      AppSpacing.md,
-                      AppSpacing.md,
-                      100,
-                    ),
+                    padding: const EdgeInsets.fromLTRB(16, 16, 16, 100),
                     itemCount: mutations.length,
-                    separatorBuilder: (_, _) =>
-                        const SizedBox(height: AppSpacing.sm),
-                    itemBuilder: (context, index) {
-                      final item = mutations[index];
-                      return _buildApprovalCard(context, item);
-                    },
+                    separatorBuilder: (_, _) => const SizedBox(height: 10),
+                    itemBuilder: (context, i) => _KabagApprovalCard(
+                      mutation: mutations[i],
+                      onTap: () =>
+                          context.push('/kabag/approvals/${mutations[i].id}'),
+                    ),
                   ),
                 );
               },
-              loading: () => const Center(child: CircularProgressIndicator()),
-              error: (err, _) => Center(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    const Icon(Icons.error_outline,
-                        size: 48, color: AppColors.error),
-                    const SizedBox(height: AppSpacing.sm),
-                    Text(
-                      'Gagal memuat daftar approval: $err',
-                      textAlign: TextAlign.center,
-                      style: const TextStyle(color: AppColors.error),
-                    ),
-                    const SizedBox(height: AppSpacing.md),
-                    ElevatedButton(
-                      onPressed: () =>
-                          ref.invalidate(kabagAllMutationsProvider),
-                      child: const Text('Coba Lagi'),
-                    ),
-                  ],
-                ),
+              loading: () => const Center(
+                child: CircularProgressIndicator(
+                    strokeWidth: 2, color: _C.teal),
+              ),
+              error: (err, _) => _ErrorState(
+                message: '$err',
+                onRetry: () => ref.invalidate(kabagAllMutationsProvider),
               ),
             ),
           ),
@@ -266,110 +207,6 @@ class _KabagApprovalsScreenState extends ConsumerState<KabagApprovalsScreen> {
       ),
       bottomNavigationBar: CustomFloatingNavBar.scaffoldBottomBar(
         items: RoleNavConfig.getNavItemsForRole(UserRole.kabagAset),
-      ),
-    );
-  }
-
-  Widget _buildApprovalCard(BuildContext context, Mutation item) {
-    return Card(
-      elevation: 0,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(AppRadius.card),
-        side: const BorderSide(color: AppColors.border),
-      ),
-      child: InkWell(
-        key: Key('card_approval_${item.id}'),
-        onTap: () {
-          context.push('/kabag/approvals/${item.id}');
-        },
-        borderRadius: BorderRadius.circular(AppRadius.card),
-        child: Padding(
-          padding: const EdgeInsets.all(AppSpacing.md),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Ticket Number & Status Badge
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text(
-                    item.ticketNumber,
-                    style: const TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.bold,
-                      color: AppColors.primary,
-                    ),
-                  ),
-                  Container(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                    decoration: BoxDecoration(
-                      color: item.status.backgroundColor,
-                      borderRadius: BorderRadius.circular(AppRadius.pill),
-                    ),
-                    child: Text(
-                      item.status.displayName,
-                      style: TextStyle(
-                        fontSize: 11,
-                        fontWeight: FontWeight.w600,
-                        color: item.status.color,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: AppSpacing.xs),
-
-              // Asset Name
-              Text(
-                item.asset.name,
-                style: const TextStyle(
-                  fontSize: 15,
-                  fontWeight: FontWeight.w600,
-                  color: AppColors.textPrimary,
-                ),
-              ),
-              const SizedBox(height: AppSpacing.sm),
-              const Divider(height: 1, color: AppColors.border),
-              const SizedBox(height: AppSpacing.sm),
-
-              // Pemohon
-              Row(
-                children: [
-                  const Icon(Icons.person_outline,
-                      size: 16, color: AppColors.textSecondary),
-                  const SizedBox(width: AppSpacing.xs),
-                  Text(
-                    'Pemohon: ${item.applicantName}',
-                    style: const TextStyle(
-                      fontSize: 13,
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: AppSpacing.xs),
-
-              // Lokasi Perpindahan (Asal → Tujuan)
-              Row(
-                children: [
-                  const Icon(Icons.swap_horiz_rounded,
-                      size: 16, color: AppColors.primary),
-                  const SizedBox(width: AppSpacing.xs),
-                  Expanded(
-                    child: Text(
-                      '${item.currentLocation} → ${item.targetLocation}',
-                      style: const TextStyle(
-                        fontSize: 12,
-                        color: AppColors.textSecondary,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ],
-          ),
-        ),
       ),
     );
   }
@@ -383,38 +220,366 @@ class _KabagApprovalsScreenState extends ConsumerState<KabagApprovalsScreen> {
     };
     final subtitle = switch (statusFilter) {
       KabagStatusFilter.waiting =>
-        'Seluruh permohonan mutasi yang masuk telah selesai ditinjau.',
+        'Seluruh permohonan mutasi telah selesai ditinjau.',
       KabagStatusFilter.approved =>
         'Belum ada permohonan mutasi yang disetujui.',
       KabagStatusFilter.rejected =>
         'Belum ada permohonan mutasi yang ditolak.',
       KabagStatusFilter.all =>
-        'Tidak ada pengajuan mutasi yang sesuai dengan kriteria.',
+        'Tidak ada pengajuan yang sesuai kriteria pencarian.',
     };
+    return _EmptyState(title: title, subtitle: subtitle);
+  }
+}
 
+// ── Shared Private Widgets ───────────────────────────────────────────────────
+
+class _KabagApprovalCard extends StatelessWidget {
+  final Mutation mutation;
+  final VoidCallback? onTap;
+
+  const _KabagApprovalCard({required this.mutation, this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    final (fg, bg) = _statusColors(mutation.status.name);
+
+    return GestureDetector(
+      key: Key('card_approval_${mutation.id}'),
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          color: _C.surface,
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: _C.border),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.04),
+              blurRadius: 8,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  mutation.ticketNumber,
+                  style: const TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w700,
+                    fontFamily: 'monospace',
+                    color: _C.navy,
+                  ),
+                ),
+                Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                  decoration: BoxDecoration(
+                    color: bg,
+                    borderRadius: BorderRadius.circular(999),
+                  ),
+                  child: Text(
+                    mutation.status.displayName,
+                    style: TextStyle(
+                        fontSize: 10, fontWeight: FontWeight.w600, color: fg),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 6),
+            Text(
+              mutation.asset.name,
+              style: const TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                  color: _C.textPrimary),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+            const SizedBox(height: 8),
+            const Divider(height: 1, color: _C.border),
+            const SizedBox(height: 8),
+            Row(
+              children: [
+                const Icon(Icons.person_outline_rounded,
+                    size: 13, color: _C.textSecondary),
+                const SizedBox(width: 4),
+                Expanded(
+                  child: Text(
+                    mutation.applicantName,
+                    style: const TextStyle(
+                        fontSize: 12, color: _C.textSecondary),
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+                const SizedBox(width: 8),
+                const Icon(Icons.swap_horiz_rounded,
+                    size: 13, color: _C.teal),
+                const SizedBox(width: 4),
+                Expanded(
+                  child: Text(
+                    '${mutation.currentLocation} → ${mutation.targetLocation}',
+                    style: const TextStyle(
+                        fontSize: 11, color: _C.textSecondary),
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  (Color, Color) _statusColors(String name) {
+    switch (name) {
+      case 'submitted':
+      case 'waitingKabagApproval':
+        return (_C.warning, _C.warningLight);
+      case 'approved':
+      case 'waitingKadivApproval':
+      case 'completed':
+        return (_C.success, _C.successLight);
+      case 'rejected':
+        return (_C.error, _C.errorLight);
+      default:
+        return (_C.info, _C.infoLight);
+    }
+  }
+}
+
+// ── Reusable shared widgets for this file ───────────────────────────────────
+
+class _ApprovalsTopBar extends StatelessWidget {
+  final String title;
+  final String subtitle;
+  final VoidCallback onBack;
+
+  const _ApprovalsTopBar({
+    required this.title,
+    required this.subtitle,
+    required this.onBack,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      color: _C.surface,
+      child: SafeArea(
+        bottom: false,
+        child: Container(
+          height: 60,
+          padding: const EdgeInsets.symmetric(horizontal: 16),
+          decoration: const BoxDecoration(
+            color: _C.surface,
+            border: Border(bottom: BorderSide(color: _C.border, width: 1)),
+          ),
+          child: Row(
+            children: [
+              GestureDetector(
+                onTap: onBack,
+                child: Container(
+                  width: 38,
+                  height: 38,
+                  decoration: BoxDecoration(
+                    color: _C.background,
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(color: _C.border),
+                  ),
+                  child: const Icon(Icons.arrow_back_rounded,
+                      size: 18, color: _C.textSecondary),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(title,
+                        style: const TextStyle(
+                            fontSize: 15,
+                            fontWeight: FontWeight.w700,
+                            color: _C.textPrimary)),
+                    Text(subtitle,
+                        style: const TextStyle(
+                            fontSize: 11, color: _C.textSecondary)),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _SearchField extends StatelessWidget {
+  final Key searchKey;
+  final TextEditingController controller;
+  final String hintText;
+  final ValueChanged<String> onChanged;
+  final VoidCallback onClear;
+  final bool showClear;
+
+  const _SearchField({
+    required this.searchKey,
+    required this.controller,
+    required this.hintText,
+    required this.onChanged,
+    required this.onClear,
+    required this.showClear,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: BoxDecoration(
+        color: _C.background,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: _C.border),
+      ),
+      child: TextField(
+        key: searchKey,
+        controller: controller,
+        style: const TextStyle(fontSize: 13, color: _C.textPrimary),
+        decoration: InputDecoration(
+          hintText: hintText,
+          hintStyle: const TextStyle(fontSize: 13, color: _C.textSecondary),
+          prefixIcon: const Icon(Icons.search_rounded,
+              size: 18, color: _C.textSecondary),
+          suffixIcon: showClear
+              ? GestureDetector(
+                  onTap: onClear,
+                  child: const Icon(Icons.clear_rounded,
+                      size: 16, color: _C.textSecondary),
+                )
+              : null,
+          border: InputBorder.none,
+          contentPadding:
+              const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        ),
+        onChanged: onChanged,
+      ),
+    );
+  }
+}
+
+class _DropdownFilter extends StatelessWidget {
+  final Widget child;
+
+  const _DropdownFilter({required this.child});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 2),
+      decoration: BoxDecoration(
+        color: _C.background,
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: _C.border),
+      ),
+      child: child,
+    );
+  }
+}
+
+class _EmptyState extends StatelessWidget {
+  final String title;
+  final String subtitle;
+
+  const _EmptyState({required this.title, required this.subtitle});
+
+  @override
+  Widget build(BuildContext context) {
     return Center(
       child: Padding(
-        padding: const EdgeInsets.all(AppSpacing.xl),
+        padding: const EdgeInsets.all(32),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const Icon(Icons.task_alt, size: 56, color: AppColors.success),
-            const SizedBox(height: AppSpacing.md),
-            Text(
-              title,
-              style: const TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.bold,
-                color: AppColors.textPrimary,
+            Container(
+              width: 72,
+              height: 72,
+              decoration: BoxDecoration(
+                color: _C.successLight,
+                borderRadius: BorderRadius.circular(20),
               ),
+              child: const Icon(Icons.task_alt_rounded,
+                  size: 36, color: _C.success),
             ),
-            const SizedBox(height: AppSpacing.xs),
-            Text(
-              subtitle,
-              textAlign: TextAlign.center,
-              style: const TextStyle(
-                fontSize: 13,
-                color: AppColors.textSecondary,
+            const SizedBox(height: 16),
+            Text(title,
+                textAlign: TextAlign.center,
+                style: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w700,
+                    color: _C.textPrimary)),
+            const SizedBox(height: 6),
+            Text(subtitle,
+                textAlign: TextAlign.center,
+                style: const TextStyle(
+                    fontSize: 13, color: _C.textSecondary)),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _ErrorState extends StatelessWidget {
+  final String message;
+  final VoidCallback onRetry;
+
+  const _ErrorState({required this.message, required this.onRetry});
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(32),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Container(
+              width: 64,
+              height: 64,
+              decoration: BoxDecoration(
+                color: _C.errorLight,
+                borderRadius: BorderRadius.circular(18),
+              ),
+              child: const Icon(Icons.error_outline_rounded,
+                  size: 32, color: _C.error),
+            ),
+            const SizedBox(height: 16),
+            const Text('Gagal Memuat Data',
+                style: TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w700,
+                    color: _C.textPrimary)),
+            const SizedBox(height: 6),
+            Text(message,
+                textAlign: TextAlign.center,
+                style: const TextStyle(
+                    fontSize: 12, color: _C.textSecondary)),
+            const SizedBox(height: 20),
+            ElevatedButton.icon(
+              onPressed: onRetry,
+              icon: const Icon(Icons.refresh_rounded, size: 16),
+              label: const Text('Coba Lagi'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: _C.teal,
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10)),
+                elevation: 0,
               ),
             ),
           ],

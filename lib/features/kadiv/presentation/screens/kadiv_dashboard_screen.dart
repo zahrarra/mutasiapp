@@ -2,18 +2,34 @@
 //
 // Dashboard Screen untuk Role: Kadiv (KDV-001).
 // Sumber: ROLE-FLOW.md §6, SCREEN-SPEC.md KDV-001, DESIGN.md.
+// UI: Premium Stitch design — stat cards, hero CTA, recent list.
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../app/router/route_names.dart';
-import '../../../../app/theme/app_colors.dart';
-import '../../../../app/theme/app_spacing.dart';
 import '../../../auth/presentation/providers/auth_provider.dart';
 import '../../../auth/presentation/widgets/role_dashboard_layout.dart';
 import '../../../mutation/domain/entities/mutation.dart';
 import '../providers/kadiv_approval_provider.dart';
+
+class _C {
+  static const navy = Color(0xFF0F3D56);
+  static const teal = Color(0xFF0F766E);
+  static const surface = Color(0xFFFFFFFF);
+  static const textPrimary = Color(0xFF172B4D);
+  static const textSecondary = Color(0xFF52606D);
+  static const border = Color(0xFFE2E8F0);
+  static const success = Color(0xFF10B981);
+  static const successLight = Color(0xFFECFDF5);
+  static const warning = Color(0xFFD97706);
+  static const warningLight = Color(0xFFFEF3C7);
+  static const error = Color(0xFFEF4444);
+  static const errorLight = Color(0xFFFEF2F2);
+}
+
+
 
 class KadivDashboardScreen extends ConsumerWidget {
   const KadivDashboardScreen({super.key});
@@ -30,32 +46,39 @@ class KadivDashboardScreen extends ConsumerWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Greeting Header
+          // ── Greeting ────────────────────────────────────────────────
           Text(
-            'Halo, $userName',
+            'Halo, $userName! 👋',
             style: const TextStyle(
-              fontSize: 20,
-              fontWeight: FontWeight.bold,
-              color: AppColors.textPrimary,
+              fontSize: 22,
+              fontWeight: FontWeight.w700,
+              color: _C.textPrimary,
+              height: 1.2,
             ),
           ),
-          const SizedBox(height: AppSpacing.xs),
+          const SizedBox(height: 4),
           const Text(
-            'Tinjau dan putuskan pengajuan mutasi aset dengan kriteria khusus tingkat Kepala Divisi.',
-            style: TextStyle(fontSize: 13, color: AppColors.textSecondary),
+            'Otorisasi final mutasi aset tingkat Kepala Divisi',
+            style: TextStyle(
+              fontSize: 13,
+              color: _C.textSecondary,
+              fontWeight: FontWeight.w500,
+            ),
           ),
-          const SizedBox(height: AppSpacing.lg),
+          const SizedBox(height: 20),
 
-          // Stat Cards (Menunggu Approval, Disetujui, Ditolak)
+          // ── Stat Cards (3 kolom) ─────────────────────────────────────
           Row(
             children: [
               Expanded(
-                child: _buildStatCard(
-                  title: 'Menunggu Approval',
-                  count: stats.waitingApprovalCount,
+                child: _StatCard(
+                  key: const Key('stat_kadiv_waiting'),
                   icon: Icons.pending_actions_rounded,
-                  color: AppColors.warning,
-                  bgColor: AppColors.warningContainer,
+                  label: 'Menunggu',
+                  count: stats.waitingApprovalCount,
+                  iconColor: _C.warning,
+                  iconBg: _C.warningLight,
+                  countColor: _C.warning,
                   onTap: () {
                     ref.read(kadivStatusFilterProvider.notifier).state =
                         KadivStatusFilter.waiting;
@@ -63,14 +86,16 @@ class KadivDashboardScreen extends ConsumerWidget {
                   },
                 ),
               ),
-              const SizedBox(width: AppSpacing.sm),
+              const SizedBox(width: 10),
               Expanded(
-                child: _buildStatCard(
-                  title: 'Disetujui',
+                child: _StatCard(
+                  key: const Key('stat_kadiv_approved'),
+                  icon: Icons.verified_outlined,
+                  label: 'Disetujui',
                   count: stats.approvedCount,
-                  icon: Icons.check_circle_outline,
-                  color: AppColors.success,
-                  bgColor: AppColors.successContainer,
+                  iconColor: _C.success,
+                  iconBg: _C.successLight,
+                  countColor: _C.success,
                   onTap: () {
                     ref.read(kadivStatusFilterProvider.notifier).state =
                         KadivStatusFilter.approved;
@@ -78,14 +103,16 @@ class KadivDashboardScreen extends ConsumerWidget {
                   },
                 ),
               ),
-              const SizedBox(width: AppSpacing.sm),
+              const SizedBox(width: 10),
               Expanded(
-                child: _buildStatCard(
-                  title: 'Ditolak',
-                  count: stats.rejectedCount,
+                child: _StatCard(
+                  key: const Key('stat_kadiv_rejected'),
                   icon: Icons.cancel_outlined,
-                  color: AppColors.error,
-                  bgColor: AppColors.errorContainer,
+                  label: 'Ditolak',
+                  count: stats.rejectedCount,
+                  iconColor: _C.error,
+                  iconBg: _C.errorLight,
+                  countColor: _C.error,
                   onTap: () {
                     ref.read(kadivStatusFilterProvider.notifier).state =
                         KadivStatusFilter.rejected;
@@ -95,9 +122,9 @@ class KadivDashboardScreen extends ConsumerWidget {
               ),
             ],
           ),
-          const SizedBox(height: AppSpacing.xl),
+          const SizedBox(height: 20),
 
-          // Primary Action Button
+          // ── Primary Action Button ─────────────────────────────────────
           SizedBox(
             width: double.infinity,
             child: ElevatedButton.icon(
@@ -107,116 +134,100 @@ class KadivDashboardScreen extends ConsumerWidget {
                     KadivStatusFilter.waiting;
                 context.push(RouteNames.kadivApprovalsPath);
               },
-              icon: const Icon(Icons.verified_user_outlined),
+              icon: const Icon(Icons.verified_user_outlined, size: 18),
               label: const Text(
                 'Lihat Antrean Approval Kadiv',
-                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                style: TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
               ),
               style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.primary,
+                backgroundColor: _C.navy,
                 foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(vertical: AppSpacing.md),
+                padding:
+                    const EdgeInsets.symmetric(vertical: 14, horizontal: 20),
                 shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(AppRadius.button),
+                  borderRadius: BorderRadius.circular(14),
                 ),
+                elevation: 0,
               ),
             ),
           ),
-          const SizedBox(height: AppSpacing.xl),
+          const SizedBox(height: 24),
 
-          // Section Pengajuan Terbaru
+          // ── Antrean Terbaru ───────────────────────────────────────────
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               const Text(
-                'Pengajuan Terbaru',
+                'Antrean Otorisasi',
                 style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
-                  color: AppColors.textPrimary,
+                  fontSize: 15,
+                  fontWeight: FontWeight.w700,
+                  color: _C.textPrimary,
                 ),
               ),
-              TextButton(
-                onPressed: () {
+              GestureDetector(
+                onTap: () {
                   ref.read(kadivStatusFilterProvider.notifier).state =
                       KadivStatusFilter.all;
                   context.push(RouteNames.kadivApprovalsPath);
                 },
-                child: const Text('Lihat Semua'),
+                child: const Text(
+                  'Lihat Semua →',
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                    color: _C.teal,
+                  ),
+                ),
               ),
             ],
           ),
-          const SizedBox(height: AppSpacing.sm),
+          const SizedBox(height: 12),
 
           asyncMutations.when(
             data: (mutations) {
-              // Filter yang relevan untuk Kadiv: pengajuan yang menunggu keputusan Kadiv
               final relevant = mutations
                   .where(isWaitingKadivApproval)
                   .take(5)
                   .toList();
 
+
               if (relevant.isEmpty) {
-                return Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.all(AppSpacing.xl),
-                  decoration: BoxDecoration(
-                    color: AppColors.surface,
-                    borderRadius: BorderRadius.circular(AppRadius.card),
-                    border: Border.all(color: AppColors.border),
-                  ),
-                  child: const Column(
-                    children: [
-                      Icon(
-                        Icons.check_circle_outline,
-                        size: 44,
-                        color: AppColors.success,
-                      ),
-                      SizedBox(height: AppSpacing.sm),
-                      Text(
-                        'Tidak Ada Antrean Approval',
-                        style: TextStyle(
-                          fontSize: 14,
-                          fontWeight: FontWeight.bold,
-                          color: AppColors.textPrimary,
-                        ),
-                      ),
-                      SizedBox(height: AppSpacing.xs),
-                      Text(
-                        'Seluruh mutasi yang memerlukan keputusan Kadiv telah selesai diproses.',
-                        textAlign: TextAlign.center,
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: AppColors.textSecondary,
-                        ),
-                      ),
-                    ],
-                  ),
-                );
+                return _EmptyState();
               }
 
               return Column(
-                children: relevant.map((mutation) {
-                  return _buildRecentCard(context, mutation);
-                }).toList(),
+                children: relevant
+                    .map((item) => Padding(
+                          padding: const EdgeInsets.only(bottom: 10),
+                          child: _ApprovalCard(
+                            mutation: item,
+                            onTap: () =>
+                                context.push('/kadiv/approvals/${item.id}'),
+                          ),
+                        ))
+                    .toList(),
               );
             },
             loading: () => const Center(
               child: Padding(
-                padding: EdgeInsets.all(AppSpacing.xl),
-                child: CircularProgressIndicator(),
+                padding: EdgeInsets.all(32),
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  color: _C.teal,
+                ),
               ),
             ),
             error: (err, _) => Container(
-              padding: const EdgeInsets.all(AppSpacing.md),
+              padding: const EdgeInsets.all(14),
               decoration: BoxDecoration(
-                color: AppColors.errorContainer.withValues(alpha: 0.3),
-                borderRadius: BorderRadius.circular(AppRadius.card),
-                border: Border.all(color: AppColors.error),
+                color: _C.errorLight,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: const Color(0xFFFECACA)),
               ),
               child: Text(
                 'Gagal memuat mutasi: $err',
-                style: const TextStyle(color: AppColors.error, fontSize: 13),
+                style: const TextStyle(color: _C.error, fontSize: 13),
               ),
             ),
           ),
@@ -224,53 +235,77 @@ class KadivDashboardScreen extends ConsumerWidget {
       ),
     );
   }
+}
 
-  Widget _buildStatCard({
-    required String title,
-    required int count,
-    required IconData icon,
-    required Color color,
-    required Color bgColor,
-    required VoidCallback onTap,
-  }) {
-    return InkWell(
+class _StatCard extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final int count;
+  final Color iconColor;
+  final Color iconBg;
+  final Color countColor;
+  final VoidCallback onTap;
+
+  const _StatCard({
+    super.key,
+    required this.icon,
+    required this.label,
+    required this.count,
+    required this.iconColor,
+    required this.iconBg,
+    required this.countColor,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
       onTap: onTap,
-      borderRadius: BorderRadius.circular(AppRadius.card),
       child: Container(
-        padding: const EdgeInsets.all(AppSpacing.md),
+        padding: const EdgeInsets.all(12),
         decoration: BoxDecoration(
-          color: AppColors.surface,
-          borderRadius: BorderRadius.circular(AppRadius.card),
-          border: Border.all(color: AppColors.border),
+          color: _C.surface,
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: _C.border),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.04),
+              blurRadius: 8,
+              offset: const Offset(0, 2),
+            ),
+          ],
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Container(
-              padding: const EdgeInsets.all(6),
+              width: 36,
+              height: 36,
               decoration: BoxDecoration(
-                color: bgColor,
-                borderRadius: BorderRadius.circular(AppRadius.card),
+                color: iconBg,
+                borderRadius: BorderRadius.circular(10),
               ),
-              child: Icon(icon, color: color, size: 20),
+              child: Icon(icon, color: iconColor, size: 18),
             ),
-            const SizedBox(height: AppSpacing.sm),
+            const SizedBox(height: 10),
             Text(
               count.toString(),
-              style: const TextStyle(
-                fontSize: 22,
-                fontWeight: FontWeight.bold,
-                color: AppColors.textPrimary,
+              style: TextStyle(
+                fontSize: 24,
+                fontWeight: FontWeight.w700,
+                color: countColor,
+                height: 1.0,
               ),
             ),
-            const SizedBox(height: 2),
+            const SizedBox(height: 3),
             Text(
-              title,
+              label,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
               style: const TextStyle(
                 fontSize: 11,
-                color: AppColors.textSecondary,
+                color: _C.textSecondary,
+                fontWeight: FontWeight.w500,
               ),
             ),
           ],
@@ -278,105 +313,146 @@ class KadivDashboardScreen extends ConsumerWidget {
       ),
     );
   }
+}
 
-  Widget _buildRecentCard(BuildContext context, Mutation item) {
-    return Card(
-      margin: const EdgeInsets.only(bottom: AppSpacing.sm),
-      elevation: 0,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(AppRadius.card),
-        side: const BorderSide(color: AppColors.border),
-      ),
-      child: InkWell(
-        key: Key('card_recent_kadiv_${item.id}'),
-        onTap: () {
-          context.push('/kadiv/approvals/${item.id}');
-        },
-        borderRadius: BorderRadius.circular(AppRadius.card),
-        child: Padding(
-          padding: const EdgeInsets.all(AppSpacing.md),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Ticket & Status
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+class _ApprovalCard extends StatelessWidget {
+  final Mutation mutation;
+  final VoidCallback? onTap;
+
+  const _ApprovalCard({required this.mutation, this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          color: _C.surface,
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: _C.border),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.04),
+              blurRadius: 8,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+        child: Row(
+          children: [
+            Container(
+              width: 3,
+              height: 48,
+              decoration: BoxDecoration(
+                color: _C.navy,
+                borderRadius: BorderRadius.circular(999),
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        mutation.ticketNumber,
+                        style: const TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w700,
+                          fontFamily: 'monospace',
+                          color: _C.navy,
+                        ),
+                      ),
+                      if (mutation.approvedBy != null)
+                        Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Icon(
+                              Icons.check_circle_outline,
+                              size: 12,
+                              color: _C.success,
+                            ),
+                            const SizedBox(width: 3),
+                            Text(
+                              'Kabag: ${mutation.approvedBy}',
+                              style: const TextStyle(
+                                fontSize: 10,
+                                color: _C.success,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                          ],
+                        ),
+                    ],
+                  ),
+                  const SizedBox(height: 4),
                   Text(
-                    item.ticketNumber,
+                    mutation.asset.name,
                     style: const TextStyle(
                       fontSize: 13,
-                      fontWeight: FontWeight.bold,
-                      color: AppColors.primary,
+                      fontWeight: FontWeight.w600,
+                      color: _C.textPrimary,
                     ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                   ),
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 8,
-                      vertical: 2,
+                  const SizedBox(height: 2),
+                  Text(
+                    'Tujuan: ${mutation.targetLocation} • ${mutation.applicantName}',
+                    style: const TextStyle(
+                      fontSize: 11,
+                      color: _C.textSecondary,
                     ),
-                    decoration: BoxDecoration(
-                      color: item.status.backgroundColor,
-                      borderRadius: BorderRadius.circular(AppRadius.pill),
-                    ),
-                    child: Text(
-                      item.status.displayName,
-                      style: TextStyle(
-                        fontSize: 11,
-                        fontWeight: FontWeight.w600,
-                        color: item.status.color,
-                      ),
-                    ),
+                    overflow: TextOverflow.ellipsis,
                   ),
                 ],
               ),
-              const SizedBox(height: 4),
-
-              // Asset Name
-              Text(
-                item.asset.name,
-                style: const TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.bold,
-                  color: AppColors.textPrimary,
-                ),
-              ),
-              const SizedBox(height: 2),
-
-              // Target Location & Applicant
-              Text(
-                'Tujuan: ${item.targetLocation} • Pemohon: ${item.applicantName}',
-                style: const TextStyle(
-                  fontSize: 12,
-                  color: AppColors.textSecondary,
-                ),
-              ),
-
-              // Info Approval Kabag jika ada
-              if (item.approvedBy != null) ...[
-                const SizedBox(height: 6),
-                Row(
-                  children: [
-                    const Icon(
-                      Icons.check_circle_outline,
-                      size: 14,
-                      color: AppColors.success,
-                    ),
-                    const SizedBox(width: 4),
-                    Text(
-                      'Disetujui Kabag: ${item.approvedBy}',
-                      style: const TextStyle(
-                        fontSize: 11,
-                        color: AppColors.success,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                  ],
-                ),
-              ],
-            ],
-          ),
+            ),
+            const SizedBox(width: 8),
+            const Icon(
+              Icons.chevron_right_rounded,
+              size: 18,
+              color: _C.border,
+            ),
+          ],
         ),
+      ),
+    );
+  }
+}
+
+class _EmptyState extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: 36, horizontal: 24),
+      decoration: BoxDecoration(
+        color: _C.surface,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: _C.border),
+      ),
+      child: const Column(
+        children: [
+          Icon(Icons.check_circle_outline, size: 44, color: _C.success),
+          SizedBox(height: 12),
+          Text(
+            'Tidak Ada Antrean Approval',
+            style: TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.w600,
+              color: _C.textPrimary,
+            ),
+          ),
+          SizedBox(height: 4),
+          Text(
+            'Semua mutasi telah diproses.',
+            textAlign: TextAlign.center,
+            style: TextStyle(fontSize: 12, color: _C.textSecondary),
+          ),
+        ],
       ),
     );
   }

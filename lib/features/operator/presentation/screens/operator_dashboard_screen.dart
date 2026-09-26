@@ -1,20 +1,30 @@
 // lib/features/operator/presentation/screens/operator_dashboard_screen.dart
 //
 // Dashboard Screen untuk Role: Operator (OPR-001).
-// Sumber: ROLE-FLOW.md §4, SCREEN-SPEC.md OPR-001, WIREFRAME.md §2.
+// Sumber: ROLE-FLOW.md §4, SCREEN-SPEC.md OPR-001.
+// UI: Premium Stitch design — hero 2-col action cards, improved recent list.
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../app/router/route_names.dart';
-import '../../../../app/theme/app_colors.dart';
-import '../../../../app/theme/app_spacing.dart';
 import '../../../auth/presentation/providers/auth_provider.dart';
 import '../../../auth/presentation/widgets/role_dashboard_layout.dart';
 import '../../../mutation/domain/entities/mutation.dart';
 import '../../../mutation/domain/entities/mutation_status.dart';
 import '../providers/operator_verification_provider.dart';
+
+/// Warna lokal — mengikuti Stitch design tokens.
+class _C {
+  static const navy = Color(0xFF0F3D56);
+  static const teal = Color(0xFF0F766E);
+  static const surface = Color(0xFFFFFFFF);
+  static const textPrimary = Color(0xFF172B4D);
+  static const textSecondary = Color(0xFF52606D);
+  static const border = Color(0xFFE2E8F0);
+  static const error = Color(0xFFEF4444);
+}
 
 class OperatorDashboardScreen extends ConsumerWidget {
   const OperatorDashboardScreen({super.key});
@@ -31,265 +41,473 @@ class OperatorDashboardScreen extends ConsumerWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Greeting Header
+          // ── Greeting ──────────────────────────────────────────────────
           Text(
-            'Halo, $userName',
+            'Halo, $userName! 👋',
             style: const TextStyle(
-              fontSize: 20,
-              fontWeight: FontWeight.bold,
-              color: AppColors.textPrimary,
+              fontSize: 22,
+              fontWeight: FontWeight.w700,
+              color: _C.textPrimary,
+              height: 1.2,
             ),
           ),
-          const SizedBox(height: AppSpacing.xs),
+          const SizedBox(height: 4),
           const Text(
-            'Periksa dan verifikasi kelengkapan pengajuan mutasi aset.',
-            style: TextStyle(fontSize: 13, color: AppColors.textSecondary),
+            'Verifikasi & Periksa Mutasi Aset',
+            style: TextStyle(
+              fontSize: 13,
+              color: _C.textSecondary,
+              fontWeight: FontWeight.w500,
+            ),
           ),
-          const SizedBox(height: AppSpacing.lg),
+          const SizedBox(height: 20),
 
-          // Stat Cards (Menunggu Verifikasi & Pengajuan Dikembalikan)
+          // ── Hero Action Cards (2-kolom) ────────────────────────────────
           Row(
             children: [
+              // Card 1: Pengajuan Masuk (teal)
               Expanded(
-                child: _buildStatCard(
-                  title: 'Menunggu Verifikasi',
-                  count: stats.pendingCount,
-                  icon: Icons.hourglass_top_rounded,
-                  color: AppColors.warning,
-                  bgColor: AppColors.warningContainer,
+                child: _HeroCard(
+                  key: const Key('hero_pengajuan_masuk'),
+                  icon: Icons.assignment_outlined,
+                  title: 'Pengajuan Masuk',
+                  subtitle: 'Perlu diverifikasi segera',
+                  badgeText: '${stats.pendingCount} Menunggu',
+                  badgeColor: Colors.white.withValues(alpha: 0.25),
+                  badgeTextColor: Colors.white,
+                  gradient: const LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [Color(0xFF0F766E), Color(0xFF0D9488)],
+                  ),
+                  glowColor: const Color(0xFF0F766E),
                   onTap: () => context.push(RouteNames.operatorMutationsPath),
                 ),
               ),
-              const SizedBox(width: AppSpacing.md),
+              const SizedBox(width: 12),
+              // Card 2: Riwayat Verifikasi (navy)
               Expanded(
-                child: _buildStatCard(
-                  title: 'Pengajuan Dikembalikan',
-                  count: stats.returnedCount,
-                  icon: Icons.assignment_return_outlined,
-                  color: AppColors.error,
-                  bgColor: AppColors.errorContainer,
+                child: _HeroCard(
+                  key: const Key('hero_riwayat_verifikasi'),
+                  icon: Icons.history_rounded,
+                  title: 'Dikembalikan',
+                  subtitle: 'Perlu tindak lanjut',
+                  badgeText: '${stats.returnedCount} Item',
+                  badgeColor: Colors.white.withValues(alpha: 0.15),
+                  badgeTextColor: const Color(0xFF6EE7B7),
+                  gradient: const LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [Color(0xFF0F3D56), Color(0xFF1A5276)],
+                  ),
+                  glowColor: const Color(0xFF0F3D56),
                   onTap: () => context.push(RouteNames.operatorMutationsPath),
                 ),
               ),
             ],
           ),
-          const SizedBox(height: AppSpacing.xl),
+          const SizedBox(height: 20),
 
-          // Primary Action: Lihat Pengajuan
+          // ── Primary Action Button ─────────────────────────────────────
           SizedBox(
             width: double.infinity,
             child: ElevatedButton.icon(
               key: const Key('btn_lihat_pengajuan'),
               onPressed: () => context.push(RouteNames.operatorMutationsPath),
-              icon: const Icon(Icons.fact_check_outlined),
+              icon: const Icon(Icons.fact_check_outlined, size: 18),
               label: const Text(
                 'Lihat Pengajuan Masuk',
-                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                style: TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
               ),
               style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.primary,
+                backgroundColor: _C.navy,
                 foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(vertical: AppSpacing.md),
+                padding:
+                    const EdgeInsets.symmetric(vertical: 14, horizontal: 20),
                 shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(AppRadius.button),
+                  borderRadius: BorderRadius.circular(14),
                 ),
+                elevation: 0,
               ),
             ),
           ),
-          const SizedBox(height: AppSpacing.xl),
+          const SizedBox(height: 24),
 
-          // Pengajuan Terbaru Section
+          // ── Pengajuan Terbaru ─────────────────────────────────────────
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               const Text(
                 'Pengajuan Terbaru',
                 style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
-                  color: AppColors.textPrimary,
+                  fontSize: 15,
+                  fontWeight: FontWeight.w700,
+                  color: _C.textPrimary,
                 ),
               ),
-              TextButton(
-                onPressed: () => context.push(RouteNames.operatorMutationsPath),
-                child: const Text('Lihat Semua'),
+              GestureDetector(
+                onTap: () => context.push(RouteNames.operatorMutationsPath),
+                child: const Text(
+                  'Lihat Semua →',
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                    color: _C.teal,
+                  ),
+                ),
               ),
             ],
           ),
-          const SizedBox(height: AppSpacing.sm),
+          const SizedBox(height: 12),
 
           asyncMutations.when(
             data: (mutations) {
               final incomingList = mutations
                   .where((m) => m.status == MutationStatus.submitted)
-                  .take(3)
+                  .take(5)
                   .toList();
 
               if (incomingList.isEmpty) {
                 return _buildEmptyState();
               }
 
-              return ListView.separated(
-                shrinkWrap: true,
-                physics: const NeverScrollableScrollPhysics(),
-                itemCount: incomingList.length,
-                separatorBuilder: (_, _) =>
-                    const SizedBox(height: AppSpacing.sm),
-                itemBuilder: (context, index) {
-                  final item = incomingList[index];
-                  return _buildRecentCard(context, item);
-                },
+              return Column(
+                children: incomingList
+                    .map((item) => Padding(
+                          padding: const EdgeInsets.only(bottom: 10),
+                          child: _RecentCard(
+                            mutation: item,
+                            onTap: () => context
+                                .push('/operator/mutations/${item.id}'),
+                          ),
+                        ))
+                    .toList(),
               );
             },
             loading: () => const Center(
               child: Padding(
-                padding: EdgeInsets.all(AppSpacing.xl),
-                child: CircularProgressIndicator(),
+                padding: EdgeInsets.all(32),
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  color: _C.teal,
+                ),
               ),
             ),
-            error: (err, _) => Center(
-              child: Text(
-                'Gagal memuat pengajuan: $err',
-                style: const TextStyle(color: AppColors.error),
+            error: (err, _) => Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: const Color(0xFFFEF2F2),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: const Color(0xFFFECACA)),
+              ),
+              child: Row(
+                children: [
+                  const Icon(Icons.error_outline, color: _C.error, size: 18),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      'Gagal memuat pengajuan: $err',
+                      style: const TextStyle(
+                        color: _C.error,
+                        fontSize: 13,
+                      ),
+                    ),
+                  ),
+                ],
               ),
             ),
           ),
         ],
-      ),
-    );
-  }
-
-  Widget _buildStatCard({
-    required String title,
-    required int count,
-    required IconData icon,
-    required Color color,
-    required Color bgColor,
-    required VoidCallback onTap,
-  }) {
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(AppRadius.card),
-      child: Container(
-        padding: const EdgeInsets.all(AppSpacing.md),
-        decoration: BoxDecoration(
-          color: bgColor.withValues(alpha: 0.3),
-          borderRadius: BorderRadius.circular(AppRadius.card),
-          border: Border.all(color: color.withValues(alpha: 0.4)),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Icon(icon, color: color, size: 24),
-                Text(
-                  count.toString(),
-                  style: TextStyle(
-                    fontSize: 26,
-                    fontWeight: FontWeight.bold,
-                    color: color,
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: AppSpacing.sm),
-            Text(
-              title,
-              style: const TextStyle(
-                fontSize: 12,
-                fontWeight: FontWeight.w600,
-                color: AppColors.textPrimary,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildRecentCard(BuildContext context, Mutation item) {
-    return Card(
-      elevation: 0,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(AppRadius.card),
-        side: const BorderSide(color: AppColors.border),
-      ),
-      child: ListTile(
-        contentPadding: const EdgeInsets.symmetric(
-          horizontal: AppSpacing.md,
-          vertical: AppSpacing.xs,
-        ),
-        title: Text(
-          item.ticketNumber,
-          style: const TextStyle(
-            fontSize: 13,
-            fontWeight: FontWeight.bold,
-            color: AppColors.primary,
-          ),
-        ),
-        subtitle: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const SizedBox(height: 2),
-            Text(
-              item.asset.name,
-              style: const TextStyle(
-                fontSize: 13,
-                fontWeight: FontWeight.w500,
-                color: AppColors.textPrimary,
-              ),
-            ),
-            Text(
-              'Pemohon: ${item.applicantName}',
-              style: const TextStyle(
-                fontSize: 12,
-                color: AppColors.textSecondary,
-              ),
-            ),
-          ],
-        ),
-        trailing: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-          decoration: BoxDecoration(
-            color: item.status.backgroundColor,
-            borderRadius: BorderRadius.circular(AppRadius.pill),
-          ),
-          child: Text(
-            item.status.displayName,
-            style: TextStyle(
-              fontSize: 11,
-              fontWeight: FontWeight.w600,
-              color: item.status.color,
-            ),
-          ),
-        ),
-        onTap: () {
-          context.push('/operator/mutations/${item.id}');
-        },
       ),
     );
   }
 
   Widget _buildEmptyState() {
     return Container(
-      padding: const EdgeInsets.all(AppSpacing.xl),
-      alignment: Alignment.center,
+      padding: const EdgeInsets.symmetric(vertical: 40, horizontal: 24),
       decoration: BoxDecoration(
-        color: AppColors.surface,
-        borderRadius: BorderRadius.circular(AppRadius.card),
-        border: Border.all(color: AppColors.border),
+        color: _C.surface,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: _C.border),
       ),
       child: const Column(
         children: [
-          Icon(Icons.inbox_outlined, size: 40, color: AppColors.textSecondary),
-          SizedBox(height: AppSpacing.sm),
+          Icon(Icons.inbox_outlined, size: 44, color: _C.border),
+          SizedBox(height: 12),
           Text(
             'Belum ada pengajuan masuk',
-            style: TextStyle(fontSize: 14, color: AppColors.textSecondary),
+            style: TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.w600,
+              color: _C.textSecondary,
+            ),
+          ),
+          SizedBox(height: 4),
+          Text(
+            'Pengajuan baru akan muncul di sini',
+            style: TextStyle(fontSize: 12, color: _C.textSecondary),
           ),
         ],
+      ),
+    );
+  }
+}
+
+/// Hero card dengan gradient background (2-kolom).
+class _HeroCard extends StatelessWidget {
+  final IconData icon;
+  final String title;
+  final String subtitle;
+  final String badgeText;
+  final Color badgeColor;
+  final Color badgeTextColor;
+  final LinearGradient gradient;
+  final Color glowColor;
+  final VoidCallback onTap;
+
+  const _HeroCard({
+    super.key,
+    required this.icon,
+    required this.title,
+    required this.subtitle,
+    required this.badgeText,
+    required this.badgeColor,
+    required this.badgeTextColor,
+    required this.gradient,
+    required this.glowColor,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          gradient: gradient,
+          borderRadius: BorderRadius.circular(20),
+          boxShadow: [
+            BoxShadow(
+              color: glowColor.withValues(alpha: 0.30),
+              blurRadius: 16,
+              offset: const Offset(0, 6),
+            ),
+          ],
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Icon container
+            Container(
+              width: 40,
+              height: 40,
+              decoration: BoxDecoration(
+                color: Colors.white.withValues(alpha: 0.15),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Icon(icon, color: Colors.white, size: 20),
+            ),
+            const SizedBox(height: 12),
+            // Title
+            Text(
+              title,
+              style: const TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.w700,
+                color: Colors.white,
+                height: 1.2,
+              ),
+            ),
+            const SizedBox(height: 3),
+            Text(
+              subtitle,
+              style: TextStyle(
+                fontSize: 11,
+                color: Colors.white.withValues(alpha: 0.75),
+              ),
+            ),
+            const SizedBox(height: 12),
+            // Divider
+            Divider(
+              height: 1,
+              color: Colors.white.withValues(alpha: 0.20),
+            ),
+            const SizedBox(height: 10),
+            // Badge + arrow
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 3,
+                  ),
+                  decoration: BoxDecoration(
+                    color: badgeColor,
+                    borderRadius: BorderRadius.circular(999),
+                  ),
+                  child: Text(
+                    badgeText,
+                    style: TextStyle(
+                      fontSize: 10,
+                      fontWeight: FontWeight.w600,
+                      color: badgeTextColor,
+                    ),
+                  ),
+                ),
+                Icon(
+                  Icons.arrow_forward_rounded,
+                  size: 14,
+                  color: Colors.white.withValues(alpha: 0.60),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Card item mutasi terbaru untuk dashboard Operator.
+class _RecentCard extends StatelessWidget {
+  final Mutation mutation;
+  final VoidCallback? onTap;
+
+  const _RecentCard({required this.mutation, this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          color: _C.surface,
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: _C.border),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.04),
+              blurRadius: 8,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+        child: Row(
+          children: [
+            // Left accent
+            Container(
+              width: 3,
+              height: 44,
+              decoration: BoxDecoration(
+                color: _C.teal,
+                borderRadius: BorderRadius.circular(999),
+              ),
+            ),
+            const SizedBox(width: 12),
+            // Content
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        mutation.ticketNumber,
+                        style: const TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w700,
+                          fontFamily: 'monospace',
+                          color: _C.navy,
+                        ),
+                      ),
+                      _StatusPill(status: mutation.status),
+                    ],
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    mutation.asset.name,
+                    style: const TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                      color: _C.textPrimary,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    'Pemohon: ${mutation.applicantName}',
+                    style: const TextStyle(
+                      fontSize: 11,
+                      color: _C.textSecondary,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(width: 8),
+            const Icon(
+              Icons.chevron_right_rounded,
+              size: 18,
+              color: _C.border,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _StatusPill extends StatelessWidget {
+  final MutationStatus status;
+
+  const _StatusPill({required this.status});
+
+  @override
+  Widget build(BuildContext context) {
+    Color bg;
+    Color fg;
+    String label;
+
+    switch (status) {
+      case MutationStatus.submitted:
+        bg = const Color(0xFFEFF6FF);
+        fg = const Color(0xFF3B82F6);
+        label = 'Masuk';
+        break;
+      case MutationStatus.returned:
+        bg = const Color(0xFFFEF3C7);
+        fg = const Color(0xFFD97706);
+        label = 'Dikembalikan';
+        break;
+      case MutationStatus.verified:
+        bg = const Color(0xFFECFDF5);
+        fg = const Color(0xFF10B981);
+        label = 'Terverifikasi';
+        break;
+      default:
+        bg = const Color(0xFFF1F5F9);
+        fg = const Color(0xFF52606D);
+        label = status.displayName;
+    }
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+      decoration: BoxDecoration(
+        color: bg,
+        borderRadius: BorderRadius.circular(999),
+      ),
+      child: Text(
+        label,
+        style: TextStyle(
+          fontSize: 10,
+          fontWeight: FontWeight.w600,
+          color: fg,
+        ),
       ),
     );
   }

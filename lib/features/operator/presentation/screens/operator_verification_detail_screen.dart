@@ -2,13 +2,12 @@
 //
 // Screen: Detail Verifikasi Pengajuan Mutasi (OPR-003).
 // Sumber: SCREEN-SPEC.md OPR-003, ROLE-FLOW.md §4, WIREFRAME.md §2.
+// UI: Premium Stitch design — custom top bar, section cards, styled action bar.
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../../app/router/route_names.dart';
-import '../../../../app/theme/app_colors.dart';
-import '../../../../app/theme/app_spacing.dart';
 import '../../../asset/domain/entities/asset.dart';
 import '../../../auth/domain/entities/user_role.dart';
 import '../../../mutation/domain/entities/mutation.dart';
@@ -16,11 +15,33 @@ import '../../../mutation/domain/entities/mutation_status.dart';
 import '../../../mutation/presentation/providers/mutation_provider.dart';
 import '../../../notification/domain/entities/notification_item.dart';
 import '../../../notification/presentation/providers/notification_provider.dart';
+import '../../../../app/theme/app_colors.dart';
+import '../../../../app/theme/app_spacing.dart';
 import '../../../../core/config/business_config.dart';
 import '../../../../core/widgets/app_feedback.dart';
 import '../../../../core/widgets/document_preview_dialog.dart';
 import '../../../auth/presentation/providers/auth_provider.dart';
 import '../providers/operator_verification_provider.dart';
+
+// ── Stitch Design Tokens ─────────────────────────────────────────────────────
+class _C {
+  static const navy = Color(0xFF0F3D56);
+  static const teal = Color(0xFF0F766E);
+  static const surface = Color(0xFFFFFFFF);
+  static const background = Color(0xFFF6F8FA);
+  static const textPrimary = Color(0xFF172B4D);
+  static const textSecondary = Color(0xFF52606D);
+  static const border = Color(0xFFE2E8F0);
+  static const warning = Color(0xFFD97706);
+  static const warningLight = Color(0xFFFEF3C7);
+  static const error = Color(0xFFEF4444);
+  static const errorLight = Color(0xFFFEF2F2);
+  static const info = Color(0xFF3B82F6);
+  static const infoLight = Color(0xFFEFF6FF);
+  static const slate = Color(0xFF475569);
+  static const slateLight = Color(0xFFF1F5F9);
+  static const slateBorder = Color(0xFFCBD5E1);
+}
 
 class OperatorVerificationDetailScreen extends ConsumerWidget {
   final String mutationId;
@@ -36,42 +57,128 @@ class OperatorVerificationDetailScreen extends ConsumerWidget {
     final actionState = ref.watch(verificationActionProvider);
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Detail Verifikasi'),
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
-          onPressed: () {
-            if (context.canPop()) {
-              context.pop();
-            } else {
-              context.go(RouteNames.operatorMutationsPath);
-            }
-          },
-        ),
-      ),
-      body: asyncMutation.when(
-        data: (mutation) => _buildBody(context, ref, mutation, actionState),
-        loading: () => const Center(child: CircularProgressIndicator()),
-        error: (err, _) => Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              const Icon(Icons.error_outline, size: 48, color: AppColors.error),
-              const SizedBox(height: AppSpacing.md),
-              Text(
-                'Gagal memuat detail pengajuan: $err',
-                textAlign: TextAlign.center,
-                style: const TextStyle(color: AppColors.error),
+      backgroundColor: _C.background,
+      body: Column(
+        children: [
+          // ── Custom Top Bar ────────────────────────────────────────
+          Container(
+            color: _C.surface,
+            child: SafeArea(
+              bottom: false,
+              child: Container(
+                height: 60,
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                decoration: const BoxDecoration(
+                  color: _C.surface,
+                  border: Border(bottom: BorderSide(color: _C.border, width: 1)),
+                ),
+                child: Row(
+                  children: [
+                    GestureDetector(
+                      onTap: () {
+                        if (context.canPop()) {
+                          context.pop();
+                        } else {
+                          context.go(RouteNames.operatorMutationsPath);
+                        }
+                      },
+                      child: Container(
+                        width: 38,
+                        height: 38,
+                        decoration: BoxDecoration(
+                          color: _C.background,
+                          borderRadius: BorderRadius.circular(10),
+                          border: Border.all(color: _C.border),
+                        ),
+                        child: const Icon(Icons.arrow_back_rounded,
+                            size: 18, color: _C.textSecondary),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    const Expanded(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Detail Verifikasi',
+                            style: TextStyle(
+                              fontSize: 15,
+                              fontWeight: FontWeight.w700,
+                              color: _C.textPrimary,
+                            ),
+                          ),
+                          Text(
+                            'Tinjauan Pengajuan Mutasi',
+                            style: TextStyle(
+                              fontSize: 11,
+                              color: _C.textSecondary,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
               ),
-              const SizedBox(height: AppSpacing.md),
-              ElevatedButton(
-                onPressed: () =>
-                    ref.invalidate(mutationDetailProvider(mutationId)),
-                child: const Text('Coba Lagi'),
-              ),
-            ],
+            ),
           ),
-        ),
+
+          // ── Body content ─────────────────────────────────────────
+          Expanded(
+            child: asyncMutation.when(
+              data: (mutation) => _buildBody(context, ref, mutation, actionState),
+              loading: () => const Center(
+                child: CircularProgressIndicator(strokeWidth: 2, color: _C.teal),
+              ),
+              error: (err, _) => Center(
+                child: Padding(
+                  padding: const EdgeInsets.all(32),
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Container(
+                        width: 64,
+                        height: 64,
+                        decoration: BoxDecoration(
+                          color: _C.errorLight,
+                          borderRadius: BorderRadius.circular(18),
+                        ),
+                        child: const Icon(Icons.error_outline_rounded,
+                            size: 32, color: _C.error),
+                      ),
+                      const SizedBox(height: 16),
+                      const Text('Gagal Memuat Data',
+                          style: TextStyle(
+                              fontSize: 15,
+                              fontWeight: FontWeight.w700,
+                              color: _C.textPrimary)),
+                      const SizedBox(height: 6),
+                      Text('$err',
+                          textAlign: TextAlign.center,
+                          style: const TextStyle(
+                              fontSize: 12, color: _C.textSecondary)),
+                      const SizedBox(height: 20),
+                      ElevatedButton.icon(
+                        onPressed: () =>
+                            ref.invalidate(mutationDetailProvider(mutationId)),
+                        icon: const Icon(Icons.refresh_rounded, size: 16),
+                        label: const Text('Coba Lagi'),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: _C.teal,
+                          foregroundColor: Colors.white,
+                          shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(10)),
+                          elevation: 0,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -99,17 +206,24 @@ class OperatorVerificationDetailScreen extends ConsumerWidget {
       children: [
         Expanded(
           child: SingleChildScrollView(
-            padding: const EdgeInsets.all(AppSpacing.md),
+            padding: const EdgeInsets.fromLTRB(16, 16, 16, 16),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Header: No Tiket & Status Badge
+                // ── Header: Ticket & Status ─────────────────────
                 Container(
-                  padding: const EdgeInsets.all(AppSpacing.md),
+                  padding: const EdgeInsets.all(16),
                   decoration: BoxDecoration(
-                    color: AppColors.surface,
-                    borderRadius: BorderRadius.circular(AppRadius.card),
-                    border: Border.all(color: AppColors.border),
+                    color: _C.surface,
+                    borderRadius: BorderRadius.circular(14),
+                    border: Border.all(color: _C.border),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withValues(alpha: 0.04),
+                        blurRadius: 8,
+                        offset: const Offset(0, 2),
+                      ),
+                    ],
                   ),
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -121,31 +235,32 @@ class OperatorVerificationDetailScreen extends ConsumerWidget {
                             'Nomor Tiket',
                             style: TextStyle(
                               fontSize: 11,
-                              color: AppColors.textSecondary,
+                              color: _C.textSecondary,
                             ),
                           ),
+                          const SizedBox(height: 2),
                           Text(
                             mutation.ticketNumber,
                             style: const TextStyle(
                               fontSize: 15,
-                              fontWeight: FontWeight.bold,
-                              color: AppColors.primary,
+                              fontWeight: FontWeight.w700,
+                              fontFamily: 'monospace',
+                              color: _C.navy,
                             ),
                           ),
                         ],
                       ),
                       Container(
                         padding: const EdgeInsets.symmetric(
-                            horizontal: 10, vertical: 4),
+                            horizontal: 10, vertical: 5),
                         decoration: BoxDecoration(
                           color: mutation.status.backgroundColor,
-                          borderRadius:
-                              BorderRadius.circular(AppRadius.pill),
+                          borderRadius: BorderRadius.circular(999),
                         ),
                         child: Text(
                           mutation.status.displayName,
                           style: TextStyle(
-                            fontSize: 12,
+                            fontSize: 11,
                             fontWeight: FontWeight.w600,
                             color: mutation.status.color,
                           ),
@@ -154,18 +269,18 @@ class OperatorVerificationDetailScreen extends ConsumerWidget {
                     ],
                   ),
                 ),
-                const SizedBox(height: AppSpacing.md),
+                const SizedBox(height: 12),
 
                 // Note jika berstatus returned
                 if (mutation.status == MutationStatus.returned &&
                     mutation.returnReason != null) ...[
                   Container(
                     width: double.infinity,
-                    padding: const EdgeInsets.all(AppSpacing.md),
+                    padding: const EdgeInsets.all(14),
                     decoration: BoxDecoration(
-                      color: AppColors.warningContainer.withValues(alpha: 0.4),
-                      borderRadius: BorderRadius.circular(AppRadius.card),
-                      border: Border.all(color: AppColors.warning),
+                      color: _C.warningLight,
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: _C.warning.withValues(alpha: 0.5)),
                     ),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -173,30 +288,31 @@ class OperatorVerificationDetailScreen extends ConsumerWidget {
                         const Row(
                           children: [
                             Icon(Icons.warning_amber_rounded,
-                                color: AppColors.warning, size: 20),
-                            SizedBox(width: AppSpacing.xs),
+                                color: _C.warning, size: 18),
+                            SizedBox(width: 6),
                             Text(
                               'Alasan Pengembalian (Operator)',
                               style: TextStyle(
                                 fontSize: 13,
-                                fontWeight: FontWeight.bold,
-                                color: AppColors.textPrimary,
+                                fontWeight: FontWeight.w700,
+                                color: _C.textPrimary,
                               ),
                             ),
                           ],
                         ),
-                        const SizedBox(height: AppSpacing.xs),
+                        const SizedBox(height: 6),
                         Text(
                           mutation.returnReason!,
                           style: const TextStyle(
                             fontSize: 13,
-                            color: AppColors.textPrimary,
+                            color: _C.textPrimary,
+                            height: 1.4,
                           ),
                         ),
                       ],
                     ),
                   ),
-                  const SizedBox(height: AppSpacing.md),
+                  const SizedBox(height: 12),
                 ],
 
                 // ── Warning Jika Aset Tidak Terdaftar ─────────────────────────
@@ -425,15 +541,13 @@ class OperatorVerificationDetailScreen extends ConsumerWidget {
           ),
         ),
 
-        // Bottom Actions (Hanya jika status submitted)
+        // ── Bottom Actions (Hanya jika status submitted) ────────
         if (isSubmitted)
           Container(
-            padding: const EdgeInsets.all(AppSpacing.md),
+            padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
             decoration: const BoxDecoration(
-              color: Colors.white,
-              border: Border(
-                top: BorderSide(color: AppColors.border),
-              ),
+              color: _C.surface,
+              border: Border(top: BorderSide(color: _C.border)),
             ),
             child: SafeArea(
               child: Row(
@@ -449,22 +563,21 @@ class OperatorVerificationDetailScreen extends ConsumerWidget {
                                   '/operator/mutations/${mutation.id}/return');
                             },
                       style: OutlinedButton.styleFrom(
-                        foregroundColor: AppColors.error,
-                        side: const BorderSide(color: AppColors.error),
-                        padding: const EdgeInsets.symmetric(
-                            vertical: AppSpacing.md),
+                        foregroundColor: _C.error,
+                        side: const BorderSide(color: _C.error),
+                        padding: const EdgeInsets.symmetric(vertical: 14),
                         shape: RoundedRectangleBorder(
-                          borderRadius:
-                              BorderRadius.circular(AppRadius.button),
+                          borderRadius: BorderRadius.circular(12),
                         ),
                       ),
                       child: const Text(
                         'Kembalikan',
-                        style: TextStyle(fontWeight: FontWeight.bold),
+                        style: TextStyle(
+                            fontWeight: FontWeight.w600, fontSize: 13),
                       ),
                     ),
                   ),
-                  const SizedBox(width: AppSpacing.md),
+                  const SizedBox(width: 12),
 
                   // Primary: [ Verifikasi Valid ]
                   Expanded(
@@ -476,13 +589,12 @@ class OperatorVerificationDetailScreen extends ConsumerWidget {
                           : () => _showVerifyConfirmDialog(
                               context, ref, mutation),
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: AppColors.primary,
+                        backgroundColor: _C.teal,
                         foregroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(
-                            vertical: AppSpacing.md),
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        elevation: 0,
                         shape: RoundedRectangleBorder(
-                          borderRadius:
-                              BorderRadius.circular(AppRadius.button),
+                          borderRadius: BorderRadius.circular(12),
                         ),
                       ),
                       child: actionState.isLoading
@@ -497,7 +609,7 @@ class OperatorVerificationDetailScreen extends ConsumerWidget {
                           : const Text(
                               'Verifikasi Valid',
                               style: TextStyle(
-                                  fontWeight: FontWeight.bold, fontSize: 14),
+                                  fontWeight: FontWeight.w600, fontSize: 13),
                             ),
                     ),
                   ),
@@ -512,11 +624,18 @@ class OperatorVerificationDetailScreen extends ConsumerWidget {
   Widget _buildSectionCard(List<Widget> children) {
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.all(AppSpacing.md),
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(AppRadius.card),
-        border: Border.all(color: AppColors.border),
+        color: _C.surface,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: _C.border),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.04),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -535,14 +654,14 @@ class OperatorVerificationDetailScreen extends ConsumerWidget {
       children: [
         Row(
           children: [
-            Icon(icon, size: 18, color: AppColors.primary),
-            const SizedBox(width: AppSpacing.xs),
+            Icon(icon, size: 16, color: _C.teal),
+            const SizedBox(width: 6),
             Text(
               title,
               style: const TextStyle(
-                fontSize: 14,
-                fontWeight: FontWeight.bold,
-                color: AppColors.textPrimary,
+                fontSize: 13,
+                fontWeight: FontWeight.w700,
+                color: _C.textPrimary,
               ),
             ),
           ],
@@ -550,16 +669,16 @@ class OperatorVerificationDetailScreen extends ConsumerWidget {
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
           decoration: BoxDecoration(
-            color: const Color(0xFFF1F5F9),
-            borderRadius: BorderRadius.circular(AppRadius.pill),
-            border: Border.all(color: const Color(0xFFCBD5E1)),
+            color: _C.slateLight,
+            borderRadius: BorderRadius.circular(999),
+            border: Border.all(color: _C.slateBorder),
           ),
           child: Text(
             badge,
             style: const TextStyle(
               fontSize: 10,
-              fontWeight: FontWeight.bold,
-              color: Color(0xFF475569),
+              fontWeight: FontWeight.w600,
+              color: _C.slate,
             ),
           ),
         ),
@@ -571,11 +690,18 @@ class OperatorVerificationDetailScreen extends ConsumerWidget {
     return Container(
       key: const Key('card_master_asset_data'),
       width: double.infinity,
-      padding: const EdgeInsets.all(AppSpacing.md),
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(AppRadius.card),
+        color: _C.surface,
+        borderRadius: BorderRadius.circular(14),
         border: Border.all(color: const Color(0xFF93C5FD)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.04),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -585,14 +711,14 @@ class OperatorVerificationDetailScreen extends ConsumerWidget {
             children: [
               const Row(
                 children: [
-                  Icon(Icons.verified, size: 18, color: AppColors.primary),
-                  SizedBox(width: AppSpacing.xs),
+                  Icon(Icons.verified_rounded, size: 16, color: _C.info),
+                  SizedBox(width: 6),
                   Text(
                     'Data Aset Master',
                     style: TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.bold,
-                      color: AppColors.textPrimary,
+                      fontSize: 13,
+                      fontWeight: FontWeight.w700,
+                      color: _C.textPrimary,
                     ),
                   ),
                 ],
@@ -738,17 +864,18 @@ class OperatorVerificationDetailScreen extends ConsumerWidget {
         Text(
           label,
           style: const TextStyle(
-            fontSize: 12,
-            color: AppColors.textSecondary,
+            fontSize: 11,
+            color: _C.textSecondary,
+            fontWeight: FontWeight.w500,
           ),
         ),
-        const SizedBox(height: 2),
+        const SizedBox(height: 3),
         Text(
           value,
           style: const TextStyle(
-            fontSize: 14,
-            fontWeight: FontWeight.w500,
-            color: AppColors.textPrimary,
+            fontSize: 13,
+            fontWeight: FontWeight.w600,
+            color: _C.textPrimary,
           ),
         ),
         if (subtext != null) ...[
@@ -756,8 +883,8 @@ class OperatorVerificationDetailScreen extends ConsumerWidget {
           Text(
             subtext,
             style: const TextStyle(
-              fontSize: 12,
-              color: AppColors.textSecondary,
+              fontSize: 11,
+              color: _C.textSecondary,
             ),
           ),
         ],
@@ -779,8 +906,9 @@ class OperatorVerificationDetailScreen extends ConsumerWidget {
         const Text(
           'Dokumen',
           style: TextStyle(
-            fontSize: 12,
-            color: AppColors.textSecondary,
+            fontSize: 11,
+            color: _C.textSecondary,
+            fontWeight: FontWeight.w500,
           ),
         ),
         const SizedBox(height: 4),
@@ -797,10 +925,9 @@ class OperatorVerificationDetailScreen extends ConsumerWidget {
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
               decoration: BoxDecoration(
-                color: AppColors.primaryContainer.withValues(alpha: 0.3),
+                color: _C.infoLight,
                 borderRadius: BorderRadius.circular(8),
-                border:
-                    Border.all(color: AppColors.primary.withValues(alpha: 0.2)),
+                border: Border.all(color: _C.info.withValues(alpha: 0.2)),
               ),
               child: Row(
                 children: [
@@ -810,27 +937,27 @@ class OperatorVerificationDetailScreen extends ConsumerWidget {
                         : isImage
                             ? Icons.image_outlined
                             : Icons.description_outlined,
-                    size: 20,
+                    size: 18,
                     color: isPdf
-                        ? AppColors.error
+                        ? _C.error
                         : isImage
-                            ? AppColors.primary
-                            : AppColors.textSecondary,
+                            ? _C.info
+                            : _C.textSecondary,
                   ),
-                  const SizedBox(width: AppSpacing.xs),
+                  const SizedBox(width: 8),
                   Expanded(
                     child: Text(
                       documentName,
                       style: const TextStyle(
-                        fontSize: 13,
+                        fontSize: 12,
                         fontWeight: FontWeight.w600,
-                        color: AppColors.primary,
+                        color: _C.info,
                       ),
                     ),
                   ),
                   const SizedBox(width: 8),
-                  const Icon(Icons.open_in_new,
-                      size: 16, color: AppColors.primary),
+                  const Icon(Icons.open_in_new_rounded,
+                      size: 14, color: _C.info),
                 ],
               ),
             ),
@@ -839,9 +966,9 @@ class OperatorVerificationDetailScreen extends ConsumerWidget {
           const Text(
             'Tidak ada dokumen dilampirkan',
             style: TextStyle(
-              fontSize: 13,
+              fontSize: 12,
               fontStyle: FontStyle.italic,
-              color: AppColors.textSecondary,
+              color: _C.textSecondary,
             ),
           ),
       ],
@@ -881,7 +1008,13 @@ class OperatorVerificationDetailScreen extends ConsumerWidget {
       context: context,
       builder: (dialogContext) => StatefulBuilder(
         builder: (context, setDialogState) => AlertDialog(
-          title: const Text('Konfirmasi Verifikasi'),
+          shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16)),
+          title: const Text('Konfirmasi Verifikasi',
+              style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w700,
+                  color: _C.textPrimary)),
           content: SingleChildScrollView(
             child: Column(
               mainAxisSize: MainAxisSize.min,
@@ -990,6 +1123,7 @@ class OperatorVerificationDetailScreen extends ConsumerWidget {
           actions: [
             TextButton(
               onPressed: () => Navigator.of(dialogContext).pop(),
+              style: TextButton.styleFrom(foregroundColor: _C.textSecondary),
               child: const Text('Batal'),
             ),
             ElevatedButton(
@@ -1038,10 +1172,14 @@ class OperatorVerificationDetailScreen extends ConsumerWidget {
                 }
               },
               style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.primary,
+                backgroundColor: _C.teal,
                 foregroundColor: Colors.white,
+                elevation: 0,
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10)),
               ),
-              child: const Text('Ya, Verifikasi Valid'),
+              child: const Text('Ya, Verifikasi Valid',
+                  style: TextStyle(fontWeight: FontWeight.w600)),
             ),
           ],
         ),
