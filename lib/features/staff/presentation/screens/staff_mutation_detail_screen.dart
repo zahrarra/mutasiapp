@@ -227,27 +227,31 @@ class _StaffMutationDetailScreenState
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Text(
-                        'Nomor Tiket',
-                        style: TextStyle(
-                          fontSize: 11,
-                          color: AppColors.textSecondary,
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text(
+                          'Nomor Tiket',
+                          style: TextStyle(
+                            fontSize: 11,
+                            color: AppColors.textSecondary,
+                          ),
                         ),
-                      ),
-                      const SizedBox(height: 2),
-                      Text(
-                        mutation.ticketNumber,
-                        style: const TextStyle(
-                          fontSize: 15,
-                          fontWeight: FontWeight.bold,
-                          color: AppColors.primary,
+                        const SizedBox(height: 2),
+                        Text(
+                          mutation.ticketNumber,
+                          style: const TextStyle(
+                            fontSize: 15,
+                            fontWeight: FontWeight.bold,
+                            color: AppColors.primary,
+                          ),
+                          overflow: TextOverflow.ellipsis,
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
+                  const SizedBox(width: 8),
                   Container(
                     padding: const EdgeInsets.symmetric(
                       horizontal: 10,
@@ -392,6 +396,7 @@ class _StaffMutationDetailScreenState
                       const SizedBox(height: 6),
                       Wrap(
                         spacing: 8,
+                        runSpacing: 8,
                         children: [
                           ActionChip(
                             key: const Key('chip_lokasi_asal'),
@@ -430,6 +435,7 @@ class _StaffMutationDetailScreenState
                       const SizedBox(height: 6),
                       Wrap(
                         spacing: 8,
+                        runSpacing: 8,
                         children: [
                           ActionChip(
                             key: const Key('chip_pic_lama'),

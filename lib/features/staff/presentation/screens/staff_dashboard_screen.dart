@@ -45,7 +45,7 @@ class StaffAsetDashboardScreen extends ConsumerWidget {
         children: [
           // ── Greeting ────────────────────────────────────────────────
           Text(
-            'Halo, $userName! 👋',
+            'Halo, $userName',
             style: const TextStyle(
               fontSize: 22,
               fontWeight: FontWeight.w700,
@@ -108,7 +108,7 @@ class StaffAsetDashboardScreen extends ConsumerWidget {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         const Text(
-                          'Antrian Pembaruan Aset',
+                          'Menunggu Pembaruan Aset',
                           style: TextStyle(
                             fontSize: 15,
                             fontWeight: FontWeight.w700,
@@ -182,14 +182,18 @@ class StaffAsetDashboardScreen extends ConsumerWidget {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              const Text(
-                'Antrian Pembaruan Terkini',
-                style: TextStyle(
-                  fontSize: 15,
-                  fontWeight: FontWeight.w700,
-                  color: _C.textPrimary,
+              const Expanded(
+                child: Text(
+                  'Antrian Pembaruan Terkini',
+                  style: TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w700,
+                    color: _C.textPrimary,
+                  ),
+                  overflow: TextOverflow.ellipsis,
                 ),
               ),
+              const SizedBox(width: 8),
               if (stats.waitingUpdateCount > 0)
                 GestureDetector(
                   onTap: () => context.push(RouteNames.staffMutationsPath),
@@ -316,15 +320,19 @@ class _StaffMutationCard extends StatelessWidget {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Text(
-                  mutation.ticketNumber,
-                  style: const TextStyle(
-                    fontSize: 11,
-                    fontWeight: FontWeight.w700,
-                    fontFamily: 'monospace',
-                    color: _C.navy,
+                Expanded(
+                  child: Text(
+                    mutation.ticketNumber,
+                    style: const TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w700,
+                      fontFamily: 'monospace',
+                      color: _C.navy,
+                    ),
+                    overflow: TextOverflow.ellipsis,
                   ),
                 ),
+                const SizedBox(width: 8),
                 Container(
                   padding:
                       const EdgeInsets.symmetric(horizontal: 8, vertical: 3),

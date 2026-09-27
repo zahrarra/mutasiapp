@@ -259,12 +259,17 @@ class ProfileScreen extends ConsumerWidget {
               color: AppColors.textSecondary,
             ),
           ),
-          Text(
-            value,
-            style: const TextStyle(
-              fontSize: 13,
-              fontWeight: FontWeight.w600,
-              color: AppColors.textPrimary,
+          const SizedBox(width: 8),
+          Flexible(
+            child: Text(
+              value,
+              style: const TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+                color: AppColors.textPrimary,
+              ),
+              overflow: TextOverflow.ellipsis,
+              textAlign: TextAlign.right,
             ),
           ),
         ],
@@ -285,7 +290,8 @@ class ProfileScreen extends ConsumerWidget {
               color: AppColors.textSecondary,
             ),
           ),
-          trailing,
+          const SizedBox(width: 8),
+          Flexible(child: trailing),
         ],
       ),
     );

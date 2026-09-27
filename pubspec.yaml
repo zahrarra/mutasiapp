@@ -33,7 +33,7 @@ dependencies:
   http: ^1.2.2
 
   # Font: Inter (DESIGN.md §6)
-  google_fonts: ^6.2.1
+  google_fonts: ^8.2.1
   printing: ^5.15.1
   file_picker: 12.1.3
 

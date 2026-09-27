@@ -48,7 +48,7 @@ class KadivDashboardScreen extends ConsumerWidget {
         children: [
           // ── Greeting ────────────────────────────────────────────────
           Text(
-            'Halo, $userName! 👋',
+            'Halo, $userName',
             style: const TextStyle(
               fontSize: 22,
               fontWeight: FontWeight.w700,
@@ -74,7 +74,7 @@ class KadivDashboardScreen extends ConsumerWidget {
                 child: _StatCard(
                   key: const Key('stat_kadiv_waiting'),
                   icon: Icons.pending_actions_rounded,
-                  label: 'Menunggu',
+                  label: 'Menunggu Approval',
                   count: stats.waitingApprovalCount,
                   iconColor: _C.warning,
                   iconBg: _C.warningLight,
@@ -157,14 +157,18 @@ class KadivDashboardScreen extends ConsumerWidget {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              const Text(
-                'Antrean Otorisasi',
-                style: TextStyle(
-                  fontSize: 15,
-                  fontWeight: FontWeight.w700,
-                  color: _C.textPrimary,
+              const Expanded(
+                child: Text(
+                  'Pengajuan Terbaru',
+                  style: TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w700,
+                    color: _C.textPrimary,
+                  ),
+                  overflow: TextOverflow.ellipsis,
                 ),
               ),
+              const SizedBox(width: 8),
               GestureDetector(
                 onTap: () {
                   ref.read(kadivStatusFilterProvider.notifier).state =
@@ -172,7 +176,7 @@ class KadivDashboardScreen extends ConsumerWidget {
                   context.push(RouteNames.kadivApprovalsPath);
                 },
                 child: const Text(
-                  'Lihat Semua →',
+                  'Lihat Semua',
                   style: TextStyle(
                     fontSize: 12,
                     fontWeight: FontWeight.w600,
@@ -357,15 +361,19 @@ class _ApprovalCard extends StatelessWidget {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Text(
-                        mutation.ticketNumber,
-                        style: const TextStyle(
-                          fontSize: 11,
-                          fontWeight: FontWeight.w700,
-                          fontFamily: 'monospace',
-                          color: _C.navy,
+                      Expanded(
+                        child: Text(
+                          mutation.ticketNumber,
+                          style: const TextStyle(
+                            fontSize: 11,
+                            fontWeight: FontWeight.w700,
+                            fontFamily: 'monospace',
+                            color: _C.navy,
+                          ),
+                          overflow: TextOverflow.ellipsis,
                         ),
                       ),
+                      const SizedBox(width: 8),
                       if (mutation.approvedBy != null)
                         Row(
                           mainAxisSize: MainAxisSize.min,
