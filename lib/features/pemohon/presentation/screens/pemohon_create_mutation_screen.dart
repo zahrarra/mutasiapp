@@ -1,34 +1,39 @@
 // lib/features/pemohon/presentation/screens/pemohon_create_mutation_screen.dart
 //
-// Screen: MutasiKu — Form Ajukan Mutasi (Enhanced UI)
-// Diadaptasi dari desain Stitch MCP.
-// Form pengajuan mutasi aset dengan alur terstruktur 3-tahap, protokol kepatuhan BMN,
-// pemilih PIC dinamis, serta integrasi input manual dan dropdown lokasi.
+// Form Pengajuan Mutasi — visual Stitch “Executive Clean Form”.
+// Font: Montserrat. Functionality: submit, dokumen, validasi, provider (kode lama).
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:google_fonts/google_fonts.dart';
 
 import '../../../../app/router/route_names.dart';
 import '../../../../core/services/document_picker_service.dart';
 import '../../../../core/widgets/app_feedback.dart';
-import '../../../../core/widgets/document_preview_dialog.dart';
-import '../../../../core/widgets/inline_searchable_dropdown.dart';
 import '../../../../core/widgets/searchable_picker_bottom_sheet.dart';
-import '../../../asset/domain/entities/asset.dart';
-import '../../../asset/domain/entities/asset_category.dart';
-import '../../../asset/domain/entities/asset_status.dart';
-import '../../../asset/presentation/providers/asset_provider.dart';
 import '../../../auth/domain/entities/user_role.dart';
 import '../../../auth/presentation/providers/auth_provider.dart';
-import '../../../mutation/domain/entities/mutation.dart';
-import '../../../mutation/domain/entities/mutation_status.dart';
-import '../../../mutation/domain/repositories/mutation_repository.dart';
+import '../../../mutation/domain/repositories/mutation_repository.dart'; // SubmitMutationParams
 import '../../../mutation/presentation/providers/mutation_form_provider.dart';
-import '../../../mutation/presentation/providers/mutation_provider.dart';
+import '../../../mutation/presentation/providers/mutation_provider.dart'; // submit + locations
 import '../../../notification/domain/entities/notification_item.dart';
 import '../../../notification/presentation/providers/notification_provider.dart';
 import '../../../operator/presentation/providers/operator_verification_provider.dart';
+
+abstract final class _C {
+  static const bg = Color(0xFFF6F8FA);
+  static const white = Color(0xFFFFFFFF);
+  static const navy = Color(0xFF0F3D56);
+  static const text = Color(0xFF172B4D);
+  static const muted = Color(0xFF52606D);
+  static const border = Color(0xFFD0D5DD);
+  static const teal = Color(0xFF006A63);
+  static const warning = Color(0xFFB45309);
+  static const warningBg = Color(0xFFFEF3C7);
+  static const warningBorder = Color(0xFFFDE68A);
+  static const success = Color(0xFF15803D);
+}
 
 class PemohonCreateMutationScreen extends ConsumerStatefulWidget {
   const PemohonCreateMutationScreen({super.key});
@@ -46,56 +51,25 @@ class _PemohonCreateMutationScreenState
   final _sourceLocationController = TextEditingController();
   final _currentPicController = TextEditingController();
   final _locationController = TextEditingController();
+  final _roomController = TextEditingController();
   final _picController = TextEditingController();
   final _reasonController = TextEditingController();
+
   String? _documentName;
   int? _documentSize;
   String? _documentPath;
   List<int>? _documentBytes;
-  bool _useOldPicTab = false;
-  bool _isFallbackMode = false;
+  bool _isFallbackMode = true; // input manual (PRD)
+  /// true = dibawa sendiri, false = ditinggalkan
+  bool _bringAsset = true;
   String? _selectedAssetId;
 
-  Future<void> _pickDocument() async {
-    final result = await DocumentPickerService.pickDocument();
+  static const _maxReason = 250;
 
-    if (!mounted) return;
-
-    if (result.isCanceled) {
-      return;
-    }
-
-    if (result.isFailure) {
-      AppFeedback.showError(
-        context,
-        result.errorMessage ?? 'Gagal mengunggah dokumen.',
-      );
-      return;
-    }
-
-    final doc = result.document;
-    if (doc != null) {
-      setState(() {
-        _documentName = doc.name;
-        _documentSize = doc.size;
-        _documentPath = doc.path;
-        _documentBytes = doc.bytes;
-      });
-
-      AppFeedback.showSuccess(
-        context,
-        'Dokumen berhasil diunggah: ${doc.name}',
-      );
-    }
-  }
-
-  String _formatFileSize(int? bytes) {
-    if (bytes == null || bytes <= 0) return 'Terverifikasi Enkripsi';
-    if (bytes < 1024) return '$bytes B • Terverifikasi Enkripsi';
-    if (bytes < 1024 * 1024) {
-      return '${(bytes / 1024).toStringAsFixed(1)} KB • Terverifikasi Enkripsi';
-    }
-    return '${(bytes / (1024 * 1024)).toStringAsFixed(1)} MB • Terverifikasi Enkripsi';
+  @override
+  void initState() {
+    super.initState();
+    _reasonController.addListener(() => setState(() {}));
   }
 
   @override
@@ -105,18 +79,80 @@ class _PemohonCreateMutationScreenState
     _sourceLocationController.dispose();
     _currentPicController.dispose();
     _locationController.dispose();
+    _roomController.dispose();
     _picController.dispose();
     _reasonController.dispose();
     super.dispose();
   }
 
+  TextStyle _m({
+    double size = 14,
+    FontWeight weight = FontWeight.w400,
+    Color color = _C.text,
+    double? height,
+    double? letterSpacing,
+  }) {
+    return GoogleFonts.montserrat(
+      fontSize: size,
+      fontWeight: weight,
+      color: color,
+      height: height,
+      letterSpacing: letterSpacing,
+    );
+  }
+
   void _safePop() {
-    if (Navigator.of(context).canPop()) {
-      Navigator.of(context).pop();
+    if (context.canPop()) {
+      context.pop();
     } else {
-      try {
-        context.go(RouteNames.pemohonDashboardPath);
-      } catch (_) {}
+      context.go(RouteNames.pemohonDashboardPath);
+    }
+  }
+
+  Future<void> _pickDocument() async {
+    final result = await DocumentPickerService.pickDocument();
+    if (!mounted) return;
+    if (result.isCanceled) return;
+    if (result.isFailure) {
+      AppFeedback.showError(
+        context,
+        result.errorMessage ?? 'Gagal mengunggah dokumen.',
+      );
+      return;
+    }
+    final doc = result.document;
+    if (doc != null) {
+      setState(() {
+        _documentName = doc.name;
+        _documentSize = doc.size;
+        _documentPath = doc.path;
+        _documentBytes = doc.bytes;
+      });
+      AppFeedback.showSuccess(context, 'Dokumen diunggah: ${doc.name}');
+    }
+  }
+
+  String _formatFileSize(int? bytes) {
+    if (bytes == null || bytes <= 0) return '—';
+    if (bytes < 1024) return '$bytes B';
+    if (bytes < 1024 * 1024) {
+      return '${(bytes / 1024).toStringAsFixed(1)} KB';
+    }
+    return '${(bytes / (1024 * 1024)).toStringAsFixed(1)} MB';
+  }
+
+  Future<void> _pickLocation(List<String> locations) async {
+    final selected = await SearchablePickerBottomSheet.show(
+      context: context,
+      title: 'Pilih Unit / Cabang Tujuan',
+      items: locations,
+      selectedItem: _locationController.text.trim().isEmpty
+          ? null
+          : _locationController.text.trim(),
+      searchHint: 'Cari lokasi...',
+    );
+    if (selected != null) {
+      setState(() => _locationController.text = selected);
     }
   }
 
@@ -124,6 +160,9 @@ class _PemohonCreateMutationScreenState
     if (!(_formKey.currentState?.validate() ?? false)) return;
 
     final user = ref.read(authStateProvider).user;
+    final targetLoc = _locationController.text.trim();
+    final room = _roomController.text.trim();
+    final fullTarget = room.isEmpty ? targetLoc : '$targetLoc — $room';
 
     final params = SubmitMutationParams(
       applicantId: user?.id,
@@ -131,18 +170,25 @@ class _PemohonCreateMutationScreenState
       assetId: _isFallbackMode
           ? null
           : (_selectedAssetId ??
-              (_assetCodeController.text.trim().isNotEmpty
-                  ? _assetCodeController.text.trim()
-                  : null)),
+                (_assetCodeController.text.trim().isNotEmpty
+                    ? _assetCodeController.text.trim()
+                    : null)),
       assetName: _assetNameController.text.trim(),
       isUnregisteredAsset: _isFallbackMode,
-      customAssetName: _isFallbackMode ? _assetNameController.text.trim() : null,
-      customSerialNumber:
-          _isFallbackMode ? _assetCodeController.text.trim() : null,
+      customAssetName: _isFallbackMode
+          ? _assetNameController.text.trim()
+          : null,
+      customSerialNumber: _isFallbackMode
+          ? _assetCodeController.text.trim()
+          : null,
       sourceLocation: _sourceLocationController.text.trim(),
-      targetLocation: _locationController.text.trim(),
-      currentPic: _currentPicController.text.trim(),
-      targetPic: _picController.text.trim(),
+      targetLocation: fullTarget,
+      currentPic: _currentPicController.text.trim().isNotEmpty
+          ? _currentPicController.text.trim()
+          : (user?.name ?? ''),
+      targetPic: _picController.text.trim().isNotEmpty
+          ? _picController.text.trim()
+          : (user?.name ?? ''),
       reason: _reasonController.text.trim(),
       documentName: _documentName,
       documentPath: _documentPath,
@@ -156,1372 +202,941 @@ class _PemohonCreateMutationScreenState
     if (!mounted) return;
 
     if (mutation != null) {
-      ref.read(notificationProvider.notifier).notifyRole(
+      ref
+          .read(notificationProvider.notifier)
+          .notifyRole(
             targetRole: UserRole.operator,
             title: 'Pengajuan Baru Masuk',
             message:
-                'Pengajuan mutasi ${mutation.ticketNumber} (${mutation.asset.name}) diajukan oleh ${mutation.applicantName} dan siap diverifikasi.',
+                'Pengajuan ${mutation.ticketNumber} diajukan oleh ${mutation.applicantName}.',
             type: NotificationType.action,
             relatedMutationId: mutation.id,
           );
       ref.invalidate(mutationListProvider);
       ref.invalidate(operatorAllMutationsProvider);
-      ref.invalidate(mutationDetailProvider(mutation.id));
-      try {
-        context.go(
-          '${RouteNames.pemohonSubmitSuccessPath}'
-          '?ticket=${Uri.encodeComponent(mutation.ticketNumber)}'
-          '&id=${mutation.id}',
-        );
-      } catch (_) {}
+      context.go(
+        '${RouteNames.pemohonSubmitSuccessPath}'
+        '?ticket=${Uri.encodeComponent(mutation.ticketNumber)}'
+        '&id=${mutation.id}',
+      );
     } else {
       final err = ref.read(submitMutationProvider).error;
       AppFeedback.showError(context, err ?? 'Gagal mengajukan mutasi');
     }
   }
 
-  Future<void> _pickPic(List<String> pics) async {
-    final currentPic = _currentPicController.text.trim();
-    final quickActions = <String>[];
-    if (currentPic.isNotEmpty) {
-      quickActions.add(currentPic);
-    }
-
-    final selected = await SearchablePickerBottomSheet.show(
-      context: context,
-      title: 'Pilih Penanggung Jawab (PIC)',
-      items: pics,
-      selectedItem: _picController.text.trim().isEmpty
-          ? null
-          : _picController.text.trim(),
-      searchHint: 'Cari nama PIC...',
-      quickActions: quickActions,
-    );
-    if (selected != null) {
-      setState(() {
-        _picController.text = selected;
-        _useOldPicTab = (selected == currentPic && currentPic.isNotEmpty);
-      });
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     final submitState = ref.watch(submitMutationProvider);
-    final availableLocations = ref.watch(availableLocationsProvider);
-    final availablePics = ref.watch(availablePicsProvider);
-    final authState = ref.watch(authStateProvider);
-    final user = authState.user;
+    final locations = ref.watch(availableLocationsProvider);
+    final user = ref.watch(authStateProvider).user;
+    final initials = _initials(user?.name ?? 'P');
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF7F9FF),
-      // ── Custom Enhanced Top Header Bar ──────────────────────────────
-      appBar: PreferredSize(
-        preferredSize: const Size.fromHeight(64),
-        child: Container(
-          decoration: const BoxDecoration(
-            color: Colors.white,
-            border: Border(
-              bottom: BorderSide(color: Color(0xFFDBEAF9), width: 1),
-            ),
-            boxShadow: [
-              BoxShadow(
-                color: Color(0x0A000000),
-                blurRadius: 8,
-                offset: Offset(0, 1),
-              ),
-            ],
-          ),
-          child: SafeArea(
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Expanded(
-                    child: Row(
-                      children: [
-                        IconButton(
-                          icon: const Icon(
-                            Icons.arrow_back,
-                            color: Color(0xFF0F1D28),
-                            size: 20,
-                          ),
-                          tooltip: 'Kembali',
-                          onPressed: _safePop,
-                        ),
-                        Expanded(
-                          child: Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Row(
-                                children: [
-                                  const Flexible(
-                                    child: Text(
-                                      'Form Mutasi Baru',
-                                      style: TextStyle(
-                                        fontSize: 16,
-                                        fontWeight: FontWeight.bold,
-                                        color: Color(0xFF0F1D28),
-                                        letterSpacing: -0.2,
-                                      ),
-                                      overflow: TextOverflow.ellipsis,
-                                    ),
-                                  ),
-                                  const SizedBox(width: 6),
-                                  Container(
-                                    padding: const EdgeInsets.symmetric(
-                                      horizontal: 6,
-                                      vertical: 1.5,
-                                    ),
-                                    decoration: BoxDecoration(
-                                      color: const Color(0xFF00273A),
-                                      borderRadius: BorderRadius.circular(20),
-                                    ),
-                                    child: const Text(
-                                      'BMN-2026',
-                                      style: TextStyle(
-                                        fontSize: 9,
-                                        fontFamily: 'monospace',
-                                        fontWeight: FontWeight.bold,
-                                        color: Colors.white,
-                                        letterSpacing: 0.5,
-                                      ),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                              const Text(
-                                'Pengalihan Hak Pakai & Tanggung Jawab',
-                                style: TextStyle(
-                                  fontSize: 11,
-                                  fontWeight: FontWeight.w500,
-                                  color: Color(0xFF3B637D),
-                                ),
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  CircleAvatar(
-                    radius: 16,
-                    backgroundColor: const Color(0xFF00273A),
-                    child: Text(
-                      user?.name.isNotEmpty == true
-                          ? user!.name[0].toUpperCase()
-                          : 'P',
-                      style: const TextStyle(
-                        fontSize: 13,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.white,
+      backgroundColor: _C.bg,
+      body: Column(
+        children: [
+          _buildHeader(initials),
+          Expanded(
+            child: Form(
+              key: _formKey,
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.fromLTRB(16, 16, 16, 120),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Text(
+                      'Form Pengajuan Mutasi',
+                      style: _m(
+                        size: 20,
+                        weight: FontWeight.w700,
+                        color: _C.text,
                       ),
                     ),
-                  ),
-                ],
+                    const SizedBox(height: 2),
+                    Text(
+                      'Pengalihan lokasi fisik dan penanggung jawab (PIC) aset dinas',
+                      style: _m(size: 13, color: _C.muted),
+                    ),
+                    const SizedBox(height: 20),
+                    _sectionAsset(),
+                    const SizedBox(height: 16),
+                    _sectionRoute(locations),
+                    const SizedBox(height: 16),
+                    _sectionReasonDoc(),
+                  ],
+                ),
               ),
             ),
           ),
-        ),
+        ],
       ),
+      bottomNavigationBar: _bottomBar(submitState.isLoading),
+    );
+  }
 
-      // ── Main Body Form ──────────────────────────────────────────────
-      body: Form(
-        key: _formKey,
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.fromLTRB(16, 14, 16, 120),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              // ── Notice Institutional Progress & Protocol Banner ───
-              Container(
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(14),
-                  border: Border.all(color: const Color(0xFFDBEAF9)),
-                  boxShadow: const [
-                    BoxShadow(
-                      color: Color(0x06101828),
-                      blurRadius: 4,
-                      offset: Offset(0, 1),
-                    ),
-                  ],
-                ),
-                padding: const EdgeInsets.all(14),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Row(
-                          children: [
-                            Container(
-                              width: 8,
-                              height: 8,
-                              decoration: const BoxDecoration(
-                                color: Color(0xFF00273A),
-                                shape: BoxShape.circle,
-                              ),
-                            ),
-                            const SizedBox(width: 6),
-                            const Text(
-                              'ALUR PENGAJUAN MUTASI',
-                              style: TextStyle(
-                                fontSize: 10,
-                                fontWeight: FontWeight.bold,
-                                color: Color(0xFF3B637D),
-                                letterSpacing: 0.8,
-                              ),
-                            ),
-                          ],
-                        ),
-                        const Text(
-                          'Tahap 2 dari 3 Selesai',
-                          style: TextStyle(
-                            fontFamily: 'monospace',
-                            fontSize: 11,
-                            fontWeight: FontWeight.bold,
-                            color: Color(0xFF00101B),
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 10),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Container(
-                                height: 5,
-                                decoration: BoxDecoration(
-                                  color: const Color(0xFF00273A),
-                                  borderRadius: BorderRadius.circular(4),
-                                ),
-                              ),
-                              const SizedBox(height: 4),
-                              const Row(
-                                children: [
-                                  Icon(
-                                    Icons.check_circle,
-                                    size: 13,
-                                    color: Color(0xFF00273A),
-                                  ),
-                                  SizedBox(width: 3),
-                                  Flexible(
-                                    child: Text(
-                                      '1. Aset Fisik',
-                                      style: TextStyle(
-                                        fontSize: 10,
-                                        fontWeight: FontWeight.bold,
-                                        color: Color(0xFF0F1D28),
-                                      ),
-                                      overflow: TextOverflow.ellipsis,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ],
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Container(
-                                height: 5,
-                                decoration: BoxDecoration(
-                                  color: const Color(0xFF00273A),
-                                  borderRadius: BorderRadius.circular(4),
-                                ),
-                              ),
-                              const SizedBox(height: 4),
-                              const Row(
-                                children: [
-                                  CircleAvatar(
-                                    radius: 6,
-                                    backgroundColor: Color(0xFF00273A),
-                                    child: Text(
-                                      '2',
-                                      style: TextStyle(
-                                        fontSize: 8,
-                                        color: Colors.white,
-                                        fontWeight: FontWeight.bold,
-                                      ),
-                                    ),
-                                  ),
-                                  SizedBox(width: 3),
-                                  Flexible(
-                                    child: Text(
-                                      '2. Destinasi & PIC',
-                                      style: TextStyle(
-                                        fontSize: 10,
-                                        fontWeight: FontWeight.bold,
-                                        color: Color(0xFF00273A),
-                                      ),
-                                      overflow: TextOverflow.ellipsis,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ],
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Container(
-                                height: 5,
-                                decoration: BoxDecoration(
-                                  color: const Color(0xFFDBEAF9),
-                                  borderRadius: BorderRadius.circular(4),
-                                ),
-                              ),
-                              const SizedBox(height: 4),
-                              const Row(
-                                children: [
-                                  CircleAvatar(
-                                    radius: 6,
-                                    backgroundColor: Color(0xFFDBEAF9),
-                                    child: Text(
-                                      '3',
-                                      style: TextStyle(
-                                        fontSize: 8,
-                                        color: Color(0xFF3B637D),
-                                        fontWeight: FontWeight.bold,
-                                      ),
-                                    ),
-                                  ),
-                                  SizedBox(width: 3),
-                                  Flexible(
-                                    child: Text(
-                                      '3. Berkas & Alasan',
-                                      style: TextStyle(
-                                        fontSize: 10,
-                                        fontWeight: FontWeight.w500,
-                                        color: Color(0xFF3B637D),
-                                      ),
-                                      overflow: TextOverflow.ellipsis,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 10),
+  // ── Header Stitch ─────────────────────────────────────────────────────────
 
-              // Compliance Protocol Banner
-              Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: const Color(0xFFECF4FF),
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: const Color(0xFFDBEAF9)),
+  Widget _buildHeader(String initials) {
+    return Material(
+      color: _C.white.withValues(alpha: 0.95),
+      elevation: 0.5,
+      child: SafeArea(
+        bottom: false,
+        child: SizedBox(
+          height: 56,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: Row(
+              children: [
+                Material(
+                  color: _C.white,
+                  shape: const CircleBorder(side: BorderSide(color: _C.border)),
+                  child: InkWell(
+                    customBorder: const CircleBorder(),
+                    onTap: _safePop,
+                    child: const SizedBox(
+                      width: 40,
+                      height: 40,
+                      child: Icon(Icons.arrow_back, size: 20, color: _C.text),
+                    ),
+                  ),
                 ),
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+                const Spacer(),
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 4,
+                  ),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFE0F2FE).withValues(alpha: 0.8),
+                    borderRadius: BorderRadius.circular(999),
+                    border: Border.all(
+                      color: const Color(0xFF99EFE5).withValues(alpha: 0.7),
+                    ),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Container(
+                        width: 8,
+                        height: 8,
+                        decoration: const BoxDecoration(
+                          color: _C.teal,
+                          shape: BoxShape.circle,
+                        ),
+                      ),
+                      const SizedBox(width: 6),
+                      Text(
+                        'MUTASIKU PEMOHON',
+                        style: _m(
+                          size: 11,
+                          weight: FontWeight.w700,
+                          color: _C.navy,
+                          letterSpacing: 0.6,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const Spacer(),
+                Stack(
+                  clipBehavior: Clip.none,
                   children: [
                     Container(
-                      width: 32,
-                      height: 32,
+                      width: 36,
+                      height: 36,
+                      alignment: Alignment.center,
                       decoration: BoxDecoration(
-                        color: const Color(0xFF00273A),
-                        borderRadius: BorderRadius.circular(8),
+                        color: _C.navy,
+                        shape: BoxShape.circle,
+                        border: Border.all(color: _C.border),
                       ),
-                      child: const Icon(
-                        Icons.verified_user,
-                        color: Colors.white,
-                        size: 18,
+                      child: Text(
+                        initials,
+                        style: _m(
+                          size: 12,
+                          weight: FontWeight.w700,
+                          color: Colors.white,
+                        ),
                       ),
                     ),
-                    const SizedBox(width: 10),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              const Expanded(
-                                child: Text(
-                                  'Protokol Kepatuhan Aset BMN',
-                                  style: TextStyle(
-                                    fontSize: 11,
-                                    fontWeight: FontWeight.bold,
-                                    color: Color(0xFF00101B),
-                                    letterSpacing: 0.2,
-                                  ),
-                                  overflow: TextOverflow.ellipsis,
-                                ),
-                              ),
-                              const SizedBox(width: 8),
-                              Container(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 6,
-                                  vertical: 1,
-                                ),
-                                decoration: BoxDecoration(
-                                  color: Colors.white,
-                                  borderRadius: BorderRadius.circular(4),
-                                  border: Border.all(
-                                    color: const Color(0xFFDBEAF9),
-                                  ),
-                                ),
-                                child: const Text(
-                                  'SOP-LOG-04',
-                                  style: TextStyle(
-                                    fontSize: 9,
-                                    fontWeight: FontWeight.bold,
-                                    color: Color(0xFF3B637D),
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 3),
-                          const Text(
-                            'Verifikasi fisik & nomor seri dicocokkan otomatis ke SIMAK BMN sebelum otorisasi berjenjang oleh Pengelola Barang.',
-                            style: TextStyle(
-                              fontSize: 11,
-                              color: Color(0xFF42474C),
-                              height: 1.4,
-                            ),
-                          ),
-                        ],
+                    Positioned(
+                      right: 0,
+                      bottom: 0,
+                      child: Container(
+                        width: 10,
+                        height: 10,
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF10B981),
+                          shape: BoxShape.circle,
+                          border: Border.all(color: Colors.white, width: 2),
+                        ),
                       ),
                     ),
                   ],
                 ),
-              ),
-              const SizedBox(height: 16),
-
-              // ── SECTION 1: DATA ASET FISIK ────────────────────────
-              _buildSectionCard(
-                title: '1. Data Aset Fisik',
-                badgeText: 'Langkah 1/3 • Selesai',
-                children: [
-                  // Fallback Mode Switch
-                  Container(
-                    margin: const EdgeInsets.only(bottom: 12),
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 10,
-                      vertical: 6,
-                    ),
-                    decoration: BoxDecoration(
-                      color: _isFallbackMode
-                          ? const Color(0xFFFEF3C7)
-                          : const Color(0xFFF0FDF4),
-                      borderRadius: BorderRadius.circular(8),
-                      border: Border.all(
-                        color: _isFallbackMode
-                            ? const Color(0xFFF59E0B)
-                            : const Color(0xFF86EFAC),
-                      ),
-                    ),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                _isFallbackMode
-                                    ? 'Mode Fallback: Aset Belum Terdaftar'
-                                    : 'Mode Master: Aset SIMAK BMN',
-                                style: TextStyle(
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.bold,
-                                  color: _isFallbackMode
-                                      ? const Color(0xFF92400E)
-                                      : const Color(0xFF166534),
-                                ),
-                              ),
-                              Text(
-                                _isFallbackMode
-                                    ? 'Pencarian master dinonaktifkan (input manual).'
-                                    : 'Pilih aset dari database master.',
-                                style: const TextStyle(
-                                  fontSize: 11,
-                                  color: Color(0xFF52606D),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                        Switch(
-                          key: const Key('switch_fallback_mode'),
-                          value: _isFallbackMode,
-                          onChanged: (val) {
-                            setState(() {
-                              _isFallbackMode = val;
-                              if (val) {
-                                _selectedAssetId = null;
-                              }
-                            });
-                          },
-                        ),
-                      ],
-                    ),
-                  ),
-
-                  // Tombol Pencarian Master Aset (HANYA tampil jika fallback mode nonaktif)
-                  if (!_isFallbackMode) ...[
-                    OutlinedButton.icon(
-                      key: const Key('btn_search_master_asset'),
-                      onPressed: () async {
-                        final assets = await ref.read(assetListProvider.future);
-                        if (!context.mounted) return;
-                        final items = assets
-                            .map((a) => '${a.assetCode} — ${a.name}')
-                            .toList();
-                        final selected = await SearchablePickerBottomSheet.show(
-                          context: context,
-                          title: 'Pilih Aset Master (SIMAK BMN)',
-                          items: items,
-                          searchHint: 'Cari kode atau nama aset...',
-                        );
-                        if (selected != null) {
-                          final matched = assets.firstWhere(
-                            (a) => '${a.assetCode} — ${a.name}' == selected,
-                          );
-                          setState(() {
-                            _selectedAssetId = matched.id;
-                            _assetNameController.text = matched.name;
-                            _assetCodeController.text = matched.assetCode;
-                            _sourceLocationController.text = matched.location;
-                            _currentPicController.text = matched.pic;
-                          });
-                        }
-                      },
-                      style: OutlinedButton.styleFrom(
-                        foregroundColor: const Color(0xFF00273A),
-                        side: const BorderSide(color: Color(0xFFDBEAF9)),
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 12,
-                          vertical: 10,
-                        ),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                      ),
-                      icon: const Icon(Icons.search, size: 16),
-                      label: const Text(
-                        'Pilih / Cari dari Master SIMAK BMN',
-                        style: TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-                  ],
-
-                  // Field 0: Nama Aset
-                  TextFormField(
-                    controller: _assetNameController,
-                    style: const TextStyle(
-                      fontSize: 13,
-                      fontWeight: FontWeight.bold,
-                      color: Color(0xFF0F1D28),
-                    ),
-                    decoration: InputDecoration(
-                      labelText: 'Nama / Model Aset *',
-                      labelStyle: const TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w600,
-                        color: Color(0xFF0F1D28),
-                      ),
-                      hintText: 'Contoh: Laptop Lenovo ThinkPad T14 Gen 4',
-                      hintStyle: const TextStyle(
-                        fontSize: 12,
-                        color: Color(0xFF72787D),
-                      ),
-                      prefixIcon: const Icon(
-                        Icons.devices,
-                        size: 20,
-                        color: Color(0xFF00273A),
-                      ),
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(10),
-                        borderSide: const BorderSide(color: Color(0xFFDBEAF9)),
-                      ),
-                      enabledBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(10),
-                        borderSide: const BorderSide(color: Color(0xFFDBEAF9)),
-                      ),
-                      filled: true,
-                      fillColor: Colors.white,
-                    ),
-                    validator: (v) =>
-                        (v == null || v.trim().isEmpty) ? 'Wajib diisi' : null,
-                  ),
-                  const SizedBox(height: 12),
-
-                  // Field 1: Kode / Nomor Seri Aset
-                  TextFormField(
-                    controller: _assetCodeController,
-                    style: const TextStyle(
-                      fontSize: 13,
-                      fontFamily: 'monospace',
-                      fontWeight: FontWeight.bold,
-                      color: Color(0xFF0F1D28),
-                    ),
-                    decoration: InputDecoration(
-                      labelText: 'Nomor / Kode Seri Aset *',
-                      labelStyle: const TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w600,
-                        color: Color(0xFF0F1D28),
-                      ),
-                      hintText: 'Contoh: AST-ELK-2024-001',
-                      hintStyle: const TextStyle(
-                        fontSize: 12,
-                        color: Color(0xFF72787D),
-                      ),
-                      prefixIcon: const Icon(
-                        Icons.tag,
-                        size: 20,
-                        color: Color(0xFF00273A),
-                      ),
-                      suffixIcon: Container(
-                        margin: const EdgeInsets.only(right: 6),
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 8,
-                          vertical: 4,
-                        ),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFF00273A),
-                          borderRadius: BorderRadius.circular(6),
-                        ),
-                        child: const Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Icon(
-                              Icons.qr_code_scanner,
-                              color: Colors.white,
-                              size: 14,
-                            ),
-                            SizedBox(width: 4),
-                            Text(
-                              'Pindai',
-                              style: TextStyle(
-                                color: Colors.white,
-                                fontSize: 11,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(10),
-                        borderSide: const BorderSide(color: Color(0xFFDBEAF9)),
-                      ),
-                      enabledBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(10),
-                        borderSide: const BorderSide(color: Color(0xFFDBEAF9)),
-                      ),
-                      filled: true,
-                      fillColor: Colors.white,
-                    ),
-                    validator: (v) =>
-                        (v == null || v.trim().isEmpty) ? 'Wajib diisi' : null,
-                  ),
-                  const SizedBox(height: 4),
-                  const Row(
-                    children: [
-                      Icon(
-                        Icons.cloud_done,
-                        size: 13,
-                        color: Color(0xFF00273A),
-                      ),
-                      SizedBox(width: 4),
-                      Text(
-                        'Tersinkronisasi otomatis dengan Database SIMAK BMN',
-                        style: TextStyle(
-                          fontSize: 10,
-                          color: Color(0xFF52606D),
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 12),
-
-                  // Field 2: Lokasi Asal (InlineSearchableDropdown)
-                  InlineSearchableDropdown(
-                    key: const Key('dropdown_source_location'),
-                    fieldKey: const Key('field_source_location'),
-                    labelText: 'Lokasi Asal *',
-                    hintText: 'Pilih lokasi asal saat ini',
-                    controller: _sourceLocationController,
-                    items: availableLocations,
-                    validator: (v) =>
-                        (v == null || v.trim().isEmpty) ? 'Wajib diisi' : null,
-                  ),
-                  const SizedBox(height: 12),
-
-                  // Field 3: Pengguna / Pemakai Aset Lama
-                  TextFormField(
-                    controller: _currentPicController,
-                    onChanged: (_) => setState(() {}),
-                    style: const TextStyle(
-                      fontSize: 13,
-                      fontWeight: FontWeight.w600,
-                      color: Color(0xFF0F1D28),
-                    ),
-                    decoration: InputDecoration(
-                      labelText: 'Pengguna / Pemakai Aset Lama *',
-                      labelStyle: const TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w600,
-                        color: Color(0xFF0F1D28),
-                      ),
-                      hintText: 'Contoh: Victor Pratama (NIP: 19920814 201802 1 003)',
-                      hintStyle: const TextStyle(
-                        fontSize: 12,
-                        color: Color(0xFF72787D),
-                      ),
-                      prefixIcon: const Icon(
-                        Icons.person_outline,
-                        size: 20,
-                        color: Color(0xFF3B637D),
-                      ),
-                      suffixIcon: Container(
-                        margin: const EdgeInsets.only(right: 8),
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 8,
-                          vertical: 4,
-                        ),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFFE1F0FF),
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: const Text(
-                          'Eksisting',
-                          style: TextStyle(
-                            fontSize: 10,
-                            fontWeight: FontWeight.bold,
-                            color: Color(0xFF00273A),
-                          ),
-                        ),
-                      ),
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(10),
-                        borderSide: const BorderSide(color: Color(0xFFDBEAF9)),
-                      ),
-                      enabledBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(10),
-                        borderSide: const BorderSide(color: Color(0xFFDBEAF9)),
-                      ),
-                      filled: true,
-                      fillColor: Colors.white,
-                    ),
-                    validator: (v) =>
-                        (v == null || v.trim().isEmpty) ? 'Wajib diisi' : null,
-                  ),
-                ],
-              ),
-              const SizedBox(height: 16),
-
-              // ── SECTION 2: TUJUAN & PENANGGUNG JAWAB BARU ─────────
-              _buildSectionCard(
-                title: '2. Tujuan & Penanggung Jawab Baru',
-                badgeText: 'Langkah 2/3 • Aktif',
-                children: [
-                  // Field 4: Cabang / Lokasi Tujuan (InlineSearchableDropdown)
-                  InlineSearchableDropdown(
-                    key: const Key('dropdown_target_location'),
-                    fieldKey: const Key('field_target_location'),
-                    labelText: 'Cabang / Lokasi Tujuan *',
-                    hintText: 'Pilih cabang / lokasi tujuan mutasi',
-                    controller: _locationController,
-                    items: availableLocations,
-                    validator: (v) =>
-                        (v == null || v.trim().isEmpty) ? 'Wajib diisi' : null,
-                  ),
-                  const SizedBox(height: 14),
-
-                  // Segment Toggle: Pilih PIC Baru vs Gunakan PIC Lama
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      const Expanded(
-                        child: Text(
-                          'Penanggung Jawab (PIC) Tujuan *',
-                          style: TextStyle(
-                            fontSize: 12,
-                            fontWeight: FontWeight.w600,
-                            color: Color(0xFF0F1D28),
-                          ),
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      const Text(
-                        'Wajib Pegawai Aktif',
-                        style: TextStyle(
-                          fontSize: 11,
-                          fontWeight: FontWeight.w500,
-                          color: Color(0xFF52606D),
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 6),
-                  Container(
-                    padding: const EdgeInsets.all(3),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFECF4FF),
-                      borderRadius: BorderRadius.circular(8),
-                      border: Border.all(color: const Color(0xFFDBEAF9)),
-                    ),
-                    child: Row(
-                      children: [
-                        Expanded(
-                          child: InkWell(
-                            onTap: () {
-                              setState(() {
-                                _useOldPicTab = false;
-                              });
-                            },
-                            child: Container(
-                              padding: const EdgeInsets.symmetric(vertical: 7),
-                              decoration: BoxDecoration(
-                                color: !_useOldPicTab
-                                    ? const Color(0xFF00273A)
-                                    : Colors.transparent,
-                                borderRadius: BorderRadius.circular(6),
-                              ),
-                              child: Text(
-                                'Pilih PIC Baru',
-                                textAlign: TextAlign.center,
-                                style: TextStyle(
-                                  fontSize: 11,
-                                  fontWeight: FontWeight.bold,
-                                  color: !_useOldPicTab
-                                      ? Colors.white
-                                      : const Color(0xFF52606D),
-                                ),
-                              ),
-                            ),
-                          ),
-                        ),
-                        Expanded(
-                          child: InkWell(
-                            onTap: () {
-                              final oldPic =
-                                  _currentPicController.text.trim();
-                              setState(() {
-                                _useOldPicTab = true;
-                                if (oldPic.isNotEmpty) {
-                                  _picController.text = oldPic;
-                                }
-                              });
-                            },
-                            child: Container(
-                              padding: const EdgeInsets.symmetric(vertical: 7),
-                              decoration: BoxDecoration(
-                                color: _useOldPicTab
-                                    ? const Color(0xFF00273A)
-                                    : Colors.transparent,
-                                borderRadius: BorderRadius.circular(6),
-                              ),
-                              child: Text(
-                                'Gunakan PIC Lama',
-                                textAlign: TextAlign.center,
-                                style: TextStyle(
-                                  fontSize: 11,
-                                  fontWeight: FontWeight.bold,
-                                  color: _useOldPicTab
-                                      ? Colors.white
-                                      : const Color(0xFF52606D),
-                                ),
-                              ),
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(height: 10),
-
-                  // Field 5: PIC Controller
-                  TextFormField(
-                    controller: _picController,
-                    style: const TextStyle(
-                      fontSize: 13,
-                      fontWeight: FontWeight.bold,
-                      color: Color(0xFF0F1D28),
-                    ),
-                    decoration: InputDecoration(
-                      labelText: 'Nama PIC Tujuan *',
-                      labelStyle: const TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w600,
-                        color: Color(0xFF0F1D28),
-                      ),
-                      hintText: 'Pilih PIC lama atau PIC baru',
-                      hintStyle: const TextStyle(
-                        fontSize: 12,
-                        color: Color(0xFF72787D),
-                      ),
-                      prefixIcon: const Icon(
-                        Icons.person_add_alt_1,
-                        size: 20,
-                        color: Color(0xFF00273A),
-                      ),
-                      suffixIcon: IconButton(
-                        icon: const Icon(
-                          Icons.arrow_drop_down,
-                          color: Color(0xFF00273A),
-                        ),
-                        onPressed: () => _pickPic(availablePics),
-                      ),
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(10),
-                        borderSide: const BorderSide(color: Color(0xFFDBEAF9)),
-                      ),
-                      enabledBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(10),
-                        borderSide: const BorderSide(color: Color(0xFFDBEAF9)),
-                      ),
-                      filled: true,
-                      fillColor: Colors.white,
-                    ),
-                    validator: (v) =>
-                        (v == null || v.trim().isEmpty) ? 'Wajib diisi' : null,
-                  ),
-                ],
-              ),
-              const SizedBox(height: 16),
-
-              // ── SECTION 3: INFORMASI PENGAJUAN ────────────────────
-              _buildSectionCard(
-                title: '3. Informasi Pengajuan',
-                badgeText: 'Langkah 3/3',
-                children: [
-                  // Field 6: Alasan Mutasi
-                  TextFormField(
-                    controller: _reasonController,
-                    maxLines: 3,
-                    maxLength: 500,
-                    style: const TextStyle(
-                      fontSize: 13,
-                      color: Color(0xFF0F1D28),
-                    ),
-                    decoration: InputDecoration(
-                      labelText: 'Alasan Mutasi *',
-                      labelStyle: const TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w600,
-                        color: Color(0xFF0F1D28),
-                      ),
-                      hintText:
-                          'Jelaskan kebutuhan operasional pemindahan aset...',
-                      hintStyle: const TextStyle(
-                        fontSize: 12,
-                        color: Color(0xFF72787D),
-                      ),
-                      alignLabelWithHint: true,
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(10),
-                        borderSide: const BorderSide(color: Color(0xFFDBEAF9)),
-                      ),
-                      enabledBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(10),
-                        borderSide: const BorderSide(color: Color(0xFFDBEAF9)),
-                      ),
-                      filled: true,
-                      fillColor: Colors.white,
-                    ),
-                    validator: (v) =>
-                        (v == null || v.trim().isEmpty) ? 'Wajib diisi' : null,
-                  ),
-                  const SizedBox(height: 12),
-
-                  // Dokumen Pendukung (Opsional)
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      const Expanded(
-                        child: Row(
-                          children: [
-                            Flexible(
-                              child: Text(
-                                'Dokumen Pendukung',
-                                style: TextStyle(
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.bold,
-                                  color: Color(0xFF0F1D28),
-                                ),
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                            ),
-                            SizedBox(width: 4),
-                            Text(
-                              '(Opsional)',
-                              style: TextStyle(
-                                fontSize: 11,
-                                color: Color(0xFF52606D),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      const Text(
-                        'PDF maks 5MB',
-                        style: TextStyle(
-                          fontSize: 11,
-                          fontWeight: FontWeight.w500,
-                          color: Color(0xFF52606D),
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 8),
-
-                  if (_documentName != null) ...[
-                    Builder(
-                      builder: (context) {
-                        final isPdf = _documentName!.toLowerCase().endsWith('.pdf');
-                        final isImage = ['png', 'jpg', 'jpeg', 'webp']
-                            .any((ext) => _documentName!.toLowerCase().endsWith(ext));
-
-                        return Container(
-                          padding: const EdgeInsets.all(10),
-                          decoration: BoxDecoration(
-                            color: Colors.white,
-                            borderRadius: BorderRadius.circular(10),
-                            border: Border.all(color: const Color(0xFFDBEAF9)),
-                          ),
-                          child: Row(
-                            children: [
-                              Container(
-                                width: 34,
-                                height: 34,
-                                decoration: BoxDecoration(
-                                  color: isPdf
-                                      ? const Color(0xFFFFDAD6)
-                                      : isImage
-                                          ? const Color(0xFFDBEAF9)
-                                          : const Color(0xFFE2E8F0),
-                                  borderRadius: BorderRadius.circular(8),
-                                ),
-                                child: Icon(
-                                  isPdf
-                                      ? Icons.picture_as_pdf
-                                      : isImage
-                                          ? Icons.image
-                                          : Icons.description,
-                                  color: isPdf
-                                      ? const Color(0xFFBA1A1A)
-                                      : isImage
-                                          ? const Color(0xFF006399)
-                                          : const Color(0xFF475569),
-                                  size: 18,
-                                ),
-                              ),
-                              const SizedBox(width: 10),
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      _documentName!,
-                                      style: const TextStyle(
-                                        fontSize: 12,
-                                        fontWeight: FontWeight.bold,
-                                        color: Color(0xFF0F1D28),
-                                      ),
-                                      overflow: TextOverflow.ellipsis,
-                                    ),
-                                    Text(
-                                      _formatFileSize(_documentSize),
-                                      style: const TextStyle(
-                                        fontSize: 10,
-                                        color: Color(0xFF52606D),
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                              IconButton(
-                                icon: const Icon(
-                                  Icons.visibility_outlined,
-                                  color: Color(0xFF006399),
-                                  size: 18,
-                                ),
-                                tooltip: 'Pratinjau Dokumen',
-                                onPressed: () {
-                                  final user = ref.read(authStateProvider).user;
-                                  final tempMutation = Mutation(
-                                    id: 'draft_preview',
-                                    ticketNumber: 'DRAFT',
-                                    asset: Asset(
-                                      id: _selectedAssetId ?? 'draft_asset',
-                                      assetCode: _assetCodeController.text.trim().isNotEmpty
-                                          ? _assetCodeController.text.trim()
-                                          : 'DRAFT-CODE',
-                                      name: _assetNameController.text.trim().isNotEmpty
-                                          ? _assetNameController.text.trim()
-                                          : 'Aset',
-                                      category: const AssetCategory(
-                                          id: 'cat_draft', code: 'DFT', name: 'Draft'),
-                                      location: _sourceLocationController.text.trim(),
-                                      pic: _currentPicController.text.trim(),
-                                      status: AssetStatus.available,
-                                      condition: 'Baik',
-                                      acquisitionYear: DateTime.now().year,
-                                      estimatedValue: 0,
-                                    ),
-                                    applicantId: user?.id,
-                                    applicantName: user?.name ?? 'Pemohon',
-                                    currentLocation: _sourceLocationController.text.trim(),
-                                    targetLocation: _locationController.text.trim(),
-                                    currentPic: _currentPicController.text.trim(),
-                                    targetPic: _picController.text.trim(),
-                                    reason: _reasonController.text.trim(),
-                                    documentName: _documentName,
-                                    documentPath: _documentPath,
-                                    documentBytes: _documentBytes,
-                                    status: MutationStatus.submitted,
-                                    createdAt: DateTime.now(),
-                                  );
-                                  DocumentPreviewDialog.show(
-                                    context,
-                                    mutation: tempMutation,
-                                    currentUser: user,
-                                  );
-                                },
-                              ),
-                              IconButton(
-                                icon: const Icon(
-                                  Icons.delete_outline,
-                                  color: Color(0xFFBA1A1A),
-                                  size: 18,
-                                ),
-                                tooltip: 'Hapus Dokumen',
-                                onPressed: () {
-                                  setState(() {
-                                    _documentName = null;
-                                    _documentSize = null;
-                                    _documentPath = null;
-                                    _documentBytes = null;
-                                  });
-                                },
-                              ),
-                            ],
-                          ),
-                        );
-                      },
-                    ),
-                  ]
-                  else
-                    OutlinedButton.icon(
-                      onPressed: _pickDocument,
-                      icon: const Icon(Icons.upload_file, size: 16),
-                      label: const Text('Pilih Dokumen dari Perangkat'),
-                      style: OutlinedButton.styleFrom(
-                        foregroundColor: const Color(0xFF00273A),
-                        side: const BorderSide(
-                          color: Color(0xFFDBEAF9),
-                          style: BorderStyle.solid,
-                        ),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                      ),
-                    ),
-                ],
-              ),
-            ],
-          ),
-        ),
-      ),
-
-      // ── Pinned Bottom Action Sheet Container ────────────────────────
-      bottomNavigationBar: Container(
-        decoration: const BoxDecoration(
-          color: Colors.white,
-          border: Border(
-            top: BorderSide(color: Color(0xFFDBEAF9), width: 1),
-          ),
-          boxShadow: [
-            BoxShadow(
-              color: Color(0x0A000000),
-              blurRadius: 8,
-              offset: Offset(0, -1),
+              ],
             ),
-          ],
-        ),
-        padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
-        child: SafeArea(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              SizedBox(
-                height: 48,
-                width: double.infinity,
-                child: ElevatedButton.icon(
-                  onPressed: submitState.isLoading ? null : _submit,
-                  icon: submitState.isLoading
-                      ? const SizedBox.shrink()
-                      : const Icon(Icons.send, size: 18),
-                  label: submitState.isLoading
-                      ? const SizedBox(
-                          width: 20,
-                          height: 20,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2,
-                            color: Colors.white,
-                          ),
-                        )
-                      : const Text(
-                          'Kirim Pengajuan Mutasi',
-                          style: TextStyle(
-                            fontSize: 14,
-                            fontWeight: FontWeight.bold,
-                            letterSpacing: 0.3,
-                          ),
-                        ),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF00273A),
-                    foregroundColor: Colors.white,
-                    elevation: 2,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                  ),
-                ),
-              ),
-              const SizedBox(height: 6),
-              const Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(
-                    Icons.lock,
-                    size: 12,
-                    color: Color(0xFF52606D),
-                  ),
-                  SizedBox(width: 4),
-                  Flexible(
-                    child: Text(
-                      'Dicatat otomatis dalam register audit BMN dan diteruskan ke Operator Cabang.',
-                      textAlign: TextAlign.center,
-                      style: TextStyle(
-                        fontSize: 10,
-                        color: Color(0xFF52606D),
-                      ),
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ),
-                ],
-              ),
-            ],
           ),
         ),
       ),
     );
   }
 
-  Widget _buildSectionCard({
-    required String title,
-    required String badgeText,
-    required List<Widget> children,
-  }) {
-    return Container(
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: const Color(0xFFDBEAF9)),
-        boxShadow: const [
-          BoxShadow(
-            color: Color(0x06101828),
-            blurRadius: 4,
-            offset: Offset(0, 1),
-          ),
-        ],
-      ),
-      padding: const EdgeInsets.all(14),
+  // ── Section 1: Aset ───────────────────────────────────────────────────────
+
+  Widget _sectionAsset() {
+    return _card(
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
+              _iconBox(Icons.inventory_2_outlined),
+              const SizedBox(width: 8),
               Expanded(
+                child: Text(
+                  'Informasi Aset Terdaftar',
+                  style: _m(size: 14, weight: FontWeight.w700),
+                ),
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 4,
+                ),
+                decoration: BoxDecoration(
+                  color: _C.warningBg,
+                  borderRadius: BorderRadius.circular(999),
+                  border: Border.all(color: _C.warningBorder),
+                ),
                 child: Row(
+                  mainAxisSize: MainAxisSize.min,
                   children: [
-                    Container(
-                      width: 3,
-                      height: 14,
-                      decoration: BoxDecoration(
-                        color: const Color(0xFF00273A),
-                        borderRadius: BorderRadius.circular(2),
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: Text(
-                        title,
-                        style: const TextStyle(
-                          fontSize: 13,
-                          fontWeight: FontWeight.bold,
-                          color: Color(0xFF0F1D28),
-                          letterSpacing: 0.2,
-                        ),
-                        overflow: TextOverflow.ellipsis,
+                    const Icon(Icons.lock_outline, size: 13, color: _C.warning),
+                    const SizedBox(width: 4),
+                    Text(
+                      'Terkunci saat proses',
+                      style: _m(
+                        size: 11,
+                        weight: FontWeight.w600,
+                        color: _C.warning,
                       ),
                     ),
                   ],
-                ),
-              ),
-              const SizedBox(width: 8),
-              Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 8,
-                  vertical: 3,
-                ),
-                decoration: BoxDecoration(
-                  color: const Color(0xFFECF4FF),
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: const Color(0xFFDBEAF9)),
-                ),
-                child: Text(
-                  badgeText,
-                  style: const TextStyle(
-                    fontSize: 10,
-                    fontWeight: FontWeight.bold,
-                    color: Color(0xFF00273A),
-                  ),
                 ),
               ),
             ],
           ),
           const SizedBox(height: 12),
-          const Divider(height: 1, color: Color(0xFFECF4FF)),
+          const Divider(height: 1, color: Color(0x99D0D5DD)),
           const SizedBox(height: 14),
-          ...children,
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Container(
+                width: 48,
+                height: 48,
+                decoration: BoxDecoration(
+                  color: _C.bg,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: _C.border),
+                ),
+                child: const Icon(Icons.laptop_mac, size: 26, color: _C.text),
+              ),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    TextFormField(
+                      controller: _assetNameController,
+                      style: _m(size: 16, weight: FontWeight.w700),
+                      decoration: _inputDeco('Nama aset *'),
+                      validator: (v) => (v == null || v.trim().isEmpty)
+                          ? 'Wajib diisi'
+                          : null,
+                    ),
+                    const SizedBox(height: 8),
+                    TextFormField(
+                      controller: _assetCodeController,
+                      style: _m(size: 12, color: _C.muted),
+                      decoration: _inputDeco('Kode / SN aset'),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(14),
+            decoration: BoxDecoration(
+              color: _C.bg,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: _C.border),
+            ),
+            child: Column(
+              children: [
+                TextFormField(
+                  controller: _currentPicController,
+                  style: _m(size: 12, weight: FontWeight.w600),
+                  decoration: _inputDeco('Pemegang / PIC saat ini'),
+                ),
+                const SizedBox(height: 8),
+                TextFormField(
+                  controller: _sourceLocationController,
+                  style: _m(size: 12, weight: FontWeight.w500),
+                  decoration: _inputDeco('Unit kerja & lokasi asal *'),
+                  validator: (v) =>
+                      (v == null || v.trim().isEmpty) ? 'Wajib diisi' : null,
+                ),
+              ],
+            ),
+          ),
         ],
       ),
     );
+  }
+
+  // ── Section 2: Rute ───────────────────────────────────────────────────────
+
+  Widget _sectionRoute(List<String> locations) {
+    return _card(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                width: 28,
+                height: 28,
+                decoration: BoxDecoration(
+                  color: const Color(0xFFE1F0FF),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: const Icon(Icons.alt_route, size: 18, color: _C.navy),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  'Rute & Status Pengelolaan Fisik',
+                  style: _m(size: 14, weight: FontWeight.w700),
+                ),
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFECFDF5),
+                  borderRadius: BorderRadius.circular(999),
+                  border: Border.all(color: const Color(0xFFA7F3D0)),
+                ),
+                child: Text(
+                  'SOP-AST-2025',
+                  style: _m(size: 10, weight: FontWeight.w600, color: _C.teal),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          const Divider(height: 1, color: Color(0x99D0D5DD)),
+          const SizedBox(height: 14),
+          Text(
+            'LOKASI ASAL (READ-ONLY)',
+            style: _m(
+              size: 11,
+              weight: FontWeight.w700,
+              color: _C.muted,
+              letterSpacing: 0.6,
+            ),
+          ),
+          const SizedBox(height: 6),
+          Container(
+            padding: const EdgeInsets.all(10),
+            decoration: BoxDecoration(
+              color: _C.bg,
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: _C.border.withValues(alpha: 0.7)),
+            ),
+            child: Row(
+              children: [
+                const Icon(Icons.apartment, size: 18, color: _C.muted),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Text(
+                    _sourceLocationController.text.trim().isEmpty
+                        ? 'Isi lokasi asal di bagian aset'
+                        : _sourceLocationController.text.trim(),
+                    style: _m(size: 13, weight: FontWeight.w500),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 14),
+          Text(
+            'UNIT / CABANG PENUGASAN BARU',
+            style: _m(
+              size: 11,
+              weight: FontWeight.w700,
+              color: _C.muted,
+              letterSpacing: 0.6,
+            ),
+          ),
+          const SizedBox(height: 6),
+          InkWell(
+            onTap: locations.isEmpty ? null : () => _pickLocation(locations),
+            borderRadius: BorderRadius.circular(8),
+            child: Container(
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: _C.white,
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: _C.border),
+              ),
+              child: Row(
+                children: [
+                  const Icon(Icons.business, size: 20, color: _C.navy),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: TextFormField(
+                      controller: _locationController,
+                      style: _m(size: 13, weight: FontWeight.w700),
+                      decoration: InputDecoration(
+                        hintText: 'Pilih atau ketik unit tujuan *',
+                        hintStyle: _m(size: 13, color: _C.muted),
+                        border: InputBorder.none,
+                        isDense: true,
+                        contentPadding: EdgeInsets.zero,
+                      ),
+                      validator: (v) => (v == null || v.trim().isEmpty)
+                          ? 'Wajib diisi'
+                          : null,
+                    ),
+                  ),
+                  const Icon(Icons.expand_more, color: _C.muted),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(height: 14),
+          Text(
+            'RUANGAN / AREA PENEMPATAN',
+            style: _m(
+              size: 11,
+              weight: FontWeight.w700,
+              color: _C.muted,
+              letterSpacing: 0.6,
+            ),
+          ),
+          const SizedBox(height: 6),
+          TextFormField(
+            controller: _roomController,
+            style: _m(size: 13, weight: FontWeight.w500),
+            decoration: _inputDeco('Contoh: Lantai 1 — Ruang Operasional')
+                .copyWith(
+                  prefixIcon: const Icon(
+                    Icons.meeting_room,
+                    size: 18,
+                    color: _C.muted,
+                  ),
+                ),
+          ),
+          Text(
+            'STATUS FISIK ASET SAAT MUTASI *',
+            style: _m(
+              size: 11,
+              weight: FontWeight.w700,
+              color: _C.muted,
+              letterSpacing: 0.6,
+            ),
+          ),
+          const SizedBox(height: 8),
+          _radioHandling(
+            selected: _bringAsset,
+            title: 'Aset Dibawa Sendiri',
+            badge: 'Rekomendasi',
+            badgeGreen: true,
+            body: 'Perangkat tetap digunakan & dibawa pemohon ke unit penugasan baru.',
+            icon: Icons.work_outline,
+            onTap: () => setState(() => _bringAsset = true),
+          ),
+          const SizedBox(height: 10),
+          _radioHandling(
+            selected: !_bringAsset,
+            title: 'Aset Ditinggalkan di Unit Asal / Alih Kelola',
+            badge: 'Pool Aset',
+            badgeGreen: false,
+            body: 'Aset fisik ditinggalkan di unit kerja saat ini untuk diserahterimakan ke Staff Aset lokal.',
+            icon: Icons.warehouse_outlined,
+            onTap: () => setState(() => _bringAsset = false),
+          ),
+          const SizedBox(height: 12),
+          Container(
+            padding: const EdgeInsets.all(14),
+            decoration: BoxDecoration(
+              color: const Color(0xFFF0FDFA),
+              borderRadius: BorderRadius.circular(12),
+              border: const Border(left: BorderSide(color: _C.teal, width: 4)),
+            ),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Icon(Icons.policy_outlined, size: 18, color: _C.teal),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Text.rich(
+                    TextSpan(
+                      style: _m(size: 12, color: _C.muted, height: 1.4),
+                      children: [
+                        TextSpan(
+                          text: 'Ketentuan Tata Kelola Inventaris:\n',
+                          style: _m(size: 12, weight: FontWeight.w700),
+                        ),
+                        const TextSpan(
+                          text: 'Pemohon hanya menentukan intensi penanganan fisik. Penentuan PIC baru & pembaruan master inventaris dieksekusi oleh Staff Aset pada tahap otorisasi berikutnya.',
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 12),
+          TextFormField(
+            controller: _picController,
+            style: _m(size: 13),
+            decoration: _inputDeco(
+              'PIC tujuan (opsional — diisi Staff jika kosong)',
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _radioHandling({
+    required bool selected,
+    required String title,
+    required String badge,
+    required bool badgeGreen,
+    required String body,
+    required IconData icon,
+    required VoidCallback onTap,
+  }) {
+    return Material(
+      color: selected ? const Color(0xFFF7F9FF) : _C.white,
+      borderRadius: BorderRadius.circular(12),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(12),
+        child: Container(
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(
+              color: selected ? _C.navy : _C.border,
+              width: selected ? 2 : 1,
+            ),
+          ),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Icon(
+                selected ? Icons.radio_button_checked : Icons.radio_button_off,
+                size: 20,
+                color: selected ? _C.navy : _C.muted,
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Icon(
+                          icon,
+                          size: 16,
+                          color: selected ? _C.navy : _C.muted,
+                        ),
+                        const SizedBox(width: 6),
+                        Expanded(
+                          child: Text(
+                            title,
+                            style: _m(size: 13, weight: FontWeight.w700),
+                          ),
+                        ),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 8,
+                            vertical: 2,
+                          ),
+                          decoration: BoxDecoration(
+                            color: badgeGreen ? const Color(0xFFECFDF5) : _C.bg,
+                            borderRadius: BorderRadius.circular(999),
+                            border: Border.all(
+                              color: badgeGreen
+                                  ? const Color(0xFFA7F3D0)
+                                  : _C.border,
+                            ),
+                          ),
+                          child: Text(
+                            badge,
+                            style: _m(
+                              size: 10,
+                              weight: FontWeight.w700,
+                              color: badgeGreen ? _C.success : _C.muted,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      body,
+                      style: _m(size: 12, color: _C.muted, height: 1.35),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  // ── Section 3: Alasan & dokumen ───────────────────────────────────────────
+
+  Widget _sectionReasonDoc() {
+    final len = _reasonController.text.length;
+    return _card(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Icon(Icons.description_outlined, size: 20, color: _C.navy),
+              const SizedBox(width: 8),
+              Text(
+                'Alasan & Dokumen Otorisasi',
+                style: _m(size: 14, weight: FontWeight.w700),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          const Divider(height: 1, color: Color(0x99D0D5DD)),
+          const SizedBox(height: 14),
+          Row(
+            children: [
+              Text(
+                'ALASAN KEBUTUHAN MUTASI *',
+                style: _m(
+                  size: 11,
+                  weight: FontWeight.w600,
+                  color: _C.muted,
+                  letterSpacing: 0.5,
+                ),
+              ),
+              const Spacer(),
+              Text(
+                '$len / $_maxReason',
+                style: _m(size: 11, weight: FontWeight.w500, color: _C.muted),
+              ),
+            ],
+          ),
+          const SizedBox(height: 6),
+          TextFormField(
+            controller: _reasonController,
+            maxLength: _maxReason,
+            maxLines: 3,
+            style: _m(size: 13, height: 1.4),
+            decoration: _inputDeco('Jelaskan alasan mutasi...')
+                .copyWith(counterText: ''),
+            validator: (v) =>
+                (v == null || v.trim().isEmpty) ? 'Alasan wajib diisi' : null,
+          ),
+          const SizedBox(height: 14),
+          Text(
+            'DOKUMEN OTORISASI (SK / BERITA ACARA)',
+            style: _m(
+              size: 11,
+              weight: FontWeight.w600,
+              color: _C.muted,
+              letterSpacing: 0.5,
+            ),
+          ),
+          const SizedBox(height: 8),
+          if (_documentName != null) ...[
+            Container(
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: _C.bg.withValues(alpha: 0.6),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: _C.border),
+              ),
+              child: Row(
+                children: [
+                  Container(
+                    width: 36,
+                    height: 36,
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFFEF2F2),
+                      borderRadius: BorderRadius.circular(6),
+                      border: Border.all(color: const Color(0xFFFECACA)),
+                    ),
+                    child: const Icon(
+                      Icons.picture_as_pdf,
+                      size: 20,
+                      color: Color(0xFFDC2626),
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          _documentName!,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: _m(size: 13, weight: FontWeight.w600),
+                        ),
+                        Text(
+                          _formatFileSize(_documentSize),
+                          style: _m(size: 11, color: _C.muted),
+                        ),
+                      ],
+                    ),
+                  ),
+                  TextButton(
+                    onPressed: () => setState(() {
+                      _documentName = null;
+                      _documentSize = null;
+                      _documentPath = null;
+                      _documentBytes = null;
+                    }),
+                    child: Text(
+                      'Hapus',
+                      style: _m(
+                        size: 12,
+                        weight: FontWeight.w600,
+                        color: _C.navy,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 8),
+          ],
+          OutlinedButton.icon(
+            onPressed: _pickDocument,
+            style: OutlinedButton.styleFrom(
+              foregroundColor: _C.navy,
+              side: const BorderSide(color: _C.border),
+              minimumSize: const Size(double.infinity, 44),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(8),
+              ),
+            ),
+            icon: const Icon(Icons.upload_file, size: 18),
+            label: Text(
+              _documentName == null
+                  ? 'Unggah Berkas'
+                  : 'Unggah Berkas Tambahan',
+              style: _m(size: 12, weight: FontWeight.w600, color: _C.navy),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ── Bottom bar ────────────────────────────────────────────────────────────
+
+  Widget _bottomBar(bool loading) {
+    return Container(
+      decoration: BoxDecoration(
+        color: _C.white.withValues(alpha: 0.95),
+        border: const Border(top: BorderSide(color: Color(0xCCD0D5DD))),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.06),
+            blurRadius: 12,
+            offset: const Offset(0, -2),
+          ),
+        ],
+      ),
+      child: SafeArea(
+        top: false,
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Row(
+                children: [
+                  OutlinedButton.icon(
+                    onPressed: loading ? null : _safePop,
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: _C.text,
+                      side: const BorderSide(color: _C.border),
+                      minimumSize: const Size(0, 48),
+                      padding: const EdgeInsets.symmetric(horizontal: 14),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                    ),
+                    icon: const Icon(Icons.bookmark_border, size: 18),
+                    label: Text(
+                      'Simpan Draf',
+                      style: _m(size: 13, weight: FontWeight.w700),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: ElevatedButton(
+                      onPressed: loading ? null : _submit,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: _C.navy,
+                        foregroundColor: Colors.white,
+                        minimumSize: const Size(0, 48),
+                        elevation: 0,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                      ),
+                      child: loading
+                          ? const SizedBox(
+                              width: 22,
+                              height: 22,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                color: Colors.white,
+                              ),
+                            )
+                          : Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Text(
+                                  'Lanjut ke Konfirmasi',
+                                  style: _m(
+                                    size: 13,
+                                    weight: FontWeight.w700,
+                                    color: Colors.white,
+                                  ),
+                                ),
+                                const SizedBox(width: 6),
+                                const Icon(Icons.arrow_forward, size: 18),
+                              ],
+                            ),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 8),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Icon(Icons.verified_user, size: 12, color: _C.teal),
+                  const SizedBox(width: 4),
+                  Flexible(
+                    child: Text(
+                      'Sesuai PRD MutasiKu • Tiket diterbitkan otomatis',
+                      textAlign: TextAlign.center,
+                      style: _m(
+                        size: 10,
+                        weight: FontWeight.w500,
+                        color: _C.muted,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  // ── Helpers ───────────────────────────────────────────────────────────────
+
+  Widget _card({required Widget child}) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: _C.white,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: _C.border),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.03),
+            blurRadius: 4,
+            offset: const Offset(0, 1),
+          ),
+        ],
+      ),
+      child: child,
+    );
+  }
+
+  Widget _iconBox(IconData icon) {
+    return Container(
+      width: 28,
+      height: 28,
+      decoration: BoxDecoration(
+        color: _C.bg,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: _C.border),
+      ),
+      child: Icon(icon, size: 18, color: _C.text),
+    );
+  }
+
+  InputDecoration _inputDeco(String hint) {
+    return InputDecoration(
+      hintText: hint,
+      hintStyle: _m(size: 13, color: _C.muted),
+      filled: true,
+      fillColor: _C.white,
+      contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      border: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(8),
+        borderSide: const BorderSide(color: _C.border),
+      ),
+      enabledBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(8),
+        borderSide: const BorderSide(color: _C.border),
+      ),
+      focusedBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(8),
+        borderSide: const BorderSide(color: _C.navy, width: 1.5),
+      ),
+      errorBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(8),
+        borderSide: const BorderSide(color: Color(0xFFB42318)),
+      ),
+    );
+  }
+
+  String _initials(String name) {
+    final p = name
+        .trim()
+        .split(RegExp(r'\s+'))
+        .where((e) => e.isNotEmpty)
+        .toList();
+    if (p.isEmpty) return 'P';
+    if (p.length == 1) {
+      return p.first.length >= 2
+          ? p.first.substring(0, 2).toUpperCase()
+          : p.first.toUpperCase();
+    }
+    return '${p.first[0]}${p.last[0]}'.toUpperCase();
   }
 }

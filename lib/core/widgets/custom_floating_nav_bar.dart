@@ -1,8 +1,8 @@
 // lib/core/widgets/custom_floating_nav_bar.dart
 //
-// Floating Bottom Navigation Bar terstandarisasi untuk seluruh 6 Role MutasiKu.
-// Mengikuti ukuran, bentuk (capsule 35), floating spacing, soft shadow,
-// active state berbasis GoRouter, dan notification badge dari Pemohon.
+// Floating Bottom Navigation Bar terstandarisasi untuk seluruh role MutasiKu.
+// Active state: oval di belakang icon (GoRouter matchedLocation).
+// Item per role: RoleNavConfig.
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -13,7 +13,6 @@ import '../../app/theme/app_colors.dart';
 import '../../features/auth/domain/entities/user_role.dart';
 import '../../features/notification/presentation/providers/notification_provider.dart';
 
-/// Item navigasi untuk [CustomFloatingNavBar].
 class CustomNavItem {
   final IconData icon;
   final String label;
@@ -28,7 +27,6 @@ class CustomNavItem {
   });
 }
 
-/// Konfigurasi menu navigasi terpusat untuk setiap role di MutasiKu.
 abstract final class RoleNavConfig {
   static List<CustomNavItem> getNavItemsForRole(UserRole role) {
     switch (role) {
@@ -41,7 +39,7 @@ abstract final class RoleNavConfig {
           ),
           CustomNavItem(
             icon: Icons.swap_horiz_rounded,
-            label: 'Mutasi Saya',
+            label: 'Mutasi',
             route: RouteNames.pemohonMutasiPath,
           ),
           CustomNavItem(
@@ -60,7 +58,7 @@ abstract final class RoleNavConfig {
         return const [
           CustomNavItem(
             icon: Icons.home_outlined,
-            label: 'Home',
+            label: 'Beranda',
             route: RouteNames.operatorDashboardPath,
           ),
           CustomNavItem(
@@ -84,7 +82,7 @@ abstract final class RoleNavConfig {
         return const [
           CustomNavItem(
             icon: Icons.home_outlined,
-            label: 'Home',
+            label: 'Beranda',
             route: RouteNames.kabagDashboardPath,
           ),
           CustomNavItem(
@@ -108,7 +106,7 @@ abstract final class RoleNavConfig {
         return const [
           CustomNavItem(
             icon: Icons.home_outlined,
-            label: 'Home',
+            label: 'Beranda',
             route: RouteNames.kadivDashboardPath,
           ),
           CustomNavItem(
@@ -132,7 +130,7 @@ abstract final class RoleNavConfig {
         return const [
           CustomNavItem(
             icon: Icons.home_outlined,
-            label: 'Home',
+            label: 'Beranda',
             route: RouteNames.staffDashboardPath,
           ),
           CustomNavItem(
@@ -156,7 +154,7 @@ abstract final class RoleNavConfig {
         return const [
           CustomNavItem(
             icon: Icons.grid_view_rounded,
-            label: 'Home',
+            label: 'Beranda',
             route: RouteNames.adminDashboardPath,
           ),
           CustomNavItem(
@@ -179,16 +177,6 @@ abstract final class RoleNavConfig {
   }
 }
 
-/// Floating Bottom Navigation Bar terstandarisasi untuk semua role MutasiKu.
-///
-/// Menggunakan styling capsule floating yang identik dengan Pemohon:
-/// - Floating di atas layar (margin horizontal 16, bottom 12)
-/// - Height: 66 dp
-/// - BorderRadius: 35 (StadiumBorder / Capsule)
-/// - Background: Colors.white
-/// - Shadow: soft blur 18, offset (0, 5)
-/// - Active state mengikuti route GoRouter yang aktif
-/// - Mendukung notification badge otomatis tanpa layout shift
 class CustomFloatingNavBar extends ConsumerWidget {
   final List<CustomNavItem> items;
   final String? currentRoute;
@@ -201,7 +189,6 @@ class CustomFloatingNavBar extends ConsumerWidget {
     this.onItemTap,
   });
 
-  /// Factory helper untuk mendapatkan navbar instan berdasarkan role.
   factory CustomFloatingNavBar.forRole(
     UserRole role, {
     Key? key,
@@ -216,8 +203,6 @@ class CustomFloatingNavBar extends ConsumerWidget {
     );
   }
 
-  /// Helper untuk membungkus CustomFloatingNavBar dengan padding standar
-  /// untuk digunakan langsung pada [Scaffold.bottomNavigationBar].
   static Widget scaffoldBottomBar({
     required List<CustomNavItem> items,
     String? currentRoute,
@@ -249,21 +234,28 @@ class CustomFloatingNavBar extends ConsumerWidget {
     if (activeLocation.isEmpty) return false;
     if (activeLocation == item.route) return true;
 
-    // Alias/sub-path Pemohon Mutasi
+    // Alias Pemohon mutasi
     if (item.route == RouteNames.pemohonMutasiPath) {
       if (activeLocation == '/pemohon/mutations' ||
           activeLocation == '/pemohon/history' ||
-          activeLocation == '/pemohon/mutation-history') {
+          activeLocation == '/pemohon/mutation-history' ||
+          activeLocation.startsWith('${RouteNames.pemohonMutasiPath}/')) {
         return true;
       }
     }
+
+    // Sub-route detail tetap aktif di tab induk (opsional)
+    if (item.route != RouteNames.pemohonMutasiPath &&
+        activeLocation.startsWith('${item.route}/')) {
+      return true;
+    }
+
     return false;
   }
 
   void _onTap(BuildContext context, CustomNavItem item, bool isActive) {
     if (onItemTap != null) {
       onItemTap!(item);
-      return;
     }
     if (isActive) return;
     context.go(item.route);
@@ -294,13 +286,18 @@ class CustomFloatingNavBar extends ConsumerWidget {
           final isNotif = item.label.toLowerCase() == 'notifikasi';
           final showBadge = item.hasBadge ?? (isNotif && unreadCount > 0);
 
-          final color = isActive ? AppColors.primary : AppColors.textSecondary;
+          final color = isActive
+              ? const Color(0xFF0F3D56)
+              : const Color(0xFF94A3B8);
 
-          final iconWidget = Icon(
-            item.icon,
-            size: 22,
-            color: color,
-          );
+          Widget iconWidget = Icon(item.icon, size: 22, color: color);
+          if (showBadge) {
+            iconWidget = Badge(
+              smallSize: 8,
+              backgroundColor: AppColors.error,
+              child: iconWidget,
+            );
+          }
 
           return Expanded(
             child: InkWell(
@@ -308,19 +305,24 @@ class CustomFloatingNavBar extends ConsumerWidget {
               borderRadius: BorderRadius.circular(35),
               child: Center(
                 child: Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 8),
+                  padding: const EdgeInsets.symmetric(vertical: 6),
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
-                    mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      showBadge
-                          ? Badge(
-                              smallSize: 8,
-                              backgroundColor: AppColors.error,
-                              child: iconWidget,
-                            )
-                          : iconWidget,
-                      const SizedBox(height: 3),
+                      Container(
+                        width: 40,
+                        height: 32,
+                        alignment: Alignment.center,
+                        decoration: isActive
+                            ? BoxDecoration(
+                                color: const Color(0xFF0F3D56)
+                                    .withValues(alpha: 0.10),
+                                borderRadius: BorderRadius.circular(999),
+                              )
+                            : null,
+                        child: iconWidget,
+                      ),
+                      const SizedBox(height: 2),
                       Text(
                         item.label,
                         maxLines: 1,
@@ -328,8 +330,9 @@ class CustomFloatingNavBar extends ConsumerWidget {
                         style: TextStyle(
                           fontSize: 10,
                           height: 1.0,
-                          fontWeight:
-                              isActive ? FontWeight.w600 : FontWeight.w500,
+                          fontWeight: isActive
+                              ? FontWeight.w700
+                              : FontWeight.w500,
                           color: color,
                         ),
                       ),

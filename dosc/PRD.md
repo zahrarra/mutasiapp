@@ -1,292 +1,195 @@
 # Product Requirements Document (PRD)
+
 # MutasiKu — Aplikasi Pengelolaan Mutasi Aset
 
 **Platform:** Mobile — Flutter  
-**Versi:** 1.0 Draft MVP  
-**Tanggal:** 16 September 2026
+**Versi:** 1.1 Revision MVP  
+**Tanggal:** 27 September 2026
 
 ---
 
 ## 1. Ringkasan Produk
 
-MutasiKu adalah aplikasi mobile internal untuk mengelola proses mutasi aset secara terstruktur, mulai dari pengajuan, verifikasi, persetujuan, pembaruan data aset, hingga konfirmasi pemohon.
+MutasiKu adalah aplikasi mobile internal untuk mengelola proses perpindahan dan pengembalian aset secara terstruktur, mulai dari pengajuan, verifikasi, persetujuan, serah terima & pembaruan data aset, hingga konfirmasi akhir oleh pemohon.
 
-Aplikasi ditujukan untuk membantu memastikan setiap perpindahan aset tercatat, dapat ditelusuri, dan memiliki informasi lokasi serta penanggung jawab yang mutakhir.
+Aplikasi memastikan setiap perubahan status, perpindahan fisik, serta pengalihan penanggung jawab aset tercatat secara transparan, tertelusuri, dan mutakhir.
 
 ---
 
 ## 2. Latar Belakang Masalah
 
-Aset seperti laptop, PC, printer, dan furniture dapat berpindah mengikuti perpindahan pegawai antar unit atau cabang. Jika proses mutasi masih dilakukan secara manual, pencatatan lokasi dan penanggung jawab aset berpotensi tidak selalu sesuai dengan kondisi aktual.
+Aset kerja (seperti laptop, PC, monitor, printer, dan furnitur) kerap berpindah mengikuti dinamika pegawai (rotasi unit, pindah cabang, atau pengembalian aset karena resign/peremajaan).
 
-MutasiKu dirancang untuk menyediakan alur terstruktur:
+Pada proses manual atau pengajuan konvensional, terjadi kendala tata kelola:
 
-Pengajuan → Verifikasi → Approval → Update Aset → Konfirmasi.
+- **Ketidaksesuaian Wewenang:** Pemohon sering dipaksa menentukan siapa penerima (PIC baru) dari aset yang mereka lepas, padahal alokasi aset adalah kewenangan pengelola inventaris (Kabag/Staff Aset).
+- **Inkonsistensi Data:** Lokasi dan PIC aktual tidak sinkron dengan sistem.
+- **Risiko Kehilangan:** Tidak adanya kepastian pencatatan serah terima saat aset dikembalikan ke gudang/pool.
+
+MutasiKu dirancang dengan membedakan secara tegas antara mutasi **bawa sendiri** dan **pelepasan aset ke pool inventaris**.
 
 ---
 
 ## 3. Tujuan
 
-1. Mencatat setiap pengajuan mutasi aset melalui proses yang terstruktur.
-2. Memastikan perpindahan aset melalui tahapan verifikasi dan persetujuan.
-3. Menjaga informasi lokasi dan penanggung jawab aset tetap mutakhir.
-4. Menyediakan riwayat mutasi yang dapat ditelusuri.
-5. Menyediakan nomor tiket unik untuk setiap pengajuan.
-6. Mendukung pengajuan saat offline dan sinkronisasi ketika koneksi tersedia.
+1. Mencatat alur mutasi aset secara otomatis dan terstruktur sesuai wewenang.
+2. Membebaskan Pemohon dari kewajiban menentukan PIC baru jika tidak membawa aset tersebut.
+3. Memastikan pemindahan/pelepasan aset melalui tahapan verifikasi Operator dan persetujuan Kabag/Kadiv.
+4. Menjaga data lokasi dan penanggung jawab aset di database tetap mutakhir (_single source of truth_).
+5. Memberikan tanda bukti serah terima yang sah dengan nomor tiket unik.
+6. Mendukung operasional draf pengajuan saat koneksi offline dan sinkronisasi otomatis saat terhubung kembali.
 
 ---
 
-## 4. Target Pengguna
+## 4. Target Pengguna & Persona
 
-Pengguna internal yang terlibat dalam proses pengajuan, verifikasi, persetujuan, dan pencatatan mutasi aset.
+### Pemohon
 
-### Persona
+- Pegawai yang memegang aset dan akan pindah tugas bersama asetnya, ATAU pegawai yang ingin mengembalikan aset ke pool perusahaan (misal: rotasi, peremajaan, pengembalian inventaris).
+- **Batasan Kewenangan:** Pemohon **tidak berhak** menentukan/memilih PIC baru dari luar dirinya sendiri.
 
-**Pemohon**
-- Pegawai yang mengalami perpindahan aset.
-- Mengajukan mutasi aset yang sedang menjadi tanggung jawabnya.
+### Operator
 
-**Staff Aset**
-- Memperbarui lokasi dan penanggung jawab aset.
-- Memastikan riwayat mutasi tercatat.
+- Staf administrasi logistik yang bertugas memvalidasi kelengkapan dokumen, kesesuaian fisik awal, dan kelayakan alasan mutasi.
+
+### Kabag Aset
+
+- Pejabat struktural yang menyetujui mutasi, memverifikasi kriteria Kadiv, serta berwenang mengelola kuota dan alokasi inventaris antar-unit.
+
+### Kadiv
+
+- Pimpinan unit tingkat divisi yang memberikan persetujuan khusus untuk aset bernilai tinggi, pemindahan antar-wilayah tertentu, atau kriteria strategis lainnya.
+
+### Staff Aset
+
+- Tim operasional lapangan yang menerima penyerahan aset fisik, memverifikasi nomor seri/kondisi, memperbarui master data aset, dan mengelola inventaris di gudang (_pool_).
 
 ---
 
 ## 5. Role dan Hak Akses
 
-### Admin
-- Mengelola user.
-- Mengelola role.
-- Mengelola lokasi/unit.
-- Mengelola kategori aset.
-- Mengelola kriteria approval Kadiv.
-
-### Pemohon
-- Membuat pengajuan mutasi.
-- Melihat status pengajuan.
-- Mengedit pengajuan yang dikembalikan.
-- Melakukan konfirmasi mutasi.
-
-### Operator
-- Memeriksa pengajuan.
-- Memverifikasi data dan kelengkapan.
-- Mengembalikan pengajuan jika tidak valid.
-
-### Kabag Aset
-- Mereview pengajuan.
-- Menyetujui atau menolak pengajuan.
-- Menentukan apakah pengajuan membutuhkan approval Kadiv berdasarkan kriteria yang berlaku.
-
-### Kadiv
-- Memberikan approval atau penolakan untuk pengajuan yang memenuhi kriteria approval Kadiv.
-
-### Staff Aset
-- Memperbarui lokasi aset.
-- Memperbarui penanggung jawab aset.
-- Menyimpan riwayat mutasi.
+| Role           | Hak Akses Utama                                                                                                                                                     |
+| :------------- | :------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| **Admin**      | Kelola akun pengguna, unit kerja/lokasi, kategori aset, dan kriteria persetujuan Kadiv.                                                                             |
+| **Pemohon**    | Mengajukan mutasi (Bawa Sendiri / Lepas ke Pool), melihat status tiket, merevisi pengajuan yang dikembalikan, dan melakukan konfirmasi akhir penyerahan/penerimaan. |
+| **Operator**   | Memverifikasi kelengkapan form pengajuan, mengembalikan pengajuan tidak valid dengan catatan, meneruskan ke Kabag.                                                  |
+| **Kabag Aset** | Mereview pengajuan valid, menyetujui/menolak, menentukan eskalasi ke Kadiv berdasarkan kriteria.                                                                    |
+| **Kadiv**      | Memberikan persetujuan akhir (_approval_) untuk pengajuan berdampak strategis/khusus.                                                                               |
+| **Staff Aset** | Menerima serah terima fisik aset, memperbarui data sistem (Lokasi & PIC), menyimpan riwayat, dan memicu tahap konfirmasi pemohon.                                   |
 
 ---
 
-## 6. Fitur MVP
+## 6. Alur Bisnis & Fitur MVP
 
-### 6.1 Login dan RBAC
-- Login pengguna.
-- Role-based access.
-- Satu role aktif per user pada MVP.
-- Navigasi berdasarkan role.
+### 6.1 Jenis Pengajuan Mutasi (REQ-004)
 
-### 6.2 Pengajuan Mutasi
-Pemohon dapat:
-- Memilih aset.
-- Mengisi data mutasi.
-- Mengirim pengajuan.
-- Melihat nomor tiket dan status.
+Pemohon memilih aset miliknya, kemudian memilih salah satu dari **2 Jenis Mutasi**:
 
-Nomor tiket menggunakan format:
+1. **Bawa Aset Sendiri (Pindah Unit/Cabang):**
+   - **Tujuan:** Pegawai pindah tugas dan tetap bertanggung jawab atas aset tersebut di tempat baru.
+   - **Lokasi Tujuan:** Dipilih oleh Pemohon (Unit/Cabang baru).
+   - **PIC Baru:** Terkunci otomatis (_read-only_) ke **nama Pemohon sendiri**.
+2. **Lepas / Kembalikan ke Pool (Pelepasan Tanggung Jawab):**
+   - **Tujuan:** Pegawai tidak lagi menggunakan aset (dikembalikan ke gudang/unit aset).
+   - **Lokasi Tujuan:** Default/Terkunci ke **Gudang Aset / Pool Unit Kerja**.
+   - **PIC Baru:** Terkunci otomatis (_read-only_) menjadi **Pool Aset (Staff Aset)**. Pemohon dilarang memilih pegawai lain.
 
-`KATEGORI-TAHUN-NOURUT`
+Setiap pengajuan yang berhasil dibuat akan memperoleh nomor tiket unik dengan format:  
+`[KATEGORI]-[TAHUN]-[NOURUT]` (dibuat oleh server).
 
-Nomor tiket dibuat oleh server.
+### 6.2 Verifikasi Operator
 
-### 6.3 Verifikasi Operator
-Operator:
-- Memeriksa data.
-- Memeriksa kelengkapan.
-- Mengembalikan pengajuan jika tidak valid dengan alasan.
-- Meneruskan pengajuan valid ke Kabag Aset.
+- Memeriksa validitas alasan dan dokumen/foto kondisi aset.
+- Jika data tidak lengkap/sesuai, Operator **mengembalikan pengajuan** ke Pemohon dengan catatan perbaikan.
+- Jika valid, Operator meneruskan tiket ke Kabag Aset.
 
-### 6.4 Approval Kabag Aset
-Kabag Aset dapat:
-- Menyetujui.
-- Menolak dengan alasan.
-- Meneruskan ke Kadiv jika memenuhi kriteria.
-- Meneruskan ke Staff Aset jika tidak membutuhkan approval Kadiv.
+### 6.3 Persetujuan Kabag Aset & Kadiv
 
-### 6.5 Approval Kadiv
-Kadiv hanya terlibat apabila kriteria approval terpenuhi.
+- **Kabag Aset:** Menyetujui atau menolak tiket pengajuan. Sistem mengecek kriteria eskalasi:
+  - Jika memerlukan persetujuan Kadiv $\rightarrow$ Tiket dialihkan ke antrean Kadiv.
+  - Jika tidak memerlukan persetujuan Kadiv $\rightarrow$ Tiket dialihkan langsung ke Staff Aset.
+- **Kadiv:** Menyetujui atau menolak pengajuan eskalasi.
+- Setiap penolakan (_rejection_) wajib menyertakan alasan tertulis.
 
-Kadiv dapat:
-- Menyetujui.
-- Menolak dengan alasan.
+### 6.4 Eksekusi Fisik & Pembaruan Sistem (Staff Aset)
 
-### 6.6 Update Data Aset
-Staff Aset:
-- Memperbarui lokasi aset.
-- Memperbarui PIC/penanggung jawab.
-- Menyimpan riwayat mutasi.
-- Mengubah proses ke tahap konfirmasi pemohon.
+Setelah seluruh persetujuan terpenuhi:
 
-### 6.7 Konfirmasi Pemohon
-Pemohon melakukan konfirmasi setelah data aset diperbarui.
+1. Serah terima fisik terjadi (misal: barang diantar ke gudang atau dipindahkan).
+2. Staff Aset memeriksa kondisi barang fisik.
+3. Staff Aset membuka tiket di aplikasi (target lokasi dan target PIC bersifat _read-only_ sesuai persetujuan).
+4. Staff Aset menekan **Konfirmasi Eksekusi**: sistem memperbarui master data aset (lokasi & PIC) serta mencatat riwayat mutasi (_Mutation History_).
+5. Tiket berlanjut ke tahap **Menunggu Konfirmasi Pemohon**.
 
-Batas konfirmasi:
-- 1 × 24 jam kerja.
-- Jika tidak ada respons, sistem dapat melakukan auto-close menjadi `Selesai (Auto)` sesuai aturan yang masih perlu ditetapkan.
+### 6.5 Konfirmasi Akhir Pemohon & Penanganan Ketidaksesuaian
 
-### 6.8 Notifikasi
-Sistem menyediakan notifikasi perubahan status dan tindakan yang diperlukan.
+Pemohon wajib memverifikasi hasil eksekusi:
 
-Kegagalan notifikasi tidak boleh menggagalkan perubahan status.
+- **Untuk Bawa Sendiri:** Mengonfirmasi bahwa aset telah sampai di lokasi baru dan tetap ia pegang.
+- **Untuk Lepas ke Pool:** Mengonfirmasi bahwa aset fisik telah resmi diserahkan ke pihak logistik/Staff Aset dan ia bebas dari tanggung jawab aset tersebut.
+- **Opsi "Sesuai":** Tiket berstatus `Selesai`.
+- **Opsi "Tidak Sesuai":** Pemohon mengisi catatan ketidaksesuaian (misal: "Barang belum dijemput", "Aset rusak saat sampai"). Status berpindah ke `Dispute — Dikembalikan ke Staff Aset` agar tim logistik menyelesaikan kendala fisik tanpa Pemohon mengulang pengajuan dari awal.
+- **SLA Konfirmasi:** Batas waktu konfirmasi $1 \times 24$ jam kerja. Jika tidak direspons, sistem otomatis mengubah status menjadi `Selesai (Auto-Closed)`.
 
-### 6.9 Riwayat Mutasi
-Sistem menyimpan riwayat perubahan dan proses mutasi aset.
+### 6.6 Operasional Offline & Sinkronisasi (Pemohon)
 
-### 6.10 Offline dan Sinkronisasi
-Pemohon dapat menyimpan pengajuan secara lokal ketika offline.
-
-Status lokal:
-`Menunggu Sinkronisasi`
-
-Nomor tiket dibuat setelah berhasil sinkronisasi dengan server.
-
-Konflik sinkronisasi harus ditangani dan tidak boleh melakukan overwrite secara diam-diam.
+- Pemohon dapat menyusun draf mutasi tanpa sambungan internet.
+- Draf disimpan di SQLite lokal dengan status `Menunggu Sinkronisasi`.
+- Saat koneksi online tersedia, aplikasi mengirim draf ke server. Server memverifikasi ketersediaan aset (memastikan aset tidak sedang dikunci oleh proses lain) dan menerbitkan nomor tiket resmi.
 
 ---
 
-## 7. Status Mutasi
+## 7. Status Siklus Mutasi (State Machine)
 
-Status utama:
-
-1. `Diajukan`
-2. `Dikembalikan ke Pemohon`
-3. `Menunggu Approval Kabag`
-4. `Menunggu Approval Kadiv`
-5. `Disetujui — Menunggu Update Aset`
-6. `Ditolak`
-7. `Menunggu Konfirmasi Pemohon`
-8. `Selesai`
-9. `Menunggu Sinkronisasi` — status sinkronisasi lokal, bukan pengganti status bisnis server.
-
----
-
-## 8. Aturan Bisnis
-
-1. Satu user hanya memiliki satu role aktif pada MVP.
-2. Hanya pemegang aset saat ini yang dapat mengajukan mutasi.
-3. Satu aset tidak boleh memiliki lebih dari satu mutasi aktif.
-4. Setelah pengajuan dibuat, aset berada dalam kondisi `Dalam Proses Mutasi`/terkunci.
-5. Pengajuan tidak valid harus dikembalikan dengan alasan.
-6. Pengajuan valid diteruskan ke approval Kabag.
-7. Penolakan harus memiliki alasan.
-8. Approval Kadiv hanya dilakukan jika kriteria terpenuhi.
-9. Staff Aset hanya memperbarui data aset setelah seluruh approval yang diperlukan selesai.
-10. Perubahan lokasi dan PIC harus menghasilkan riwayat mutasi.
-11. Nomor tiket dibuat oleh server.
-12. Status, approval, ticket, SLA, asset lock, history, dan konflik merupakan sumber kebenaran dari backend.
-13. Kriteria approval yang diubah Admin hanya berlaku untuk pengajuan baru.
-14. Kegagalan penyimpanan update aset tidak boleh menghasilkan status sukses palsu.
-15. Kegagalan notifikasi tidak boleh membatalkan perubahan status.
-16. Konflik offline harus ditangani secara eksplisit; server menjadi sumber kebenaran.
+1. `Menunggu Sinkronisasi` _(Status lokal khusus offline)_
+2. `Diajukan`
+3. `Dikembalikan ke Pemohon`
+4. `Menunggu Approval Kabag`
+5. `Menunggu Approval Kadiv`
+6. `Disetujui — Menunggu Tindakan Staff Aset`
+7. `Ditolak` _(Status akhir penolakan)_
+8. `Menunggu Konfirmasi Pemohon`
+9. `Dispute — Dikembalikan ke Staff Aset` _(Jika pemohon memilih 'Tidak Sesuai')_
+10. `Selesai`
+11. `Selesai (Auto-Closed)`
 
 ---
 
-## 9. Data Utama
+## 8. Aturan Bisnis Inti (Business Rules)
 
-Entitas utama:
-
-- User
-- Role
-- Location / Unit
-- AssetCategory
-- Asset
-- MutationRequest
-- Approval
-- MutationHistory
-- Notification
-- Document
+1. **Aturan Hak PIC Baru:** Pemohon dilarang memilih pegawai lain sebagai PIC baru. PIC baru hanya bisa bernilai identitas Pemohon sendiri (_Bawa Sendiri_) atau Pool/Staff Aset (_Lepas Aset_).
+2. **Kunci Aset (_Asset Lock_):** Segera setelah pengajuan berstatus `Diajukan`, aset terkunci (`is_locked = true`). Aset yang sedang terkunci tidak dapat diajukan untuk mutasi lain.
+3. **Penolakan Final:** Penolakan oleh Kabag atau Kadiv bersifat final dan langsung melepaskan kunci aset (_unlock_).
+4. **Prinsip Imutabilitas Rekam Jejak:** Setiap mutasi yang selesai wajib mencatat riwayat permanen (_audit trail_) berisi: Tanggal, Pemohon, PIC Lama, PIC Baru, Lokasi Lama, Lokasi Baru, Petugas Staff Aset, dan Riwayat Approver.
+5. **Backend sebagai Single Source of Truth:** Seluruh perubahan status, validasi lock aset, kalkulasi SLA, dan penanganan konflik sinkronisasi diatur oleh backend.
+6. **Toleransi Notifikasi:** Kegagalan pengiriman push notification atau email tidak boleh menggagalkan transaksi database status mutasi.
 
 ---
 
-## 10. Non-Goals MVP
+## 9. Model Entitas Data
 
-Hal berikut tidak termasuk scope MVP:
-
-- Mutasi aset karena kerusakan/kehilangan.
-- Mutasi massal.
-- Mutasi oleh pihak yang bukan pemegang aset saat ini.
-- Partial bundle mutation.
-- Integrasi ERP eksternal.
+- **User:** `id`, `name`, `email`, `role_id`, `unit_id`
+- **Asset:** `id`, `asset_tag`, `name`, `category_id`, `current_pic_id`, `current_location_id`, `is_locked`
+- **MutationRequest:** `id`, `ticket_number`, `asset_id`, `requester_id`, `mutation_type` _(BAWA_SENDIRI | LEPAS_POOL)_, `target_location_id`, `target_pic_id`, `reason`, `status`, `created_at`
+- **Approval:** `id`, `mutation_request_id`, `approver_id`, `step` _(KABAG | KADIV)_, `action` _(APPROVED | REJECTED)_, `notes`, `action_at`
+- **MutationHistory:** `id`, `asset_id`, `ticket_number`, `from_pic_id`, `to_pic_id`, `from_location_id`, `to_location_id`, `executed_by_staff_id`, `completed_at`
 
 ---
 
-## 11. Edge Cases
+## 10. Batasan MVP (Non-Goals)
 
-- Pengajuan mutasi aktif ganda untuk aset yang sama harus ditolak.
-- Aset tidak ditemukan.
-- Data pengajuan tidak lengkap.
-- Pengajuan dikembalikan dan dapat diedit/resubmit.
-- Pengajuan ditolak secara final.
-- Approval terlambat.
-- User tidak memiliki permission.
-- Lokasi tujuan tidak valid.
-- PIC tujuan tidak aktif.
-- Penyimpanan update aset gagal → rollback.
-- Notifikasi gagal → status tetap dapat berubah.
-- Pengajuan offline menunggu sinkronisasi.
-- Konflik ketika aset telah dimutasi melalui proses lain.
+Fitur-fitur berikut secara eksplisit **tidak** disertakan dalam rilis MVP:
+
+- Mutasi hibah/transfer langsung antar-pegawai tanpa melalui gudang/pool.
+- Mutasi massal (_bulk transfer_ banyak aset sekaligus dalam satu tiket).
+- Alur aset hilang/musnah/penghapusan buku aset.
+- Integrasi otomatis dengan sistem ERP pihak ketiga (SAP/Oracle).
 
 ---
 
-## 12. Success Metrics
+## 11. Success Metrics
 
-Metrik yang akan digunakan antara lain:
-
-- Persentase mutasi yang diproses melalui sistem.
-- Akurasi lokasi dan PIC aset.
-- Waktu penyelesaian mutasi.
-- Persentase pengajuan yang dikembalikan.
-- Penggunaan riwayat mutasi.
-- Keberhasilan penyelesaian pengajuan.
-
-Target numerik belum ditentukan.
-
----
-
-## 13. Open Questions
-
-Hal berikut belum boleh diasumsikan oleh developer:
-
-1. Kriteria pasti approval Kadiv.
-2. Aturan auto-close.
-3. Alur `Tidak Sesuai` pada konfirmasi.
-4. Kalender hari kerja dan hari libur.
-5. Backend dan database final.
-6. Metode autentikasi final.
-7. Ketentuan dokumen wajib/opsional.
-8. SLA approval.
-9. Scope offline untuk role selain Pemohon.
-10. Target numerik success metrics.
-11. Kategori aset awal.
-12. Skenario tambahan yang akan dikecualikan dari MVP.
-
----
-
-## 14. Prinsip Implementasi
-
-- Jangan mengarang business rule yang belum ditentukan.
-- Backend menjadi sumber kebenaran untuk data dan workflow.
-- UI tidak boleh mengubah status secara langsung.
-- Gunakan repository/use case untuk proses bisnis.
-- Gunakan komponen UI yang konsisten.
-- Jangan hardcode design token berulang.
-- Perubahan kode dilakukan secara bertahap dan teruji.
+1. **Zero Misallocated Assets:** 100% aset yang dilepas tercatat masuk ke Pool/Gudang tanpa salah penunjukan PIC.
+2. **Waktu Siklus Mutasi:** Rata-rata penyelesaian mutasi dari pengajuan hingga selesai $\le 3$ hari kerja.
+3. **Penyelesaian Dispute:** Tingkat sanggahan ("Tidak Sesuai") pemohon di bawah 3% dari total mutasi.
+4. **Integritas Sinkronisasi Offline:** 0% kehilangan data (_data loss_) pada pengajuan yang dibuat secara offline.

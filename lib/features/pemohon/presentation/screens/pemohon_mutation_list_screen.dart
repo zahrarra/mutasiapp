@@ -1,31 +1,34 @@
 // lib/features/pemohon/presentation/screens/pemohon_mutation_list_screen.dart
 //
-// Screen: MutasiKu — Mutasi Saya (Refined Natural UI)
-// Diadaptasi dari desain Stitch MCP.
-// Menampilkan daftar mutasi milik Pemohon dengan quick filter tabs, search real-time,
-// card status dinamis, dan akses langsung ke detail / konfirmasi / pengajuan ulang.
+// Mutasi Saya — visual Stitch (HTML yang dikirim).
+// Font: Inter. Logic: search, filter chip, status, navigasi, FAB.
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:google_fonts/google_fonts.dart';
 
 import '../../../../app/router/route_names.dart';
-import '../../../../core/widgets/error_view.dart';
-import '../../../../core/widgets/loading_indicator.dart';
 import '../../../auth/presentation/providers/auth_provider.dart';
 import '../../../mutation/domain/entities/mutation.dart';
 import '../../../mutation/domain/entities/mutation_status.dart';
 import '../../../mutation/presentation/providers/mutation_provider.dart';
-import '../../../auth/domain/entities/user_role.dart';
-import '../../../../core/widgets/custom_floating_nav_bar.dart';
-import '../widgets/mutation_filter_bottom_sheet.dart';
-import '../widgets/pemohon_mutation_card.dart';
 
-enum QuickFilterTab {
-  all,
-  action,
-  inProgress,
-  completed,
+enum _QuickFilter { all, progress, done, action }
+
+abstract final class _C {
+  static const background = Color(0xFFF6F8FA);
+  static const surface = Color(0xFFFFFFFF);
+  static const primary = Color(0xFF00273A);
+  static const primaryContainer = Color(0xFF0F3D56);
+  static const secondary = Color(0xFF006A63);
+  static const secondaryContainer = Color(0xFF99EFE5);
+  static const textPrimary = Color(0xFF172B4D);
+  static const textSecondary = Color(0xFF52606D);
+  static const border = Color(0xFFD0D5DD);
+  static const warning = Color(0xFFB45309);
+  static const success = Color(0xFF15803D);
+  static const surfaceContainer = Color(0xFFE1F0FF);
 }
 
 class PemohonMutationListScreen extends ConsumerStatefulWidget {
@@ -39,8 +42,17 @@ class PemohonMutationListScreen extends ConsumerStatefulWidget {
 class _PemohonMutationListScreenState
     extends ConsumerState<PemohonMutationListScreen> {
   final _searchController = TextEditingController();
-  QuickFilterTab _selectedTab = QuickFilterTab.all;
-  MutationStatus? _selectedStatus;
+  String _query = '';
+  _QuickFilter _filter = _QuickFilter.all;
+
+  @override
+  void initState() {
+    super.initState();
+    _searchController.addListener(() {
+      final q = _searchController.text.trim().toLowerCase();
+      if (q != _query) setState(() => _query = q);
+    });
+  }
 
   @override
   void dispose() {
@@ -48,858 +60,920 @@ class _PemohonMutationListScreenState
     super.dispose();
   }
 
-  List<Mutation> _applyFilter(List<Mutation> list) {
+  TextStyle _inter({
+    double size = 14,
+    FontWeight weight = FontWeight.w400,
+    Color color = _C.textPrimary,
+    double? height,
+    double? letterSpacing,
+  }) {
+    return GoogleFonts.inter(
+      fontSize: size,
+      fontWeight: weight,
+      color: color,
+      height: height,
+      letterSpacing: letterSpacing,
+    );
+  }
+
+  List<Mutation> _filterList(List<Mutation> list) {
     var result = list;
-
-    // Filter by specific status (if selected from bottom sheet)
-    if (_selectedStatus != null) {
-      result = result.where((m) => m.status == _selectedStatus).toList();
-    } else {
-      // Otherwise apply quick filter tab
-      switch (_selectedTab) {
-        case QuickFilterTab.all:
-          break;
-        case QuickFilterTab.action:
-          result = result
-              .where(
-                (m) =>
-                    m.status == MutationStatus.pendingConfirmation ||
-                    m.status == MutationStatus.returned,
-              )
-              .toList();
-          break;
-        case QuickFilterTab.inProgress:
-          result = result
-              .where(
-                (m) =>
-                    m.status == MutationStatus.submitted ||
-                    m.status == MutationStatus.verified ||
-                    m.status == MutationStatus.waitingKabagApproval ||
-                    m.status == MutationStatus.waitingKadivApproval ||
-                    m.status == MutationStatus.approved,
-              )
-              .toList();
-          break;
-        case QuickFilterTab.completed:
-          result = result
-              .where((m) => m.status == MutationStatus.completed)
-              .toList();
-          break;
-      }
+    switch (_filter) {
+      case _QuickFilter.all:
+        break;
+      case _QuickFilter.progress:
+        result = result
+            .where(
+              (m) =>
+                  m.status == MutationStatus.submitted ||
+                  m.status == MutationStatus.verified ||
+                  m.status == MutationStatus.waitingKabagApproval ||
+                  m.status == MutationStatus.waitingKadivApproval ||
+                  m.status == MutationStatus.approved,
+            )
+            .toList();
+        break;
+      case _QuickFilter.done:
+        result = result
+            .where((m) => m.status == MutationStatus.completed)
+            .toList();
+        break;
+      case _QuickFilter.action:
+        result = result
+            .where(
+              (m) =>
+                  m.status == MutationStatus.pendingConfirmation ||
+                  m.status == MutationStatus.returned,
+            )
+            .toList();
+        break;
     }
-
-    final query = _searchController.text.trim().toLowerCase();
-    if (query.isNotEmpty) {
-      result = result
-          .where(
-            (m) =>
-                m.ticketNumber.toLowerCase().contains(query) ||
-                m.asset.name.toLowerCase().contains(query) ||
-                m.asset.assetCode.toLowerCase().contains(query) ||
-                m.currentLocation.toLowerCase().contains(query) ||
-                m.targetLocation.toLowerCase().contains(query) ||
-                m.targetPic.toLowerCase().contains(query),
-          )
-          .toList();
+    if (_query.isNotEmpty) {
+      result = result.where((m) {
+        final hay = [
+          m.ticketNumber,
+          m.displayAssetName,
+          m.displayAssetCode,
+          m.currentLocation,
+          m.targetLocation,
+          m.targetPic,
+        ].join(' ').toLowerCase();
+        return hay.contains(_query);
+      }).toList();
     }
+    result = [...result]..sort((a, b) => b.createdAt.compareTo(a.createdAt));
     return result;
   }
 
-  Future<void> _openFilterBottomSheet(
-    BuildContext context,
-    List<Mutation> list,
-  ) async {
-    final Map<MutationStatus?, int> counts = {
-      null: list.length,
-    };
-    for (final s in MutationStatus.values) {
-      counts[s] = list.where((m) => m.status == s).length;
-    }
-
-    final selected = await showMutationFilterBottomSheet(
-      context: context,
-      currentStatus: _selectedStatus,
-      counts: counts,
-    );
-
-    if (mounted) {
-      setState(() {
-        _selectedStatus = selected;
-      });
-    }
-  }
-
-  void _showHelpDialog(BuildContext context) {
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: const Row(
-          children: [
-            Icon(Icons.help_outline, color: Color(0xFF00273A)),
-            SizedBox(width: 8),
-            Text(
-              'Panduan Mutasi',
-              style: TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.bold,
-                color: Color(0xFF172B4D),
-              ),
-            ),
-          ],
-        ),
-        content: const Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Alur Pengajuan Mutasi Aset:',
-              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
-            ),
-            SizedBox(height: 6),
-            Text(
-              '1. Pemohon mengajukan mutasi melalui tombol "+".\n'
-              '2. Operator memeriksa fisik dan berkas mutasi.\n'
-              '3. Kabag Aset menyetujui (dan Kadiv jika diperlukan).\n'
-              '4. Staff Aset memperbarui data fisik & serah terima.\n'
-              '5. Pemohon menerima notifikasi dan melakukan konfirmasi serah terima.',
-              style: TextStyle(fontSize: 12, height: 1.5),
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(ctx).pop(),
-            child: const Text('Mengerti'),
-          ),
-        ],
-      ),
-    );
-  }
-
-  bool _canPop(BuildContext context) {
-    try {
-      return Navigator.of(context).canPop();
-    } catch (_) {
-      return false;
-    }
-  }
-
-  void _handleBack(BuildContext context) {
-    if (Navigator.of(context).canPop()) {
-      Navigator.of(context).pop();
-    } else {
-      try {
-        context.go(RouteNames.pemohonDashboardPath);
-      } catch (_) {}
-    }
-  }
-
-  void _safePush(BuildContext context, String path) {
-    try {
-      context.push(path);
-    } catch (_) {
-      // In standalone test environment without GoRouter
+  int _count(List<Mutation> list, _QuickFilter f) {
+    switch (f) {
+      case _QuickFilter.all:
+        return list.length;
+      case _QuickFilter.progress:
+        return list
+            .where(
+              (m) =>
+                  m.status == MutationStatus.submitted ||
+                  m.status == MutationStatus.verified ||
+                  m.status == MutationStatus.waitingKabagApproval ||
+                  m.status == MutationStatus.waitingKadivApproval ||
+                  m.status == MutationStatus.approved,
+            )
+            .length;
+      case _QuickFilter.done:
+        return list.where((m) => m.status == MutationStatus.completed).length;
+      case _QuickFilter.action:
+        return list
+            .where(
+              (m) =>
+                  m.status == MutationStatus.pendingConfirmation ||
+                  m.status == MutationStatus.returned,
+            )
+            .length;
     }
   }
 
   @override
   Widget build(BuildContext context) {
     final asyncList = ref.watch(mutationListProvider);
-    final authState = ref.watch(authStateProvider);
-    final user = authState.user;
+    final user = ref.watch(authStateProvider).user;
+    final all = asyncList.valueOrNull ?? const <Mutation>[];
+    final filtered = _filterList(all);
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF6F8FA),
-      // ── Custom Refined Natural Top Bar ──────────────────────────────
-      appBar: PreferredSize(
-        preferredSize: const Size.fromHeight(64),
-        child: Container(
-          decoration: const BoxDecoration(
-            color: Colors.white,
-            border: Border(
-              bottom: BorderSide(color: Color(0xFFE4E7EC), width: 1),
-            ),
-            boxShadow: [
-              BoxShadow(
-                color: Color(0x0A000000),
-                blurRadius: 8,
-                offset: Offset(0, 1),
-              ),
-            ],
-          ),
-          child: SafeArea(
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  // Left: Back button (if canPop) & MutasiKu Corp Branding
-                  Row(
-                    children: [
-                      if (_canPop(context))
-                        IconButton(
-                          icon: const Icon(
-                            Icons.arrow_back,
-                            color: Color(0xFF172B4D),
-                            size: 20,
-                          ),
-                          tooltip: 'Kembali',
-                          onPressed: () => _handleBack(context),
-                        ),
-                      Container(
-                        width: 36,
-                        height: 36,
-                        decoration: BoxDecoration(
-                          color: const Color(0xFF00273A),
-                          borderRadius: BorderRadius.circular(10),
-                          border: Border.all(
-                            color: const Color(0xFF00273A).withValues(alpha: 0.2),
-                          ),
-                        ),
-                        child: const Icon(
-                          Icons.sync_alt,
-                          color: Colors.white,
-                          size: 20,
-                        ),
-                      ),
-                      const SizedBox(width: 10),
-                      Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Row(
-                            children: [
-                              const Text(
-                                'MutasiKu',
-                                style: TextStyle(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.bold,
-                                  color: Color(0xFF00273A),
-                                  letterSpacing: -0.2,
-                                ),
-                              ),
-                              const SizedBox(width: 6),
-                              Container(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 5,
-                                  vertical: 1.5,
-                                ),
-                                decoration: BoxDecoration(
-                                  color: const Color(0xFFE1F0FF),
-                                  borderRadius: BorderRadius.circular(4),
-                                ),
-                                child: const Text(
-                                  'CORP',
-                                  style: TextStyle(
-                                    fontSize: 9,
-                                    fontFamily: 'monospace',
-                                    fontWeight: FontWeight.bold,
-                                    color: Color(0xFF00273A),
-                                    letterSpacing: 0.5,
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                          const Text(
-                            'Manajemen Mutasi Aset',
-                            style: TextStyle(
-                              fontSize: 11,
-                              fontWeight: FontWeight.w500,
-                              color: Color(0xFF52606D),
+      backgroundColor: _C.background,
+      body: Column(
+        children: [
+          _buildHeader(user?.name ?? 'P'),
+          Expanded(
+            child: RefreshIndicator(
+              color: _C.primaryContainer,
+              onRefresh: () async {
+                ref.invalidate(mutationListProvider);
+                await ref.read(mutationListProvider.future);
+              },
+              child: CustomScrollView(
+                physics: const AlwaysScrollableScrollPhysics(
+                  parent: BouncingScrollPhysics(),
+                ),
+                slivers: [
+                  SliverPadding(
+                    padding: const EdgeInsets.fromLTRB(16, 8, 16, 100),
+                    sliver: SliverList(
+                      delegate: SliverChildListDelegate([
+                        _buildTitle(all.length),
+                        const SizedBox(height: 12),
+                        _buildSearch(),
+                        const SizedBox(height: 12),
+                        _buildChips(all),
+                        const SizedBox(height: 12),
+                        if (asyncList.isLoading && all.isEmpty)
+                          const Padding(
+                            padding: EdgeInsets.all(32),
+                            child: Center(child: CircularProgressIndicator()),
+                          )
+                        else if (filtered.isEmpty)
+                          Padding(
+                            padding: const EdgeInsets.all(24),
+                            child: Text(
+                              'Tidak ada pengajuan.',
+                              textAlign: TextAlign.center,
+                              style: _inter(size: 13, color: _C.textSecondary),
+                            ),
+                          )
+                        else
+                          ...filtered.map(
+                            (m) => Padding(
+                              padding: const EdgeInsets.only(bottom: 8),
+                              child: _MutationCard(mutation: m, style: _inter),
                             ),
                           ),
-                        ],
-                      ),
-                    ],
-                  ),
-
-                  // Right: Help icon & User Profile Avatar
-                  Row(
-                    children: [
-                      InkWell(
-                        onTap: () => _showHelpDialog(context),
-                        borderRadius: BorderRadius.circular(8),
-                        child: Container(
-                          width: 36,
-                          height: 36,
-                          decoration: BoxDecoration(
-                            border: Border.all(color: const Color(0xFFD0D5DD)),
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          child: const Icon(
-                            Icons.help_outline,
-                            size: 19,
-                            color: Color(0xFF52606D),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      InkWell(
-                        onTap: () => _safePush(context, RouteNames.pemohonProfilePath),
-                        borderRadius: BorderRadius.circular(18),
-                        child: Stack(
-                          children: [
-                            CircleAvatar(
-                              radius: 17,
-                              backgroundColor: const Color(0xFF00273A),
-                              child: Text(
-                                user?.name.isNotEmpty == true
-                                    ? user!.name[0].toUpperCase()
-                                    : 'P',
-                                style: const TextStyle(
-                                  fontSize: 14,
-                                  fontWeight: FontWeight.bold,
-                                  color: Colors.white,
-                                ),
-                              ),
-                            ),
-                            Positioned(
-                              bottom: 0,
-                              right: 0,
-                              child: Container(
-                                width: 10,
-                                height: 10,
-                                decoration: BoxDecoration(
-                                  color: const Color(0xFF15803D),
-                                  shape: BoxShape.circle,
-                                  border: Border.all(
-                                    color: Colors.white,
-                                    width: 2,
-                                  ),
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
+                      ]),
+                    ),
                   ),
                 ],
               ),
             ),
           ),
-        ),
+        ],
       ),
-
-      // ── Floating Action Button (Ajukan Mutasi) ───────────────────────
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: () => _safePush(context, RouteNames.pemohonMutasiCreatePath),
-        backgroundColor: const Color(0xFF00273A),
-        foregroundColor: Colors.white,
-        elevation: 4,
-        icon: const Icon(Icons.add, size: 20),
-        label: const Text(
-          'Ajukan Mutasi',
-          style: TextStyle(
-            fontWeight: FontWeight.bold,
-            fontSize: 13,
-            letterSpacing: 0.3,
+      floatingActionButton: Padding(
+        padding: const EdgeInsets.only(bottom: 72),
+        child: FloatingActionButton.extended(
+          onPressed: () =>
+              context.pushNamed(RouteNames.pemohonMutasiCreateName),
+          backgroundColor: _C.primary,
+          foregroundColor: Colors.white,
+          elevation: 8,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(999),
+          ),
+          icon: const Icon(Icons.add_rounded, size: 20),
+          label: Text(
+            'Ajukan Mutasi',
+            style: _inter(
+              size: 14,
+              weight: FontWeight.w700,
+              color: Colors.white,
+            ),
           ),
         ),
       ),
+      bottomNavigationBar: _bottomNav(context),
+    );
+  }
 
-      extendBody: true,
-      bottomNavigationBar: CustomFloatingNavBar.scaffoldBottomBar(
-        items: RoleNavConfig.getNavItemsForRole(UserRole.pemohon),
-      ),
-
-      body: asyncList.when(
-        loading: () => const LoadingIndicator(),
-        error: (e, _) => ErrorView(
-          message: e.toString(),
-          onRetry: () => ref.invalidate(mutationListProvider),
-        ),
-        data: (list) {
-          final filtered = _applyFilter(list);
-
-          // Counts for quick filter tabs
-          final totalCount = list.length;
-          final actionCount = list
-              .where(
-                (m) =>
-                    m.status == MutationStatus.pendingConfirmation ||
-                    m.status == MutationStatus.returned,
-              )
-              .length;
-          final inProgressCount = list
-              .where(
-                (m) =>
-                    m.status == MutationStatus.submitted ||
-                    m.status == MutationStatus.verified ||
-                    m.status == MutationStatus.waitingKabagApproval ||
-                    m.status == MutationStatus.waitingKadivApproval ||
-                    m.status == MutationStatus.approved,
-              )
-              .length;
-          final completedCount = list
-              .where((m) => m.status == MutationStatus.completed)
-              .length;
-
-          return Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // ── Header Overview & Action Summary ──────────────────
-              Padding(
-                padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    const Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'Mutasi Saya',
-                          style: TextStyle(
-                            fontSize: 20,
-                            fontWeight: FontWeight.bold,
-                            color: Color(0xFF172B4D),
-                            letterSpacing: -0.3,
-                          ),
-                        ),
-                        SizedBox(height: 2),
-                        Text(
-                          'Daftar pengajuan mutasi aset',
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: Color(0xFF52606D),
-                          ),
-                        ),
-                      ],
-                    ),
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 10,
-                        vertical: 5,
-                      ),
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(20),
-                        border: Border.all(color: const Color(0xFFD0D5DD)),
-                      ),
-                      child: const Row(
-                        children: [
-                          Icon(
-                            Icons.event_repeat,
-                            size: 14,
-                            color: Color(0xFF006A63),
-                          ),
-                          SizedBox(width: 4),
-                          Text(
-                            'TA 2026',
-                            style: TextStyle(
-                              fontSize: 11,
-                              fontWeight: FontWeight.bold,
-                              color: Color(0xFF52606D),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-
-              // ── Search & Filter Controls ──────────────────────────
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                child: Row(
-                  children: [
-                    Expanded(
-                      child: Container(
-                        height: 44,
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.circular(12),
-                          border: Border.all(color: const Color(0xFFD0D5DD)),
-                          boxShadow: const [
-                            BoxShadow(
-                              color: Color(0x08101828),
-                              blurRadius: 2,
-                              offset: Offset(0, 1),
-                            ),
-                          ],
-                        ),
-                        child: TextField(
-                          controller: _searchController,
-                          onChanged: (_) => setState(() {}),
-                          style: const TextStyle(
-                            fontSize: 13,
-                            color: Color(0xFF172B4D),
-                          ),
-                          decoration: InputDecoration(
-                            hintText: 'Cari kode tiket, nama aset, atau unit...',
-                            hintStyle: TextStyle(
-                              fontSize: 13,
-                              color: const Color(0xFF52606D).withValues(alpha: 0.6),
-                            ),
-                            prefixIcon: const Icon(
-                              Icons.search,
-                              size: 18,
-                              color: Color(0xFF52606D),
-                            ),
-                            suffixIcon: _searchController.text.isNotEmpty
-                                ? IconButton(
-                                    icon: const Icon(
-                                      Icons.cancel,
-                                      size: 16,
-                                      color: Color(0xFF52606D),
-                                    ),
-                                    onPressed: () {
-                                      _searchController.clear();
-                                      setState(() {});
-                                    },
-                                  )
-                                : null,
-                            border: InputBorder.none,
-                            contentPadding: const EdgeInsets.symmetric(
-                              vertical: 12,
-                            ),
-                          ),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    InkWell(
-                      onTap: () => _openFilterBottomSheet(context, list),
-                      borderRadius: BorderRadius.circular(12),
-                      child: Container(
-                        width: 44,
-                        height: 44,
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.circular(12),
-                          border: Border.all(
-                            color: _selectedStatus != null
-                                ? const Color(0xFF00273A)
-                                : const Color(0xFFD0D5DD),
-                          ),
-                          boxShadow: const [
-                            BoxShadow(
-                              color: Color(0x08101828),
-                              blurRadius: 2,
-                              offset: Offset(0, 1),
-                            ),
-                          ],
-                        ),
-                        child: Stack(
-                          alignment: Alignment.center,
-                          children: [
-                            const Icon(
-                              Icons.tune,
-                              size: 20,
-                              color: Color(0xFF52606D),
-                            ),
-                            if (_selectedStatus != null)
-                              Positioned(
-                                top: 8,
-                                right: 8,
-                                child: Container(
-                                  width: 8,
-                                  height: 8,
-                                  decoration: const BoxDecoration(
-                                    color: Color(0xFF00273A),
-                                    shape: BoxShape.circle,
-                                  ),
-                                ),
-                              ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-
-              // ── Quick Filter Tabs (Refined Natural Chips) ─────────
-              SingleChildScrollView(
-                scrollDirection: Axis.horizontal,
-                padding: const EdgeInsets.fromLTRB(16, 12, 16, 10),
-                child: Row(
-                  children: [
-                    _quickChip(
-                      label: 'Semua',
-                      count: totalCount,
-                      isSelected: _selectedStatus == null &&
-                          _selectedTab == QuickFilterTab.all,
-                      onTap: () {
-                        setState(() {
-                          _selectedStatus = null;
-                          _selectedTab = QuickFilterTab.all;
-                        });
-                      },
-                    ),
-                    const SizedBox(width: 8),
-                    _quickChip(
-                      label: 'Perlu Tindakan',
-                      count: actionCount,
-                      showPulseDot: actionCount > 0,
-                      isSelected: _selectedStatus == null &&
-                          _selectedTab == QuickFilterTab.action,
-                      onTap: () {
-                        setState(() {
-                          _selectedStatus = null;
-                          _selectedTab = QuickFilterTab.action;
-                        });
-                      },
-                    ),
-                    const SizedBox(width: 8),
-                    _quickChip(
-                      label: 'Diproses',
-                      count: inProgressCount,
-                      isSelected: _selectedStatus == null &&
-                          _selectedTab == QuickFilterTab.inProgress,
-                      onTap: () {
-                        setState(() {
-                          _selectedStatus = null;
-                          _selectedTab = QuickFilterTab.inProgress;
-                        });
-                      },
-                    ),
-                    const SizedBox(width: 8),
-                    _quickChip(
-                      label: 'Selesai',
-                      count: completedCount,
-                      isSelected: _selectedStatus == null &&
-                          _selectedTab == QuickFilterTab.completed,
-                      onTap: () {
-                        setState(() {
-                          _selectedStatus = null;
-                          _selectedTab = QuickFilterTab.completed;
-                        });
-                      },
-                    ),
-                  ],
-                ),
-              ),
-
-              // ── Active Specific Status Filter Banner ──────────────
-              if (_selectedStatus != null)
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(16, 0, 16, 10),
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 12,
-                      vertical: 6,
-                    ),
-                    decoration: BoxDecoration(
-                      color: _selectedStatus!.color.withValues(alpha: 0.1),
-                      borderRadius: BorderRadius.circular(8),
-                      border: Border.all(
-                        color: _selectedStatus!.color.withValues(alpha: 0.3),
-                      ),
-                    ),
-                    child: Row(
-                      children: [
-                        Icon(
-                          Icons.filter_alt,
-                          size: 15,
-                          color: _selectedStatus!.color,
-                        ),
-                        const SizedBox(width: 6),
-                        Expanded(
-                          child: Text(
-                            'Status: ${_selectedStatus!.displayName} (${filtered.length} data)',
-                            style: TextStyle(
-                              fontSize: 12,
-                              fontWeight: FontWeight.w600,
-                              color: _selectedStatus!.color,
-                            ),
-                          ),
-                        ),
-                        InkWell(
-                          onTap: () => setState(() => _selectedStatus = null),
-                          borderRadius: BorderRadius.circular(12),
-                          child: Padding(
-                            padding: const EdgeInsets.all(2),
-                            child: Icon(
-                              Icons.close,
-                              size: 16,
-                              color: _selectedStatus!.color,
-                            ),
-                          ),
-                        ),
-                      ],
+  Widget _buildHeader(String name) {
+    final initials = _initials(name);
+    return Material(
+      color: _C.surface.withValues(alpha: 0.95),
+      elevation: 0.5,
+      child: SafeArea(
+        bottom: false,
+        child: SizedBox(
+          height: 56,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: Row(
+              children: [
+                _circleBtn(Icons.menu_rounded, () {
+                  if (context.canPop()) {
+                    context.pop();
+                  } else {
+                    context.go(RouteNames.pemohonDashboardPath);
+                  }
+                }),
+                const Spacer(),
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 4,
+                  ),
+                  decoration: BoxDecoration(
+                    color: _C.secondaryContainer.withValues(alpha: 0.4),
+                    borderRadius: BorderRadius.circular(999),
+                    border: Border.all(
+                      color: _C.secondary.withValues(alpha: 0.2),
                     ),
                   ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Container(
+                        width: 8,
+                        height: 8,
+                        decoration: const BoxDecoration(
+                          color: _C.secondary,
+                          shape: BoxShape.circle,
+                        ),
+                      ),
+                      const SizedBox(width: 6),
+                      Text(
+                        'MUTASIKU PEMOHON',
+                        style: _inter(
+                          size: 11,
+                          weight: FontWeight.w700,
+                          color: _C.secondary,
+                          letterSpacing: 0.6,
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
-
-              // ── Records List ──────────────────────────────────────
-              Expanded(
-                child: filtered.isEmpty
-                    ? Center(
-                        child: Padding(
-                          padding: const EdgeInsets.all(32),
-                          child: Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Container(
-                                width: 64,
-                                height: 64,
-                                decoration: BoxDecoration(
-                                  color: Colors.white,
-                                  shape: BoxShape.circle,
-                                  border: Border.all(
-                                    color: const Color(0xFFD0D5DD),
-                                  ),
-                                ),
-                                child: const Icon(
-                                  Icons.assignment_outlined,
-                                  size: 32,
-                                  color: Color(0xFF52606D),
-                                ),
-                              ),
-                              const SizedBox(height: 14),
-                              Text(
-                                _searchController.text.trim().isNotEmpty
-                                    ? 'Tidak ada mutasi yang cocok dengan "${_searchController.text.trim()}"'
-                                    : (_selectedStatus != null
-                                        ? 'Tidak ada mutasi dengan status "${_selectedStatus!.displayName}"'
-                                        : 'Belum ada pengajuan mutasi'),
-                                textAlign: TextAlign.center,
-                                style: const TextStyle(
-                                  color: Color(0xFF52606D),
-                                  fontSize: 14,
-                                  fontWeight: FontWeight.w500,
-                                ),
-                              ),
-                              const SizedBox(height: 12),
-                              if (_searchController.text.trim().isNotEmpty)
-                                OutlinedButton.icon(
-                                  onPressed: () {
-                                    _searchController.clear();
-                                    setState(() {});
-                                  },
-                                  icon: const Icon(Icons.clear, size: 16),
-                                  label: const Text('Hapus Pencarian'),
-                                  style: OutlinedButton.styleFrom(
-                                    foregroundColor: const Color(0xFF00273A),
-                                  ),
-                                )
-                              else if (_selectedStatus != null ||
-                                  _selectedTab != QuickFilterTab.all)
-                                OutlinedButton.icon(
-                                  onPressed: () {
-                                    setState(() {
-                                      _selectedStatus = null;
-                                      _selectedTab = QuickFilterTab.all;
-                                    });
-                                  },
-                                  icon: const Icon(Icons.refresh, size: 16),
-                                  label: const Text('Tampilkan Semua'),
-                                  style: OutlinedButton.styleFrom(
-                                    foregroundColor: const Color(0xFF00273A),
-                                  ),
-                                ),
-                            ],
+                const Spacer(),
+                GestureDetector(
+                  onTap: () => context.pushNamed(RouteNames.pemohonProfileName),
+                  child: Stack(
+                    clipBehavior: Clip.none,
+                    children: [
+                      Container(
+                        width: 40,
+                        height: 40,
+                        alignment: Alignment.center,
+                        decoration: const BoxDecoration(
+                          color: _C.primaryContainer,
+                          shape: BoxShape.circle,
+                        ),
+                        child: Text(
+                          initials,
+                          style: _inter(
+                            size: 13,
+                            weight: FontWeight.w700,
+                            color: Colors.white,
                           ),
                         ),
-                      )
-                    : ListView.separated(
-                        padding: const EdgeInsets.fromLTRB(16, 0, 16, 90),
-                        itemCount: filtered.length,
-                        separatorBuilder: (_, _) => const SizedBox(height: 12),
-                        itemBuilder: (context, i) {
-                          final m = filtered[i];
-                          return PemohonMutationCard(
-                            mutation: m,
-                            onTap: () => _safePush(
-                              context,
-                              RouteNames.pemohonMutasiDetailPath.replaceFirst(
-                                ':id',
-                                m.id,
-                              ),
-                            ),
-                          );
-                        },
                       ),
-              ),
-            ],
-          );
-        },
+                      Positioned(
+                        right: 0,
+                        bottom: 0,
+                        child: Container(
+                          width: 10,
+                          height: 10,
+                          decoration: BoxDecoration(
+                            color: _C.success,
+                            shape: BoxShape.circle,
+                            border: Border.all(color: Colors.white, width: 2),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
       ),
     );
   }
 
-  Widget _quickChip({
-    required String label,
-    required int count,
-    required bool isSelected,
-    required VoidCallback onTap,
-    bool showPulseDot = false,
-  }) {
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(20),
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 180),
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
-        decoration: BoxDecoration(
-          color: isSelected ? const Color(0xFF00273A) : Colors.white,
-          borderRadius: BorderRadius.circular(20),
-          border: Border.all(
-            color: isSelected
-                ? const Color(0xFF00273A)
-                : const Color(0xFFD0D5DD),
-          ),
-          boxShadow: const [
-            BoxShadow(
-              color: Color(0x0A101828),
-              blurRadius: 2,
-              offset: Offset(0, 1),
+  Widget _buildTitle(int total) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Text(
+              'Mutasi Saya',
+              style: _inter(
+                size: 22,
+                weight: FontWeight.w700,
+                color: _C.primary,
+              ),
+            ),
+            const Spacer(),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+              decoration: BoxDecoration(
+                color: _C.warning.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(999),
+                border: Border.all(color: _C.warning.withValues(alpha: 0.3)),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Container(
+                    width: 6,
+                    height: 6,
+                    decoration: const BoxDecoration(
+                      color: _C.warning,
+                      shape: BoxShape.circle,
+                    ),
+                  ),
+                  const SizedBox(width: 6),
+                  Text(
+                    '$total Tiket',
+                    style: _inter(
+                      size: 11,
+                      weight: FontWeight.w600,
+                      color: _C.warning,
+                    ),
+                  ),
+                ],
+              ),
             ),
           ],
         ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            if (showPulseDot) ...[
-              Container(
-                width: 7,
-                height: 7,
-                decoration: const BoxDecoration(
-                  color: Color(0xFFB45309),
-                  shape: BoxShape.circle,
+        const SizedBox(height: 4),
+        Text(
+          'Daftar pengajuan mutasi aset internal',
+          style: _inter(size: 12, color: _C.textSecondary),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildSearch() {
+    return Row(
+      children: [
+        Expanded(
+          child: Container(
+            height: 44,
+            decoration: BoxDecoration(
+              color: _C.surface,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: _C.border.withValues(alpha: 0.7)),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.04),
+                  blurRadius: 2,
+                  offset: const Offset(0, 1),
+                ),
+              ],
+            ),
+            child: TextField(
+              controller: _searchController,
+              style: _inter(size: 13, weight: FontWeight.w500),
+              decoration: InputDecoration(
+                hintText: 'Cari no. tiket, aset, tujuan...',
+                hintStyle: _inter(
+                  size: 13,
+                  color: _C.textSecondary.withValues(alpha: 0.6),
+                ),
+                prefixIcon: const Icon(
+                  Icons.search_rounded,
+                  size: 20,
+                  color: _C.textSecondary,
+                ),
+                suffixIcon: _query.isEmpty
+                    ? null
+                    : IconButton(
+                        onPressed: _searchController.clear,
+                        icon: const Icon(Icons.cancel, size: 16),
+                      ),
+                border: InputBorder.none,
+                contentPadding: const EdgeInsets.symmetric(vertical: 12),
+              ),
+            ),
+          ),
+        ),
+        const SizedBox(width: 8),
+        Container(
+          width: 44,
+          height: 44,
+          decoration: BoxDecoration(
+            color: _C.surface,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: _C.border.withValues(alpha: 0.7)),
+          ),
+          child: Stack(
+            children: [
+              const Center(
+                child: Icon(
+                  Icons.tune_rounded,
+                  size: 20,
+                  color: _C.textSecondary,
+                ),
+              ),
+              Positioned(
+                top: 8,
+                right: 8,
+                child: Container(
+                  width: 8,
+                  height: 8,
+                  decoration: const BoxDecoration(
+                    color: _C.primary,
+                    shape: BoxShape.circle,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildChips(List<Mutation> all) {
+    Widget chip(String label, _QuickFilter f) {
+      final active = _filter == f;
+      final n = _count(all, f);
+      return GestureDetector(
+        onTap: () => setState(() => _filter = f),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+          decoration: BoxDecoration(
+            color: active ? _C.primary : _C.surface,
+            borderRadius: BorderRadius.circular(999),
+            border: active ? null : Border.all(color: _C.border),
+            boxShadow: active
+                ? [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.06),
+                      blurRadius: 4,
+                    ),
+                  ]
+                : null,
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                label,
+                style: _inter(
+                  size: 12,
+                  weight: FontWeight.w600,
+                  color: active ? Colors.white : _C.textSecondary,
                 ),
               ),
               const SizedBox(width: 6),
-            ],
-            Text(
-              label,
-              style: TextStyle(
-                fontSize: 12,
-                fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
-                color: isSelected ? Colors.white : const Color(0xFF172B4D),
-              ),
-            ),
-            const SizedBox(width: 6),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
-              decoration: BoxDecoration(
-                color: isSelected
-                    ? Colors.white.withValues(alpha: 0.2)
-                    : (showPulseDot
-                        ? const Color(0xFFFEF0C7)
-                        : const Color(0xFFE1F0FF)),
-                borderRadius: BorderRadius.circular(10),
-              ),
-              child: Text(
-                '$count',
-                style: TextStyle(
-                  fontSize: 10,
-                  fontWeight: FontWeight.bold,
-                  color: isSelected
-                      ? Colors.white
-                      : (showPulseDot
-                          ? const Color(0xFFB45309)
-                          : const Color(0xFF00273A)),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
+                decoration: BoxDecoration(
+                  color: active
+                      ? Colors.white.withValues(alpha: 0.25)
+                      : _C.surfaceContainer,
+                  borderRadius: BorderRadius.circular(999),
+                ),
+                child: Text(
+                  '$n',
+                  style: _inter(
+                    size: 10,
+                    weight: FontWeight.w700,
+                    color: active ? Colors.white : _C.textSecondary,
+                  ),
                 ),
               ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    return SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      child: Row(
+        children: [
+          chip('Semua', _QuickFilter.all),
+          const SizedBox(width: 8),
+          chip('Dalam Proses', _QuickFilter.progress),
+          const SizedBox(width: 8),
+          chip('Selesai', _QuickFilter.done),
+          const SizedBox(width: 8),
+          chip('Perlu Perbaikan', _QuickFilter.action),
+        ],
+      ),
+    );
+  }
+
+  Widget _bottomNav(BuildContext context) {
+    return SafeArea(
+      top: false,
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+          decoration: BoxDecoration(
+            color: _C.surface.withValues(alpha: 0.95),
+            borderRadius: BorderRadius.circular(999),
+            border: Border.all(
+              color: const Color(0xFFCBD5E1).withValues(alpha: 0.8),
             ),
-          ],
+            boxShadow: [
+              BoxShadow(
+                color: const Color(0xFF0F172A).withValues(alpha: 0.06),
+                blurRadius: 16,
+                offset: const Offset(0, 4),
+              ),
+            ],
+          ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceAround,
+            children: [
+              _nav(Icons.home_outlined, 'Beranda', false, () {
+                context.go(RouteNames.pemohonDashboardPath);
+              }),
+              _nav(Icons.sync_alt_rounded, 'Mutasi', true, () {}),
+              _nav(Icons.notifications_outlined, 'Notifikasi', false, () {
+                context.pushNamed(RouteNames.pemohonNotificationsName);
+              }),
+              _nav(Icons.person_outline, 'Profil', false, () {
+                context.pushNamed(RouteNames.pemohonProfileName);
+              }),
+            ],
+          ),
         ),
       ),
     );
+  }
+
+  Widget _nav(IconData icon, String label, bool active, VoidCallback onTap) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(999),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+            decoration: active
+                ? BoxDecoration(
+                    color: _C.primaryContainer.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(999),
+                  )
+                : null,
+            child: Icon(
+              icon,
+              size: 20,
+              color: active ? _C.primaryContainer : const Color(0xFF94A3B8),
+            ),
+          ),
+          Text(
+            label,
+            style: _inter(
+              size: 10,
+              weight: active ? FontWeight.w700 : FontWeight.w500,
+              color: active ? _C.primaryContainer : const Color(0xFF94A3B8),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _circleBtn(IconData icon, VoidCallback onTap) {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(999),
+        child: Container(
+          width: 40,
+          height: 40,
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            border: Border.all(color: _C.border.withValues(alpha: 0.7)),
+          ),
+          child: Icon(icon, size: 20, color: _C.textPrimary),
+        ),
+      ),
+    );
+  }
+
+  String _initials(String name) {
+    final p = name
+        .trim()
+        .split(RegExp(r'\s+'))
+        .where((e) => e.isNotEmpty)
+        .toList();
+    if (p.isEmpty) return 'P';
+    if (p.length == 1) {
+      return p.first.length >= 2
+          ? p.first.substring(0, 2).toUpperCase()
+          : p.first.toUpperCase();
+    }
+    return '${p.first[0]}${p.last[0]}'.toUpperCase();
+  }
+}
+
+class _MutationCard extends StatelessWidget {
+  final Mutation mutation;
+  final TextStyle Function({
+    double size,
+    FontWeight weight,
+    Color color,
+    double? height,
+    double? letterSpacing,
+  })
+  style;
+
+  const _MutationCard({required this.mutation, required this.style});
+
+  @override
+  Widget build(BuildContext context) {
+    final m = mutation;
+    final status = m.status;
+
+    return Material(
+      color: _C.surface,
+      borderRadius: BorderRadius.circular(12),
+      child: InkWell(
+        onTap: () => context.pushNamed(
+          RouteNames.pemohonMutasiDetailName,
+          pathParameters: {'id': m.id},
+        ),
+        borderRadius: BorderRadius.circular(12),
+        child: Container(
+          padding: const EdgeInsets.all(14),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: _C.border.withValues(alpha: 0.6)),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      '${m.ticketNumber}  •  ${_fmt(m.createdAt)}',
+                      style: style(
+                        size: 11,
+                        weight: FontWeight.w600,
+                        color: _C.primary,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                  _badge(status),
+                ],
+              ),
+              const SizedBox(height: 8),
+              Text(
+                m.displayAssetName,
+                style: style(size: 14, weight: FontWeight.w700),
+              ),
+              const SizedBox(height: 4),
+              Row(
+                children: [
+                  Flexible(
+                    child: Text(
+                      m.currentLocation,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: style(
+                        size: 12,
+                        weight: FontWeight.w500,
+                        color: _C.textPrimary,
+                      ),
+                    ),
+                  ),
+                  const Padding(
+                    padding: EdgeInsets.symmetric(horizontal: 4),
+                    child: Icon(
+                      Icons.arrow_forward,
+                      size: 13,
+                      color: _C.textSecondary,
+                    ),
+                  ),
+                  Flexible(
+                    child: Text(
+                      m.targetLocation,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: style(
+                        size: 12,
+                        weight: FontWeight.w500,
+                        color: _C.textPrimary,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              if (status == MutationStatus.returned &&
+                  (m.returnReason?.isNotEmpty ?? false)) ...[
+                const SizedBox(height: 6),
+                Row(
+                  children: [
+                    const Icon(Icons.info_outline, size: 13, color: _C.warning),
+                    const SizedBox(width: 4),
+                    Expanded(
+                      child: Text(
+                        m.returnReason!,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: style(size: 11, color: _C.warning),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+              const SizedBox(height: 8),
+              const Divider(height: 1, color: Color(0x33D0D5DD)),
+              const SizedBox(height: 8),
+              Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      _footerLeft(m),
+                      style: style(size: 11, color: _C.textSecondary),
+                    ),
+                  ),
+                  if (status == MutationStatus.pendingConfirmation)
+                    _actionBtn(
+                      context,
+                      'Konfirmasi Diterima',
+                      filled: true,
+                      onTap: () => context.pushNamed(
+                        RouteNames.pemohonConfirmationName,
+                        pathParameters: {'id': m.id},
+                      ),
+                    )
+                  else if (status == MutationStatus.returned)
+                    _actionBtn(
+                      context,
+                      'Perbaiki Berkas',
+                      filled: false,
+                      onTap: () => context.pushNamed(
+                        RouteNames.pemohonMutasiEditName,
+                        pathParameters: {'id': m.id},
+                      ),
+                    )
+                  else if (status == MutationStatus.completed)
+                    Text(
+                      'BAST Terbit',
+                      style: style(
+                        size: 11,
+                        weight: FontWeight.w500,
+                        color: _C.success,
+                      ),
+                    ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _badge(MutationStatus s) {
+    final (bg, fg, label) = switch (s) {
+      MutationStatus.pendingConfirmation => (
+        _C.primary,
+        Colors.white,
+        'Perlu Tindakan',
+      ),
+      MutationStatus.returned => (
+        _C.warning.withValues(alpha: 0.15),
+        _C.warning,
+        'Perlu Perbaikan',
+      ),
+      MutationStatus.completed => (
+        _C.success.withValues(alpha: 0.15),
+        _C.success,
+        'Selesai',
+      ),
+      MutationStatus.waitingKabagApproval => (
+        _C.warning.withValues(alpha: 0.1),
+        _C.warning,
+        'Approval Kabag',
+      ),
+      MutationStatus.waitingKadivApproval => (
+        _C.warning.withValues(alpha: 0.1),
+        _C.warning,
+        'Approval Kadiv',
+      ),
+      MutationStatus.approved => (
+        _C.warning.withValues(alpha: 0.1),
+        _C.warning,
+        'Update Aset',
+      ),
+      MutationStatus.submitted => (_C.surfaceContainer, _C.primary, 'Diajukan'),
+      MutationStatus.verified => (
+        _C.surfaceContainer,
+        _C.primary,
+        'Terverifikasi',
+      ),
+      MutationStatus.rejected => (
+        const Color(0xFFFEE2E2),
+        const Color(0xFFB42318),
+        'Ditolak',
+      ),
+    };
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+      decoration: BoxDecoration(
+        color: bg,
+        borderRadius: BorderRadius.circular(999),
+        border:
+            s == MutationStatus.returned ||
+                s == MutationStatus.waitingKabagApproval
+            ? Border.all(color: _C.warning.withValues(alpha: 0.3))
+            : null,
+      ),
+      child: Text(
+        label,
+        style: style(size: 10, weight: FontWeight.w600, color: fg),
+      ),
+    );
+  }
+
+  Widget _actionBtn(
+    BuildContext context,
+    String label, {
+    required bool filled,
+    required VoidCallback onTap,
+  }) {
+    return Material(
+      color: filled ? _C.primary : Colors.transparent,
+      borderRadius: BorderRadius.circular(8),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(8),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(8),
+            border: filled ? null : Border.all(color: _C.border),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                label,
+                style: style(
+                  size: 11,
+                  weight: FontWeight.w700,
+                  color: filled ? Colors.white : _C.primary,
+                ),
+              ),
+              const SizedBox(width: 2),
+              Icon(
+                Icons.arrow_forward,
+                size: 13,
+                color: filled ? Colors.white : _C.primary,
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  String _footerLeft(Mutation m) {
+    if (m.status == MutationStatus.completed) return '';
+    if (m.status == MutationStatus.returned ||
+        m.status == MutationStatus.pendingConfirmation) {
+      return m.displayAssetCode;
+    }
+    return 'Tahap: ${_stage(m.status)}';
+  }
+
+  String _stage(MutationStatus s) {
+    switch (s) {
+      case MutationStatus.submitted:
+        return 'Diajukan';
+      case MutationStatus.verified:
+        return 'Verifikasi';
+      case MutationStatus.waitingKabagApproval:
+        return 'Kabag Review';
+      case MutationStatus.waitingKadivApproval:
+        return 'Kadiv Review';
+      case MutationStatus.approved:
+        return 'Update Aset';
+      default:
+        return s.displayName;
+    }
+  }
+
+  String _fmt(DateTime d) {
+    const m = [
+      'Jan',
+      'Feb',
+      'Mar',
+      'Apr',
+      'Mei',
+      'Jun',
+      'Jul',
+      'Agu',
+      'Sep',
+      'Okt',
+      'Nov',
+      'Des',
+    ];
+    return '${d.day} ${m[d.month - 1]} ${d.year}';
   }
 }

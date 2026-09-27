@@ -1,18 +1,15 @@
 // lib/features/pemohon/presentation/screens/pemohon_confirmation_screen.dart
 //
-// Screen: MutasiKu — Konfirmasi Mutasi (Interactive & Dynamic)
-// Diadaptasi dari desain Stitch MCP.
-// Memungkinkan Pemohon memvalidasi hasil update Staff Aset secara interaktif
-// dengan checklist verifikasi fisik dinamis sebelum melakukan konfirmasi akhir atau sanggahan.
+// Konfirmasi Mutasi — visual Stitch HTML.
+// Logic: ownership, confirm, return for revision (kode lama).
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:google_fonts/google_fonts.dart';
 
 import '../../../../app/router/route_names.dart';
-import '../../../../app/theme/app_colors.dart';
-import '../../../../app/theme/app_spacing.dart';
 import '../../../../core/widgets/app_feedback.dart';
 import '../../../../core/widgets/error_view.dart';
 import '../../../auth/domain/entities/user.dart';
@@ -24,6 +21,23 @@ import '../../../mutation/presentation/providers/mutation_provider.dart';
 import '../../../notification/domain/entities/notification_item.dart';
 import '../../../notification/presentation/providers/notification_provider.dart';
 import '../providers/pemohon_confirmation_provider.dart';
+
+abstract final class _C {
+  static const bg = Color(0xFFF6F8FA);
+  static const white = Color(0xFFFFFFFF);
+  static const primary = Color(0xFF00273A);
+  static const primaryContainer = Color(0xFF0F3D56);
+  static const textPrimary = Color(0xFF172B4D);
+  static const textSecondary = Color(0xFF52606D);
+  static const border = Color(0xFFD0D5DD);
+  static const surfaceLow = Color(0xFFECF4FF);
+  static const surfaceHigh = Color(0xFFDBEAF9);
+  static const secondary = Color(0xFF006A63);
+  static const success = Color(0xFF15803D);
+  static const warning = Color(0xFFB45309);
+  static const error = Color(0xFFB42318);
+  static const info = Color(0xFF175CD3);
+}
 
 class PemohonConfirmationScreen extends ConsumerStatefulWidget {
   final String mutationId;
@@ -42,20 +56,33 @@ class _PemohonConfirmationScreenState
   bool _checkPic = true;
   bool _copiedSn = false;
 
+  TextStyle _t({
+    double size = 14,
+    FontWeight w = FontWeight.w400,
+    Color color = _C.textPrimary,
+    double? h,
+    double? ls,
+  }) {
+    return GoogleFonts.inter(
+      fontSize: size,
+      fontWeight: w,
+      color: color,
+      height: h,
+      letterSpacing: ls,
+    );
+  }
+
   void _safePop(BuildContext context) {
-    if (Navigator.of(context).canPop()) {
-      Navigator.of(context).pop();
+    if (context.canPop()) {
+      context.pop();
     } else {
-      try {
-        context.go(RouteNames.pemohonMutasiPath);
-      } catch (_) {}
+      context.go(RouteNames.pemohonMutasiPath);
     }
   }
 
   bool _isMutationOwnedBy(Mutation mutation, User? user) {
     if (user == null) return true;
     if (user.role != UserRole.pemohon) return true;
-
     if (mutation.applicantId != null && mutation.applicantId == user.id) {
       return true;
     }
@@ -75,7 +102,6 @@ class _PemohonConfirmationScreenState
   }
 
   String _formatDateTime(DateTime dt) {
-    final day = dt.day.toString().padLeft(2, '0');
     const months = [
       'Jan',
       'Feb',
@@ -90,182 +116,164 @@ class _PemohonConfirmationScreenState
       'Nov',
       'Des',
     ];
+    final day = dt.day.toString().padLeft(2, '0');
     final hour = dt.hour.toString().padLeft(2, '0');
     final min = dt.minute.toString().padLeft(2, '0');
     return '$day ${months[dt.month - 1]} ${dt.year}, $hour:$min WIB';
+  }
+
+  String _initials(String? name) {
+    final p = (name ?? 'P')
+        .trim()
+        .split(RegExp(r'\s+'))
+        .where((e) => e.isNotEmpty)
+        .toList();
+    if (p.isEmpty) return 'P';
+    if (p.length == 1) {
+      return p.first.length >= 2
+          ? p.first.substring(0, 2).toUpperCase()
+          : p.first.toUpperCase();
+    }
+    return '${p.first[0]}${p.last[0]}'.toUpperCase();
   }
 
   @override
   Widget build(BuildContext context) {
     final asyncMutation = ref.watch(mutationDetailProvider(widget.mutationId));
     final actionState = ref.watch(pemohonConfirmationActionProvider);
-    final authState = ref.watch(authStateProvider);
-    final user = authState.user;
+    final user = ref.watch(authStateProvider).user;
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF6F8FA),
-      // ── Custom Interactive Top App Bar ──────────────────────────────
-      appBar: PreferredSize(
-        preferredSize: const Size.fromHeight(64),
-        child: Container(
-          decoration: const BoxDecoration(
-            color: Colors.white,
-            border: Border(
-              bottom: BorderSide(color: Color(0xFFE4E7EC), width: 1),
+      backgroundColor: _C.bg,
+      body: Column(
+        children: [
+          _buildHeader(user),
+          Expanded(
+            child: asyncMutation.when(
+              data: (mutation) {
+                if (!_isMutationOwnedBy(mutation, user)) {
+                  return _accessDenied();
+                }
+                return _buildBody(mutation, actionState);
+              },
+              loading: () => const Center(
+                child: CircularProgressIndicator(color: _C.primary),
+              ),
+              error: (err, _) => ErrorView(
+                message: err.toString(),
+                onRetry: () =>
+                    ref.invalidate(mutationDetailProvider(widget.mutationId)),
+              ),
             ),
-            boxShadow: [
-              BoxShadow(
-                color: Color(0x0A000000),
-                blurRadius: 8,
-                offset: Offset(0, 1),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildHeader(User? user) {
+    return Material(
+      color: _C.white.withValues(alpha: 0.95),
+      elevation: 0,
+      child: SafeArea(
+        bottom: false,
+        child: Container(
+          height: 56,
+          padding: const EdgeInsets.symmetric(horizontal: 16),
+          decoration: BoxDecoration(
+            border: Border(
+              bottom: BorderSide(color: _C.border.withValues(alpha: 0.4)),
+            ),
+          ),
+          child: Row(
+            children: [
+              Material(
+                color: _C.white,
+                shape: CircleBorder(
+                  side: BorderSide(color: _C.border.withValues(alpha: 0.5)),
+                ),
+                child: InkWell(
+                  customBorder: const CircleBorder(),
+                  onTap: () => _safePop(context),
+                  child: const SizedBox(
+                    width: 40,
+                    height: 40,
+                    child: Icon(
+                      Icons.arrow_back,
+                      size: 20,
+                      color: _C.textPrimary,
+                    ),
+                  ),
+                ),
+              ),
+              const Spacer(),
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 4,
+                ),
+                decoration: BoxDecoration(
+                  color: _C.surfaceLow,
+                  borderRadius: BorderRadius.circular(999),
+                  border: Border.all(color: _C.border.withValues(alpha: 0.5)),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Container(
+                      width: 8,
+                      height: 8,
+                      decoration: const BoxDecoration(
+                        color: _C.success,
+                        shape: BoxShape.circle,
+                      ),
+                    ),
+                    const SizedBox(width: 6),
+                    Text(
+                      'MUTASIKU PEMOHON',
+                      style: _t(size: 11, w: FontWeight.w600, ls: 0.5),
+                    ),
+                  ],
+                ),
+              ),
+              const Spacer(),
+              Container(
+                width: 40,
+                height: 40,
+                alignment: Alignment.center,
+                decoration: const BoxDecoration(
+                  color: _C.primary,
+                  shape: BoxShape.circle,
+                ),
+                child: Text(
+                  _initials(user?.name),
+                  style: _t(size: 12, w: FontWeight.w700, color: Colors.white),
+                ),
               ),
             ],
           ),
-          child: SafeArea(
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Expanded(
-                    child: Row(
-                      children: [
-                        IconButton(
-                          icon: const Icon(
-                            Icons.arrow_back,
-                            color: Color(0xFF172B4D),
-                            size: 20,
-                          ),
-                          tooltip: 'Kembali',
-                          onPressed: () => _safePop(context),
-                        ),
-                        const Expanded(
-                          child: Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                'Konfirmasi Mutasi',
-                                style: TextStyle(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.bold,
-                                  color: Color(0xFF172B4D),
-                                  letterSpacing: -0.2,
-                                ),
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                              Text(
-                                'Verifikasi Fisik & Serah Terima Aset',
-                                style: TextStyle(
-                                  fontSize: 11,
-                                  fontWeight: FontWeight.w500,
-                                  color: Color(0xFF52606D),
-                                ),
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  Row(
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 8,
-                          vertical: 4,
-                        ),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFFECF4FF),
-                          borderRadius: BorderRadius.circular(12),
-                          border: Border.all(color: const Color(0xFFD0D5DD)),
-                        ),
-                        child: Text(
-                          'ID: ${widget.mutationId}',
-                          style: const TextStyle(
-                            fontFamily: 'monospace',
-                            fontSize: 11,
-                            fontWeight: FontWeight.w600,
-                            color: Color(0xFF52606D),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      CircleAvatar(
-                        radius: 16,
-                        backgroundColor: const Color(0xFF00273A),
-                        child: Text(
-                          user?.name.isNotEmpty == true
-                              ? user!.name[0].toUpperCase()
-                              : 'P',
-                          style: const TextStyle(
-                            fontSize: 13,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.white,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ),
-      ),
-
-      body: asyncMutation.when(
-        data: (mutation) {
-          if (!_isMutationOwnedBy(mutation, authState.user)) {
-            return _buildAccessDenied(context);
-          }
-          return _buildBody(context, ref, mutation, actionState);
-        },
-        loading: () => const Center(
-          child: CircularProgressIndicator(color: Color(0xFF00273A)),
-        ),
-        error: (err, _) => ErrorView(
-          message: err.toString(),
-          onRetry: () =>
-              ref.invalidate(mutationDetailProvider(widget.mutationId)),
         ),
       ),
     );
   }
 
-  Widget _buildAccessDenied(BuildContext context) {
+  Widget _accessDenied() {
     return Center(
       child: Padding(
-        padding: const EdgeInsets.all(AppSpacing.xl),
+        padding: const EdgeInsets.all(24),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(
-              Icons.lock_outline,
-              size: 64,
-              color: AppColors.error,
-            ),
-            const SizedBox(height: AppSpacing.md),
-            const Text(
-              'Akses Ditolak',
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-                color: AppColors.textPrimary,
-              ),
-            ),
-            const SizedBox(height: AppSpacing.sm),
-            const Text(
+            const Icon(Icons.lock_outline, size: 64, color: _C.error),
+            const SizedBox(height: 12),
+            Text('Akses Ditolak', style: _t(size: 18, w: FontWeight.w700)),
+            const SizedBox(height: 8),
+            Text(
               'Anda hanya dapat melihat dan mengonfirmasi pengajuan mutasi milik Anda sendiri.',
               textAlign: TextAlign.center,
-              style: TextStyle(
-                fontSize: 14,
-                color: AppColors.textSecondary,
-              ),
+              style: _t(size: 14, color: _C.textSecondary),
             ),
-            const SizedBox(height: AppSpacing.lg),
+            const SizedBox(height: 20),
             OutlinedButton.icon(
               onPressed: () => _safePop(context),
               icon: const Icon(Icons.arrow_back),
@@ -278,92 +286,96 @@ class _PemohonConfirmationScreenState
   }
 
   Widget _buildBody(
-    BuildContext context,
-    WidgetRef ref,
     Mutation mutation,
     PemohonConfirmationActionState actionState,
   ) {
-    final effectiveMutation = actionState.result ?? mutation;
-    final isPendingConfirmation =
-        effectiveMutation.status == MutationStatus.pendingConfirmation;
-    final isCompleted = effectiveMutation.status == MutationStatus.completed;
+    final m = actionState.result ?? mutation;
+    final isPending = m.status == MutationStatus.pendingConfirmation;
+    final isCompleted = m.status == MutationStatus.completed;
 
     return Stack(
       children: [
-        Column(
+        ListView(
+          padding: const EdgeInsets.fromLTRB(16, 12, 16, 32),
           children: [
-            Expanded(
-              child: SingleChildScrollView(
-                padding: const EdgeInsets.fromLTRB(16, 14, 16, 120),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    // ── Success Result Banner ────────────────────────
-                    if (actionState.successMessage != null) ...[
-                      _buildSuccessBanner(actionState.successMessage!),
-                      const SizedBox(height: 12),
-                    ],
-
-                    // ── Card 1: Ticket Header & Status Pill ──────────
-                    _buildTicketHeaderCard(effectiveMutation),
-                    const SizedBox(height: 12),
-
-                    // ── Status Info Banners ──────────────────────────
-                    if (isCompleted) ...[
-                      _buildCompletedBanner(),
-                      const SizedBox(height: 12),
-                    ] else if (!isPendingConfirmation) ...[
-                      _buildNotPendingBanner(effectiveMutation),
-                      const SizedBox(height: 12),
-                    ],
-
-                    // ── Error Banner ─────────────────────────────────
-                    if (actionState.error != null) ...[
-                      _buildErrorBanner(actionState.error!),
-                      const SizedBox(height: 12),
-                    ],
-
-                    // ── Card 2: Hasil Update Aset ────────────────────
-                    _buildAssetUpdateCard(effectiveMutation),
-                    const SizedBox(height: 12),
-
-                    // ── Card 3: Perubahan Mutasi (Diff) ──────────────
-                    _buildTransferDiffCard(effectiveMutation),
-                    const SizedBox(height: 12),
-
-                    // ── Card 4: Verifikasi Fisik & Pernyataan ────────
-                    if (isPendingConfirmation) ...[
-                      _buildPhysicalChecklistCard(effectiveMutation),
-                      const SizedBox(height: 12),
-                    ],
-
-                    // ── Card 5: Alasan Mutasi ────────────────────────
-                    _buildReasonCard(effectiveMutation),
-                  ],
-                ),
-              ),
+            Text(
+              'Konfirmasi Mutasi',
+              style: _t(size: 20, w: FontWeight.w700, h: 1.3),
             ),
+            const SizedBox(height: 2),
+            Text(
+              'Verifikasi fisik & serah terima mutasi aset',
+              style: _t(size: 12, color: _C.textSecondary),
+            ),
+            const SizedBox(height: 12),
 
-            // ── Sticky Bottom Action Bar ──────────────────────────────
-            if (isPendingConfirmation)
-              _buildActionBar(context, ref, effectiveMutation, actionState),
+            if (actionState.successMessage != null) ...[
+              _banner(
+                actionState.successMessage!,
+                _C.success,
+                const Color(0xFFECFDF3),
+                const Color(0xFFD1FADF),
+                Icons.check_circle,
+              ),
+              const SizedBox(height: 12),
+            ],
+            if (actionState.error != null) ...[
+              _banner(
+                actionState.error!,
+                _C.error,
+                const Color(0xFFFEF3F2),
+                const Color(0xFFFECDCA),
+                Icons.error_outline,
+              ),
+              const SizedBox(height: 12),
+            ],
+            if (isCompleted) ...[
+              _banner(
+                'Konfirmasi telah diberikan. Mutasi aset telah selesai.',
+                _C.success,
+                const Color(0xFFECFDF3),
+                const Color(0xFFD1FADF),
+                Icons.check_circle_outline,
+              ),
+              const SizedBox(height: 12),
+            ] else if (!isPending) ...[
+              _banner(
+                'Pengajuan berstatus "${m.status.displayName}". Konfirmasi hanya saat "Menunggu Konfirmasi".',
+                _C.warning,
+                const Color(0xFFFFFBEB),
+                const Color(0xFFFEDF89),
+                Icons.warning_amber_rounded,
+              ),
+              const SizedBox(height: 12),
+            ],
+
+            _ticketCard(m),
+            const SizedBox(height: 12),
+            _assetUpdateCard(m),
+            const SizedBox(height: 12),
+            _diffCard(m),
+            const SizedBox(height: 12),
+            if (isPending) ...[
+              _checklistCard(m),
+              const SizedBox(height: 16),
+              _actionButtons(m, actionState),
+            ],
+            const SizedBox(height: 8),
+            _reasonCard(m),
           ],
         ),
-
-        // ── Loading Overlay ──────────────────────────────────────────
         if (actionState.isLoading)
           Container(
             color: Colors.black26,
             child: const Center(
               child: Card(
-                elevation: 8,
                 child: Padding(
                   padding: EdgeInsets.all(20),
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      CircularProgressIndicator(color: Color(0xFF00273A)),
-                      SizedBox(height: 14),
+                      CircularProgressIndicator(color: _C.primary),
+                      SizedBox(height: 12),
                       Text(
                         'Memproses konfirmasi...',
                         style: TextStyle(fontWeight: FontWeight.bold),
@@ -378,109 +390,113 @@ class _PemohonConfirmationScreenState
     );
   }
 
-  // ── Card 1: Ticket Header & Status Card ─────────────────────────────
-  Widget _buildTicketHeaderCard(Mutation mutation) {
+  Widget _banner(String msg, Color fg, Color bg, Color border, IconData icon) {
     return Container(
+      padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: const Color(0xFFD0D5DD)),
-        boxShadow: const [
-          BoxShadow(
-            color: Color(0x0A101828),
-            blurRadius: 4,
-            offset: Offset(0, 1),
+        color: bg,
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: border),
+      ),
+      child: Row(
+        children: [
+          Icon(icon, size: 20, color: fg),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              msg,
+              style: _t(size: 12, w: FontWeight.w600, color: fg, h: 1.4),
+            ),
           ),
         ],
       ),
-      padding: const EdgeInsets.all(14),
+    );
+  }
+
+  Widget _card({required Widget child}) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: _C.white,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: _C.border.withValues(alpha: 0.4)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.03),
+            blurRadius: 6,
+            offset: const Offset(0, 1),
+          ),
+        ],
+      ),
+      child: child,
+    );
+  }
+
+  Widget _ticketCard(Mutation m) {
+    final pending = m.status == MutationStatus.pendingConfirmation;
+    final done = m.status == MutationStatus.completed;
+    return _card(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Expanded(
-                child: Row(
-                  children: [
-                    Container(
-                      width: 28,
-                      height: 28,
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFE1F0FF),
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: const Icon(
-                        Icons.tag,
-                        size: 16,
-                        color: Color(0xFF00273A),
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    Flexible(
-                      child: Text(
-                        mutation.ticketNumber,
-                        style: const TextStyle(
-                          fontFamily: 'monospace',
-                          fontSize: 14,
-                          fontWeight: FontWeight.bold,
-                          color: Color(0xFF172B4D),
-                        ),
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ),
-                  ],
+                child: Text(
+                  m.ticketNumber,
+                  style: _t(
+                    size: 13,
+                    w: FontWeight.w600,
+                  ).copyWith(fontFamily: 'monospace', letterSpacing: 0.5),
                 ),
               ),
-              const SizedBox(width: 8),
               Container(
                 padding: const EdgeInsets.symmetric(
                   horizontal: 10,
                   vertical: 4,
                 ),
                 decoration: BoxDecoration(
-                  color: mutation.status == MutationStatus.completed
+                  color: done
                       ? const Color(0xFFECFDF3)
-                      : (mutation.status == MutationStatus.pendingConfirmation
-                          ? const Color(0xFFEFF8FF)
-                          : const Color(0xFFFEF3F2)),
-                  borderRadius: BorderRadius.circular(20),
+                      : pending
+                      ? const Color(0xFFFEF3C7)
+                      : const Color(0xFFFEF3F2),
+                  borderRadius: BorderRadius.circular(999),
                   border: Border.all(
-                    color: mutation.status == MutationStatus.completed
+                    color: done
                         ? const Color(0xFFD1FADF)
-                        : (mutation.status == MutationStatus.pendingConfirmation
-                            ? const Color(0xFFB2DDFF)
-                            : const Color(0xFFFECDCA)),
+                        : pending
+                        ? const Color(0xFFFDE68A)
+                        : const Color(0xFFFECDCA),
                   ),
                 ),
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Container(
-                      width: 6,
-                      height: 6,
-                      decoration: BoxDecoration(
-                        color: mutation.status == MutationStatus.completed
-                            ? const Color(0xFF15803D)
-                            : (mutation.status ==
-                                    MutationStatus.pendingConfirmation
-                                ? const Color(0xFF175CD3)
-                                : const Color(0xFFB42318)),
-                        shape: BoxShape.circle,
-                      ),
+                    Icon(
+                      pending
+                          ? Icons.pending_actions
+                          : done
+                          ? Icons.check_circle_outline
+                          : Icons.info_outline,
+                      size: 14,
+                      color: done
+                          ? _C.success
+                          : pending
+                          ? _C.warning
+                          : _C.error,
                     ),
-                    const SizedBox(width: 6),
+                    const SizedBox(width: 4),
                     Text(
-                      mutation.status.displayName,
-                      style: TextStyle(
-                        fontSize: 11,
-                        fontWeight: FontWeight.bold,
-                        color: mutation.status == MutationStatus.completed
-                            ? const Color(0xFF15803D)
-                            : (mutation.status ==
-                                    MutationStatus.pendingConfirmation
-                                ? const Color(0xFF175CD3)
-                                : const Color(0xFFB42318)),
+                      m.status.displayName,
+                      style: _t(
+                        size: 11,
+                        w: FontWeight.w600,
+                        color: done
+                            ? _C.success
+                            : pending
+                            ? _C.warning
+                            : _C.error,
                       ),
                     ),
                   ],
@@ -490,29 +506,21 @@ class _PemohonConfirmationScreenState
           ),
           const SizedBox(height: 10),
           Container(
-            padding: const EdgeInsets.all(10),
+            padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
-              color: const Color(0xFFECF4FF),
+              color: _C.surfaceLow.withValues(alpha: 0.6),
               borderRadius: BorderRadius.circular(8),
-              border: Border.all(color: const Color(0xFFDBEAF9)),
+              border: Border.all(color: _C.surfaceHigh),
             ),
-            child: const Row(
+            child: Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Icon(
-                  Icons.info,
-                  size: 16,
-                  color: Color(0xFF175CD3),
-                ),
-                SizedBox(width: 8),
+                const Icon(Icons.info, size: 20, color: _C.info),
+                const SizedBox(width: 8),
                 Expanded(
                   child: Text(
                     'Staff Aset telah menyelesaikan pembaruan master data aset pada sistem inventaris korporat. Harap lakukan verifikasi fisik sebelum melakukan konfirmasi final.',
-                    style: TextStyle(
-                      fontSize: 11,
-                      color: Color(0xFF42474D),
-                      height: 1.4,
-                    ),
+                    style: _t(size: 12, color: const Color(0xFF42474D), h: 1.4),
                   ),
                 ),
               ],
@@ -523,93 +531,72 @@ class _PemohonConfirmationScreenState
     );
   }
 
-  // ── Card 2: Hasil Update Aset ───────────────────────────────────────
-  Widget _buildAssetUpdateCard(Mutation mutation) {
-    return Container(
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: const Color(0xFFD0D5DD)),
-        boxShadow: const [
-          BoxShadow(
-            color: Color(0x0A101828),
-            blurRadius: 4,
-            offset: Offset(0, 1),
-          ),
-        ],
-      ),
-      padding: const EdgeInsets.all(14),
+  Widget _assetUpdateCard(Mutation m) {
+    final sn =
+        (m.asset.serialNumber != null && m.asset.serialNumber!.isNotEmpty)
+        ? m.asset.serialNumber!
+        : '-';
+
+    return _card(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              const Row(
-                children: [
-                  Icon(
-                    Icons.devices,
-                    size: 18,
-                    color: Color(0xFF52606D),
-                  ),
-                  SizedBox(width: 6),
-                  Text(
-                    'HASIL UPDATE ASET',
-                    style: TextStyle(
-                      fontSize: 11,
-                      fontWeight: FontWeight.bold,
-                      color: Color(0xFF52606D),
-                      letterSpacing: 0.8,
-                    ),
-                  ),
-                ],
+              const Icon(Icons.devices, size: 18, color: _C.textSecondary),
+              const SizedBox(width: 6),
+              Text(
+                'HASIL UPDATE ASET',
+                style: _t(
+                  size: 12,
+                  w: FontWeight.w600,
+                  color: _C.textSecondary,
+                  ls: 0.6,
+                ),
               ),
+              const Spacer(),
               Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 8,
-                  vertical: 3,
-                ),
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                 decoration: BoxDecoration(
-                  color: const Color(0xFFECF4FF),
+                  color: _C.surfaceLow,
                   borderRadius: BorderRadius.circular(6),
-                  border: Border.all(color: const Color(0xFFD0D5DD)),
+                  border: Border.all(color: _C.border.withValues(alpha: 0.3)),
                 ),
-                child: Text(
-                  'Diperbarui oleh Staff Aset: ${mutation.staffUpdatedBy ?? 'Ahmad Staff Aset'}',
-                  style: const TextStyle(
-                    fontSize: 10,
-                    fontWeight: FontWeight.w600,
-                    color: Color(0xFF172B4D),
-                  ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Icon(Icons.badge, size: 13, color: _C.textSecondary),
+                    const SizedBox(width: 4),
+                    Text(
+                      'Oleh: ${m.staffUpdatedBy ?? 'Staff Aset'}',
+                      style: _t(size: 11, color: _C.textSecondary),
+                    ),
+                  ],
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 10),
-          const Divider(height: 1, color: Color(0xFFEAECF0)),
           const SizedBox(height: 12),
-
-          // Asset Item Card Preview
           Container(
             padding: const EdgeInsets.all(10),
             decoration: BoxDecoration(
-              color: const Color(0xFFF7F9FF),
-              borderRadius: BorderRadius.circular(10),
-              border: Border.all(color: const Color(0xFFE4E7EC)),
+              color: _C.surfaceLow.withValues(alpha: 0.4),
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: _C.border.withValues(alpha: 0.2)),
             ),
             child: Row(
               children: [
                 Container(
-                  width: 44,
-                  height: 44,
+                  width: 56,
+                  height: 56,
                   decoration: BoxDecoration(
-                    color: const Color(0xFF00273A),
+                    color: _C.primary,
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: const Icon(
                     Icons.laptop_mac,
                     color: Colors.white,
-                    size: 24,
+                    size: 28,
                   ),
                 ),
                 const SizedBox(width: 10),
@@ -618,57 +605,47 @@ class _PemohonConfirmationScreenState
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        mutation.asset.assetCode,
-                        style: const TextStyle(
-                          fontFamily: 'monospace',
-                          fontSize: 11,
-                          color: Color(0xFF52606D),
-                          fontWeight: FontWeight.w600,
-                        ),
+                        m.asset.assetCode,
+                        style: _t(
+                          size: 11,
+                          color: _C.textSecondary,
+                        ).copyWith(fontFamily: 'monospace'),
                       ),
                       Text(
-                        mutation.asset.name,
-                        style: const TextStyle(
-                          fontSize: 14,
-                          fontWeight: FontWeight.bold,
-                          color: Color(0xFF172B4D),
-                        ),
+                        m.asset.name,
+                        style: _t(size: 15, w: FontWeight.w600),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
                       ),
-                      const SizedBox(height: 2),
-                      Row(
-                        children: [
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 6,
-                              vertical: 1.5,
+                      const SizedBox(height: 4),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 6,
+                          vertical: 2,
+                        ),
+                        decoration: BoxDecoration(
+                          color: _C.success.withValues(alpha: 0.1),
+                          borderRadius: BorderRadius.circular(4),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Icon(
+                              Icons.verified,
+                              size: 13,
+                              color: _C.success,
                             ),
-                            decoration: BoxDecoration(
-                              color: const Color(0xFFECFDF3),
-                              borderRadius: BorderRadius.circular(4),
-                              border: Border.all(
-                                color: const Color(0xFFD1FADF),
+                            const SizedBox(width: 4),
+                            Text(
+                              'Kondisi Baik & Normal',
+                              style: _t(
+                                size: 11,
+                                w: FontWeight.w600,
+                                color: _C.success,
                               ),
                             ),
-                            child: const Row(
-                              children: [
-                                Icon(
-                                  Icons.verified,
-                                  size: 11,
-                                  color: Color(0xFF15803D),
-                                ),
-                                SizedBox(width: 3),
-                                Text(
-                                  'Kondisi Baik & Normal',
-                                  style: TextStyle(
-                                    fontSize: 9,
-                                    fontWeight: FontWeight.bold,
-                                    color: Color(0xFF15803D),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ],
+                          ],
+                        ),
                       ),
                     ],
                   ),
@@ -677,571 +654,284 @@ class _PemohonConfirmationScreenState
             ),
           ),
           const SizedBox(height: 10),
-
-          // Serial Number Row with Copy Button
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-            decoration: BoxDecoration(
-              color: const Color(0xFFF7F9FF),
-              borderRadius: BorderRadius.circular(8),
-              border: Border.all(color: const Color(0xFFE4E7EC)),
+          _kvRow(
+            'Nomor Seri (SN)',
+            sn,
+            trailing: InkWell(
+              onTap: () {
+                Clipboard.setData(ClipboardData(text: sn));
+                setState(() => _copiedSn = true);
+                Future.delayed(const Duration(seconds: 2), () {
+                  if (mounted) setState(() => _copiedSn = false);
+                });
+              },
+              child: Icon(
+                _copiedSn ? Icons.check : Icons.content_copy,
+                size: 15,
+                color: _copiedSn ? _C.success : _C.textSecondary,
+              ),
             ),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                const Text(
-                  'Nomor Seri (SN)',
-                  style: TextStyle(
-                    fontSize: 11,
-                    color: Color(0xFF52606D),
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
-                Builder(
-                  builder: (context) {
-                    final sn = (mutation.asset.serialNumber != null &&
-                            mutation.asset.serialNumber!.isNotEmpty)
-                        ? mutation.asset.serialNumber!
-                        : '-';
-                    return Row(
-                      children: [
-                        Text(
-                          sn,
-                          style: const TextStyle(
-                            fontFamily: 'monospace',
-                            fontSize: 12,
-                            fontWeight: FontWeight.bold,
-                            color: Color(0xFF172B4D),
-                          ),
-                        ),
-                        const SizedBox(width: 6),
-                        InkWell(
-                          onTap: () {
-                            Clipboard.setData(
-                              ClipboardData(text: sn),
-                            );
-                            setState(() => _copiedSn = true);
-                            Future.delayed(const Duration(seconds: 2), () {
-                              if (mounted) setState(() => _copiedSn = false);
-                            });
-                          },
-                          child: Icon(
-                            _copiedSn ? Icons.check : Icons.content_copy,
-                            size: 16,
-                            color: _copiedSn
-                                ? const Color(0xFF15803D)
-                                : const Color(0xFF52606D),
-                          ),
-                        ),
-                      ],
-                    );
-                  },
-                ),
-              ],
-            ),
+            mono: true,
           ),
           const SizedBox(height: 8),
-
-          // Waktu Update Master Row
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-            decoration: BoxDecoration(
-              color: const Color(0xFFF7F9FF),
-              borderRadius: BorderRadius.circular(8),
-              border: Border.all(color: const Color(0xFFE4E7EC)),
-            ),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                const Text(
-                  'Waktu Update Master',
-                  style: TextStyle(
-                    fontSize: 11,
-                    color: Color(0xFF52606D),
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
-                Text(
-                  _formatDateTime(mutation.staffUpdatedAt ?? mutation.createdAt),
-                  style: const TextStyle(
-                    fontSize: 11,
-                    fontWeight: FontWeight.bold,
-                    color: Color(0xFF172B4D),
-                  ),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 10),
-
-          // Mandatory Asset Info Chips for Test Expectations
-          Wrap(
-            spacing: 8,
-            runSpacing: 6,
-            children: [
-              _buildInfoChip(
-                Icons.category_outlined,
-                mutation.asset.category.name,
-              ),
-              _buildInfoChip(
-                Icons.star_outline,
-                mutation.asset.condition,
-              ),
-              _buildInfoChip(
-                Icons.location_on_outlined,
-                'Lokasi: ${mutation.asset.location}',
-              ),
-              _buildInfoChip(
-                Icons.person_outline,
-                'PIC: ${mutation.asset.pic}',
-              ),
-            ],
+          _kvRow(
+            'Waktu Update Master',
+            _formatDateTime(m.staffUpdatedAt ?? m.createdAt),
           ),
         ],
       ),
     );
   }
 
-  // ── Card 3: Perubahan Mutasi (Diff) ─────────────────────────────────
-  Widget _buildTransferDiffCard(Mutation mutation) {
+  Widget _kvRow(
+    String label,
+    String value, {
+    Widget? trailing,
+    bool mono = false,
+  }) {
     return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: const Color(0xFFD0D5DD)),
-        boxShadow: const [
-          BoxShadow(
-            color: Color(0x0A101828),
-            blurRadius: 4,
-            offset: Offset(0, 1),
+        color: _C.surfaceLow.withValues(alpha: 0.3),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: _C.border.withValues(alpha: 0.2)),
+      ),
+      child: Row(
+        children: [
+          Text(label, style: _t(size: 12, color: _C.textSecondary)),
+          const Spacer(),
+          Text(
+            value,
+            style: _t(
+              size: 12,
+              w: FontWeight.w600,
+            ).copyWith(fontFamily: mono ? 'monospace' : null),
           ),
+          if (trailing != null) ...[const SizedBox(width: 6), trailing],
         ],
       ),
-      padding: const EdgeInsets.all(14),
+    );
+  }
+
+  Widget _diffCard(Mutation m) {
+    return _card(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              const Row(
-                children: [
-                  Icon(
-                    Icons.swap_horiz,
-                    size: 18,
-                    color: Color(0xFF52606D),
-                  ),
-                  SizedBox(width: 6),
-                  Text(
-                    'PERUBAHAN MUTASI',
-                    style: TextStyle(
-                      fontSize: 11,
-                      fontWeight: FontWeight.bold,
-                      color: Color(0xFF52606D),
-                      letterSpacing: 0.8,
-                    ),
-                  ),
-                ],
+              const Icon(Icons.swap_horiz, size: 18, color: _C.textSecondary),
+              const SizedBox(width: 6),
+              Text(
+                'PERUBAHAN MUTASI',
+                style: _t(
+                  size: 12,
+                  w: FontWeight.w600,
+                  color: _C.textSecondary,
+                  ls: 0.6,
+                ),
               ),
+              const Spacer(),
               Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 8,
-                  vertical: 3,
-                ),
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                 decoration: BoxDecoration(
-                  color: const Color(0xFFECFDF3),
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: const Color(0xFFD1FADF)),
+                  color: _C.secondary.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(999),
                 ),
-                child: const Text(
+                child: Text(
                   '2 Data Berubah',
-                  style: TextStyle(
-                    fontSize: 10,
-                    fontWeight: FontWeight.bold,
-                    color: Color(0xFF15803D),
-                  ),
+                  style: _t(size: 11, w: FontWeight.w600, color: _C.secondary),
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 10),
-          const Divider(height: 1, color: Color(0xFFEAECF0)),
-          const SizedBox(height: 12),
-
-          // Perubahan 1: Lokasi Penempatan
-          Container(
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              color: const Color(0xFFF7F9FF),
-              borderRadius: BorderRadius.circular(10),
-              border: Border.all(color: const Color(0xFFE4E7EC)),
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Row(
-                  children: [
-                    Icon(
-                      Icons.corporate_fare,
-                      size: 15,
-                      color: Color(0xFF00273A),
-                    ),
-                    SizedBox(width: 6),
-                    Text(
-                      'LOKASI PENEMPATAN',
-                      style: TextStyle(
-                        fontSize: 11,
-                        fontWeight: FontWeight.bold,
-                        color: Color(0xFF172B4D),
-                        letterSpacing: 0.5,
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 8),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    const Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        CircleAvatar(
-                          radius: 3,
-                          backgroundColor: Color(0xFF52606D),
-                        ),
-                        SizedBox(width: 6),
-                        Text(
-                          'Sebelum',
-                          style: TextStyle(
-                            fontSize: 11,
-                            color: Color(0xFF52606D),
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(width: 8),
-                    Flexible(
-                      child: Text(
-                        mutation.currentLocation,
-                        style: const TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.w600,
-                          color: Color(0xFF52606D),
-                        ),
-                        overflow: TextOverflow.ellipsis,
-                        textAlign: TextAlign.right,
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 6),
-                Center(
-                  child: Container(
-                    width: 22,
-                    height: 22,
-                    decoration: const BoxDecoration(
-                      color: Color(0xFF00273A),
-                      shape: BoxShape.circle,
-                    ),
-                    child: const Icon(
-                      Icons.arrow_downward,
-                      size: 14,
-                      color: Colors.white,
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 6),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    const Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        CircleAvatar(
-                          radius: 3,
-                          backgroundColor: Color(0xFF15803D),
-                        ),
-                        SizedBox(width: 6),
-                        Text(
-                          'Tujuan Baru',
-                          style: TextStyle(
-                            fontSize: 11,
-                            fontWeight: FontWeight.bold,
-                            color: Color(0xFF15803D),
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(width: 8),
-                    Flexible(
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Flexible(
-                            child: Text(
-                              mutation.targetLocation,
-                              style: const TextStyle(
-                                fontSize: 13,
-                                fontWeight: FontWeight.bold,
-                                color: Color(0xFF172B4D),
-                              ),
-                              overflow: TextOverflow.ellipsis,
-                              textAlign: TextAlign.right,
-                            ),
-                          ),
-                          const SizedBox(width: 4),
-                          const Icon(
-                            Icons.check_circle,
-                            size: 15,
-                            color: Color(0xFF15803D),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-              ],
-            ),
+          const SizedBox(height: 14),
+          _diffBlock(
+            icon: Icons.corporate_fare,
+            title: 'LOKASI PENEMPATAN',
+            beforeLabel: 'Sebelum',
+            beforeValue: m.currentLocation,
+            afterLabel: 'Tujuan Baru',
+            afterValue: m.targetLocation,
           ),
-          const SizedBox(height: 10),
-
-          // Perubahan 2: Penanggung Jawab (PIC)
-          Container(
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              color: const Color(0xFFF7F9FF),
-              borderRadius: BorderRadius.circular(10),
-              border: Border.all(color: const Color(0xFFE4E7EC)),
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Row(
-                  children: [
-                    Icon(
-                      Icons.person_outline,
-                      size: 15,
-                      color: Color(0xFF00273A),
-                    ),
-                    SizedBox(width: 6),
-                    Text(
-                      'PENANGGUNG JAWAB (PIC)',
-                      style: TextStyle(
-                        fontSize: 11,
-                        fontWeight: FontWeight.bold,
-                        color: Color(0xFF172B4D),
-                        letterSpacing: 0.5,
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 8),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    const Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        CircleAvatar(
-                          radius: 3,
-                          backgroundColor: Color(0xFF52606D),
-                        ),
-                        SizedBox(width: 6),
-                        Text(
-                          'Lama',
-                          style: TextStyle(
-                            fontSize: 11,
-                            color: Color(0xFF52606D),
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(width: 8),
-                    Flexible(
-                      child: Text(
-                        mutation.currentPic,
-                        style: const TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.w600,
-                          color: Color(0xFF52606D),
-                        ),
-                        overflow: TextOverflow.ellipsis,
-                        textAlign: TextAlign.right,
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 6),
-                Center(
-                  child: Container(
-                    width: 22,
-                    height: 22,
-                    decoration: const BoxDecoration(
-                      color: Color(0xFF00273A),
-                      shape: BoxShape.circle,
-                    ),
-                    child: const Icon(
-                      Icons.arrow_downward,
-                      size: 14,
-                      color: Colors.white,
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 6),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    const Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        CircleAvatar(
-                          radius: 3,
-                          backgroundColor: Color(0xFF15803D),
-                        ),
-                        SizedBox(width: 6),
-                        Text(
-                          'PIC Baru',
-                          style: TextStyle(
-                            fontSize: 11,
-                            fontWeight: FontWeight.bold,
-                            color: Color(0xFF15803D),
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(width: 8),
-                    Flexible(
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Flexible(
-                            child: Text(
-                              mutation.targetPic,
-                              style: const TextStyle(
-                                fontSize: 13,
-                                fontWeight: FontWeight.bold,
-                                color: Color(0xFF172B4D),
-                              ),
-                              overflow: TextOverflow.ellipsis,
-                              textAlign: TextAlign.right,
-                            ),
-                          ),
-                          const SizedBox(width: 4),
-                          const Icon(
-                            Icons.verified,
-                            size: 15,
-                            color: Color(0xFF15803D),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-              ],
-            ),
+          const SizedBox(height: 12),
+          _diffBlock(
+            icon: Icons.person_outline,
+            title: 'PENANGGUNG JAWAB (PIC)',
+            beforeLabel: 'Lama',
+            beforeValue: m.currentPic,
+            afterLabel: 'PIC Baru',
+            afterValue: m.targetPic,
           ),
         ],
       ),
     );
   }
 
-  // ── Card 4: Verifikasi Fisik & Pernyataan (Interactive Checklist) ──
-  Widget _buildPhysicalChecklistCard(Mutation mutation) {
+  Widget _diffBlock({
+    required IconData icon,
+    required String title,
+    required String beforeLabel,
+    required String beforeValue,
+    required String afterLabel,
+    required String afterValue,
+  }) {
     return Container(
+      padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: const Color(0xFFD0D5DD)),
-        boxShadow: const [
-          BoxShadow(
-            color: Color(0x0A101828),
-            blurRadius: 4,
-            offset: Offset(0, 1),
-          ),
-        ],
+        color: _C.surfaceLow.withValues(alpha: 0.2),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: _C.border.withValues(alpha: 0.4)),
       ),
-      padding: const EdgeInsets.all(14),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Row(
+          Row(
             children: [
-              Icon(
-                Icons.checklist,
-                size: 20,
-                color: Color(0xFF00273A),
+              Icon(icon, size: 16, color: _C.primary),
+              const SizedBox(width: 6),
+              Text(title, style: _t(size: 12, w: FontWeight.w600, ls: 0.4)),
+            ],
+          ),
+          const SizedBox(height: 10),
+          _diffRow(beforeLabel, beforeValue, isAfter: false),
+          const SizedBox(height: 6),
+          Center(
+            child: Container(
+              width: 24,
+              height: 24,
+              decoration: const BoxDecoration(
+                color: _C.secondary,
+                shape: BoxShape.circle,
               ),
-              SizedBox(width: 8),
+              child: const Icon(
+                Icons.arrow_downward,
+                size: 14,
+                color: Colors.white,
+              ),
+            ),
+          ),
+          const SizedBox(height: 6),
+          _diffRow(afterLabel, afterValue, isAfter: true),
+        ],
+      ),
+    );
+  }
+
+  Widget _diffRow(String label, String value, {required bool isAfter}) {
+    return Container(
+      padding: const EdgeInsets.all(8),
+      decoration: BoxDecoration(
+        color: isAfter ? _C.secondary.withValues(alpha: 0.05) : _C.white,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(
+          color: isAfter
+              ? _C.secondary.withValues(alpha: 0.2)
+              : _C.border.withValues(alpha: 0.3),
+        ),
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 8,
+            height: 8,
+            decoration: BoxDecoration(
+              color: isAfter
+                  ? _C.secondary
+                  : _C.textSecondary.withValues(alpha: 0.4),
+              shape: BoxShape.circle,
+            ),
+          ),
+          const SizedBox(width: 8),
+          Text(
+            label,
+            style: _t(
+              size: 11,
+              w: isAfter ? FontWeight.w600 : FontWeight.w400,
+              color: isAfter ? _C.secondary : _C.textSecondary,
+            ),
+          ),
+          const Spacer(),
+          Flexible(
+            child: Text(
+              value,
+              textAlign: TextAlign.right,
+              style: _t(
+                size: 13,
+                w: isAfter ? FontWeight.w600 : FontWeight.w500,
+                color: isAfter ? _C.textPrimary : _C.textSecondary,
+              ),
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+          if (isAfter) ...[
+            const SizedBox(width: 4),
+            const Icon(Icons.check_circle, size: 16, color: _C.secondary),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _checklistCard(Mutation m) {
+    final sn =
+        (m.asset.serialNumber != null && m.asset.serialNumber!.isNotEmpty)
+        ? m.asset.serialNumber!
+        : '-';
+
+    return _card(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Icon(Icons.checklist, size: 20, color: _C.primary),
+              const SizedBox(width: 8),
               Text(
                 'Verifikasi Fisik & Pernyataan',
-                style: TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.bold,
-                  color: Color(0xFF172B4D),
-                ),
+                style: _t(size: 14, w: FontWeight.w600),
               ),
             ],
           ),
           const SizedBox(height: 4),
-          const Text(
+          Text(
             'Pastikan poin berikut divalidasi secara langsung di lapangan:',
-            style: TextStyle(
-              fontSize: 11,
-              color: Color(0xFF52606D),
-            ),
+            style: _t(size: 12, color: _C.textSecondary),
           ),
           const SizedBox(height: 12),
-
-          // Check Item 1: SN Check
-          _buildCheckItem(
-            value: _checkSn,
-            onChanged: (v) => setState(() => _checkSn = v ?? false),
-            text:
-                'Nomor seri (SN) pada fisik aset sesuai dengan sistem (${(mutation.asset.serialNumber != null && mutation.asset.serialNumber!.isNotEmpty) ? mutation.asset.serialNumber! : '-'})',
+          _check(
+            _checkSn,
+            (v) => setState(() => _checkSn = v ?? false),
+            'Nomor seri (SN) pada fisik aset sesuai dengan sistem ($sn)',
           ),
           const SizedBox(height: 8),
-
-          // Check Item 2: Lokasi Check
-          _buildCheckItem(
-            value: _checkLocation,
-            onChanged: (v) => setState(() => _checkLocation = v ?? false),
-            text:
-                'Unit fisik dan kelengkapan telah diterima di ${mutation.targetLocation}',
+          _check(
+            _checkLocation,
+            (v) => setState(() => _checkLocation = v ?? false),
+            'Unit fisik dan kelengkapan telah diterima di ${m.targetLocation}',
           ),
           const SizedBox(height: 8),
-
-          // Check Item 3: PIC Check
-          _buildCheckItem(
-            value: _checkPic,
-            onChanged: (v) => setState(() => _checkPic = v ?? false),
-            text:
-                'Serah terima fisik dan aksesoris telah divalidasi bersama PIC Baru (${mutation.targetPic})',
+          _check(
+            _checkPic,
+            (v) => setState(() => _checkPic = v ?? false),
+            'Serah terima fisik dan aksesoris telah divalidasi bersama PIC Baru (${m.targetPic})',
           ),
           const SizedBox(height: 12),
-
-          // BAST note
           Container(
             padding: const EdgeInsets.all(10),
             decoration: BoxDecoration(
-              color: const Color(0xFFECF4FF),
+              color: _C.surfaceLow.withValues(alpha: 0.6),
               borderRadius: BorderRadius.circular(8),
-              border: Border.all(color: const Color(0xFFDBEAF9)),
+              border: Border.all(color: _C.border.withValues(alpha: 0.3)),
             ),
-            child: const Row(
+            child: Row(
               children: [
-                Icon(
-                  Icons.verified_user,
-                  size: 16,
-                  color: Color(0xFF00273A),
-                ),
-                SizedBox(width: 8),
+                const Icon(Icons.verified_user, size: 16, color: _C.secondary),
+                const SizedBox(width: 8),
                 Expanded(
                   child: Text(
                     'Setelah dikonfirmasi, Berita Acara Serah Terima (BAST) digital otomatis diterbitkan.',
-                    style: TextStyle(
-                      fontSize: 11,
-                      color: Color(0xFF52606D),
-                    ),
+                    style: _t(size: 11, color: _C.textSecondary),
                   ),
                 ),
               ],
@@ -1252,357 +942,124 @@ class _PemohonConfirmationScreenState
     );
   }
 
-  Widget _buildCheckItem({
-    required bool value,
-    required ValueChanged<bool?> onChanged,
-    required String text,
-  }) {
+  Widget _check(bool value, ValueChanged<bool?> onChanged, String text) {
     return InkWell(
       onTap: () => onChanged(!value),
       borderRadius: BorderRadius.circular(8),
       child: Container(
         padding: const EdgeInsets.all(10),
         decoration: BoxDecoration(
-          color: value ? Colors.white : const Color(0xFFF7F9FF),
+          color: _C.surfaceLow.withValues(alpha: 0.4),
           borderRadius: BorderRadius.circular(8),
-          border: Border.all(
-            color: value
-                ? const Color(0xFF00273A).withValues(alpha: 0.3)
-                : const Color(0xFFE4E7EC),
-          ),
+          border: Border.all(color: _C.border.withValues(alpha: 0.2)),
         ),
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Checkbox(
-              value: value,
-              onChanged: onChanged,
-              activeColor: const Color(0xFF00273A),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(4),
-              ),
-              materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-              visualDensity: VisualDensity.compact,
-            ),
-            const SizedBox(width: 6),
-            Expanded(
-              child: Text(
-                text,
-                style: const TextStyle(
-                  fontSize: 12,
-                  color: Color(0xFF172B4D),
-                  height: 1.4,
-                ),
+            SizedBox(
+              width: 22,
+              height: 22,
+              child: Checkbox(
+                value: value,
+                onChanged: onChanged,
+                activeColor: _C.primary,
+                materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                visualDensity: VisualDensity.compact,
               ),
             ),
+            const SizedBox(width: 8),
+            Expanded(child: Text(text, style: _t(size: 12, h: 1.4))),
           ],
         ),
       ),
     );
   }
 
-  // ── Card 5: Alasan Mutasi ───────────────────────────────────────────
-  Widget _buildReasonCard(Mutation mutation) {
-    return Container(
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: const Color(0xFFD0D5DD)),
-        boxShadow: const [
-          BoxShadow(
-            color: Color(0x0A101828),
-            blurRadius: 4,
-            offset: Offset(0, 1),
-          ),
-        ],
-      ),
-      padding: const EdgeInsets.all(14),
+  Widget _reasonCard(Mutation m) {
+    return _card(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
-            'Alasan Mutasi',
-            style: TextStyle(
-              fontSize: 13,
-              fontWeight: FontWeight.bold,
-              color: Color(0xFF172B4D),
-            ),
-          ),
+          Text('Alasan Mutasi', style: _t(size: 13, w: FontWeight.w700)),
           const SizedBox(height: 6),
-          Text(
-            mutation.reason,
-            style: const TextStyle(
-              fontSize: 12,
-              color: Color(0xFF52606D),
-              height: 1.4,
-            ),
-          ),
+          Text(m.reason, style: _t(size: 12, color: _C.textSecondary, h: 1.4)),
         ],
       ),
     );
   }
 
-  // ── Info Banners ───────────────────────────────────────────────────
-  Widget _buildCompletedBanner() {
-    return Container(
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: const Color(0xFFECFDF3),
-        borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: const Color(0xFFD1FADF)),
-      ),
-      child: const Row(
-        children: [
-          Icon(
-            Icons.check_circle_outline,
-            color: Color(0xFF15803D),
-            size: 20,
-          ),
-          SizedBox(width: 8),
-          Expanded(
-            child: Text(
-              'Konfirmasi telah diberikan. Mutasi aset telah selesai.',
-              style: TextStyle(
-                fontSize: 12,
-                fontWeight: FontWeight.w600,
-                color: Color(0xFF15803D),
-                height: 1.4,
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildNotPendingBanner(Mutation mutation) {
-    return Container(
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: const Color(0xFFFFFBEB),
-        borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: const Color(0xFFFEDF89)),
-      ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Icon(
-            Icons.warning_amber_rounded,
-            color: Color(0xFFB45309),
-            size: 18,
-          ),
-          const SizedBox(width: 8),
-          Expanded(
-            child: Text(
-              'Pengajuan ini berstatus "${mutation.status.displayName}". Konfirmasi hanya dapat dilakukan ketika pengajuan berstatus "Menunggu Konfirmasi".',
-              style: const TextStyle(
-                fontSize: 12,
-                color: Color(0xFFB45309),
-                height: 1.4,
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildSuccessBanner(String message) {
-    return Container(
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: const Color(0xFFECFDF3),
-        borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: const Color(0xFFD1FADF)),
-      ),
-      child: Row(
-        children: [
-          const Icon(
-            Icons.check_circle,
-            color: Color(0xFF15803D),
-            size: 20,
-          ),
-          SizedBox(width: 8),
-          Expanded(
-            child: Text(
-              message,
-              style: const TextStyle(
-                fontSize: 12,
-                fontWeight: FontWeight.bold,
-                color: Color(0xFF15803D),
-                height: 1.4,
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildErrorBanner(String error) {
-    return Container(
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: const Color(0xFFFEF3F2),
-        borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: const Color(0xFFFECDCA)),
-      ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Icon(
-            Icons.error_outline,
-            color: Color(0xFFB42318),
-            size: 18,
-          ),
-          const SizedBox(width: 8),
-          Expanded(
-            child: Text(
-              error,
-              style: const TextStyle(
-                fontSize: 12,
-                color: Color(0xFFB42318),
-                height: 1.4,
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildInfoChip(IconData icon, String label) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-      decoration: BoxDecoration(
-        color: const Color(0xFFECF4FF),
-        borderRadius: BorderRadius.circular(6),
-        border: Border.all(color: const Color(0xFFDBEAF9)),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(icon, size: 13, color: const Color(0xFF00273A)),
-          const SizedBox(width: 4),
-          Text(
-            label,
-            style: const TextStyle(
-              fontSize: 11,
-              fontWeight: FontWeight.w600,
-              color: Color(0xFF172B4D),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  // ── Sticky Action Bar ───────────────────────────────────────────────
-  Widget _buildActionBar(
-    BuildContext context,
-    WidgetRef ref,
-    Mutation mutation,
+  Widget _actionButtons(
+    Mutation m,
     PemohonConfirmationActionState actionState,
   ) {
-    return Container(
-      padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
-      decoration: const BoxDecoration(
-        color: Colors.white,
-        border: Border(
-          top: BorderSide(color: Color(0xFFE4E7EC), width: 1),
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: Color(0x0A000000),
-            blurRadius: 8,
-            offset: Offset(0, -1),
+    return Column(
+      children: [
+        SizedBox(
+          width: double.infinity,
+          height: 48,
+          child: ElevatedButton.icon(
+            key: const Key('btn_sesuai_konfirmasi'),
+            onPressed: actionState.isLoading
+                ? null
+                : () => _onConfirmTap(context, ref, m),
+            icon: const Icon(Icons.verified, size: 20),
+            label: Text(
+              'Konfirmasi & Terima Aset',
+              style: _t(size: 14, w: FontWeight.w600, color: Colors.white),
+            ),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: _C.primary,
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+            ),
           ),
-        ],
-      ),
-      child: SafeArea(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
+        ),
+        const SizedBox(height: 10),
+        SizedBox(
+          width: double.infinity,
+          height: 44,
+          child: OutlinedButton.icon(
+            key: const Key('btn_tidak_sesuai_konfirmasi'),
+            onPressed: actionState.isLoading
+                ? null
+                : () => _onTidakSesuaiTap(context),
+            icon: const Icon(Icons.report_problem_outlined, size: 18),
+            label: Text(
+              'Lapor Ketidaksesuaian',
+              style: _t(size: 12, w: FontWeight.w600, color: _C.warning),
+            ),
+            style: OutlinedButton.styleFrom(
+              foregroundColor: _C.warning,
+              side: BorderSide(color: _C.warning.withValues(alpha: 0.3)),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+            ),
+          ),
+        ),
+        const SizedBox(height: 8),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            // Primary Confirm Button
-            SizedBox(
-              height: 48,
-              child: ElevatedButton.icon(
-                key: const Key('btn_sesuai_konfirmasi'),
-                onPressed: actionState.isLoading
-                    ? null
-                    : () => _onConfirmTap(context, ref, mutation),
-                icon: const Icon(Icons.verified, size: 18),
-                label: const Text(
-                  '✓ Sesuai',
-                  style: TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.bold,
-                    letterSpacing: 0.3,
-                  ),
-                ),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF00273A),
-                  foregroundColor: Colors.white,
-                  elevation: 2,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                ),
+            const Icon(Icons.lock, size: 14, color: _C.textSecondary),
+            const SizedBox(width: 4),
+            Text(
+              'Audit Trail ISO 27001 Terenkripsi MutasiKu Enterprise',
+              style: _t(
+                size: 11,
+                color: _C.textSecondary.withValues(alpha: 0.7),
               ),
-            ),
-            const SizedBox(height: 8),
-
-            // Secondary Report Discrepancy Button
-            SizedBox(
-              height: 44,
-              child: OutlinedButton.icon(
-                key: const Key('btn_tidak_sesuai_konfirmasi'),
-                onPressed: actionState.isLoading
-                    ? null
-                    : () => _onTidakSesuaiTap(context),
-                icon: const Icon(Icons.report_problem_outlined, size: 16),
-                label: const Text(
-                  'Tidak Sesuai',
-                  style: TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                style: OutlinedButton.styleFrom(
-                  foregroundColor: const Color(0xFFB45309),
-                  side: const BorderSide(color: Color(0xFFFEDF89)),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                ),
-              ),
-            ),
-            const SizedBox(height: 6),
-            const Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Icon(Icons.lock, size: 11, color: Color(0xFF52606D)),
-                SizedBox(width: 4),
-                Flexible(
-                  child: Text(
-                    'Audit Trail ISO 27001 Terenkripsi MutasiKu Enterprise',
-                    style: TextStyle(
-                      fontSize: 10,
-                      color: Color(0xFF52606D),
-                    ),
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ),
-              ],
             ),
           ],
         ),
-      ),
+      ],
     );
   }
 
-  // ── Actions & Dialogs ───────────────────────────────────────────────
+  // ── Actions (logic lama) ──────────────────────────────────────────────
+
   Future<void> _onConfirmTap(
     BuildContext context,
     WidgetRef ref,
@@ -1626,7 +1083,7 @@ class _PemohonConfirmationScreenState
           ElevatedButton(
             onPressed: () => Navigator.of(ctx).pop(true),
             style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFF00273A),
+              backgroundColor: _C.primary,
               foregroundColor: Colors.white,
             ),
             child: const Text('Ya, Konfirmasi'),
@@ -1637,8 +1094,9 @@ class _PemohonConfirmationScreenState
 
     if (confirmed != true || !context.mounted) return;
 
-    final notifier = ref.read(pemohonConfirmationActionProvider.notifier);
-    final success = await notifier.confirm(mutationId: widget.mutationId);
+    final success = await ref
+        .read(pemohonConfirmationActionProvider.notifier)
+        .confirm(mutationId: widget.mutationId);
 
     if (!context.mounted) return;
 
@@ -1675,19 +1133,15 @@ class _PemohonConfirmationScreenState
               ),
               child: const Icon(
                 Icons.assignment_return_outlined,
-                color: Color(0xFFB45309),
+                color: _C.warning,
                 size: 20,
               ),
             ),
             const SizedBox(width: 10),
-            const Expanded(
+            Expanded(
               child: Text(
                 'Mutasi Tidak Sesuai',
-                style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
-                  color: Color(0xFF172B4D),
-                ),
+                style: _t(size: 16, w: FontWeight.w700),
               ),
             ),
           ],
@@ -1698,13 +1152,9 @@ class _PemohonConfirmationScreenState
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text(
+              Text(
                 'Silakan berikan alasan atau catatan ketidaksesuaian aset/lokasi yang diterima agar pengajuan dapat diperbaiki.',
-                style: TextStyle(
-                  fontSize: 12,
-                  color: Color(0xFF52606D),
-                  height: 1.4,
-                ),
+                style: _t(size: 12, color: _C.textSecondary, h: 1.4),
               ),
               const SizedBox(height: 12),
               TextFormField(
@@ -1713,13 +1163,8 @@ class _PemohonConfirmationScreenState
                 decoration: InputDecoration(
                   labelText: 'Alasan / Keterangan *',
                   hintText: 'Jelaskan ketidaksesuaian...',
-                  hintStyle: const TextStyle(
-                    fontSize: 12,
-                    color: Color(0xFF52606D),
-                  ),
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(10),
-                    borderSide: const BorderSide(color: Color(0xFFD0D5DD)),
                   ),
                   filled: true,
                   fillColor: Colors.white,
@@ -1741,63 +1186,65 @@ class _PemohonConfirmationScreenState
           ),
           ElevatedButton(
             onPressed: () async {
-              if (formKey.currentState?.validate() ?? false) {
-                final reason = reasonController.text.trim();
-                Navigator.of(ctx).pop();
+              if (!(formKey.currentState?.validate() ?? false)) return;
+              final reason = reasonController.text.trim();
+              Navigator.of(ctx).pop();
 
-                final success = await ref
-                    .read(pemohonConfirmationActionProvider.notifier)
-                    .returnForRevision(
-                      mutationId: widget.mutationId,
-                      reason: reason,
-                    );
-
-                if (!context.mounted) return;
-
-                if (success) {
-                  AppFeedback.showSuccess(
-                    context,
-                    'Pengajuan dikembalikan untuk perbaikan data.',
+              final success = await ref
+                  .read(pemohonConfirmationActionProvider.notifier)
+                  .returnForRevision(
+                    mutationId: widget.mutationId,
+                    reason: reason,
                   );
 
-                  final currentMutation = ref
-                      .read(mutationDetailProvider(widget.mutationId))
-                      .valueOrNull;
-                  ref.read(notificationProvider.notifier).notifyRole(
-                        targetRole: UserRole.staffAset,
-                        title: 'Ketidaksesuaian Ditemukan',
-                        message:
-                            'Pemohon melaporkan ketidaksesuaian untuk pengajuan ${currentMutation?.ticketNumber ?? widget.mutationId}: $reason',
-                        type: NotificationType.action,
-                        relatedMutationId: widget.mutationId,
-                      );
-                  ref.read(notificationProvider.notifier).notifyRole(
-                        targetRole: UserRole.operator,
-                        title: 'Pengajuan Dikembalikan oleh Pemohon',
-                        message:
-                            'Pengajuan ${currentMutation?.ticketNumber ?? widget.mutationId} dikembalikan untuk penyesuaian: $reason',
-                        type: NotificationType.action,
-                        relatedMutationId: widget.mutationId,
-                      );
-                  ref.invalidate(mutationDetailProvider(widget.mutationId));
-                  try {
-                    context.go(
-                      RouteNames.pemohonMutasiEditPath
-                          .replaceFirst(':id', widget.mutationId),
+              if (!context.mounted) return;
+
+              if (success) {
+                AppFeedback.showSuccess(
+                  context,
+                  'Pengajuan dikembalikan untuk perbaikan data.',
+                );
+
+                final currentMutation = ref
+                    .read(mutationDetailProvider(widget.mutationId))
+                    .valueOrNull;
+                ref
+                    .read(notificationProvider.notifier)
+                    .notifyRole(
+                      targetRole: UserRole.staffAset,
+                      title: 'Ketidaksesuaian Ditemukan',
+                      message:
+                          'Pemohon melaporkan ketidaksesuaian untuk pengajuan ${currentMutation?.ticketNumber ?? widget.mutationId}: $reason',
+                      type: NotificationType.action,
+                      relatedMutationId: widget.mutationId,
                     );
-                  } catch (_) {}
-                } else {
-                  final state =
-                      ref.read(pemohonConfirmationActionProvider);
-                  AppFeedback.showError(
-                    context,
-                    state.error ?? 'Gagal melaporkan ketidaksesuaian.',
-                  );
-                }
+                ref
+                    .read(notificationProvider.notifier)
+                    .notifyRole(
+                      targetRole: UserRole.operator,
+                      title: 'Pengajuan Dikembalikan oleh Pemohon',
+                      message:
+                          'Pengajuan ${currentMutation?.ticketNumber ?? widget.mutationId} dikembalikan untuk penyesuaian: $reason',
+                      type: NotificationType.action,
+                      relatedMutationId: widget.mutationId,
+                    );
+                ref.invalidate(mutationDetailProvider(widget.mutationId));
+                context.go(
+                  RouteNames.pemohonMutasiEditPath.replaceFirst(
+                    ':id',
+                    widget.mutationId,
+                  ),
+                );
+              } else {
+                final state = ref.read(pemohonConfirmationActionProvider);
+                AppFeedback.showError(
+                  context,
+                  state.error ?? 'Gagal melaporkan ketidaksesuaian.',
+                );
               }
             },
             style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFFB45309),
+              backgroundColor: _C.warning,
               foregroundColor: Colors.white,
             ),
             child: const Text('Perbaiki Pengajuan'),

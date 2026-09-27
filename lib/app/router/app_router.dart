@@ -38,7 +38,6 @@ import '../../features/mutation/presentation/screens/mutation_submit_success_scr
 import '../../features/pemohon/presentation/screens/pemohon_edit_mutation_screen.dart';
 import '../../features/pemohon/presentation/screens/pemohon_mutation_detail_screen.dart';
 import '../../features/pemohon/presentation/screens/pemohon_mutation_list_screen.dart';
-import '../../features/pemohon/presentation/screens/pemohon_notifications_screen.dart';
 import '../../features/pemohon/presentation/screens/pemohon_profile_screen.dart';
 import '../../features/profile/presentation/screens/profile_screen.dart';
 import '../../features/staff/presentation/screens/staff_dashboard_screen.dart';
@@ -89,8 +88,8 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         pageBuilder: (context, state) => CustomTransitionPage<void>(
           key: state.pageKey,
           child: const LandingScreen(),
-          transitionsBuilder:
-              (context, animation, secondaryAnimation, child) => child,
+          transitionsBuilder: (context, animation, secondaryAnimation, child) =>
+              child,
           transitionDuration: Duration.zero,
           reverseTransitionDuration: Duration.zero,
         ),
@@ -233,7 +232,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: RouteNames.pemohonNotificationsPath,
         name: RouteNames.pemohonNotificationsName,
-        builder: (context, state) => const PemohonNotificationsScreen(),
+        builder: (context, state) => const NotificationScreen(),
       ),
       GoRoute(
         path: RouteNames.pemohonProfilePath,
