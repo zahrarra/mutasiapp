@@ -695,9 +695,11 @@ class OperatorVerificationDetailScreen extends ConsumerWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Row 1: Status Pill & SLA
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          // Row 1: Status Pill & SLA (Responsive Wrap)
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            crossAxisAlignment: WrapCrossAlignment.center,
             children: [
               Container(
                 padding:
@@ -723,9 +725,7 @@ class OperatorVerificationDetailScreen extends ConsumerWidget {
                     ),
                     const SizedBox(width: 6),
                     Text(
-                      mutation.status == MutationStatus.submitted
-                          ? 'Menunggu Verifikasi Operator'
-                          : mutation.status.displayName,
+                      mutation.status.displayName,
                       style: TextStyle(
                         fontSize: 11,
                         fontWeight: FontWeight.w600,
@@ -770,31 +770,35 @@ class OperatorVerificationDetailScreen extends ConsumerWidget {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text(
-                    'NOMOR PENGAJUAN',
-                    style: TextStyle(
-                      fontSize: 10,
-                      fontWeight: FontWeight.w600,
-                      color: _C.textSecondary,
-                      letterSpacing: 0.8,
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'NOMOR PENGAJUAN',
+                      style: TextStyle(
+                        fontSize: 10,
+                        fontWeight: FontWeight.w600,
+                        color: _C.textSecondary,
+                        letterSpacing: 0.8,
+                      ),
                     ),
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    mutation.ticketNumber,
-                    style: const TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.w700,
-                      fontFamily: 'monospace',
-                      color: _C.textPrimary,
-                      letterSpacing: -0.2,
+                    const SizedBox(height: 2),
+                    Text(
+                      mutation.ticketNumber,
+                      style: const TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.w700,
+                        fontFamily: 'monospace',
+                        color: _C.textPrimary,
+                        letterSpacing: -0.2,
+                      ),
+                      overflow: TextOverflow.ellipsis,
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
+              const SizedBox(width: 8),
               Container(
                 padding:
                     const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
@@ -887,20 +891,26 @@ class OperatorVerificationDetailScreen extends ConsumerWidget {
       Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          const Row(
-            children: [
-              Icon(Icons.badge_outlined, size: 18, color: _C.secondary),
-              SizedBox(width: 8),
-              Text(
-                'Pemegang Aset Saat Ini',
-                style: TextStyle(
-                  fontSize: 13,
-                  fontWeight: FontWeight.w700,
-                  color: _C.textPrimary,
+          const Expanded(
+            child: Row(
+              children: [
+                Icon(Icons.badge_outlined, size: 18, color: _C.secondary),
+                SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    'Pemegang Aset Saat Ini',
+                    style: TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w700,
+                      color: _C.textPrimary,
+                    ),
+                    overflow: TextOverflow.ellipsis,
+                  ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
+          const SizedBox(width: 8),
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
             decoration: BoxDecoration(
@@ -1060,20 +1070,26 @@ class OperatorVerificationDetailScreen extends ConsumerWidget {
       Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          const Row(
-            children: [
-              Icon(Icons.devices_outlined, size: 18, color: _C.primaryContainer),
-              SizedBox(width: 8),
-              Text(
-                'Detail Aset Fisik',
-                style: TextStyle(
-                  fontSize: 13,
-                  fontWeight: FontWeight.w700,
-                  color: _C.textPrimary,
+          const Expanded(
+            child: Row(
+              children: [
+                Icon(Icons.devices_outlined, size: 18, color: _C.primaryContainer),
+                SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    'Detail Aset Fisik',
+                    style: TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w700,
+                      color: _C.textPrimary,
+                    ),
+                    overflow: TextOverflow.ellipsis,
+                  ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
+          const SizedBox(width: 8),
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
             decoration: BoxDecoration(

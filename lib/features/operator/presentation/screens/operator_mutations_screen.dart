@@ -245,66 +245,166 @@ class _OperatorMutationsScreenState
     );
   }
 
-  // ── Search bar ────────────────────────────────────────────────────────────
+  // ── Search bar & Filters ──────────────────────────────────────────────────
   Widget _buildSearchBar() {
+    final statusFilter = ref.watch(operatorStatusFilterProvider);
+    final sortOrder = ref.watch(operatorSortOrderProvider);
+
     return Container(
       padding: const EdgeInsets.fromLTRB(16, 12, 16, 10),
       color: _C.surface,
-      child: Container(
-        height: 46,
-        decoration: BoxDecoration(
-          color: _C.bg,
-          borderRadius: BorderRadius.circular(14),
-          border: Border.all(color: _C.border),
-        ),
-        child: TextField(
-          key: const Key('input_search_mutations'),
-          controller: _searchController,
-          style: const TextStyle(
-            fontSize: 13,
-            color: _C.textPrimary,
-          ),
-          decoration: InputDecoration(
-            hintText: 'Cari no. tiket, aset, pemohon...',
-            hintStyle: TextStyle(
-              fontSize: 13,
-              color: _C.textSecondary.withValues(alpha: 0.6),
+      child: Column(
+        children: [
+          Container(
+            height: 46,
+            decoration: BoxDecoration(
+              color: _C.bg,
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(color: _C.border),
             ),
-            prefixIcon: const Padding(
-              padding: EdgeInsets.only(left: 14, right: 8),
-              child: Icon(
-                Icons.search_rounded,
-                size: 20,
-                color: _C.textSecondary,
+            child: TextField(
+              key: const Key('input_search_mutations'),
+              controller: _searchController,
+              style: const TextStyle(
+                fontSize: 13,
+                color: _C.textPrimary,
               ),
-            ),
-            prefixIconConstraints:
-                const BoxConstraints(minWidth: 0, minHeight: 0),
-            suffixIcon: _searchController.text.isNotEmpty
-                ? GestureDetector(
-                    onTap: () {
-                      _searchController.clear();
-                      ref.read(operatorSearchQueryProvider.notifier).state = '';
-                      setState(() {});
-                    },
-                    child: const Icon(
-                      Icons.close_rounded,
-                      size: 16,
-                      color: _C.textSecondary,
-                    ),
-                  )
-                : null,
-            border: InputBorder.none,
-            contentPadding: const EdgeInsets.symmetric(
-              horizontal: 12,
-              vertical: 12,
+              decoration: InputDecoration(
+                hintText: 'Cari no. tiket, aset, pemohon...',
+                hintStyle: TextStyle(
+                  fontSize: 13,
+                  color: _C.textSecondary.withValues(alpha: 0.6),
+                ),
+                prefixIcon: const Padding(
+                  padding: EdgeInsets.only(left: 14, right: 8),
+                  child: Icon(
+                    Icons.search_rounded,
+                    size: 20,
+                    color: _C.textSecondary,
+                  ),
+                ),
+                prefixIconConstraints:
+                    const BoxConstraints(minWidth: 0, minHeight: 0),
+                suffixIcon: _searchController.text.isNotEmpty
+                    ? GestureDetector(
+                        onTap: () {
+                          _searchController.clear();
+                          ref.read(operatorSearchQueryProvider.notifier).state = '';
+                          setState(() {});
+                        },
+                        child: const Icon(
+                          Icons.close_rounded,
+                          size: 16,
+                          color: _C.textSecondary,
+                        ),
+                      )
+                    : null,
+                border: InputBorder.none,
+                contentPadding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 12,
+                ),
+              ),
+              onChanged: (value) {
+                ref.read(operatorSearchQueryProvider.notifier).state = value;
+                setState(() {});
+              },
             ),
           ),
-          onChanged: (value) {
-            ref.read(operatorSearchQueryProvider.notifier).state = value;
-            setState(() {});
-          },
-        ),
+          const SizedBox(height: 10),
+          Row(
+            children: [
+              Expanded(
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 2,
+                  ),
+                  decoration: BoxDecoration(
+                    color: _C.bg,
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(color: _C.border),
+                  ),
+                  child: DropdownButtonHideUnderline(
+                    child: DropdownButton<OperatorStatusFilter>(
+                      key: const Key('dropdown_filter_operator_status'),
+                      value: statusFilter,
+                      isDense: true,
+                      isExpanded: true,
+                      icon: const Icon(Icons.filter_list_rounded,
+                          size: 16, color: _C.teal),
+                      style: const TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w500,
+                        color: _C.textPrimary,
+                      ),
+                      items: OperatorStatusFilter.values
+                          .map((s) => DropdownMenuItem(
+                                value: s,
+                                child: Text(s.displayName),
+                              ))
+                          .toList(),
+                      onChanged: (val) {
+                        if (val != null) {
+                          ref
+                              .read(operatorStatusFilterProvider.notifier)
+                              .state = val;
+                          setState(() {
+                            _activeTab = switch (val) {
+                              OperatorStatusFilter.all => _Tab.all,
+                              OperatorStatusFilter.submitted => _Tab.submitted,
+                              OperatorStatusFilter.returned => _Tab.returned,
+                            };
+                          });
+                        }
+                      },
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 10),
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 2,
+                ),
+                decoration: BoxDecoration(
+                  color: _C.bg,
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(color: _C.border),
+                ),
+                child: DropdownButtonHideUnderline(
+                  child: DropdownButton<MutationSortOrder>(
+                    key: const Key('dropdown_filter_operator_sort'),
+                    value: sortOrder,
+                    isDense: true,
+                    icon: const Icon(Icons.sort_rounded,
+                        size: 16, color: _C.textSecondary),
+                    style: const TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w500,
+                      color: _C.textPrimary,
+                    ),
+                    items: MutationSortOrder.values
+                        .map((s) => DropdownMenuItem(
+                              value: s,
+                              child: Text(s.displayName),
+                            ))
+                        .toList(),
+                    onChanged: (val) {
+                      if (val != null) {
+                        ref
+                            .read(operatorSortOrderProvider.notifier)
+                            .state = val;
+                        setState(() {});
+                      }
+                    },
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ],
       ),
     );
   }
@@ -596,7 +696,7 @@ class _MutationCard extends StatelessWidget {
         MutationStatus.submitted => (
           fg: const Color(0xFFB45309),
           bg: const Color(0xFFFEF3C7),
-          label: 'Menunggu Verifikasi',
+          label: 'Diajukan',
         ),
         MutationStatus.returned => (
           fg: const Color(0xFFB45309),
@@ -657,26 +757,30 @@ class _MutationCard extends StatelessWidget {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 9,
-                    vertical: 4,
-                  ),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFF1F5F9),
-                    borderRadius: BorderRadius.circular(999),
-                  ),
-                  child: Text(
-                    m.ticketNumber,
-                    style: const TextStyle(
-                      fontSize: 10,
-                      fontWeight: FontWeight.w700,
-                      fontFamily: 'monospace',
-                      color: _C.navy,
-                      letterSpacing: 0.3,
+                Flexible(
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 9,
+                      vertical: 4,
+                    ),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFF1F5F9),
+                      borderRadius: BorderRadius.circular(999),
+                    ),
+                    child: Text(
+                      m.ticketNumber,
+                      style: const TextStyle(
+                        fontSize: 10,
+                        fontWeight: FontWeight.w700,
+                        fontFamily: 'monospace',
+                        color: _C.navy,
+                        letterSpacing: 0.3,
+                      ),
+                      overflow: TextOverflow.ellipsis,
                     ),
                   ),
                 ),
+                const SizedBox(width: 8),
                 // Status badge with dot
                 Container(
                   padding: const EdgeInsets.symmetric(

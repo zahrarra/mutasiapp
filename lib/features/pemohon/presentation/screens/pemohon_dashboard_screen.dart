@@ -74,9 +74,7 @@ class _PemohonDashboardScreenState
   }
 
   Future<void> _openDashboardFilter(List<Mutation> list) async {
-    final Map<MutationStatus?, int> counts = {
-      null: list.length,
-    };
+    final Map<MutationStatus?, int> counts = {null: list.length};
     for (final s in MutationStatus.values) {
       counts[s] = list.where((m) => m.status == s).length;
     }
@@ -128,732 +126,730 @@ class _PemohonDashboardScreenState
       backgroundColor: _C.background,
       extendBody: true,
       body: Column(
-            children: [
-              // Header
-              _Header(onNotif: _goNotifications, onProfile: _goProfile),
+        children: [
+          // Header
+          _Header(onNotif: _goNotifications, onProfile: _goProfile),
 
-              Expanded(
-                child: ListView(
-                  padding: const EdgeInsets.fromLTRB(16, 12, 16, 100),
+          Expanded(
+            child: ListView(
+              padding: const EdgeInsets.fromLTRB(16, 12, 16, 100),
+              children: [
+                // ── Sapaan ─────────────────────────────────────────
+                Row(
                   children: [
-                    // ── Sapaan ─────────────────────────────────────────
-                    Row(
+                    Stack(
                       children: [
-                        Stack(
-                          children: [
-                            CircleAvatar(
-                              radius: 22,
-                              backgroundColor: _C.primaryContainer,
-                              child: Text(
-                                name.isNotEmpty ? name[0].toUpperCase() : 'P',
-                                style: const TextStyle(
-                                  color: Colors.white,
-                                  fontWeight: FontWeight.w700,
-                                ),
-                              ),
+                        CircleAvatar(
+                          radius: 22,
+                          backgroundColor: _C.primaryContainer,
+                          child: Text(
+                            name.isNotEmpty ? name[0].toUpperCase() : 'P',
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontWeight: FontWeight.w700,
                             ),
-                            Positioned(
-                              right: 0,
-                              bottom: 0,
-                              child: Container(
-                                width: 12,
-                                height: 12,
-                                decoration: BoxDecoration(
-                                  color: _C.success,
-                                  shape: BoxShape.circle,
-                                  border: Border.all(
-                                    color: _C.surface,
-                                    width: 2,
-                                  ),
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                'Halo, $name',
-                                style: const TextStyle(
-                                  fontSize: 18,
-                                  fontWeight: FontWeight.w600,
-                                  color: _C.textPrimary,
-                                ),
-                              ),
-                              const SizedBox(height: 2),
-                              Row(
-                                children: [
-                                  const Icon(
-                                    Icons.corporate_fare,
-                                    size: 15,
-                                    color: _C.textSecondary,
-                                  ),
-                                  const SizedBox(width: 4),
-                                  Expanded(
-                                    child: Text(
-                                      unit,
-                                      style: const TextStyle(
-                                        fontSize: 11,
-                                        color: _C.textSecondary,
-                                      ),
-                                      overflow: TextOverflow.ellipsis,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ],
                           ),
                         ),
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 10,
-                            vertical: 4,
-                          ),
-                          decoration: BoxDecoration(
-                            color: _C.success.withValues(alpha: 0.10),
-                            borderRadius: BorderRadius.circular(999),
-                          ),
-                          child: Row(
-                            children: [
-                              Container(
-                                width: 6,
-                                height: 6,
-                                decoration: const BoxDecoration(
-                                  color: _C.success,
-                                  shape: BoxShape.circle,
-                                ),
-                              ),
-                              const SizedBox(width: 6),
-                              const Text(
-                                'Sinkron',
-                                style: TextStyle(
-                                  fontSize: 11,
-                                  fontWeight: FontWeight.w500,
-                                  color: _C.success,
-                                ),
-                              ),
-                            ],
+                        Positioned(
+                          right: 0,
+                          bottom: 0,
+                          child: Container(
+                            width: 12,
+                            height: 12,
+                            decoration: BoxDecoration(
+                              color: _C.success,
+                              shape: BoxShape.circle,
+                              border: Border.all(color: _C.surface, width: 2),
+                            ),
                           ),
                         ),
                       ],
                     ),
-
-                    const SizedBox(height: 16),
-
-                    // ── Hero card ──────────────────────────────────────
-                    Container(
-                      padding: const EdgeInsets.all(16),
-                      decoration: BoxDecoration(
-                        color: _C.primaryContainer,
-                        borderRadius: BorderRadius.circular(16),
-                        boxShadow: [
-                          BoxShadow(
-                            color: _C.primaryContainer.withValues(alpha: 0.25),
-                            blurRadius: 12,
-                            offset: const Offset(0, 4),
-                          ),
-                        ],
-                      ),
+                    const SizedBox(width: 12),
+                    Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Row(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      'TOTAL ASET TANGGUNG JAWAB',
-                                      style: TextStyle(
-                                        fontSize: 11,
-                                        fontWeight: FontWeight.w500,
-                                        letterSpacing: 0.6,
-                                        color: _C.onPrimaryContainer,
-                                      ),
-                                    ),
-                                    const SizedBox(height: 4),
-                                    Row(
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.baseline,
-                                      textBaseline: TextBaseline.alphabetic,
-                                      children: [
-                                        responsibleAssetsAsync.when(
-                                          data: (assets) => Text(
-                                            '${assets.length}',
-                                            style: const TextStyle(
-                                              fontSize: 24,
-                                              fontWeight: FontWeight.w700,
-                                              color: Colors.white,
-                                            ),
-                                          ),
-                                          loading: () => const SizedBox(
-                                            width: 24,
-                                            height: 24,
-                                            child: CircularProgressIndicator(
-                                              strokeWidth: 2,
-                                              color: Colors.white,
-                                            ),
-                                          ),
-                                          error: (_, _) => const Text(
-                                            '0',
-                                            style: TextStyle(
-                                              fontSize: 24,
-                                              fontWeight: FontWeight.w700,
-                                              color: Colors.white,
-                                            ),
-                                          ),
-                                        ),
-                                        const SizedBox(width: 6),
-                                        Text(
-                                          'Aset Aktif (PIC)',
-                                          style: TextStyle(
-                                            fontSize: 14,
-                                            color: _C.onPrimaryContainer,
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ],
-                                ),
-                              ),
-                              Container(
-                                width: 40,
-                                height: 40,
-                                decoration: BoxDecoration(
-                                  color: Colors.white.withValues(alpha: 0.10),
-                                  borderRadius: BorderRadius.circular(12),
-                                ),
-                                child: const Icon(
-                                  Icons.inventory_2_outlined,
-                                  color: Colors.white,
-                                ),
-                              ),
-                            ],
+                          Text(
+                            'Halo, $name',
+                            style: const TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.w600,
+                              color: _C.textPrimary,
+                            ),
                           ),
-                          const SizedBox(height: 16),
+                          const SizedBox(height: 2),
                           Row(
                             children: [
+                              const Icon(
+                                Icons.corporate_fare,
+                                size: 15,
+                                color: _C.textSecondary,
+                              ),
+                              const SizedBox(width: 4),
                               Expanded(
-                                child: SizedBox(
-                                  height: 44,
-                                  child: ElevatedButton.icon(
-                                    onPressed: _goCreateMutation,
-                                    style: ElevatedButton.styleFrom(
-                                      backgroundColor: _C.surface,
-                                      foregroundColor: _C.primaryContainer,
-                                      elevation: 0,
-                                      shape: RoundedRectangleBorder(
-                                        borderRadius: BorderRadius.circular(12),
-                                      ),
-                                    ),
-                                    icon: const Icon(
-                                      Icons.add_circle,
-                                      size: 19,
-                                    ),
-                                    label: const Text(
-                                      'Ajukan Mutasi',
-                                      style: TextStyle(
-                                        fontSize: 12,
-                                        fontWeight: FontWeight.w600,
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                              ),
-                              const SizedBox(width: 12),
-                              Expanded(
-                                child: SizedBox(
-                                  height: 44,
-                                  child: OutlinedButton.icon(
-                                    onPressed: _goMutasiList,
-                                    style: OutlinedButton.styleFrom(
-                                      foregroundColor: Colors.white,
-                                      side: BorderSide(
-                                        color: Colors.white.withValues(
-                                          alpha: 0.25,
-                                        ),
-                                      ),
-                                      backgroundColor: Colors.white.withValues(
-                                        alpha: 0.10,
-                                      ),
-                                      shape: RoundedRectangleBorder(
-                                        borderRadius: BorderRadius.circular(12),
-                                      ),
-                                    ),
-                                    icon: const Icon(
-                                      Icons.receipt_long,
-                                      size: 19,
-                                    ),
-                                    label: const Text(
-                                      'Cek Tiket',
-                                      style: TextStyle(
-                                        fontSize: 12,
-                                        fontWeight: FontWeight.w600,
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ],
-                      ),
-                    ),
-
-                    const SizedBox(height: 16),
-
-                    // ── Search ─────────────────────────────────────────
-                    Row(
-                      children: [
-                        Expanded(
-                          child: Container(
-                            height: 44,
-                            decoration: BoxDecoration(
-                              color: _C.surface,
-                              borderRadius: BorderRadius.circular(12),
-                              boxShadow: [
-                                BoxShadow(
-                                  color: Colors.black.withValues(alpha: 0.04),
-                                  blurRadius: 6,
-                                ),
-                              ],
-                            ),
-                            child: TextField(
-                              controller: _searchController,
-                              onChanged: (_) => setState(() {}),
-                              style: const TextStyle(
-                                fontSize: 12,
-                                color: _C.textPrimary,
-                              ),
-                              decoration: InputDecoration(
-                                hintText: 'Cari nomor tiket atau nama aset...',
-                                hintStyle: TextStyle(
-                                  fontSize: 12,
-                                  color: _C.textSecondary.withValues(
-                                    alpha: 0.6,
-                                  ),
-                                ),
-                                prefixIcon: const Icon(
-                                  Icons.search,
-                                  size: 20,
-                                  color: _C.textSecondary,
-                                ),
-                                suffixIcon: _searchController.text.isNotEmpty
-                                    ? IconButton(
-                                        icon: const Icon(
-                                          Icons.clear,
-                                          size: 18,
-                                          color: _C.textSecondary,
-                                        ),
-                                        onPressed: () {
-                                          _searchController.clear();
-                                          setState(() {});
-                                        },
-                                      )
-                                    : null,
-                                border: InputBorder.none,
-                                contentPadding: const EdgeInsets.symmetric(
-                                  vertical: 12,
-                                ),
-                              ),
-                            ),
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                        Container(
-                          width: 44,
-                          height: 44,
-                          decoration: BoxDecoration(
-                            color: _C.surface,
-                            borderRadius: BorderRadius.circular(12),
-                            boxShadow: [
-                              BoxShadow(
-                                color: Colors.black.withValues(alpha: 0.04),
-                                blurRadius: 6,
-                              ),
-                            ],
-                          ),
-                          child: IconButton(
-                            onPressed: () {
-                              mutationsAsync.whenData((list) {
-                                _openDashboardFilter(list);
-                              });
-                            },
-                            tooltip: 'Filter Status',
-                            icon: Icon(
-                              Icons.tune,
-                              size: 20,
-                              color: _dashboardFilterStatus != null
-                                  ? _C.primaryContainer
-                                  : _C.textPrimary,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-
-                    if (_dashboardFilterStatus != null) ...[
-                      const SizedBox(height: 10),
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 12,
-                          vertical: 6,
-                        ),
-                        decoration: BoxDecoration(
-                          color: _dashboardFilterStatus!.color
-                              .withValues(alpha: 0.12),
-                          borderRadius: BorderRadius.circular(16),
-                          border: Border.all(
-                            color: _dashboardFilterStatus!.color
-                                .withValues(alpha: 0.3),
-                          ),
-                        ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Icon(
-                              Icons.filter_alt,
-                              size: 14,
-                              color: _dashboardFilterStatus!.color,
-                            ),
-                            const SizedBox(width: 6),
-                            Text(
-                              'Filter: ${_dashboardFilterStatus!.displayName}',
-                              style: TextStyle(
-                                fontSize: 12,
-                                fontWeight: FontWeight.w600,
-                                color: _dashboardFilterStatus!.color,
-                              ),
-                            ),
-                            const SizedBox(width: 8),
-                            InkWell(
-                              onTap: () => setState(
-                                () => _dashboardFilterStatus = null,
-                              ),
-                              child: Icon(
-                                Icons.close,
-                                size: 14,
-                                color: _dashboardFilterStatus!.color,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
-
-                    const SizedBox(height: 20),
-
-                    // ── Banner Menunggu Konfirmasi (jika ada) ──────────
-                    mutationsAsync.when(
-                      data: (list) {
-                        final pending = list
-                            .where((m) => m.status == MutationStatus.pendingConfirmation)
-                            .toList();
-                        if (pending.isEmpty) return const SizedBox.shrink();
-
-                        return Container(
-                          margin: const EdgeInsets.only(bottom: 16),
-                          padding: const EdgeInsets.all(16),
-                          decoration: BoxDecoration(
-                            color: const Color(0xFFFEF0C7),
-                            borderRadius: BorderRadius.circular(16),
-                            border: Border.all(color: const Color(0xFFFEDF89)),
-                          ),
-                          child: Row(
-                            children: [
-                              Container(
-                                width: 40,
-                                height: 40,
-                                decoration: BoxDecoration(
-                                  color: const Color(0xFFF79009),
-                                  borderRadius: BorderRadius.circular(12),
-                                ),
-                                child: const Icon(
-                                  Icons.assignment_turned_in,
-                                  color: Colors.white,
-                                  size: 22,
-                                ),
-                              ),
-                              const SizedBox(width: 12),
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      '${pending.length} Mutasi Menunggu Konfirmasi',
-                                      style: const TextStyle(
-                                        fontSize: 13,
-                                        fontWeight: FontWeight.bold,
-                                        color: Color(0xFFB45309),
-                                      ),
-                                    ),
-                                    const SizedBox(height: 2),
-                                    const Text(
-                                      'Staff Aset telah selesai update data fisik. Silakan periksa & konfirmasi penerimaan.',
-                                      style: TextStyle(
-                                        fontSize: 11,
-                                        color: Color(0xFF7A2E0E),
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                              const SizedBox(width: 8),
-                              ElevatedButton(
-                                onPressed: () {
-                                  if (pending.length == 1) {
-                                    context.push(
-                                      RouteNames.pemohonConfirmationPath
-                                          .replaceFirst(':id', pending.first.id),
-                                    );
-                                  } else {
-                                    context.push(RouteNames.pemohonMutasiPath);
-                                  }
-                                },
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: const Color(0xFFB45309),
-                                  foregroundColor: Colors.white,
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 12,
-                                    vertical: 8,
-                                  ),
-                                  minimumSize: Size.zero,
-                                  elevation: 0,
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(8),
-                                  ),
-                                ),
-                                child: const Text(
-                                  'Periksa',
-                                  style: TextStyle(
-                                    fontSize: 11,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                        );
-                      },
-                      loading: () => const SizedBox.shrink(),
-                      error: (_, _) => const SizedBox.shrink(),
-                    ),
-
-                    // ── Mutasi dalam proses ────────────────────────────
-                    mutationsAsync.when(
-                      data: (list) {
-                        final query = _searchController.text.trim().toLowerCase();
-                        final aktif = list
-                            .where(
-                              (m) =>
-                                  m.status != MutationStatus.completed &&
-                                  m.status != MutationStatus.rejected &&
-                                  (query.isEmpty ||
-                                      m.ticketNumber.toLowerCase().contains(query) ||
-                                      m.asset.name.toLowerCase().contains(query) ||
-                                      m.targetLocation.toLowerCase().contains(query) ||
-                                      m.targetPic.toLowerCase().contains(query)),
-                            )
-                            .toList();
-
-                        final fokus = aktif.isNotEmpty ? aktif.first : null;
-
-                        return Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Row(
-                              children: [
-                                const Text(
-                                  'Mutasi Dalam Proses',
-                                  style: TextStyle(
-                                    fontSize: 16,
-                                    fontWeight: FontWeight.w600,
-                                    color: _C.textPrimary,
-                                  ),
-                                ),
-                                const SizedBox(width: 6),
-                                Container(
-                                  width: 8,
-                                  height: 8,
-                                  decoration: const BoxDecoration(
-                                    color: _C.warning,
-                                    shape: BoxShape.circle,
-                                  ),
-                                ),
-                                const Spacer(),
-                                Text(
-                                  '${aktif.length} Aktif',
+                                child: Text(
+                                  unit,
                                   style: const TextStyle(
                                     fontSize: 11,
                                     color: _C.textSecondary,
                                   ),
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 10,
+                        vertical: 4,
+                      ),
+                      decoration: BoxDecoration(
+                        color: _C.success.withValues(alpha: 0.10),
+                        borderRadius: BorderRadius.circular(999),
+                      ),
+                      child: Row(
+                        children: [
+                          Container(
+                            width: 6,
+                            height: 6,
+                            decoration: const BoxDecoration(
+                              color: _C.success,
+                              shape: BoxShape.circle,
+                            ),
+                          ),
+                          const SizedBox(width: 6),
+                          const Text(
+                            'Sinkron',
+                            style: TextStyle(
+                              fontSize: 11,
+                              fontWeight: FontWeight.w500,
+                              color: _C.success,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+
+                const SizedBox(height: 16),
+
+                // ── Hero card ──────────────────────────────────────
+                Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: _C.primaryContainer,
+                    borderRadius: BorderRadius.circular(16),
+                    boxShadow: [
+                      BoxShadow(
+                        color: _C.primaryContainer.withValues(alpha: 0.25),
+                        blurRadius: 12,
+                        offset: const Offset(0, 4),
+                      ),
+                    ],
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'TOTAL ASET TANGGUNG JAWAB',
+                                  style: TextStyle(
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.w500,
+                                    letterSpacing: 0.6,
+                                    color: _C.onPrimaryContainer,
+                                  ),
+                                ),
+                                const SizedBox(height: 4),
+                                Row(
+                                  crossAxisAlignment:
+                                      CrossAxisAlignment.baseline,
+                                  textBaseline: TextBaseline.alphabetic,
+                                  children: [
+                                    responsibleAssetsAsync.when(
+                                      data: (assets) => Text(
+                                        '${assets.length}',
+                                        style: const TextStyle(
+                                          fontSize: 24,
+                                          fontWeight: FontWeight.w700,
+                                          color: Colors.white,
+                                        ),
+                                      ),
+                                      loading: () => const SizedBox(
+                                        width: 24,
+                                        height: 24,
+                                        child: CircularProgressIndicator(
+                                          strokeWidth: 2,
+                                          color: Colors.white,
+                                        ),
+                                      ),
+                                      error: (_, _) => const Text(
+                                        '0',
+                                        style: TextStyle(
+                                          fontSize: 24,
+                                          fontWeight: FontWeight.w700,
+                                          color: Colors.white,
+                                        ),
+                                      ),
+                                    ),
+                                    const SizedBox(width: 6),
+                                    Text(
+                                      'Aset Aktif (PIC)',
+                                      style: TextStyle(
+                                        fontSize: 14,
+                                        color: _C.onPrimaryContainer,
+                                      ),
+                                    ),
+                                  ],
                                 ),
                               ],
                             ),
-                            const SizedBox(height: 12),
-                            if (fokus == null)
-                              _EmptyCard(
-                                text: query.isNotEmpty
-                                    ? 'Tidak ada mutasi aktif yang cocok'
-                                    : 'Belum ada mutasi aktif',
-                                actionLabel: 'Ajukan Mutasi',
-                                onAction: _goCreateMutation,
-                              )
-                            else
-                              _ActiveMutationCard(
-                                ticket: fokus.ticketNumber,
-                                assetName: fokus.asset.name,
-                                statusLabel: _statusLabel(fokus.status),
-                                statusColor: _statusColor(fokus.status),
-                                fromLoc: fokus.targetLocation.isNotEmpty
-                                    ? 'Asal terdata'
-                                    : '-',
-                                toLoc: fokus.targetLocation,
-                                onConfirm: fokus.status == MutationStatus.pendingConfirmation
-                                    ? () {
-                                        context.push(
-                                          RouteNames.pemohonConfirmationPath
-                                              .replaceFirst(':id', fokus.id),
-                                        );
-                                      }
-                                    : null,
-                                onDetail: () {
-                                  context.push(
-                                    RouteNames.pemohonMutasiDetailPath
-                                        .replaceAll(':id', fokus.id),
-                                  );
-                                },
+                          ),
+                          Container(
+                            width: 40,
+                            height: 40,
+                            decoration: BoxDecoration(
+                              color: Colors.white.withValues(alpha: 0.10),
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: const Icon(
+                              Icons.inventory_2_outlined,
+                              color: Colors.white,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 16),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: SizedBox(
+                              height: 44,
+                              child: ElevatedButton.icon(
+                                onPressed: _goCreateMutation,
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: _C.surface,
+                                  foregroundColor: _C.primaryContainer,
+                                  elevation: 0,
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                ),
+                                icon: const Icon(Icons.add_circle, size: 19),
+                                label: const Text(
+                                  'Ajukan Mutasi',
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
                               ),
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: SizedBox(
+                              height: 44,
+                              child: OutlinedButton.icon(
+                                onPressed: _goMutasiList,
+                                style: OutlinedButton.styleFrom(
+                                  foregroundColor: Colors.white,
+                                  side: BorderSide(
+                                    color: Colors.white.withValues(alpha: 0.25),
+                                  ),
+                                  backgroundColor: Colors.white.withValues(
+                                    alpha: 0.10,
+                                  ),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                ),
+                                icon: const Icon(Icons.receipt_long, size: 19),
+                                label: const Text(
+                                  'Cek Tiket',
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+
+                const SizedBox(height: 16),
+
+                // ── Search ─────────────────────────────────────────
+                Row(
+                  children: [
+                    Expanded(
+                      child: Container(
+                        height: 44,
+                        decoration: BoxDecoration(
+                          color: _C.surface,
+                          borderRadius: BorderRadius.circular(12),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withValues(alpha: 0.04),
+                              blurRadius: 6,
+                            ),
                           ],
-                        );
-                      },
-                      loading: () => const Padding(
-                        padding: EdgeInsets.all(24),
-                        child: Center(child: CircularProgressIndicator()),
-                      ),
-                      error: (_, _) => _EmptyCard(
-                        text: 'Gagal memuat mutasi',
-                        actionLabel: 'Coba lagi',
-                        onAction: () => ref.invalidate(mutationListProvider),
-                      ),
-                    ),
-
-                    const SizedBox(height: 20),
-
-                    // ── Pengajuan terbaru ──────────────────────────────
-                    Row(
-                      children: [
-                        const Text(
-                          'Pengajuan Terbaru',
-                          style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.w600,
+                        ),
+                        child: TextField(
+                          controller: _searchController,
+                          onChanged: (_) => setState(() {}),
+                          style: const TextStyle(
+                            fontSize: 12,
                             color: _C.textPrimary,
                           ),
-                        ),
-                        const Spacer(),
-                        TextButton(
-                          onPressed: _goMutasiList,
-                          style: TextButton.styleFrom(
-                            foregroundColor: _C.info,
-                            padding: EdgeInsets.zero,
-                            minimumSize: Size.zero,
-                            tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                          decoration: InputDecoration(
+                            hintText: 'Cari nomor tiket atau nama aset...',
+                            hintStyle: TextStyle(
+                              fontSize: 12,
+                              color: _C.textSecondary.withValues(alpha: 0.6),
+                            ),
+                            prefixIcon: const Icon(
+                              Icons.search,
+                              size: 20,
+                              color: _C.textSecondary,
+                            ),
+                            suffixIcon: _searchController.text.isNotEmpty
+                                ? IconButton(
+                                    icon: const Icon(
+                                      Icons.clear,
+                                      size: 18,
+                                      color: _C.textSecondary,
+                                    ),
+                                    onPressed: () {
+                                      _searchController.clear();
+                                      setState(() {});
+                                    },
+                                  )
+                                : null,
+                            border: InputBorder.none,
+                            contentPadding: const EdgeInsets.symmetric(
+                              vertical: 12,
+                            ),
                           ),
-                          child: const Row(
-                            children: [
-                              Text(
-                                'Lihat Semua',
-                                style: TextStyle(fontSize: 11),
-                              ),
-                              Icon(Icons.chevron_right, size: 16),
-                            ],
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Container(
+                      width: 44,
+                      height: 44,
+                      decoration: BoxDecoration(
+                        color: _C.surface,
+                        borderRadius: BorderRadius.circular(12),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withValues(alpha: 0.04),
+                            blurRadius: 6,
+                          ),
+                        ],
+                      ),
+                      child: IconButton(
+                        onPressed: () {
+                          mutationsAsync.whenData((list) {
+                            _openDashboardFilter(list);
+                          });
+                        },
+                        tooltip: 'Filter Status',
+                        icon: Icon(
+                          Icons.tune,
+                          size: 20,
+                          color: _dashboardFilterStatus != null
+                              ? _C.primaryContainer
+                              : _C.textPrimary,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+
+                if (_dashboardFilterStatus != null) ...[
+                  const SizedBox(height: 10),
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 6,
+                    ),
+                    decoration: BoxDecoration(
+                      color: _dashboardFilterStatus!.color.withValues(
+                        alpha: 0.12,
+                      ),
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(
+                        color: _dashboardFilterStatus!.color.withValues(
+                          alpha: 0.3,
+                        ),
+                      ),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          Icons.filter_alt,
+                          size: 14,
+                          color: _dashboardFilterStatus!.color,
+                        ),
+                        const SizedBox(width: 6),
+                        Text(
+                          'Filter: ${_dashboardFilterStatus!.displayName}',
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                            color: _dashboardFilterStatus!.color,
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        InkWell(
+                          onTap: () =>
+                              setState(() => _dashboardFilterStatus = null),
+                          child: Icon(
+                            Icons.close,
+                            size: 14,
+                            color: _dashboardFilterStatus!.color,
                           ),
                         ),
                       ],
                     ),
-                    const SizedBox(height: 8),
+                  ),
+                ],
 
-                    mutationsAsync.when(
-                      data: (list) {
-                        final query = _searchController.text.trim().toLowerCase();
-                        var filteredList = _dashboardFilterStatus != null
-                            ? list
-                                .where((m) => m.status == _dashboardFilterStatus)
-                                .toList()
-                            : list;
+                const SizedBox(height: 20),
 
-                        if (query.isNotEmpty) {
-                          filteredList = filteredList
-                              .where(
-                                (m) =>
-                                    m.ticketNumber.toLowerCase().contains(query) ||
-                                    m.asset.name.toLowerCase().contains(query) ||
-                                    m.targetLocation.toLowerCase().contains(query) ||
-                                    m.targetPic.toLowerCase().contains(query),
-                              )
-                              .toList();
-                        }
+                // ── Banner Menunggu Konfirmasi (jika ada) ──────────
+                mutationsAsync.when(
+                  data: (list) {
+                    final pending = list
+                        .where(
+                          (m) => m.status == MutationStatus.pendingConfirmation,
+                        )
+                        .toList();
+                    if (pending.isEmpty) return const SizedBox.shrink();
 
-                        final recent = filteredList.take(5).toList();
+                    return Container(
+                      margin: const EdgeInsets.only(bottom: 16),
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFFEF0C7),
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(color: const Color(0xFFFEDF89)),
+                      ),
+                      child: Row(
+                        children: [
+                          Container(
+                            width: 40,
+                            height: 40,
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFF79009),
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: const Icon(
+                              Icons.assignment_turned_in,
+                              color: Colors.white,
+                              size: 22,
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  '${pending.length} Mutasi Menunggu Konfirmasi',
+                                  style: const TextStyle(
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.bold,
+                                    color: Color(0xFFB45309),
+                                  ),
+                                ),
+                                const SizedBox(height: 2),
+                                const Text(
+                                  'Staff Aset telah selesai update data fisik. Silakan periksa & konfirmasi penerimaan.',
+                                  style: TextStyle(
+                                    fontSize: 11,
+                                    color: Color(0xFF7A2E0E),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          ElevatedButton(
+                            onPressed: () {
+                              if (pending.length == 1) {
+                                context.push(
+                                  RouteNames.pemohonConfirmationPath
+                                      .replaceFirst(':id', pending.first.id),
+                                );
+                              } else {
+                                context.push(RouteNames.pemohonMutasiPath);
+                              }
+                            },
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: const Color(0xFFB45309),
+                              foregroundColor: Colors.white,
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 12,
+                                vertical: 8,
+                              ),
+                              minimumSize: Size.zero,
+                              elevation: 0,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                            ),
+                            child: const Text(
+                              'Periksa',
+                              style: TextStyle(
+                                fontSize: 11,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    );
+                  },
+                  loading: () => const SizedBox.shrink(),
+                  error: (_, _) => const SizedBox.shrink(),
+                ),
 
-                        if (recent.isEmpty) {
-                          final emptyMessage = query.isNotEmpty
-                              ? 'Tidak ada pengajuan yang cocok dengan "$query"'
-                              : (_dashboardFilterStatus != null
-                                  ? 'Tidak ada pengajuan dengan status "${_dashboardFilterStatus!.displayName}"'
-                                  : 'Belum ada pengajuan');
-                          return Padding(
-                            padding: const EdgeInsets.symmetric(vertical: 16),
-                            child: Text(
-                              emptyMessage,
+                // ── Mutasi dalam proses ────────────────────────────
+                mutationsAsync.when(
+                  data: (list) {
+                    final query = _searchController.text.trim().toLowerCase();
+                    final aktif = list
+                        .where(
+                          (m) =>
+                              m.status != MutationStatus.completed &&
+                              m.status != MutationStatus.rejected &&
+                              (query.isEmpty ||
+                                  m.ticketNumber.toLowerCase().contains(
+                                    query,
+                                  ) ||
+                                  m.asset.name.toLowerCase().contains(query) ||
+                                  m.targetLocation.toLowerCase().contains(
+                                    query,
+                                  ) ||
+                                  m.targetPic.toLowerCase().contains(query)),
+                        )
+                        .toList();
+
+                    final fokus = aktif.isNotEmpty ? aktif.first : null;
+
+                    return Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            const Text(
+                              'Mutasi Dalam Proses',
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.w600,
+                                color: _C.textPrimary,
+                              ),
+                            ),
+                            const SizedBox(width: 6),
+                            Container(
+                              width: 8,
+                              height: 8,
+                              decoration: const BoxDecoration(
+                                color: _C.warning,
+                                shape: BoxShape.circle,
+                              ),
+                            ),
+                            const Spacer(),
+                            Text(
+                              '${aktif.length} Aktif',
                               style: const TextStyle(
-                                fontSize: 13,
+                                fontSize: 11,
                                 color: _C.textSecondary,
                               ),
                             ),
-                          );
-                        }
+                          ],
+                        ),
+                        const SizedBox(height: 12),
+                        if (fokus == null)
+                          _EmptyCard(
+                            text: query.isNotEmpty
+                                ? 'Tidak ada mutasi aktif yang cocok'
+                                : 'Belum ada mutasi aktif',
+                            actionLabel: 'Ajukan Mutasi',
+                            onAction: _goCreateMutation,
+                          )
+                        else
+                          _ActiveMutationCard(
+                            ticket: fokus.ticketNumber,
+                            assetName: fokus.asset.name,
+                            statusLabel: _statusLabel(fokus.status),
+                            statusColor: _statusColor(fokus.status),
+                            fromLoc: fokus.targetLocation.isNotEmpty
+                                ? 'Asal terdata'
+                                : '-',
+                            toLoc: fokus.targetLocation,
+                            onConfirm:
+                                fokus.status ==
+                                    MutationStatus.pendingConfirmation
+                                ? () {
+                                    context.push(
+                                      RouteNames.pemohonConfirmationPath
+                                          .replaceFirst(':id', fokus.id),
+                                    );
+                                  }
+                                : null,
+                            onDetail: () {
+                              context.push(
+                                RouteNames.pemohonMutasiDetailPath.replaceAll(
+                                  ':id',
+                                  fokus.id,
+                                ),
+                              );
+                            },
+                          ),
+                      ],
+                    );
+                  },
+                  loading: () => const Padding(
+                    padding: EdgeInsets.all(24),
+                    child: Center(child: CircularProgressIndicator()),
+                  ),
+                  error: (_, _) => _EmptyCard(
+                    text: 'Gagal memuat mutasi',
+                    actionLabel: 'Coba lagi',
+                    onAction: () => ref.invalidate(mutationListProvider),
+                  ),
+                ),
 
-                        return Column(
-                          children: recent.map((m) {
-                            return Padding(
-                              padding: const EdgeInsets.only(bottom: 8),
-                              child: _RecentTile(
-                                ticket: m.ticketNumber,
-                                assetName: m.asset.name,
-                                statusLabel: _statusLabel(m.status),
-                                statusColor: _statusColor(m.status),
-                                subtitle:
-                                    '${m.targetLocation} • ${m.createdAt}',
-                                onTap: () {
-                                  context.push(
-                                    RouteNames.pemohonMutasiDetailPath
-                                        .replaceAll(':id', m.id),
-                                  );
-                                },
-                              ),
-                            );
-                          }).toList(),
-                        );
-                      },
-                      loading: () => const SizedBox.shrink(),
-                      error: (_, _) => const SizedBox.shrink(),
+                const SizedBox(height: 20),
+
+                // ── Pengajuan terbaru ──────────────────────────────
+                Row(
+                  children: [
+                    const Text(
+                      'Pengajuan Terbaru',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                        color: _C.textPrimary,
+                      ),
+                    ),
+                    const Spacer(),
+                    TextButton(
+                      onPressed: _goMutasiList,
+                      style: TextButton.styleFrom(
+                        foregroundColor: _C.info,
+                        padding: EdgeInsets.zero,
+                        minimumSize: Size.zero,
+                        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                      ),
+                      child: const Row(
+                        children: [
+                          Text('Lihat Semua', style: TextStyle(fontSize: 11)),
+                          Icon(Icons.chevron_right, size: 16),
+                        ],
+                      ),
                     ),
                   ],
                 ),
-              ),
-            ],
+                const SizedBox(height: 8),
+
+                mutationsAsync.when(
+                  data: (list) {
+                    final query = _searchController.text.trim().toLowerCase();
+                    var filteredList = _dashboardFilterStatus != null
+                        ? list
+                              .where((m) => m.status == _dashboardFilterStatus)
+                              .toList()
+                        : list;
+
+                    if (query.isNotEmpty) {
+                      filteredList = filteredList
+                          .where(
+                            (m) =>
+                                m.ticketNumber.toLowerCase().contains(query) ||
+                                m.asset.name.toLowerCase().contains(query) ||
+                                m.targetLocation.toLowerCase().contains(
+                                  query,
+                                ) ||
+                                m.targetPic.toLowerCase().contains(query),
+                          )
+                          .toList();
+                    }
+
+                    final recent = filteredList.take(5).toList();
+
+                    if (recent.isEmpty) {
+                      final emptyMessage = query.isNotEmpty
+                          ? 'Tidak ada pengajuan yang cocok dengan "$query"'
+                          : (_dashboardFilterStatus != null
+                                ? 'Tidak ada pengajuan dengan status "${_dashboardFilterStatus!.displayName}"'
+                                : 'Belum ada pengajuan');
+                      return Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 16),
+                        child: Text(
+                          emptyMessage,
+                          style: const TextStyle(
+                            fontSize: 13,
+                            color: _C.textSecondary,
+                          ),
+                        ),
+                      );
+                    }
+
+                    return Column(
+                      children: recent.map((m) {
+                        return Padding(
+                          padding: const EdgeInsets.only(bottom: 8),
+                          child: _RecentTile(
+                            ticket: m.ticketNumber,
+                            assetName: m.asset.name,
+                            statusLabel: _statusLabel(m.status),
+                            statusColor: _statusColor(m.status),
+                            subtitle: '${m.targetLocation} • ${m.createdAt}',
+                            onTap: () {
+                              context.push(
+                                RouteNames.pemohonMutasiDetailPath.replaceAll(
+                                  ':id',
+                                  m.id,
+                                ),
+                              );
+                            },
+                          ),
+                        );
+                      }).toList(),
+                    );
+                  },
+                  loading: () => const SizedBox.shrink(),
+                  error: (_, _) => const SizedBox.shrink(),
+                ),
+              ],
+            ),
           ),
-          bottomNavigationBar: CustomFloatingNavBar.scaffoldBottomBar(
-            items: RoleNavConfig.getNavItemsForRole(UserRole.pemohon),
-          ),
-        );
+        ],
+      ),
+      bottomNavigationBar: CustomFloatingNavBar.scaffoldBottomBar(
+        items: RoleNavConfig.getNavItemsForRole(UserRole.pemohon),
+      ),
+    );
   }
 }
 
@@ -1016,6 +1012,7 @@ class _ActiveMutationCard extends StatelessWidget {
                         fontWeight: FontWeight.w600,
                         color: _C.textPrimary,
                       ),
+                      overflow: TextOverflow.ellipsis,
                     ),
                     Text(
                       assetName,
@@ -1023,10 +1020,12 @@ class _ActiveMutationCard extends StatelessWidget {
                         fontSize: 11,
                         color: _C.textSecondary,
                       ),
+                      overflow: TextOverflow.ellipsis,
                     ),
                   ],
                 ),
               ),
+              const SizedBox(width: 8),
               Container(
                 padding: const EdgeInsets.symmetric(
                   horizontal: 10,

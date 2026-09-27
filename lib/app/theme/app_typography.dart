@@ -28,7 +28,7 @@ import 'app_colors.dart';
 abstract final class AppTypography {
   // ─── Display ─────────────────────────────────────────────────────────────
 
-  static TextStyle get display => GoogleFonts.inter(
+  static TextStyle get display => GoogleFonts.montserrat(
         fontSize: 32,
         fontWeight: FontWeight.w700,
         color: AppColors.textPrimary,
@@ -37,21 +37,21 @@ abstract final class AppTypography {
 
   // ─── Headings ─────────────────────────────────────────────────────────────
 
-  static TextStyle get h1 => GoogleFonts.inter(
+  static TextStyle get h1 => GoogleFonts.montserrat(
         fontSize: 24,
         fontWeight: FontWeight.w700,
         color: AppColors.textPrimary,
         height: 1.3,
       );
 
-  static TextStyle get h2 => GoogleFonts.inter(
+  static TextStyle get h2 => GoogleFonts.montserrat(
         fontSize: 20,
         fontWeight: FontWeight.w700,
         color: AppColors.textPrimary,
         height: 1.3,
       );
 
-  static TextStyle get h3 => GoogleFonts.inter(
+  static TextStyle get h3 => GoogleFonts.montserrat(
         fontSize: 18,
         fontWeight: FontWeight.w600,
         color: AppColors.textPrimary,
@@ -60,21 +60,21 @@ abstract final class AppTypography {
 
   // ─── Body ─────────────────────────────────────────────────────────────────
 
-  static TextStyle get bodyLarge => GoogleFonts.inter(
+  static TextStyle get bodyLarge => GoogleFonts.montserrat(
         fontSize: 16,
         fontWeight: FontWeight.w400,
         color: AppColors.textPrimary,
         height: 1.5,
       );
 
-  static TextStyle get body => GoogleFonts.inter(
+  static TextStyle get body => GoogleFonts.montserrat(
         fontSize: 14,
         fontWeight: FontWeight.w400,
         color: AppColors.textPrimary,
         height: 1.5,
       );
 
-  static TextStyle get bodySecondary => GoogleFonts.inter(
+  static TextStyle get bodySecondary => GoogleFonts.montserrat(
         fontSize: 14,
         fontWeight: FontWeight.w400,
         color: AppColors.textSecondary,
@@ -83,14 +83,14 @@ abstract final class AppTypography {
 
   // ─── Caption ─────────────────────────────────────────────────────────────
 
-  static TextStyle get caption => GoogleFonts.inter(
+  static TextStyle get caption => GoogleFonts.montserrat(
         fontSize: 12,
         fontWeight: FontWeight.w400,
         color: AppColors.textSecondary,
         height: 1.4,
       );
 
-  static TextStyle get captionPrimary => GoogleFonts.inter(
+  static TextStyle get captionPrimary => GoogleFonts.montserrat(
         fontSize: 12,
         fontWeight: FontWeight.w400,
         color: AppColors.textPrimary,
@@ -99,14 +99,14 @@ abstract final class AppTypography {
 
   // ─── Button ──────────────────────────────────────────────────────────────
 
-  static TextStyle get button => GoogleFonts.inter(
+  static TextStyle get button => GoogleFonts.montserrat(
         fontSize: 14,
         fontWeight: FontWeight.w600,
         color: AppColors.surface,
         height: 1.0,
       );
 
-  static TextStyle get buttonSecondary => GoogleFonts.inter(
+  static TextStyle get buttonSecondary => GoogleFonts.montserrat(
         fontSize: 14,
         fontWeight: FontWeight.w600,
         color: AppColors.primary,
@@ -117,7 +117,7 @@ abstract final class AppTypography {
 
   /// Style khusus untuk ticket number (DESIGN.md §8).
   /// Ticket harus mudah ditemukan dan tidak menggunakan typography dekoratif.
-  static TextStyle get ticket => GoogleFonts.inter(
+  static TextStyle get ticket => GoogleFonts.montserrat(
         fontSize: 14,
         fontWeight: FontWeight.w600,
         color: AppColors.primary,
@@ -128,7 +128,7 @@ abstract final class AppTypography {
   // ─── Helper: TextTheme untuk MaterialApp ─────────────────────────────────
 
   /// Menghasilkan [TextTheme] untuk digunakan di [ThemeData].
-  static TextTheme get textTheme => GoogleFonts.interTextTheme(
+  static TextTheme get textTheme => GoogleFonts.montserratTextTheme(
         const TextTheme(
           displayLarge: TextStyle(
             fontSize: 32,

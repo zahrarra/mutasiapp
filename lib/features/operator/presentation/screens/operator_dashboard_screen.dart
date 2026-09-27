@@ -82,7 +82,7 @@ class _OperatorDashboardScreenState
         children: [
             // ── Greeting ─────────────────────────────────────────────
             Text(
-              'Halo, $userName!',
+              'Halo, $userName',
               style: const TextStyle(
                 fontSize: 24,
                 fontWeight: FontWeight.w800,
@@ -140,7 +140,7 @@ class _OperatorDashboardScreenState
               children: [
                 Expanded(
                   child: _HeroCard(
-                    title: 'Pengajuan Masuk',
+                    title: 'Menunggu Verifikasi',
                     subtitle: 'Perlu diverifikasi segera',
                     badge: '${stats.pendingCount} Menunggu',
                     icon: Icons.fact_check_outlined,
@@ -151,23 +151,41 @@ class _OperatorDashboardScreenState
                 const SizedBox(width: 12),
                 Expanded(
                   child: _HeroCard(
-                    title: 'Riwayat Verifikasi',
-                    subtitle: 'Sudah diproses',
-                    badge: '${stats.waitingKabagCount} Menunggu',
-                    icon: Icons.history_rounded,
+                    title: 'Pengajuan Dikembalikan',
+                    subtitle: 'Perlu tindak lanjut',
+                    badge: '${stats.returnedCount} Berkas',
+                    icon: Icons.assignment_return_outlined,
                     background: _C.darkCard,
                     badgeHighlight: true,
-                    onTap: () {
-                      // Pakai history path jika ada di router; fallback list
-                      try {
-                        context.push(RouteNames.operatorHistoryPath);
-                      } catch (_) {
-                        context.push(RouteNames.operatorMutationsPath);
-                      }
-                    },
+                    onTap: () => context.push(RouteNames.operatorMutationsPath),
                   ),
                 ),
               ],
+            ),
+            const SizedBox(height: 16),
+
+            // ── Primary Action Button ─────────────────────────────────────
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton.icon(
+                key: const Key('btn_lihat_pengajuan'),
+                onPressed: () => context.push(RouteNames.operatorMutationsPath),
+                icon: const Icon(Icons.fact_check_outlined, size: 18),
+                label: const Text(
+                  'Lihat Pengajuan Masuk',
+                  style: TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
+                ),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: _C.navy,
+                  foregroundColor: Colors.white,
+                  padding:
+                      const EdgeInsets.symmetric(vertical: 14, horizontal: 20),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(14),
+                  ),
+                  elevation: 0,
+                ),
+              ),
             ),
             const SizedBox(height: 20),
 
@@ -535,24 +553,27 @@ class _QueueCard extends StatelessWidget {
         children: [
           Row(
             children: [
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                decoration: BoxDecoration(
-                  color: const Color(0xFFF1F5F9),
-                  borderRadius: BorderRadius.circular(6),
-                  border: Border.all(color: const Color(0xFFE2E8F0)),
-                ),
-                child: Text(
-                  m.ticketNumber,
-                  style: const TextStyle(
-                    fontSize: 11,
-                    fontWeight: FontWeight.w700,
-                    fontFamily: 'monospace',
-                    color: _C.navy,
+              Flexible(
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFF1F5F9),
+                    borderRadius: BorderRadius.circular(6),
+                    border: Border.all(color: const Color(0xFFE2E8F0)),
+                  ),
+                  child: Text(
+                    m.ticketNumber,
+                    style: const TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w700,
+                      fontFamily: 'monospace',
+                      color: _C.navy,
+                    ),
+                    overflow: TextOverflow.ellipsis,
                   ),
                 ),
               ),
-              const Spacer(),
+              const SizedBox(width: 8),
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                 decoration: BoxDecoration(
@@ -560,14 +581,14 @@ class _QueueCard extends StatelessWidget {
                   borderRadius: BorderRadius.circular(999),
                   border: Border.all(color: const Color(0xFFFDE68A)),
                 ),
-                child: const Row(
+                child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Icon(Icons.circle, size: 6, color: Color(0xFFF59E0B)),
-                    SizedBox(width: 4),
+                    const Icon(Icons.circle, size: 6, color: Color(0xFFF59E0B)),
+                    const SizedBox(width: 4),
                     Text(
-                      'Menunggu Verifikasi',
-                      style: TextStyle(
+                      m.status.displayName,
+                      style: const TextStyle(
                         fontSize: 11,
                         fontWeight: FontWeight.w600,
                         color: Color(0xFFB45309),

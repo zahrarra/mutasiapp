@@ -221,7 +221,7 @@ class _StaffMutationListScreenState
                       ),
                       child: DropdownButtonHideUnderline(
                         child: DropdownButton<StaffSortOrder>(
-                          key: const Key('dropdown_sort_staff'),
+                          key: const Key('dropdown_filter_staff_sort'),
                           value: sortOrder,
                           isDense: true,
                           icon: const Icon(Icons.sort_rounded,
@@ -357,7 +357,7 @@ class _StaffMutationListScreenState
             const SizedBox(height: 16),
             Text(
               _searchController.text.isNotEmpty
-                  ? 'Tidak ada hasil untuk\n"${_searchController.text}"'
+                  ? 'Tidak ada hasil untuk "${_searchController.text}"'
                   : 'Tidak Ada Antrian Update',
               textAlign: TextAlign.center,
               style: const TextStyle(
@@ -422,15 +422,19 @@ class _StaffMutationCard extends StatelessWidget {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Text(
-                  mutation.ticketNumber,
-                  style: const TextStyle(
-                    fontSize: 11,
-                    fontWeight: FontWeight.w700,
-                    fontFamily: 'monospace',
-                    color: _C.navy,
+                Expanded(
+                  child: Text(
+                    mutation.ticketNumber,
+                    style: const TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w700,
+                      fontFamily: 'monospace',
+                      color: _C.navy,
+                    ),
+                    overflow: TextOverflow.ellipsis,
                   ),
                 ),
+                const SizedBox(width: 8),
                 Container(
                   padding: const EdgeInsets.symmetric(
                       horizontal: 8, vertical: 3),

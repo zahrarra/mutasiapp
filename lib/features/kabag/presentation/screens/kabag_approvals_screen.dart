@@ -140,7 +140,7 @@ class _KabagApprovalsScreenState extends ConsumerState<KabagApprovalsScreen> {
                     _DropdownFilter(
                       child: DropdownButtonHideUnderline(
                         child: DropdownButton<KabagSortOrder>(
-                          key: const Key('dropdown_sort_kabag'),
+                          key: const Key('dropdown_filter_kabag_sort'),
                           value: sortOrder,
                           isDense: true,
                           icon: const Icon(Icons.sort_rounded,
@@ -267,15 +267,19 @@ class _KabagApprovalCard extends StatelessWidget {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Text(
-                  mutation.ticketNumber,
-                  style: const TextStyle(
-                    fontSize: 11,
-                    fontWeight: FontWeight.w700,
-                    fontFamily: 'monospace',
-                    color: _C.navy,
+                Expanded(
+                  child: Text(
+                    mutation.ticketNumber,
+                    style: const TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w700,
+                      fontFamily: 'monospace',
+                      color: _C.navy,
+                    ),
+                    overflow: TextOverflow.ellipsis,
                   ),
                 ),
+                const SizedBox(width: 8),
                 Container(
                   padding:
                       const EdgeInsets.symmetric(horizontal: 8, vertical: 3),

@@ -69,8 +69,8 @@ class _KadivApprovalsScreenState extends ConsumerState<KadivApprovalsScreen> {
         children: [
           // ── Custom Top Bar ──────────────────────────────────────────
           _ApprovalsTopBar(
-            title: title,
-            subtitle: 'Otorisasi Final Tingkat Kepala Divisi',
+            title: 'Approval Kadiv',
+            subtitle: title,
             onBack: () {
               if (Navigator.of(context).canPop()) {
                 Navigator.of(context).pop();
@@ -140,7 +140,7 @@ class _KadivApprovalsScreenState extends ConsumerState<KadivApprovalsScreen> {
                     _DropdownFilter(
                       child: DropdownButtonHideUnderline(
                         child: DropdownButton<KadivSortOrder>(
-                          key: const Key('dropdown_sort_kadiv'),
+                          key: const Key('dropdown_filter_kadiv_sort'),
                           value: sortOrder,
                           isDense: true,
                           icon: const Icon(Icons.sort_rounded,
@@ -267,15 +267,19 @@ class _KadivApprovalCard extends StatelessWidget {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Text(
-                  mutation.ticketNumber,
-                  style: const TextStyle(
-                    fontSize: 11,
-                    fontWeight: FontWeight.w700,
-                    fontFamily: 'monospace',
-                    color: _C.navy,
+                Expanded(
+                  child: Text(
+                    mutation.ticketNumber,
+                    style: const TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w700,
+                      fontFamily: 'monospace',
+                      color: _C.navy,
+                    ),
+                    overflow: TextOverflow.ellipsis,
                   ),
                 ),
+                const SizedBox(width: 8),
                 Container(
                   padding:
                       const EdgeInsets.symmetric(horizontal: 8, vertical: 3),

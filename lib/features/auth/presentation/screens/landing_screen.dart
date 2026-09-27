@@ -187,7 +187,7 @@ class _LandingScreenState extends State<LandingScreen>
                                   // App Title
                                   Text(
                                     'MutasiKu',
-                                    style: GoogleFonts.inter(
+                                    style: GoogleFonts.montserrat(
                                       fontSize: 36,
                                       fontWeight: FontWeight.w800,
                                       color: Colors.white,
@@ -209,7 +209,7 @@ class _LandingScreenState extends State<LandingScreen>
                                   Text(
                                     'Transparan. Terstruktur. Akuntabel.',
                                     textAlign: TextAlign.center,
-                                    style: GoogleFonts.inter(
+                                    style: GoogleFonts.montserrat(
                                       fontSize: 14,
                                       fontWeight: FontWeight.w400,
                                       color: const Color(0xFFCBD5E1)

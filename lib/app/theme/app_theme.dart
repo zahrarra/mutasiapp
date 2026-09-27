@@ -8,6 +8,7 @@
 // - Jangan hardcode Colors.blue / Colors.red di widget.
 
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 
 import 'app_colors.dart';
 import 'app_spacing.dart';
@@ -71,7 +72,9 @@ abstract final class AppTheme {
       useMaterial3: true,
       colorScheme: colorScheme,
 
-      // Typography
+      // Typography — Montserrat sebagai font default seluruh aplikasi.
+      // fontFamily ini meng-cover semua Text() yang tidak menentukan fontFamily secara eksplisit.
+      fontFamily: GoogleFonts.montserrat().fontFamily,
       textTheme: AppTypography.textTheme,
 
       // Scaffold

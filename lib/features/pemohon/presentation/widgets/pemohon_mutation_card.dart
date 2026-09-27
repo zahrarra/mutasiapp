@@ -172,17 +172,20 @@ class PemohonMutationCard extends StatelessWidget {
                     Expanded(
                       child: Row(
                         children: [
-                          Text(
-                            mutation.ticketNumber,
-                            style: TextStyle(
-                              fontFamily: 'monospace',
-                              fontWeight: FontWeight.bold,
-                              fontSize: 12,
-                              color: status == MutationStatus.pendingConfirmation
-                                  ? const Color(0xFF175CD3)
-                                  : (status == MutationStatus.returned
-                                      ? const Color(0xFFB45309)
-                                      : const Color(0xFF00273A)),
+                          Flexible(
+                            child: Text(
+                              mutation.ticketNumber,
+                              style: TextStyle(
+                                fontFamily: 'monospace',
+                                fontWeight: FontWeight.bold,
+                                fontSize: 12,
+                                color: status == MutationStatus.pendingConfirmation
+                                    ? const Color(0xFF175CD3)
+                                    : (status == MutationStatus.returned
+                                        ? const Color(0xFFB45309)
+                                        : const Color(0xFF00273A)),
+                              ),
+                              overflow: TextOverflow.ellipsis,
                             ),
                           ),
                           const SizedBox(width: 6),
@@ -205,6 +208,7 @@ class PemohonMutationCard extends StatelessWidget {
                         ],
                       ),
                     ),
+                    const SizedBox(width: 8),
                     Container(
                       padding: const EdgeInsets.symmetric(
                         horizontal: 8,
@@ -486,44 +490,52 @@ class PemohonMutationCard extends StatelessWidget {
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        Text.rich(
-                          TextSpan(
-                            text: '${_getStageText(status).split(':')[0]}: ',
-                            style: const TextStyle(
-                              fontSize: 11,
-                              color: Color(0xFF52606D),
-                            ),
-                            children: [
-                              TextSpan(
-                                text: _getStageText(status).contains(':')
-                                    ? _getStageText(status)
-                                        .split(':')[1]
-                                        .trim()
-                                    : _getStageText(status),
-                                style: const TextStyle(
-                                  fontWeight: FontWeight.bold,
-                                  color: Color(0xFF172B4D),
-                                ),
+                        Expanded(
+                          child: Text.rich(
+                            TextSpan(
+                              text: '${_getStageText(status).split(':')[0]}: ',
+                              style: const TextStyle(
+                                fontSize: 11,
+                                color: Color(0xFF52606D),
                               ),
-                            ],
+                              children: [
+                                TextSpan(
+                                  text: _getStageText(status).contains(':')
+                                      ? _getStageText(status)
+                                          .split(':')[1]
+                                          .trim()
+                                      : _getStageText(status),
+                                  style: const TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                    color: Color(0xFF172B4D),
+                                  ),
+                                ),
+                              ],
+                            ),
+                            overflow: TextOverflow.ellipsis,
                           ),
                         ),
-                        Text.rich(
-                          TextSpan(
-                            text: 'PIC: ',
-                            style: const TextStyle(
-                              fontSize: 11,
-                              color: Color(0xFF52606D),
-                            ),
-                            children: [
-                              TextSpan(
-                                text: mutation.targetPic,
-                                style: const TextStyle(
-                                  fontWeight: FontWeight.bold,
-                                  color: Color(0xFF172B4D),
-                                ),
+                        const SizedBox(width: 8),
+                        Flexible(
+                          child: Text.rich(
+                            TextSpan(
+                              text: 'PIC: ',
+                              style: const TextStyle(
+                                fontSize: 11,
+                                color: Color(0xFF52606D),
                               ),
-                            ],
+                              children: [
+                                TextSpan(
+                                  text: mutation.targetPic,
+                                  style: const TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                    color: Color(0xFF172B4D),
+                                  ),
+                                ),
+                              ],
+                            ),
+                            overflow: TextOverflow.ellipsis,
+                            textAlign: TextAlign.right,
                           ),
                         ),
                       ],

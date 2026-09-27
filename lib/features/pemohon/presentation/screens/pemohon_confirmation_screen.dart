@@ -127,42 +127,49 @@ class _PemohonConfirmationScreenState
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Row(
-                    children: [
-                      IconButton(
-                        icon: const Icon(
-                          Icons.arrow_back,
-                          color: Color(0xFF172B4D),
-                          size: 20,
+                  Expanded(
+                    child: Row(
+                      children: [
+                        IconButton(
+                          icon: const Icon(
+                            Icons.arrow_back,
+                            color: Color(0xFF172B4D),
+                            size: 20,
+                          ),
+                          tooltip: 'Kembali',
+                          onPressed: () => _safePop(context),
                         ),
-                        tooltip: 'Kembali',
-                        onPressed: () => _safePop(context),
-                      ),
-                      const Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            'Konfirmasi Mutasi',
-                            style: TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.bold,
-                              color: Color(0xFF172B4D),
-                              letterSpacing: -0.2,
-                            ),
+                        const Expanded(
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'Konfirmasi Mutasi',
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.bold,
+                                  color: Color(0xFF172B4D),
+                                  letterSpacing: -0.2,
+                                ),
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                              Text(
+                                'Verifikasi Fisik & Serah Terima Aset',
+                                style: TextStyle(
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w500,
+                                  color: Color(0xFF52606D),
+                                ),
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ],
                           ),
-                          Text(
-                            'Verifikasi Fisik & Serah Terima Aset',
-                            style: TextStyle(
-                              fontSize: 11,
-                              fontWeight: FontWeight.w500,
-                              color: Color(0xFF52606D),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ],
+                        ),
+                      ],
+                    ),
                   ),
+                  const SizedBox(width: 8),
                   Row(
                     children: [
                       Container(
@@ -393,33 +400,39 @@ class _PemohonConfirmationScreenState
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Row(
-                children: [
-                  Container(
-                    width: 28,
-                    height: 28,
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFE1F0FF),
-                      borderRadius: BorderRadius.circular(8),
+              Expanded(
+                child: Row(
+                  children: [
+                    Container(
+                      width: 28,
+                      height: 28,
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFE1F0FF),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: const Icon(
+                        Icons.tag,
+                        size: 16,
+                        color: Color(0xFF00273A),
+                      ),
                     ),
-                    child: const Icon(
-                      Icons.tag,
-                      size: 16,
-                      color: Color(0xFF00273A),
+                    const SizedBox(width: 8),
+                    Flexible(
+                      child: Text(
+                        mutation.ticketNumber,
+                        style: const TextStyle(
+                          fontFamily: 'monospace',
+                          fontSize: 14,
+                          fontWeight: FontWeight.bold,
+                          color: Color(0xFF172B4D),
+                        ),
+                        overflow: TextOverflow.ellipsis,
+                      ),
                     ),
-                  ),
-                  const SizedBox(width: 8),
-                  Text(
-                    mutation.ticketNumber,
-                    style: const TextStyle(
-                      fontFamily: 'monospace',
-                      fontSize: 14,
-                      fontWeight: FontWeight.bold,
-                      color: Color(0xFF172B4D),
-                    ),
-                  ),
-                ],
+                  ],
+                ),
               ),
+              const SizedBox(width: 8),
               Container(
                 padding: const EdgeInsets.symmetric(
                   horizontal: 10,
@@ -890,6 +903,7 @@ class _PemohonConfirmationScreenState
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     const Row(
+                      mainAxisSize: MainAxisSize.min,
                       children: [
                         CircleAvatar(
                           radius: 3,
@@ -905,12 +919,17 @@ class _PemohonConfirmationScreenState
                         ),
                       ],
                     ),
-                    Text(
-                      mutation.currentLocation,
-                      style: const TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w600,
-                        color: Color(0xFF52606D),
+                    const SizedBox(width: 8),
+                    Flexible(
+                      child: Text(
+                        mutation.currentLocation,
+                        style: const TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                          color: Color(0xFF52606D),
+                        ),
+                        overflow: TextOverflow.ellipsis,
+                        textAlign: TextAlign.right,
                       ),
                     ),
                   ],
@@ -936,6 +955,7 @@ class _PemohonConfirmationScreenState
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     const Row(
+                      mainAxisSize: MainAxisSize.min,
                       children: [
                         CircleAvatar(
                           radius: 3,
@@ -952,23 +972,31 @@ class _PemohonConfirmationScreenState
                         ),
                       ],
                     ),
-                    Row(
-                      children: [
-                        Text(
-                          mutation.targetLocation,
-                          style: const TextStyle(
-                            fontSize: 13,
-                            fontWeight: FontWeight.bold,
-                            color: Color(0xFF172B4D),
+                    const SizedBox(width: 8),
+                    Flexible(
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Flexible(
+                            child: Text(
+                              mutation.targetLocation,
+                              style: const TextStyle(
+                                fontSize: 13,
+                                fontWeight: FontWeight.bold,
+                                color: Color(0xFF172B4D),
+                              ),
+                              overflow: TextOverflow.ellipsis,
+                              textAlign: TextAlign.right,
+                            ),
                           ),
-                        ),
-                        const SizedBox(width: 4),
-                        const Icon(
-                          Icons.check_circle,
-                          size: 15,
-                          color: Color(0xFF15803D),
-                        ),
-                      ],
+                          const SizedBox(width: 4),
+                          const Icon(
+                            Icons.check_circle,
+                            size: 15,
+                            color: Color(0xFF15803D),
+                          ),
+                        ],
+                      ),
                     ),
                   ],
                 ),
@@ -1012,6 +1040,7 @@ class _PemohonConfirmationScreenState
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     const Row(
+                      mainAxisSize: MainAxisSize.min,
                       children: [
                         CircleAvatar(
                           radius: 3,
@@ -1027,12 +1056,17 @@ class _PemohonConfirmationScreenState
                         ),
                       ],
                     ),
-                    Text(
-                      mutation.currentPic,
-                      style: const TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w600,
-                        color: Color(0xFF52606D),
+                    const SizedBox(width: 8),
+                    Flexible(
+                      child: Text(
+                        mutation.currentPic,
+                        style: const TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                          color: Color(0xFF52606D),
+                        ),
+                        overflow: TextOverflow.ellipsis,
+                        textAlign: TextAlign.right,
                       ),
                     ),
                   ],
@@ -1058,6 +1092,7 @@ class _PemohonConfirmationScreenState
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     const Row(
+                      mainAxisSize: MainAxisSize.min,
                       children: [
                         CircleAvatar(
                           radius: 3,
@@ -1074,23 +1109,31 @@ class _PemohonConfirmationScreenState
                         ),
                       ],
                     ),
-                    Row(
-                      children: [
-                        Text(
-                          mutation.targetPic,
-                          style: const TextStyle(
-                            fontSize: 13,
-                            fontWeight: FontWeight.bold,
-                            color: Color(0xFF172B4D),
+                    const SizedBox(width: 8),
+                    Flexible(
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Flexible(
+                            child: Text(
+                              mutation.targetPic,
+                              style: const TextStyle(
+                                fontSize: 13,
+                                fontWeight: FontWeight.bold,
+                                color: Color(0xFF172B4D),
+                              ),
+                              overflow: TextOverflow.ellipsis,
+                              textAlign: TextAlign.right,
+                            ),
                           ),
-                        ),
-                        const SizedBox(width: 4),
-                        const Icon(
-                          Icons.verified,
-                          size: 15,
-                          color: Color(0xFF15803D),
-                        ),
-                      ],
+                          const SizedBox(width: 4),
+                          const Icon(
+                            Icons.verified,
+                            size: 15,
+                            color: Color(0xFF15803D),
+                          ),
+                        ],
+                      ),
                     ),
                   ],
                 ),
@@ -1541,11 +1584,14 @@ class _PemohonConfirmationScreenState
               children: [
                 Icon(Icons.lock, size: 11, color: Color(0xFF52606D)),
                 SizedBox(width: 4),
-                Text(
-                  'Audit Trail ISO 27001 Terenkripsi MutasiKu Enterprise',
-                  style: TextStyle(
-                    fontSize: 10,
-                    color: Color(0xFF52606D),
+                Flexible(
+                  child: Text(
+                    'Audit Trail ISO 27001 Terenkripsi MutasiKu Enterprise',
+                    style: TextStyle(
+                      fontSize: 10,
+                      color: Color(0xFF52606D),
+                    ),
+                    overflow: TextOverflow.ellipsis,
                   ),
                 ),
               ],

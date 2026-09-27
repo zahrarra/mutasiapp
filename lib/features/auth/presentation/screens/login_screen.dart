@@ -98,7 +98,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                   Expanded(
                     child: Text(
                       'Bantuan Akses MutasiKu',
-                      style: GoogleFonts.inter(
+                      style: GoogleFonts.montserrat(
                         fontSize: 16,
                         fontWeight: FontWeight.w700,
                         color: _LoginTheme.textHeading,
@@ -110,7 +110,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
               const SizedBox(height: 14),
               Text(
                 'Akun MutasiKu terintegrasi dengan kredensial Single Sign-On (SSO) pegawai internal.\n\nJika mengalami kendala masuk, pembaruan kata sandi, atau mutasi divisi tugas, silakan hubungi Helpdesk TI di ext. 1404 atau melalui portal dukungan internal.',
-                style: GoogleFonts.inter(
+                style: GoogleFonts.montserrat(
                   fontSize: 13,
                   height: 1.5,
                   color: _LoginTheme.textMuted,
@@ -131,7 +131,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                   onPressed: () => Navigator.pop(ctx),
                   child: Text(
                     'Mengerti',
-                    style: GoogleFonts.inter(
+                    style: GoogleFonts.montserrat(
                       fontSize: 14,
                       fontWeight: FontWeight.w600,
                     ),
@@ -233,7 +233,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                                 Expanded(
                                   child: Text(
                                     auth.failure!.userMessage,
-                                    style: GoogleFonts.inter(
+                                    style: GoogleFonts.montserrat(
                                       color: _LoginTheme.error,
                                       fontSize: 12,
                                       fontWeight: FontWeight.w500,
@@ -360,7 +360,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
               const SizedBox(width: 6),
               Text(
                 'MutasiKu',
-                style: GoogleFonts.inter(
+                style: GoogleFonts.montserrat(
                   fontSize: 12,
                   fontWeight: FontWeight.w700,
                   color: _LoginTheme.navy,
@@ -377,7 +377,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                 ),
                 child: Text(
                   'Internal',
-                  style: GoogleFonts.inter(
+                  style: GoogleFonts.montserrat(
                     fontSize: 10,
                     fontWeight: FontWeight.w600,
                     color: _LoginTheme.teal,
@@ -397,7 +397,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       children: [
         Text(
           'Hello Again!',
-          style: GoogleFonts.inter(
+          style: GoogleFonts.montserrat(
             fontSize: 32,
             fontWeight: FontWeight.w700,
             color: _LoginTheme.textHeading,
@@ -408,7 +408,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
         const SizedBox(height: 8),
         Text(
           "Welcome back you've\nbeen missed.",
-          style: GoogleFonts.inter(
+          style: GoogleFonts.montserrat(
             fontSize: 15,
             fontWeight: FontWeight.w400,
             color: _LoginTheme.textMuted,
@@ -437,14 +437,14 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
         key: const Key('login_username_field'),
         controller: _usernameController,
         textInputAction: TextInputAction.next,
-        style: GoogleFonts.inter(
+        style: GoogleFonts.montserrat(
           fontSize: 15,
           fontWeight: FontWeight.w400,
           color: _LoginTheme.textBody,
         ),
         decoration: InputDecoration(
           hintText: 'Email Address',
-          hintStyle: GoogleFonts.inter(
+          hintStyle: GoogleFonts.montserrat(
             fontSize: 15,
             color: _LoginTheme.textPlaceholder,
           ),
@@ -483,14 +483,14 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
         obscureText: _obscure,
         textInputAction: TextInputAction.done,
         onFieldSubmitted: (_) => _login(),
-        style: GoogleFonts.inter(
+        style: GoogleFonts.montserrat(
           fontSize: 15,
           fontWeight: FontWeight.w400,
           color: _LoginTheme.textBody,
         ),
         decoration: InputDecoration(
           hintText: 'Password',
-          hintStyle: GoogleFonts.inter(
+          hintStyle: GoogleFonts.montserrat(
             fontSize: 15,
             color: _LoginTheme.textPlaceholder,
           ),
@@ -520,8 +520,11 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   }
 
   Widget _buildUtilityRow() {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+    return Wrap(
+      alignment: WrapAlignment.spaceBetween,
+      crossAxisAlignment: WrapCrossAlignment.center,
+      spacing: 8,
+      runSpacing: 8,
       children: [
         // Remember Me
         InkWell(
@@ -546,7 +549,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
               const SizedBox(width: 8),
               Text(
                 'Remember me',
-                style: GoogleFonts.inter(
+                style: GoogleFonts.montserrat(
                   fontSize: 13,
                   fontWeight: FontWeight.w400,
                   color: _LoginTheme.textMuted,
@@ -561,7 +564,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
           onTap: _showHelpdeskDialog,
           child: Text(
             'Forgot Password?',
-            style: GoogleFonts.inter(
+            style: GoogleFonts.montserrat(
               fontSize: 13,
               fontWeight: FontWeight.w600,
               color: _LoginTheme.textHeading,
@@ -599,7 +602,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
               )
             : Text(
                 'Login',
-                style: GoogleFonts.inter(
+                style: GoogleFonts.montserrat(
                   fontSize: 16,
                   fontWeight: FontWeight.w600,
                   letterSpacing: 0.5,
@@ -641,7 +644,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
               children: [
                 Text(
                   'Sistem Terotentikasi & Terproteksi',
-                  style: GoogleFonts.inter(
+                  style: GoogleFonts.montserrat(
                     fontSize: 13,
                     fontWeight: FontWeight.w600,
                     color: _LoginTheme.textBody,
@@ -650,7 +653,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                 const SizedBox(height: 3),
                 Text(
                   'Akses hanya diperuntukkan bagi pegawai resmi. Setiap aktivitas pencatatan mutasi aset diawasi oleh audit log SIPA.',
-                  style: GoogleFonts.inter(
+                  style: GoogleFonts.montserrat(
                     fontSize: 11,
                     fontWeight: FontWeight.w400,
                     color: _LoginTheme.textMuted,
@@ -681,27 +684,30 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                 color: _LoginTheme.textMuted,
               ),
               const SizedBox(width: 6),
-              RichText(
-                text: TextSpan(
-                  children: [
-                    TextSpan(
-                      text: 'Butuh bantuan akses? ',
-                      style: GoogleFonts.inter(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w400,
-                        color: _LoginTheme.textMuted,
+              Flexible(
+                child: Text.rich(
+                  TextSpan(
+                    children: [
+                      TextSpan(
+                        text: 'Butuh bantuan akses? ',
+                        style: GoogleFonts.montserrat(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w400,
+                          color: _LoginTheme.textMuted,
+                        ),
                       ),
-                    ),
-                    TextSpan(
-                      text: 'Hubungi Helpdesk TI',
-                      style: GoogleFonts.inter(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w600,
-                        color: _LoginTheme.navy,
-                        decoration: TextDecoration.underline,
+                      TextSpan(
+                        text: 'Hubungi Helpdesk TI',
+                        style: GoogleFonts.montserrat(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                          color: _LoginTheme.navy,
+                          decoration: TextDecoration.underline,
+                        ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
+                  overflow: TextOverflow.ellipsis,
                 ),
               ),
             ],
@@ -723,12 +729,15 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
               color: _LoginTheme.textMuted,
             ),
             const SizedBox(width: 6),
-            Text(
-              'Quick Role Switch (Demo & Testing)',
-              style: GoogleFonts.inter(
-                fontSize: 11,
-                fontWeight: FontWeight.w600,
-                color: _LoginTheme.textMuted,
+            Expanded(
+              child: Text(
+                'Quick Role Switch (Demo & Testing)',
+                style: GoogleFonts.montserrat(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w600,
+                  color: _LoginTheme.textMuted,
+                ),
+                overflow: TextOverflow.ellipsis,
               ),
             ),
           ],
@@ -756,7 +765,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                 ),
                 child: Text(
                   role.displayName,
-                  style: GoogleFonts.inter(
+                  style: GoogleFonts.montserrat(
                     fontSize: 11,
                     fontWeight: FontWeight.w600,
                     color: selected ? Colors.white : _LoginTheme.textBody,
@@ -782,12 +791,15 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
               color: _LoginTheme.textPlaceholder,
             ),
             const SizedBox(width: 4),
-            Text(
-              'Sistem Pengelolaan Mutasi & Inventaris Aset',
-              style: GoogleFonts.inter(
-                fontSize: 11,
-                fontWeight: FontWeight.w500,
-                color: _LoginTheme.textPlaceholder,
+            Flexible(
+              child: Text(
+                'Sistem Pengelolaan Mutasi & Inventaris Aset',
+                style: GoogleFonts.montserrat(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w500,
+                  color: _LoginTheme.textPlaceholder,
+                ),
+                overflow: TextOverflow.ellipsis,
               ),
             ),
           ],
@@ -795,7 +807,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
         const SizedBox(height: 4),
         Text(
           'MutasiKu v2.4.0 • Divisi Operasional TI',
-          style: GoogleFonts.inter(
+          style: GoogleFonts.montserrat(
             fontSize: 10,
             color: _LoginTheme.textPlaceholder.withValues(alpha: 0.8),
           ),
