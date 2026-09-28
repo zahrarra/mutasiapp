@@ -18,6 +18,9 @@ class FakeStaffMutationRepository implements MutationRepository {
   FakeStaffMutationRepository(this.mutations);
 
   @override
+  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
+
+  @override
   Future<Result<Mutation>> submitMutation(SubmitMutationParams params) async =>
       throw UnimplementedError();
 

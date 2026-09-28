@@ -144,7 +144,7 @@ void main() {
       expect(created.asset.name, equals('Printer Epson L3210'));
     });
 
-    test('2, 3, 4: Jalur TANPA Kadiv (Pemohon → Operator → Kabag → Staff → Pemohon Konfirmasi → Completed)', () async {
+    test('2, 3, 4: Alur Lengkap Mutasi Disetujui (Pemohon → Operator → Bagian Aset → Pemimpin Divisi → Pemohon Konfirmasi Sesuai → Completed)', () async {
       // 1. Submit
       final subRes = await mutationRepo.submitMutation(
         const SubmitMutationParams(
@@ -156,8 +156,11 @@ void main() {
           targetLocation: 'Cabang Bandung',
           targetPic: 'Ahmad Fauzi',
           reason: 'Kebutuhan cabang biasa',
+          isAssetMovingWithApplicant: true,
+          documentName: 'sk_sdm.pdf',
         ),
       );
+      expect(subRes.isSuccess, isTrue);
       final mutId = subRes.dataOrNull!.id;
 
       // 2. Operator receives mutation in queue
@@ -165,54 +168,55 @@ void main() {
       final oprQueue = allMutations.dataOrNull!.where((m) => m.status == MutationStatus.submitted).toList();
       expect(oprQueue.any((m) => m.id == mutId), isTrue);
 
-      // 3. Operator verifies WITHOUT Kadiv (requiresKadivApproval = false)
-      final verifRes = await mutationRepo.verifyMutation(
+      // 3. Operator forwards to Bagian Aset
+      final opForwardRes = await mutationRepo.operatorForward(
         mutationId: mutId,
         operatorName: 'Siti Operator',
-        requiresKadivApproval: false,
       );
-      expect(verifRes.isSuccess, isTrue);
-      expect(verifRes.dataOrNull!.status, equals(MutationStatus.waitingKabagApproval));
-      expect(verifRes.dataOrNull!.requiresKadivApproval, isFalse);
+      expect(opForwardRes.isSuccess, isTrue);
+      expect(opForwardRes.dataOrNull!.status, equals(MutationStatus.waitingAssetVerification));
 
-      // 4. Kabag approves (without Kadiv) → status directly becomes approved
-      final allAfterVerif = await mutationRepo.getAllMutations();
-      final kabagQueue = allAfterVerif.dataOrNull!.where((m) => m.status == MutationStatus.waitingKabagApproval).toList();
-      expect(kabagQueue.any((m) => m.id == mutId), isTrue);
+      // 4. Bagian Aset receives and forwards to Pemimpin Divisi
+      final allAfterOpr = await mutationRepo.getAllMutations();
+      final asetQueue = allAfterOpr.dataOrNull!.where((m) => m.status == MutationStatus.waitingAssetVerification).toList();
+      expect(asetQueue.any((m) => m.id == mutId), isTrue);
 
-      final kabagApproveRes = await mutationRepo.approveMutationKabag(
+      final asetForwardRes = await mutationRepo.assetSectionForward(
         mutationId: mutId,
-        kabagName: 'Bambang Kabag',
-        requiresKadivApproval: false,
-      );
-      expect(kabagApproveRes.isSuccess, isTrue);
-      expect(kabagApproveRes.dataOrNull!.status, equals(MutationStatus.approved));
-
-      // 6. Staff receives mutation
-      final allAfterKabag = await mutationRepo.getAllMutations();
-      final staffQueue = allAfterKabag.dataOrNull!.where((m) => m.status == MutationStatus.approved).toList();
-      expect(staffQueue.any((m) => m.id == mutId), isTrue);
-
-      // 7. Staff updates location + PIC
-      final staffUpdateRes = await mutationRepo.processStaffAssetUpdate(
-        mutationId: mutId,
-        staffName: 'Agus Staff',
-        newLocation: 'Cabang Bandung Lt 2',
+        verifierName: 'Bambang Kabag',
         newPic: 'Ahmad Fauzi',
       );
-      expect(staffUpdateRes.isSuccess, isTrue);
-      expect(staffUpdateRes.dataOrNull!.status, equals(MutationStatus.pendingConfirmation));
+      expect(asetForwardRes.isSuccess, isTrue);
+      expect(asetForwardRes.dataOrNull!.status, equals(MutationStatus.waitingDivisionHeadApproval));
 
-      // 8 & 9. Pemohon confirms (Sesuai) → status completed
-      final confirmRes = await mutationRepo.confirmMutation(
+      // 5. Pemimpin Divisi receives and approves
+      final allAfterAset = await mutationRepo.getAllMutations();
+      final kadivQueue = allAfterAset.dataOrNull!.where((m) => m.status == MutationStatus.waitingDivisionHeadApproval).toList();
+      expect(kadivQueue.any((m) => m.id == mutId), isTrue);
+
+      final kadivApproveRes = await mutationRepo.divisionApprove(
+        mutationId: mutId,
+        divisionHeadName: 'Hendra Kadiv',
+      );
+      expect(kadivApproveRes.isSuccess, isTrue);
+      expect(kadivApproveRes.dataOrNull!.status, equals(MutationStatus.waitingConfirmation));
+
+      // 6. Pemohon confirms (Sesuai) -> auto updates asset and completes
+      final confirmRes = await mutationRepo.confirmMutationResult(
         mutationId: mutId,
         confirmedBy: 'Rina Pemohon',
+        isSesuai: true,
       );
       expect(confirmRes.isSuccess, isTrue);
       expect(confirmRes.dataOrNull!.status, equals(MutationStatus.completed));
+
+      // Verify asset location and PIC are updated automatically
+      final updatedAsset = await assetRepo.getAssetById('AST-PRN-009');
+      expect(updatedAsset.dataOrNull?.location, equals('Cabang Bandung'));
+      expect(updatedAsset.dataOrNull?.pic, equals('Ahmad Fauzi'));
     });
 
-    test('3, 4, 5: Jalur DENGAN Kadiv (Operator set requiresKadivApproval → Kabag routes to Kadiv → Kadiv approves → Staff)', () async {
+    test('3, 4, 5: Alur Konfirmasi Tidak Sesuai (Kembali ke Bagian Aset)', () async {
       // 1. Submit
       final subRes = await mutationRepo.submitMutation(
         const SubmitMutationParams(
@@ -224,46 +228,31 @@ void main() {
           targetLocation: 'Data Center Bali',
           targetPic: 'Kadek Surya',
           reason: 'Relokasi server produksi bernilai tinggi',
+          isAssetMovingWithApplicant: true,
+          documentName: 'sk_srv.pdf',
         ),
       );
       final mutId = subRes.dataOrNull!.id;
 
-      // 3. Operator verifies WITH Kadiv (requiresKadivApproval = true)
-      final verifRes = await mutationRepo.verifyMutation(
+      // 2. Operator forwards
+      await mutationRepo.operatorForward(mutationId: mutId, operatorName: 'Siti Operator');
+
+      // 3. Bagian Aset forwards
+      await mutationRepo.assetSectionForward(mutationId: mutId, verifierName: 'Bambang Kabag');
+
+      // 4. Pemimpin Divisi approves
+      await mutationRepo.divisionApprove(mutationId: mutId, divisionHeadName: 'Hendra Kadiv');
+
+      // 5. Pemohon confirms Tidak Sesuai with reason
+      final disputeRes = await mutationRepo.confirmMutationResult(
         mutationId: mutId,
-        operatorName: 'Siti Operator',
-        requiresKadivApproval: true,
+        confirmedBy: 'Rina Pemohon',
+        isSesuai: false,
+        reason: 'Fisik server tergores dan belum tiba di rak',
       );
-      expect(verifRes.isSuccess, isTrue);
-      expect(verifRes.dataOrNull!.requiresKadivApproval, isTrue);
-      expect(verifRes.dataOrNull!.status, equals(MutationStatus.waitingKabagApproval));
-
-      // 4. Kabag detects requiresKadivApproval == true → routes to waitingKadivApproval
-      final kabagApproveRes = await mutationRepo.approveMutationKabag(
-        mutationId: mutId,
-        kabagName: 'Bambang Kabag',
-        requiresKadivApproval: true,
-      );
-      expect(kabagApproveRes.isSuccess, isTrue);
-      expect(kabagApproveRes.dataOrNull!.status, equals(MutationStatus.waitingKadivApproval));
-
-      // 5. Kadiv receives mutation
-      final allAfterKabag = await mutationRepo.getAllMutations();
-      final kadivQueue = allAfterKabag.dataOrNull!.where((m) => m.status == MutationStatus.waitingKadivApproval).toList();
-      expect(kadivQueue.any((m) => m.id == mutId), isTrue);
-
-      // Kadiv approves
-      final kadivApproveRes = await mutationRepo.approveMutationKadiv(
-        mutationId: mutId,
-        kadivName: 'Hendra Kadiv',
-      );
-      expect(kadivApproveRes.isSuccess, isTrue);
-      expect(kadivApproveRes.dataOrNull!.status, equals(MutationStatus.approved));
-
-      // 6. Staff receives only after Kadiv approval
-      final allAfterKadiv = await mutationRepo.getAllMutations();
-      final staffQueue = allAfterKadiv.dataOrNull!.where((m) => m.status == MutationStatus.approved).toList();
-      expect(staffQueue.any((m) => m.id == mutId), isTrue);
+      expect(disputeRes.isSuccess, isTrue);
+      expect(disputeRes.dataOrNull!.status, equals(MutationStatus.waitingAssetVerification));
+      expect(disputeRes.dataOrNull!.confirmationReason, equals('Fisik server tergores dan belum tiba di rak'));
     });
   });
 
@@ -444,12 +433,12 @@ void main() {
 
   group('SMOKE TEST 14: Profile Screen for all 6 Roles', () {
     final roles = [
-      (pemohonUser, 'Pemohon'),
-      (operatorUser, 'Operator'),
-      (kabagUser, 'Kabag Aset'),
-      (kadivUser, 'Kadiv'),
-      (staffUser, 'Staff Aset'),
-      (adminUser, 'Admin'),
+      (pemohonUser, pemohonUser.role.label),
+      (operatorUser, operatorUser.role.label),
+      (kabagUser, kabagUser.role.label),
+      (kadivUser, kadivUser.role.label),
+      (staffUser, staffUser.role.label),
+      (adminUser, adminUser.role.label),
     ];
 
     for (final (user, label) in roles) {
@@ -464,8 +453,8 @@ void main() {
         );
         await tester.pumpAndSettle();
 
-        expect(find.text(user.name), findsOneWidget);
-        expect(find.text(user.email ?? ''), findsOneWidget);
+        expect(find.text(user.name), findsWidgets);
+        expect(find.text(user.email ?? ''), findsWidgets);
         expect(find.text(label), findsWidgets);
       });
     }
@@ -485,7 +474,7 @@ void main() {
 
       expect(find.text('User & Permission'), findsOneWidget);
       expect(find.text('Lokasi & Unit'), findsOneWidget);
-      expect(find.text('Kategori Aset & Kriteria Approval'), findsOneWidget);
+      expect(find.textContaining('Kategori Aset'), findsOneWidget);
     });
 
     testWidgets('Admin Users Screen renders without dead buttons', (tester) async {

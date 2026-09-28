@@ -38,39 +38,43 @@ class _AdminUsersScreenState extends ConsumerState<AdminUsersScreen> {
     switch (role) {
       case UserRole.pemohon:
         return [
-          'Ajukan Mutasi',
-          'Edit Mutasi Dikembalikan',
-          'Konfirmasi Fisik',
+          'Ajukan Mutasi Aset Terdaftar',
+          'Edit & Kirim Ulang Pengajuan',
+          'Konfirmasi Fisik (Sesuai / Tidak Sesuai)',
         ];
       case UserRole.operator:
         return [
-          'Verifikasi Pengajuan',
-          'Kembalikan Pengajuan',
-          'Tentukan Jalur Kadiv',
+          'Pemeriksaan Kelengkapan Data & SK SDM',
+          'Kembalikan Pengajuan Belum Lengkap',
+          'Teruskan Pengajuan ke Bagian Aset',
+        ];
+      case UserRole.bagianAset:
+        return [
+          'Verifikasi Keabsahan Aset & SK SDM',
+          'Tentukan PIC Baru bila Kosong',
+          'Kembalikan Pengajuan Tidak Valid',
+          'Teruskan ke Pemimpin Divisi',
+          'Tindak Lanjut Laporan Tidak Sesuai',
         ];
       case UserRole.kabagAset:
         return [
-          'Setujui Mutasi',
-          'Tolak Mutasi',
-          'Tinjau Riwayat Approval',
+          'Verifikasi Bagian Aset (Legacy)',
+          'Teruskan ke Pemimpin Divisi',
         ];
       case UserRole.kadiv:
         return [
-          'Approval Tingkat Kadiv',
-          'Tolak Mutasi',
-          'Review Lintas Wilayah',
+          'Approval Final Semua Pengajuan Aset',
+          'Tolak Pengajuan dengan Alasan',
         ];
       case UserRole.staffAset:
         return [
-          'Update Lokasi Fisik',
-          'Update PIC Fisik',
-          'Serah Terima Aset',
+          'Pembaruan Otomatis oleh Server (Legacy)',
         ];
       case UserRole.admin:
         return [
-          'Kelola Master Data',
-          'Audit Log',
-          'Kelola Role & Akses',
+          'Kelola Master Pengguna & Role',
+          'Kelola Master Lokasi & Unit',
+          'Kelola Master Kategori Aset',
         ];
     }
   }
@@ -143,7 +147,7 @@ class _AdminUsersScreenState extends ConsumerState<AdminUsersScreen> {
                   DropdownButtonFormField<UserRole>(
                     initialValue: selectedRole,
                     decoration: const InputDecoration(labelText: 'Role Akun *'),
-                    items: UserRole.values.map((r) {
+                    items: UserRole.activeRoles.map((r) {
                       return DropdownMenuItem(
                         value: r,
                         child: Text(r.displayName),
@@ -262,7 +266,7 @@ class _AdminUsersScreenState extends ConsumerState<AdminUsersScreen> {
                   DropdownButtonFormField<UserRole>(
                     initialValue: selectedRole,
                     decoration: const InputDecoration(labelText: 'Role Akun *'),
-                    items: UserRole.values.map((r) {
+                    items: UserRole.activeRoles.map((r) {
                       return DropdownMenuItem(
                         value: r,
                         child: Text(r.displayName),
@@ -460,9 +464,9 @@ class _AdminUsersScreenState extends ConsumerState<AdminUsersScreen> {
                         color: AppColors.textSecondary,
                       ),
                     ),
-                    const Text(
-                      '6 Role RBAC Terdaftar',
-                      style: TextStyle(
+                    Text(
+                      '${UserRole.activeRoles.length} Role RBAC Aktif',
+                      style: const TextStyle(
                         fontSize: 12,
                         color: AppColors.primary,
                         fontWeight: FontWeight.bold,

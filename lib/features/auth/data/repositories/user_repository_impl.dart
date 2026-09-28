@@ -31,6 +31,15 @@ class UserRepositoryImpl implements UserRepository {
       isActive: true,
     ),
     const User(
+      id: 'usr_bagian_aset',
+      username: 'bagian_aset',
+      name: 'Hendra Setiawan (Bagian Aset)',
+      role: UserRole.bagianAset,
+      email: 'aset@mutasiku.id',
+      department: 'Bagian Pengelolaan Aset & Logistik',
+      isActive: true,
+    ),
+    const User(
       id: 'usr_kabag',
       username: 'kabag',
       name: 'H. M. Yusuf (Kabag Aset)',
@@ -42,10 +51,10 @@ class UserRepositoryImpl implements UserRepository {
     const User(
       id: 'usr_kadiv',
       username: 'kadiv',
-      name: 'Drs. Ahmad Dahlan (Kadiv)',
+      name: 'Drs. Ahmad Dahlan (Pemimpin Divisi)',
       role: UserRole.kadiv,
       email: 'kadiv@mutasiku.id',
-      department: 'Divisi Umum & Perlengkapan',
+      department: 'Divisi Umum & Aset',
       isActive: true,
     ),
     const User(
@@ -71,6 +80,7 @@ class UserRepositoryImpl implements UserRepository {
   static const Set<String> _protectedUserIds = {
     'usr_pemohon',
     'usr_operator',
+    'usr_bagian_aset',
     'usr_kabag',
     'usr_kadiv',
     'usr_staff',

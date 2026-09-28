@@ -31,6 +31,10 @@ abstract final class RouteGuards {
     if (location.startsWith(role.routePrefix)) {
       return true;
     }
+    if ((role == UserRole.bagianAset && location.startsWith('/kabag')) ||
+        (role == UserRole.kabagAset && location.startsWith('/bagian-aset'))) {
+      return true;
+    }
 
     return false;
   }

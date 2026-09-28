@@ -10,6 +10,7 @@ void main() {
   late MutationRepositoryImpl mutationRepo;
 
   setUp(() {
+    AssetRepositoryImpl.resetForTesting();
     MutationRepositoryImpl.resetForTesting();
     assetRepo = AssetRepositoryImpl();
     mutationRepo = MutationRepositoryImpl(assetRepository: assetRepo);
@@ -24,9 +25,8 @@ void main() {
           applicantId: 'usr_pemohon_1',
           applicantName: 'Pemohon Test',
           assetId: 'ast_1',
-          sourceLocation: 'Lokasi Asal di Form',
+          sourceLocation: '', // Empty to test snapshotting from master asset
           targetLocation: 'Cabang Medan',
-          currentPic: 'PIC di Form',
           targetPic: 'PIC Baru Medan',
           reason: 'Peremajaan cabang Medan',
         ),
@@ -43,7 +43,7 @@ void main() {
       expect(mutation.status, equals(MutationStatus.submitted));
     });
 
-    test('master asset in AssetRepository remains unchanged during submission', () async {
+    test('master asset in AssetRepository location and pic remain unchanged during submission, status locked to inMutation', () async {
       final initialAsset = (await assetRepo.getAssetById('ast_1')).dataOrNull!;
       expect(initialAsset.location, equals('Lantai 3 — Ruang IT Developer'));
       expect(initialAsset.status, equals(AssetStatus.available));
@@ -60,11 +60,13 @@ void main() {
         ),
       );
 
-      // Verify master asset in asset repository is UNCHANGED
+      // Verify master asset in asset repository location and pic are UNCHANGED during submission,
+      // but asset is locked to inMutation per PRD V1.1 §8 Rule 5
       final afterAsset = (await assetRepo.getAssetById('ast_1')).dataOrNull!;
       expect(afterAsset.location, equals('Lantai 3 — Ruang IT Developer'));
       expect(afterAsset.pic, equals(initialAsset.pic));
-      expect(afterAsset.status, equals(AssetStatus.available));
+      expect(afterAsset.status, equals(AssetStatus.inMutation));
+      expect(afterAsset.hasActiveMutation, isTrue);
     });
 
     test('prevents duplicate active mutation for the same asset', () async {

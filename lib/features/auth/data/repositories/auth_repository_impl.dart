@@ -55,9 +55,11 @@ class AuthRepositoryImpl implements AuthRepository {
         role = UserRole.admin;
       } else if (lower.contains('operator')) {
         role = UserRole.operator;
+      } else if (lower.contains('aset') || lower.contains('bagian')) {
+        role = UserRole.bagianAset;
       } else if (lower.contains('kabag')) {
         role = UserRole.kabagAset;
-      } else if (lower.contains('kadiv')) {
+      } else if (lower.contains('kadiv') || lower.contains('pemimpin')) {
         role = UserRole.kadiv;
       } else if (lower.contains('staff')) {
         role = UserRole.staffAset;

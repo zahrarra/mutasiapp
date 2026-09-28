@@ -47,4 +47,7 @@ abstract class AssetRepository {
     required String ticketNumber,
     required String updatedBy,
   });
+
+  /// Memperbarui informasi aset (status, lokasi, PIC).
+  Future<Result<Asset>> updateAsset(Asset asset);
 }

@@ -9,10 +9,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../app/router/route_names.dart';
+import '../../../auth/domain/entities/user_role.dart';
 import '../../../auth/presentation/providers/auth_provider.dart';
 import '../../../auth/presentation/widgets/role_dashboard_layout.dart';
 import '../../../mutation/domain/entities/mutation.dart';
-import '../../../mutation/domain/entities/mutation_status.dart';
 import '../providers/kabag_approval_provider.dart';
 
 class _C {
@@ -36,12 +36,18 @@ class KabagDashboardScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final authState = ref.watch(authStateProvider);
-    final userName = authState.user?.name ?? 'Kabag Aset';
+    final isBagianAset = authState.user?.role == UserRole.bagianAset;
+    final userName =
+        authState.user?.name ?? (isBagianAset ? 'Bagian Aset' : 'Kabag Aset');
     final stats = ref.watch(kabagStatsProvider);
     final asyncMutations = ref.watch(kabagAllMutationsProvider);
 
+    final approvalsRoute = isBagianAset
+        ? RouteNames.bagianAsetVerificationsPath
+        : RouteNames.kabagApprovalsPath;
+
     return RoleDashboardLayout(
-      title: 'Dashboard Kabag Aset',
+      title: isBagianAset ? 'Dashboard Bagian Aset' : 'Dashboard Kabag Aset',
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -56,9 +62,11 @@ class KabagDashboardScreen extends ConsumerWidget {
             ),
           ),
           const SizedBox(height: 4),
-          const Text(
-            'Tinjau dan berikan persetujuan mutasi aset',
-            style: TextStyle(
+          Text(
+            isBagianAset
+                ? 'Verifikasi keabsahan data aset & kelengkapan pengajuan'
+                : 'Tinjau dan berikan persetujuan mutasi aset',
+            style: const TextStyle(
               fontSize: 13,
               color: _C.textSecondary,
               fontWeight: FontWeight.w500,
@@ -73,7 +81,7 @@ class KabagDashboardScreen extends ConsumerWidget {
                 child: _StatCard(
                   key: const Key('stat_waiting'),
                   icon: Icons.pending_actions_rounded,
-                  label: 'Menunggu Approval',
+                  label: isBagianAset ? 'Menunggu Verifikasi' : 'Menunggu Approval',
                   count: stats.waitingApprovalCount,
                   iconColor: _C.warning,
                   iconBg: _C.warningLight,
@@ -81,7 +89,7 @@ class KabagDashboardScreen extends ConsumerWidget {
                   onTap: () {
                     ref.read(kabagStatusFilterProvider.notifier).state =
                         KabagStatusFilter.waiting;
-                    context.push(RouteNames.kabagApprovalsPath);
+                    context.push(approvalsRoute);
                   },
                 ),
               ),
@@ -98,7 +106,7 @@ class KabagDashboardScreen extends ConsumerWidget {
                   onTap: () {
                     ref.read(kabagStatusFilterProvider.notifier).state =
                         KabagStatusFilter.approved;
-                    context.push(RouteNames.kabagApprovalsPath);
+                    context.push(approvalsRoute);
                   },
                 ),
               ),
@@ -115,7 +123,7 @@ class KabagDashboardScreen extends ConsumerWidget {
                   onTap: () {
                     ref.read(kabagStatusFilterProvider.notifier).state =
                         KabagStatusFilter.rejected;
-                    context.push(RouteNames.kabagApprovalsPath);
+                    context.push(approvalsRoute);
                   },
                 ),
               ),
@@ -131,12 +139,12 @@ class KabagDashboardScreen extends ConsumerWidget {
               onPressed: () {
                 ref.read(kabagStatusFilterProvider.notifier).state =
                     KabagStatusFilter.waiting;
-                context.push(RouteNames.kabagApprovalsPath);
+                context.push(approvalsRoute);
               },
               icon: const Icon(Icons.how_to_reg_outlined, size: 18),
-              label: const Text(
-                'Lihat Antrean Approval',
-                style: TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
+              label: Text(
+                isBagianAset ? 'Lihat Antrean Verifikasi' : 'Lihat Antrean Approval',
+                style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
               ),
               style: ElevatedButton.styleFrom(
                 backgroundColor: _C.navy,
@@ -156,10 +164,12 @@ class KabagDashboardScreen extends ConsumerWidget {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              const Expanded(
+              Expanded(
                 child: Text(
-                  'Antrean Persetujuan',
-                  style: TextStyle(
+                  isBagianAset
+                      ? 'Antrean Verifikasi Aset'
+                      : 'Antrean Persetujuan',
+                  style: const TextStyle(
                     fontSize: 15,
                     fontWeight: FontWeight.w700,
                     color: _C.textPrimary,
@@ -172,7 +182,7 @@ class KabagDashboardScreen extends ConsumerWidget {
                 onTap: () {
                   ref.read(kabagStatusFilterProvider.notifier).state =
                       KabagStatusFilter.all;
-                  context.push(RouteNames.kabagApprovalsPath);
+                  context.push(approvalsRoute);
                 },
                 child: const Text(
                   'Lihat Semua',
@@ -191,7 +201,7 @@ class KabagDashboardScreen extends ConsumerWidget {
             data: (mutations) {
               final recentMutations = mutations
                   .where(
-                      (m) => m.status == MutationStatus.waitingKabagApproval)
+                      (m) => m.status.isWaitingAssetVerification)
                   .take(5)
                   .toList();
 
@@ -205,8 +215,13 @@ class KabagDashboardScreen extends ConsumerWidget {
                           padding: const EdgeInsets.only(bottom: 10),
                           child: _ApprovalCard(
                             mutation: item,
-                            onTap: () => context
-                                .push('/kabag/approvals/${item.id}'),
+                            onTap: () {
+                              final path = isBagianAset
+                                  ? RouteNames.bagianAsetVerificationDetailPath
+                                      .replaceFirst(':id', item.id)
+                                  : '/kabag/approvals/${item.id}';
+                              context.push(path);
+                            },
                           ),
                         ))
                     .toList(),

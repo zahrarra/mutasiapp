@@ -115,8 +115,8 @@ void main() {
     expect(find.byKey(const Key('dropdown_filter_kabag_status')), findsOneWidget);
     expect(find.byKey(const Key('dropdown_filter_kabag_sort')), findsOneWidget);
 
-    // Verifikasi badge Menunggu Approval Kabag tampil
-    expect(find.text('Menunggu Approval Kabag'), findsWidgets);
+    // Verifikasi badge status tampil
+    expect(find.text('Menunggu Verifikasi Bagian Aset'), findsWidgets);
   });
 
   testWidgets('KabagApprovalsScreen search filters list correctly',
@@ -154,7 +154,7 @@ void main() {
     // Ticket Number
     expect(find.text('FURNITUR-2026-00018'), findsOneWidget);
     // Status Badge
-    expect(find.text('Menunggu Approval Kabag'), findsWidgets);
+    expect(find.text('Menunggu Verifikasi Bagian Aset'), findsWidgets);
     // Pemohon
     expect(find.text('Dewi Lestari'), findsWidgets);
     // Transition Row Lokasi
@@ -201,20 +201,18 @@ void main() {
     await tester.tap(find.byKey(const Key('btn_setujui_approval')));
     await tester.pumpAndSettle();
 
-    // Dialog konfirmasi muncul (default requiresKadiv = false)
-    expect(find.text('Konfirmasi Persetujuan'), findsOneWidget);
-    expect(find.textContaining('Tanpa approval Kadiv'), findsOneWidget);
+    // Dialog konfirmasi muncul (Verifikasi Data Aset)
+    expect(find.text('Verifikasi Data Aset'), findsOneWidget);
 
-    // Tap Ya, Setujui
+    // Tap Ya, Teruskan
     await tester.tap(find.byKey(const Key('btn_confirm_setujui')));
     await tester.pumpAndSettle();
 
-    // Cek status mutasi terupdate ke approved
+    // Cek status mutasi terupdate ke waitingDivisionHeadApproval
     final detail =
         await containerRef.read(mutationDetailProvider('mut_004').future);
-    expect(detail.status, MutationStatus.approved);
-    expect(detail.approvedBy, 'Bambang Kabag');
-    expect(detail.requiresKadivApproval, false);
+    expect(detail.status.isWaitingDivisionApproval, true);
+    expect(detail.assetVerifiedBy, 'Bambang Kabag');
   });
 
   testWidgets(
@@ -241,23 +239,22 @@ void main() {
     await tester.pumpWidget(testWidget);
     await tester.pumpAndSettle();
 
-    // Tap Setujui
+    // Tap Teruskan / Verifikasi
     await tester.tap(find.byKey(const Key('btn_setujui_approval')));
     await tester.pumpAndSettle();
 
-    // Dialog konfirmasi menunjukkan bahwa perlu approval Kadiv
-    expect(find.text('Konfirmasi Persetujuan'), findsOneWidget);
-    expect(find.textContaining('Memerlukan approval Kadiv'), findsOneWidget);
+    // Dialog konfirmasi muncul
+    expect(find.text('Verifikasi Data Aset'), findsOneWidget);
 
-    // Tap Ya, Setujui
+    // Tap Ya, Teruskan
     await tester.tap(find.byKey(const Key('btn_confirm_setujui')));
     await tester.pumpAndSettle();
 
     // Cek status mutasi terupdate ke waitingKadivApproval
     final detail =
         await containerRef.read(mutationDetailProvider('mut_004_kadiv').future);
-    expect(detail.status, MutationStatus.waitingKadivApproval);
-    expect(detail.approvedBy, 'Bambang Kabag');
+    expect(detail.status.isWaitingDivisionApproval, true);
+    expect(detail.assetVerifiedBy, 'Bambang Kabag');
     expect(detail.requiresKadivApproval, true);
   });
 
@@ -305,12 +302,12 @@ void main() {
     await tester.tap(find.byKey(const Key('btn_submit_tolak')));
     await tester.pumpAndSettle();
 
-    // Cek status mutasi terupdate ke rejected
+    // Cek status mutasi terupdate ke returned
     final detail =
         await containerRef.read(mutationDetailProvider('mut_004').future);
-    expect(detail.status, MutationStatus.rejected);
+    expect(detail.status, MutationStatus.returned);
     expect(detail.rejectedBy, 'Bambang Kabag');
-    expect(detail.rejectionReason,
+    expect(detail.returnReason,
         'Anggaran relokasi furnitur belum dialokasikan untuk cabang ini.');
   });
 
@@ -328,6 +325,15 @@ void main() {
         ),
         GoRoute(
           path: '/kabag/approvals/:id',
+          builder: (context, state) {
+            navigatedPath = state.uri.toString();
+            return Scaffold(
+              body: Text('Kabag Detail: ${state.pathParameters['id']}'),
+            );
+          },
+        ),
+        GoRoute(
+          path: '/bagian-aset/verifications/:id',
           builder: (context, state) {
             navigatedPath = state.uri.toString();
             return Scaffold(
@@ -353,14 +359,14 @@ void main() {
     await tester.pumpAndSettle();
 
     // Verify NotificationScreen renders items
-    expect(find.byType(NotificationTile), findsWidgets);
+    expect(find.textContaining('FURNITUR-2026-00018'), findsWidgets);
 
     // Tap first notification item (which has relatedMutationId: mut_004)
-    await tester.tap(find.byType(NotificationTile).first);
+    await tester.tap(find.textContaining('FURNITUR-2026-00018').first);
     await tester.pumpAndSettle();
 
-    // Verify navigation reached kabag approval detail route
-    expect(navigatedPath, '/kabag/approvals/mut_004');
+    // Verify navigation reached kabag / bagian-aset approval detail route
+    expect(navigatedPath, contains('mut_004'));
     expect(find.text('Kabag Detail: mut_004'), findsOneWidget);
   });
 }

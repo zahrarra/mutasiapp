@@ -9,7 +9,6 @@ import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 import '../../../../app/router/route_names.dart';
-import '../../../../app/theme/app_colors.dart';
 import '../../../../app/theme/app_spacing.dart';
 import '../../../../core/widgets/app_feedback.dart';
 import '../../../../core/widgets/error_view.dart';
@@ -25,13 +24,11 @@ import '../../../mutation/presentation/providers/mutation_form_provider.dart';
 import '../../../mutation/presentation/providers/mutation_provider.dart';
 import '../../../notification/domain/entities/notification_item.dart';
 import '../../../notification/presentation/providers/notification_provider.dart';
-import '../../../operator/presentation/providers/operator_verification_provider.dart';
 
 abstract final class _EditColors {
   static const bg = Color(0xFFF6F8FA);
   static const white = Color(0xFFFFFFFF);
   static const primary = Color(0xFF00273A);
-  static const primaryHover = Color(0xFF0F3D56);
   static const textPrimary = Color(0xFF0F1D28);
   static const textSecondary = Color(0xFF42474D);
   static const textMuted = Color(0xFF64748B);
@@ -40,7 +37,6 @@ abstract final class _EditColors {
   static const surfaceLow = Color(0xFFECF4FF);
   static const secondary = Color(0xFF0F766E);
   static const success = Color(0xFF15803D);
-  static const warning = Color(0xFFB45309);
   static const error = Color(0xFFB42318);
   static const info = Color(0xFF1E40AF);
   static const infoBg = Color(0xFFEBF5FF);
@@ -515,38 +511,14 @@ class _PemohonEditMutationScreenState
                 Row(
                   children: [
                     Text(
-                      'Alur Perbaikan',
+                      'Alur Perbaikan & Pengajuan Ulang',
                       style: _t(
-                        size: 16,
+                        size: 15,
                         w: FontWeight.w700,
                         color: _EditColors.textPrimary,
                       ),
                     ),
-                    const SizedBox(width: 8),
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 10,
-                        vertical: 2,
-                      ),
-                      decoration: BoxDecoration(
-                        color: _EditColors.infoBg,
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: Text(
-                        'Pengajuan Ulang',
-                        style: _t(
-                          size: 12,
-                          w: FontWeight.w600,
-                          color: _EditColors.info,
-                        ),
-                      ),
-                    ),
                   ],
-                ),
-                // Compatibility for test assertions checking 'Alur Perbaikan & Pengajuan Ulang'
-                const Offstage(
-                  offstage: true,
-                  child: Text('Alur Perbaikan & Pengajuan Ulang'),
                 ),
                 const SizedBox(height: 6),
                 Text(
@@ -634,16 +606,18 @@ class _PemohonEditMutationScreenState
                     ),
                   ],
                 ),
-                // Compatibility for tests checking 'Catatan dari Operator:' verbatim
-                const Offstage(
-                  offstage: true,
-                  child: Text('Catatan dari Operator:'),
-                ),
-                // Verbatim text for tests looking for exact string without quotation marks
-                Offstage(offstage: true, child: Text(returnReason)),
                 const SizedBox(height: 6),
                 Text(
-                  '“$returnReason”',
+                  'Catatan dari Operator:',
+                  style: _t(
+                    size: 11,
+                    w: FontWeight.w600,
+                    color: _EditColors.textSecondary,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  returnReason,
                   style: _t(
                     size: 12.5,
                     color: _EditColors.textSecondary,

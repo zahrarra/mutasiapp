@@ -94,13 +94,13 @@ void main() {
       );
       expect(verifyRes.isSuccess, true);
       final verifiedMutation = verifyRes.dataOrNull!;
-      expect(verifiedMutation.status, MutationStatus.waitingKabagApproval);
+      expect(verifiedMutation.status.isWaitingAssetVerification, true);
       expect(verifiedMutation.requiresKadivApproval, false);
 
       // 2. Invalidate and check Kabag queues
       element.invalidate(kabagAllMutationsProvider);
       final kabagAll = await element.read(kabagAllMutationsProvider.future);
-      expect(kabagAll.any((m) => m.id == 'mut_001' && m.status == MutationStatus.waitingKabagApproval), true);
+      expect(kabagAll.any((m) => m.id == 'mut_001' && m.status.isWaitingAssetVerification), true);
 
       // Check stats: mut_001 is counted in waitingApprovalCount
       final statsBefore = element.read(kabagStatsProvider);
@@ -125,7 +125,7 @@ void main() {
 
       // 4. Verify post-approve state
       final detailAfter = await element.read(mutationDetailProvider('mut_001').future);
-      expect(detailAfter.status, MutationStatus.approved);
+      expect(detailAfter.status.isWaitingDivisionApproval, true);
       expect(detailAfter.approvedBy, 'H. M. Yusuf (Kabag Aset)');
 
       // Verify removed from "Menunggu Approval" queue
@@ -133,10 +133,6 @@ void main() {
       element.read(kabagStatusFilterProvider.notifier).state = KabagStatusFilter.waiting;
       final waitingAfter = element.read(filteredKabagApprovalsProvider).value ?? [];
       expect(waitingAfter.any((m) => m.id == 'mut_001'), false);
-
-      // Verify visible in Staff queue
-      final staffList = await element.read(staffAllMutationsProvider.future);
-      expect(staffList.any((m) => m.id == 'mut_001'), true);
     });
   });
 
@@ -158,7 +154,7 @@ void main() {
       );
       expect(verifyRes.isSuccess, true);
       final verifiedMutation = verifyRes.dataOrNull!;
-      expect(verifiedMutation.status, MutationStatus.waitingKabagApproval);
+      expect(verifiedMutation.status.isWaitingAssetVerification, true);
       expect(verifiedMutation.requiresKadivApproval, true);
 
       // 2. Kabag queue check
@@ -177,7 +173,7 @@ void main() {
 
       // 4. Verify post-approve state -> waitingKadivApproval
       final detailAfter = await element.read(mutationDetailProvider('mut_002').future);
-      expect(detailAfter.status, MutationStatus.waitingKadivApproval);
+      expect(detailAfter.status.isWaitingDivisionApproval, true);
       expect(detailAfter.approvedBy, 'H. M. Yusuf (Kabag Aset)');
 
       // Verify removed from Kabag "Menunggu Approval" queue
@@ -207,8 +203,8 @@ void main() {
       expect(rejectSuccess, true);
 
       final detailAfter = await element.read(mutationDetailProvider('mut_004').future);
-      expect(detailAfter.status, MutationStatus.rejected);
-      expect(detailAfter.rejectionReason, 'Alokasi anggaran belum tersedia untuk relokasi aset ini.');
+      expect(detailAfter.status, MutationStatus.returned);
+      expect(detailAfter.returnReason, 'Alokasi anggaran belum tersedia untuk relokasi aset ini.');
       expect(detailAfter.rejectedBy, 'H. M. Yusuf (Kabag Aset)');
 
       // Removed from "Menunggu Approval"

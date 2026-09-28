@@ -6,7 +6,6 @@
 import '../../../../core/errors/failures.dart';
 import '../../../../core/errors/result.dart';
 import '../entities/mutation.dart';
-import '../entities/mutation_status.dart';
 import '../repositories/mutation_repository.dart';
 
 class ApproveMutationKadivUseCase {
@@ -37,11 +36,11 @@ class ApproveMutationKadivUseCase {
       );
     }
 
-    if (mutation.status != MutationStatus.waitingKadivApproval) {
+    if (!mutation.status.isWaitingDivisionApproval) {
       return Result.failure(
         ValidationFailure(
           message:
-              'Hanya pengajuan berstatus Menunggu Approval Kadiv yang dapat disetujui (Status saat ini: ${mutation.status.displayName}).',
+              'Hanya pengajuan berstatus Menunggu Approval Pemimpin Divisi yang dapat disetujui (Status saat ini: ${mutation.status.displayName}).',
         ),
       );
     }

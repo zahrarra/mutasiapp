@@ -132,48 +132,40 @@ void main() {
 
     final verifySuccess = await operatorContainer.read(verificationActionProvider.notifier).verify(
       mutationId: mutation.id,
-      requiresKadivApproval: false,
+      requiresKadivApproval: true,
     );
     expect(verifySuccess, isTrue);
 
     final verifiedMutation = (await mutationRepo.getMutationById(mutation.id) as Success<Mutation>).data;
-    expect(verifiedMutation.status, equals(MutationStatus.waitingKabagApproval));
-    expect(verifiedMutation.requiresKadivApproval, isFalse);
+    expect(verifiedMutation.status.isWaitingAssetVerification, isTrue);
 
-    // 4. Kabag reviews: appears in 'Menunggu Approval'
+    // 4. Bagian Aset reviews & forwards to Pemimpin Divisi
     final kabagContainer = createContainer(currentUser: kabagUser);
     addTearDown(kabagContainer.dispose);
 
     final kabagApprovals = await kabagContainer.read(kabagAllMutationsProvider.future);
-    expect(kabagApprovals.any((m) => m.id == mutation.id && m.status == MutationStatus.waitingKabagApproval), isTrue);
+    expect(kabagApprovals.any((m) => m.id == mutation.id && m.status.isWaitingAssetVerification), isTrue);
 
-    // Kabag approves without Kadiv -> status becomes approved (approvedWaitingAssetUpdate)
     final kabagApproveSuccess = await kabagContainer.read(kabagApprovalActionProvider.notifier).approve(
       mutationId: mutation.id,
-      requiresKadivApproval: false,
+      requiresKadivApproval: true,
     );
     expect(kabagApproveSuccess, isTrue);
 
-    final approvedMutation = (await mutationRepo.getMutationById(mutation.id) as Success<Mutation>).data;
-    expect(approvedMutation.status, equals(MutationStatus.approved));
+    final forwardedMutation = (await mutationRepo.getMutationById(mutation.id) as Success<Mutation>).data;
+    expect(forwardedMutation.status.isWaitingDivisionApproval, isTrue);
 
-    // 5. Staff Aset reviews: appears in 'approved' queue
-    final staffContainer = createContainer(currentUser: staffUser);
-    addTearDown(staffContainer.dispose);
+    // 5. Pemimpin Divisi approves -> status becomes waitingConfirmation
+    final kadivContainer = createContainer(currentUser: kadivUser);
+    addTearDown(kadivContainer.dispose);
 
-    final staffList = await staffContainer.read(staffAllMutationsProvider.future);
-    expect(staffList.any((m) => m.id == mutation.id && m.status == MutationStatus.approved), isTrue);
-
-    // Staff Aset executes physical update -> status becomes pendingConfirmation
-    final staffUpdateSuccess = await staffContainer.read(staffAssetUpdateActionProvider.notifier).processUpdate(
+    final kadivApproveSuccess = await kadivContainer.read(kadivApprovalActionProvider.notifier).approve(
       mutationId: mutation.id,
-      newLocation: 'Lantai 2 — Ruang Keuangan',
-      newPic: 'Siti Aminah (Finance)',
     );
-    expect(staffUpdateSuccess, isTrue);
+    expect(kadivApproveSuccess, isTrue);
 
-    final updatedMutation = (await mutationRepo.getMutationById(mutation.id) as Success<Mutation>).data;
-    expect(updatedMutation.status, equals(MutationStatus.pendingConfirmation));
+    final approvedMutation = (await mutationRepo.getMutationById(mutation.id) as Success<Mutation>).data;
+    expect(approvedMutation.status.isWaitingConfirmation, isTrue);
 
     // 6. Pemohon confirms receipt ('Sesuai') -> status becomes completed
     final confirmSuccess = await pemohonContainer.read(pemohonConfirmationActionProvider.notifier).confirm(
@@ -235,7 +227,7 @@ void main() {
     expect(kabagApproveSuccess, isTrue);
 
     final kabagApprovedMutation = (await mutationRepo.getMutationById(mutation.id) as Success<Mutation>).data;
-    expect(kabagApprovedMutation.status, equals(MutationStatus.waitingKadivApproval));
+    expect(kabagApprovedMutation.status.isWaitingDivisionApproval, isTrue);
     expect(kabagApprovedMutation.requiresKadivApproval, isTrue);
 
     // 4. Kadiv views in 'Menunggu Approval'
@@ -243,31 +235,20 @@ void main() {
     addTearDown(kadivContainer.dispose);
 
     final kadivList = (await kadivContainer.read(kadivAllMutationsProvider.future))
-        .where(isWaitingKadivApproval)
+        .where((m) => m.status.isWaitingDivisionApproval)
         .toList();
     expect(kadivList.any((m) => m.id == mutation.id), isTrue);
 
-    // Kadiv approves -> status becomes approved (approvedWaitingAssetUpdate)
+    // Kadiv approves -> status becomes waitingConfirmation
     final kadivApproveSuccess = await kadivContainer.read(kadivApprovalActionProvider.notifier).approve(
       mutationId: mutation.id,
     );
     expect(kadivApproveSuccess, isTrue);
 
     final kadivApprovedMutation = (await mutationRepo.getMutationById(mutation.id) as Success<Mutation>).data;
-    expect(kadivApprovedMutation.status, equals(MutationStatus.approved));
+    expect(kadivApprovedMutation.status.isWaitingConfirmation, isTrue);
 
-    // 5. Staff Aset processes -> pendingConfirmation
-    final staffContainer = createContainer(currentUser: staffUser);
-    addTearDown(staffContainer.dispose);
-
-    final staffUpdateSuccess = await staffContainer.read(staffAssetUpdateActionProvider.notifier).processUpdate(
-      mutationId: mutation.id,
-      newLocation: 'Cabang Bandung — Parkir Operasional',
-      newPic: 'Ahmad Supir Bandung',
-    );
-    expect(staffUpdateSuccess, isTrue);
-
-    // 6. Pemohon confirms -> completed
+    // 5. Pemohon confirms -> completed
     final pemohonContainer = createContainer(currentUser: pemohonUser);
     addTearDown(pemohonContainer.dispose);
 
@@ -337,8 +318,8 @@ void main() {
     expect(rejectSuccess, isTrue);
 
     final rejectedMutation = (await mutationRepo.getMutationById(mutation.id) as Success<Mutation>).data;
-    expect(rejectedMutation.status, equals(MutationStatus.rejected));
-    expect(rejectedMutation.rejectionReason, equals('Anggaran pemindahan belum disetujui.'));
+    expect(rejectedMutation.status, equals(MutationStatus.returned));
+    expect(rejectedMutation.returnReason, equals('Anggaran pemindahan belum disetujui.'));
   });
 
   test('Flow 5: Kadiv Rejects Mutation with Mandatory Reason', () async {
@@ -403,27 +384,21 @@ void main() {
     expect(mutation.customAssetName, equals('Proyektor Epson EB-X500 Manual'));
     expect(mutation.customSerialNumber, equals('EPS-MANUAL-999'));
 
-    // Staff Aset updates unregistered asset -> does NOT throw or create dummy asset
-    final staffUpdateResult = await mutationRepo.processStaffAssetUpdate(
-      mutationId: mutation.id,
-      newLocation: 'Lantai 2 — Meeting Room',
-      newPic: 'Sekretariat',
-      staffName: 'Rizky Staff Aset',
-    );
-    expect(staffUpdateResult, isA<AppFailure<Mutation>>()); // Must be approved first
-
-    // Approve first
+    // Verification & Approval flow
     await mutationRepo.verifyMutation(mutationId: mutation.id, operatorName: 'Operator');
-    await mutationRepo.approveMutationKabag(mutationId: mutation.id, kabagName: 'Kabag', requiresKadivApproval: false);
+    await mutationRepo.approveMutationKabag(mutationId: mutation.id, kabagName: 'Bagian Aset', requiresKadivApproval: true);
+    await mutationRepo.approveMutationKadiv(mutationId: mutation.id, kadivName: 'Kadiv');
 
-    final staffSuccess = await mutationRepo.processStaffAssetUpdate(
+    final afterKadiv = (await mutationRepo.getMutationById(mutation.id) as Success<Mutation>).data;
+    expect(afterKadiv.status.isWaitingConfirmation, isTrue);
+
+    final confirmSuccess = await mutationRepo.confirmMutationResult(
       mutationId: mutation.id,
-      newLocation: 'Lantai 2 — Meeting Room',
-      newPic: 'Sekretariat',
-      staffName: 'Rizky Staff Aset',
+      confirmedBy: 'Budi Santoso',
+      isSesuai: true,
     );
-    expect(staffSuccess, isA<Success<Mutation>>());
-    expect((staffSuccess as Success<Mutation>).data.status, equals(MutationStatus.pendingConfirmation));
+    expect(confirmSuccess, isA<Success<Mutation>>());
+    expect((confirmSuccess as Success<Mutation>).data.status, equals(MutationStatus.completed));
   });
 
   test('Flow 7: Duplicate active mutation on same asset is blocked', () async {

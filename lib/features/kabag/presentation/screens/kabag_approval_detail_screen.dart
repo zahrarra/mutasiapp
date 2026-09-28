@@ -15,6 +15,7 @@ import '../../../mutation/presentation/providers/mutation_provider.dart';
 import '../../../mutation/presentation/models/mutation_tracking_step.dart';
 import '../../../../core/widgets/app_feedback.dart';
 import '../../../../core/widgets/document_preview_dialog.dart';
+import '../../../auth/domain/entities/user_role.dart';
 import '../../../auth/presentation/providers/auth_provider.dart';
 import '../providers/kabag_approval_provider.dart';
 
@@ -33,14 +34,21 @@ class KabagApprovalDetailScreen extends ConsumerWidget {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Detail Approval'),
+        title: Text(
+          ref.watch(authStateProvider).user?.role == UserRole.bagianAset
+              ? 'Verifikasi Mutasi Aset'
+              : 'Detail Approval',
+        ),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
           onPressed: () {
             if (context.canPop()) {
               context.pop();
             } else {
-              context.go(RouteNames.kabagApprovalsPath);
+              final userRole = ref.read(authStateProvider).user?.role;
+              context.go(userRole == UserRole.bagianAset
+                  ? RouteNames.bagianAsetVerificationsPath
+                  : RouteNames.kabagApprovalsPath);
             }
           },
         ),
@@ -79,7 +87,7 @@ class KabagApprovalDetailScreen extends ConsumerWidget {
     KabagApprovalActionState actionState,
   ) {
     final isWaitingApproval =
-        mutation.status == MutationStatus.waitingKabagApproval;
+        mutation.status.isWaitingAssetVerification;
 
     return Column(
       children: [
@@ -278,8 +286,13 @@ class KabagApprovalDetailScreen extends ConsumerWidget {
                       onPressed: actionState.isLoading
                           ? null
                           : () {
-                              context.push(
-                                  '/kabag/approvals/${mutation.id}/reject');
+                              final userRole =
+                                  ref.read(authStateProvider).user?.role;
+                              final target = userRole == UserRole.bagianAset
+                                  ? RouteNames.bagianAsetReturnFormPath
+                                      .replaceFirst(':id', mutation.id)
+                                  : '/kabag/approvals/${mutation.id}/reject';
+                              context.push(target);
                             },
                       style: OutlinedButton.styleFrom(
                         foregroundColor: AppColors.error,
@@ -606,109 +619,151 @@ class KabagApprovalDetailScreen extends ConsumerWidget {
     WidgetRef ref,
     Mutation mutation,
   ) {
-    final requiresKadiv = mutation.requiresKadivApproval;
+    final isLeftBehind = !mutation.isAssetMovingWithApplicant;
+    final needsPic = isLeftBehind || mutation.targetPic.trim().isEmpty;
+    final picController = TextEditingController();
+    final formKey = GlobalKey<FormState>();
 
     showDialog(
       context: context,
       builder: (dialogContext) => AlertDialog(
-        title: const Text('Konfirmasi Persetujuan'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Apakah Anda yakin menyetujui pengajuan mutasi '
-              '${mutation.ticketNumber} untuk aset '
-              '"${mutation.asset.name}"?',
-              style: const TextStyle(fontSize: 14),
-            ),
-            const SizedBox(height: 16),
-            Container(
-              padding: const EdgeInsets.all(AppSpacing.sm),
-              decoration: BoxDecoration(
-                color: requiresKadiv
-                    ? AppColors.warningContainer
-                    : AppColors.infoContainer,
-                borderRadius: BorderRadius.circular(AppSpacing.radiusSm),
+        title: const Text('Verifikasi Data Aset'),
+        content: Form(
+          key: formKey,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Apakah Anda yakin data aset ${mutation.ticketNumber} '
+                '("${mutation.asset.name}") telah valid dan siap diteruskan ke Pemimpin Divisi?',
+                style: const TextStyle(fontSize: 14),
               ),
-              child: Row(
-                children: [
-                  Icon(
-                    requiresKadiv
-                        ? Icons.schedule_outlined
-                        : Icons.forward_outlined,
-                    color: requiresKadiv ? AppColors.warning : AppColors.info,
-                    size: 20,
+              if (needsPic) ...[
+                const SizedBox(height: 16),
+                Text(
+                  isLeftBehind
+                      ? 'Penentuan PIC Baru (Aset Ditinggalkan) *'
+                      : 'Penentuan PIC Baru *',
+                  style: const TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w700,
+                    color: AppColors.textSecondary,
                   ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: Text(
-                      requiresKadiv
-                          ? 'Alur Bisnis: Memerlukan approval Kadiv (ditentukan oleh Operator saat verifikasi).'
-                          : 'Alur Bisnis: Tanpa approval Kadiv (langsung diteruskan ke antrean Staff Aset).',
-                      style: TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w600,
-                        color: requiresKadiv
-                            ? AppColors.warning
-                            : AppColors.info,
-                      ),
+                ),
+                if (isLeftBehind) ...[
+                  const SizedBox(height: 4),
+                  const Text(
+                    'Aset fisik ditinggalkan di unit asal. Bagian Aset menentukan PIC baru melalui sistem.',
+                    style: TextStyle(
+                      fontSize: 11,
+                      color: AppColors.textSecondary,
                     ),
                   ),
                 ],
+                const SizedBox(height: 6),
+                TextFormField(
+                  key: const Key('input_pic_baru_bagian_aset'),
+                  controller: picController,
+                  decoration: InputDecoration(
+                    hintText: isLeftBehind
+                        ? 'Tentukan PIC baru di unit asal...'
+                        : 'Nama PIC baru...',
+                    border: const OutlineInputBorder(),
+                    contentPadding:
+                        const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                  ),
+                  validator: (v) => (v == null || v.trim().isEmpty)
+                      ? 'PIC baru wajib ditentukan oleh Bagian Aset'
+                      : null,
+                ),
+              ],
+              const SizedBox(height: 16),
+              Container(
+                padding: const EdgeInsets.all(AppSpacing.sm),
+                decoration: BoxDecoration(
+                  color: AppColors.infoContainer,
+                  borderRadius: BorderRadius.circular(AppSpacing.radiusSm),
+                ),
+                child: const Row(
+                  children: [
+                    Icon(
+                      Icons.forward_outlined,
+                      color: AppColors.info,
+                      size: 20,
+                    ),
+                    SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        'Alur PRD V1.1: Pengajuan yang valid akan langsung diteruskan ke antrean Approval Pemimpin Divisi.',
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                          color: AppColors.info,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(dialogContext).pop(),
-              child: const Text('Batal'),
-            ),
-            ElevatedButton(
-              key: const Key('btn_confirm_setujui'),
-              onPressed: () async {
-                Navigator.of(dialogContext).pop();
-                final success = await ref
-                    .read(kabagApprovalActionProvider.notifier)
-                    .approve(
-                      mutationId: mutation.id,
-                      requiresKadivApproval: requiresKadiv,
-                    );
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(),
+            child: const Text('Batal'),
+          ),
+          ElevatedButton(
+            key: const Key('btn_confirm_setujui'),
+            onPressed: () async {
+              if (needsPic && !(formKey.currentState?.validate() ?? false)) {
+                return;
+              }
+              Navigator.of(dialogContext).pop();
+              final success = await ref
+                  .read(kabagApprovalActionProvider.notifier)
+                  .approve(
+                    mutationId: mutation.id,
+                    newPic: needsPic ? picController.text.trim() : null,
+                  );
 
-                if (context.mounted) {
-                  if (success) {
-                    final msg = requiresKadiv
-                        ? 'Pengajuan berhasil disetujui (Menunggu approval Kadiv).'
-                        : 'Pengajuan mutasi berhasil disetujui.';
-                    AppFeedback.showSuccess(context, msg);
-                    _safePop(context);
-                  } else {
-                    final err = ref.read(kabagApprovalActionProvider).error;
-                    AppFeedback.showError(
-                      context,
-                      err ?? 'Gagal menyetujui pengajuan.',
-                    );
-                  }
+              if (context.mounted) {
+                if (success) {
+                  AppFeedback.showSuccess(
+                    context,
+                    'Data aset diverifikasi dan diteruskan ke Pemimpin Divisi.',
+                  );
+                  _safePop(context, ref);
+                } else {
+                  final err = ref.read(kabagApprovalActionProvider).error;
+                  AppFeedback.showError(
+                    context,
+                    err ?? 'Gagal memverifikasi pengajuan.',
+                  );
                 }
-              },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.primary,
-                foregroundColor: Colors.white,
-              ),
-              child: const Text('Ya, Setujui'),
+              }
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.primary,
+              foregroundColor: Colors.white,
             ),
-          ],
-        ),
+            child: const Text('Ya, Teruskan'),
+          ),
+        ],
+      ),
     );
   }
 
-  void _safePop(BuildContext context) {
+  void _safePop(BuildContext context, WidgetRef ref) {
     if (Navigator.of(context).canPop()) {
       Navigator.of(context).pop();
     } else {
       try {
-        context.go(RouteNames.kabagApprovalsPath);
+        final userRole = ref.read(authStateProvider).user?.role;
+        context.go(userRole == UserRole.bagianAset
+            ? RouteNames.bagianAsetVerificationsPath
+            : RouteNames.kabagApprovalsPath);
       } catch (_) {}
     }
   }

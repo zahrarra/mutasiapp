@@ -802,6 +802,7 @@ class _MutationCard extends StatelessWidget {
         s == MutationStatus.returned && m.staffUpdatedAt != null;
 
     final (bg, fg, label) = switch (s) {
+      MutationStatus.waitingConfirmation ||
       MutationStatus.pendingConfirmation => (
         _C.primary,
         Colors.white,
@@ -810,7 +811,7 @@ class _MutationCard extends StatelessWidget {
       MutationStatus.returned when isDisputedByApplicant => (
         const Color(0xFFEFF6FF),
         const Color(0xFF175CD3),
-        'Menunggu Staff Aset',
+        'Menunggu Bagian Aset',
       ),
       MutationStatus.returned => (
         _C.warning.withValues(alpha: 0.15),
@@ -822,11 +823,17 @@ class _MutationCard extends StatelessWidget {
         _C.success,
         'Selesai',
       ),
+      MutationStatus.waitingAssetVerification => (
+        _C.warning.withValues(alpha: 0.1),
+        _C.warning,
+        'Verifikasi Aset',
+      ),
       MutationStatus.waitingKabagApproval => (
         _C.warning.withValues(alpha: 0.1),
         _C.warning,
         'Approval Kabag',
       ),
+      MutationStatus.waitingDivisionHeadApproval ||
       MutationStatus.waitingKadivApproval => (
         _C.warning.withValues(alpha: 0.1),
         _C.warning,
@@ -847,6 +854,11 @@ class _MutationCard extends StatelessWidget {
         const Color(0xFFFEE2E2),
         const Color(0xFFB42318),
         'Ditolak',
+      ),
+      MutationStatus.waitingSync => (
+        _C.surfaceContainer,
+        _C.primary,
+        'Offline',
       ),
     };
 
@@ -926,6 +938,8 @@ class _MutationCard extends StatelessWidget {
         return 'Diajukan';
       case MutationStatus.verified:
         return 'Verifikasi';
+      case MutationStatus.waitingAssetVerification:
+        return 'Verifikasi Aset';
       case MutationStatus.waitingKabagApproval:
         return 'Kabag Review';
       case MutationStatus.waitingKadivApproval:

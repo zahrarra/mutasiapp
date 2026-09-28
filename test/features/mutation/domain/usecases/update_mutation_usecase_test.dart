@@ -22,6 +22,9 @@ class _FakeMutationRepository implements MutationRepository {
   _FakeMutationRepository(this.mutations);
 
   @override
+  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
+
+  @override
   Future<Result<Mutation>> submitMutation(SubmitMutationParams params) async {
     throw UnimplementedError();
   }

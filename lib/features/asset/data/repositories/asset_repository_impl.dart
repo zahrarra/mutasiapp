@@ -408,4 +408,17 @@ class AssetRepositoryImpl implements AssetRepository {
     _mockAssets[index] = updated;
     return Result.success(updated);
   }
+
+  @override
+  Future<Result<Asset>> updateAsset(Asset asset) async {
+    final index = _mockAssets.indexWhere(
+      (a) => a.id == asset.id || a.assetCode == asset.assetCode,
+    );
+    if (index == -1) {
+      _mockAssets.add(asset);
+      return Result.success(asset);
+    }
+    _mockAssets[index] = asset;
+    return Result.success(asset);
+  }
 }

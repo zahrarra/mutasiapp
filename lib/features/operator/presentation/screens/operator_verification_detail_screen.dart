@@ -2266,7 +2266,7 @@ class OperatorVerificationDetailScreen extends ConsumerWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'Apakah Anda yakin data dan dokumen pengajuan ${mutation.ticketNumber} sudah valid dan lengkap?\n\nPengajuan akan diteruskan ke antrean Kabag Aset.',
+                  'Apakah Anda yakin data dan dokumen pengajuan ${mutation.ticketNumber} sudah valid dan lengkap?\n\nPengajuan akan diteruskan ke antrean Bagian Aset.',
                   style: const TextStyle(fontSize: 13, height: 1.4),
                 ),
                 const SizedBox(height: AppSpacing.md),
@@ -2385,20 +2385,17 @@ class OperatorVerificationDetailScreen extends ConsumerWidget {
                 if (context.mounted) {
                   if (success) {
                     ref.read(notificationProvider.notifier).notifyRole(
-                          targetRole: UserRole.kabagAset,
-                          title: 'Menunggu Approval Kabag',
+                          targetRole: UserRole.bagianAset,
+                          title: 'Menunggu Verifikasi Data Aset',
                           message:
-                              'Pengajuan mutasi ${mutation.ticketNumber} (${mutation.asset.name}) telah diverifikasi Operator dan siap ditinjau.',
+                              'Pengajuan mutasi ${mutation.ticketNumber} (${mutation.asset.name}) telah diperiksa kelengkapannya dan siap diverifikasi.',
                           type: NotificationType.action,
                           relatedMutationId: mutation.id,
                         );
                     ref.invalidate(mutationDetailProvider(mutation.id));
                     AppFeedback.showSuccess(
                       context,
-                      'Pengajuan berhasil diverifikasi.',
-                      details: requiresKadiv
-                          ? 'Jalur: Kabag Aset → Kadiv'
-                          : 'Jalur: Kabag Aset → Staff Aset',
+                      'Pengajuan berhasil diteruskan ke Bagian Aset.',
                     );
                     if (Navigator.of(context).canPop()) {
                       Navigator.of(context).pop();

@@ -362,18 +362,11 @@ class MutationRepositoryImpl implements MutationRepository {
     // di database aset aplikasi. Data yang dimasukkan pada form
     // menjadi dasar data aset pada pengajuan mutasi.
     final targetLocation = params.targetLocation.trim();
-    final targetPic = params.targetPic.trim();
     final reason = params.reason.trim();
 
     if (targetLocation.isEmpty) {
       return const Result.failure(
         ValidationFailure(message: 'Lokasi tujuan wajib diisi.'),
-      );
-    }
-
-    if (targetPic.isEmpty) {
-      return const Result.failure(
-        ValidationFailure(message: 'Penanggung jawab baru wajib diisi.'),
       );
     }
 
@@ -383,13 +376,29 @@ class MutationRepositoryImpl implements MutationRepository {
       );
     }
 
+    // Aturan PIC Baru PRD V1.1 §6.2:
+    // - Jawaban Ya -> PIC baru otomatis Pemohon sendiri.
+    // - Jawaban Tidak -> PIC baru dikosongkan dan ditentukan Bagian Aset.
+    final String targetPic;
+    if (params.isAssetMovingWithApplicant) {
+      targetPic = params.targetPic.trim().isNotEmpty
+          ? params.targetPic.trim()
+          : (params.applicantName?.trim().isNotEmpty == true
+              ? params.applicantName!.trim()
+              : (params.currentPic?.trim().isNotEmpty == true
+                  ? params.currentPic!.trim()
+                  : 'Pemohon'));
+    } else {
+      targetPic = '';
+    }
+
     const manualCategory = AssetCategory(
-      id: 'cat_manual',
-      code: 'OTH',
-      name: 'Lainnya',
+      id: 'cat_ti',
+      code: 'TI',
+      name: 'Aset TI',
     );
 
-    String categoryCode = 'OTH';
+    String categoryCode = 'TI';
     String sourceLocation = params.sourceLocation.trim();
     String currentPic = params.currentPic?.trim().isNotEmpty == true
         ? params.currentPic!.trim()
@@ -400,18 +409,12 @@ class MutationRepositoryImpl implements MutationRepository {
     String? customSerialNumber;
 
     if (params.isUnregisteredAsset) {
-      // ================================================================
-      // UNREGISTERED ASSET (FALLBACK)
-      // ================================================================
-      // - assetId = null
-      // - Simpan data manual di customAssetName dan customSerialNumber
-      // - Jangan membuat ID aset dummy atau relasi palsu ke database
       finalAssetId = null;
       customAssetName = (params.customAssetName?.trim().isNotEmpty == true)
           ? params.customAssetName!.trim()
           : (params.assetName.trim().isNotEmpty ? params.assetName.trim() : null);
       customSerialNumber = params.customSerialNumber?.trim();
-      categoryCode = 'OTH';
+      categoryCode = 'TI';
 
       if (sourceLocation.isEmpty) {
         return const Result.failure(
@@ -419,9 +422,6 @@ class MutationRepositoryImpl implements MutationRepository {
         );
       }
     } else {
-      // ================================================================
-      // REGISTERED ASSET
-      // ================================================================
       final rawAssetId = params.assetId?.trim() ?? '';
       if (rawAssetId.isEmpty) {
         return const Result.failure(
@@ -429,7 +429,7 @@ class MutationRepositoryImpl implements MutationRepository {
         );
       }
 
-      // Cegah duplicate active mutation untuk asset yang sama.
+      // Cegah duplicate active mutation untuk aset yang sama (PRD V1.1 §8 Rule 4).
       final hasActiveMutation = _mutations.any((m) {
         final matchesAsset = (m.assetId != null && m.assetId == rawAssetId) ||
             (m.asset.id.isNotEmpty && m.asset.id == rawAssetId) ||
@@ -453,7 +453,6 @@ class MutationRepositoryImpl implements MutationRepository {
       if (assetResult is Success<Asset>) {
         assetEntity = assetResult.data;
       } else {
-        // Coba cari melalui getAssets jika rawAssetId berupa kode aset
         final assetListResult = await assetRepository.getAssets(query: rawAssetId);
         if (assetListResult is Success<List<Asset>> && assetListResult.data.isNotEmpty) {
           assetEntity = assetListResult.data.firstWhere(
@@ -461,7 +460,6 @@ class MutationRepositoryImpl implements MutationRepository {
             orElse: () => assetListResult.data.first,
           );
         } else {
-          // Fallback aman untuk skenario unit test mock
           assetEntity = Asset(
             id: rawAssetId,
             assetCode: rawAssetId,
@@ -469,24 +467,33 @@ class MutationRepositoryImpl implements MutationRepository {
             category: manualCategory,
             location: sourceLocation.isNotEmpty ? sourceLocation : 'Kantor Pusat',
             pic: currentPic,
-            status: AssetStatus.available,
+            status: AssetStatus.inMutation,
             condition: 'Baik',
             acquisitionYear: DateTime.now().year,
+            hasActiveMutation: true,
           );
         }
       }
 
       finalAssetId = assetEntity.id;
-      categoryCode = assetEntity.category.code.isNotEmpty ? assetEntity.category.code : 'ELK';
+      categoryCode = assetEntity.category.code.isNotEmpty
+          ? assetEntity.category.code
+          : 'TI';
 
-      // Simpan snapshot lokasi asal dan PIC lama dari master aset saat pengajuan dibuat
-      if (assetEntity.location.isNotEmpty) {
+      if (sourceLocation.isEmpty) {
         sourceLocation = assetEntity.location;
       }
-      if (assetEntity.pic.isNotEmpty && assetEntity.pic != '-') {
+      if (currentPic == '-' && assetEntity.pic.isNotEmpty) {
         currentPic = assetEntity.pic;
       }
-      // Master asset TIDAK diubah pada tahap submission/approval
+
+      // Kunci aset saat mutasi dibuat (PRD V1.1 §8 Rule 5)
+      await assetRepository.updateAsset(
+        assetEntity.copyWith(
+          hasActiveMutation: true,
+          status: AssetStatus.inMutation,
+        ),
+      );
     }
 
     final year = DateTime.now().year;
@@ -507,6 +514,7 @@ class MutationRepositoryImpl implements MutationRepository {
       targetLocation: targetLocation,
       currentPic: currentPic,
       targetPic: targetPic,
+      isAssetMovingWithApplicant: params.isAssetMovingWithApplicant,
       reason: reason,
       documentName: params.documentName,
       documentPath: params.documentPath,
@@ -621,21 +629,21 @@ class MutationRepositoryImpl implements MutationRepository {
 
   @override
   Future<Result<List<Mutation>>> getAllMutations() async {
-    await Future.delayed(const Duration(milliseconds: 200));
-
+    await Future.delayed(const Duration(milliseconds: 150));
     return Result.success(List.unmodifiable(_mutations.reversed.toList()));
   }
 
+  // ─── PRD V1.1 Workflow Operations ──────────────────────────────────────────
+
   @override
-  Future<Result<Mutation>> verifyMutation({
+  Future<Result<Mutation>> operatorForward({
     required String mutationId,
     required String operatorName,
-    bool requiresKadivApproval = false,
+    bool? requiresKadivApproval,
   }) async {
     await Future.delayed(const Duration(milliseconds: 300));
 
     final index = _mutations.indexWhere((m) => m.id == mutationId);
-
     if (index == -1) {
       return const Result.failure(
         NotFoundFailure(message: 'Pengajuan mutasi tidak ditemukan.'),
@@ -643,21 +651,19 @@ class MutationRepositoryImpl implements MutationRepository {
     }
 
     final current = _mutations[index];
-
     final updated = current.copyWith(
-      status: MutationStatus.waitingKabagApproval,
-      requiresKadivApproval: requiresKadivApproval,
+      status: MutationStatus.waitingAssetVerification,
+      requiresKadivApproval: requiresKadivApproval ?? current.requiresKadivApproval,
       verifiedAt: DateTime.now(),
       verifiedBy: operatorName,
     );
 
     _mutations[index] = updated;
-
     return Result.success(updated);
   }
 
   @override
-  Future<Result<Mutation>> returnMutation({
+  Future<Result<Mutation>> operatorReturn({
     required String mutationId,
     required String reason,
     required String operatorName,
@@ -665,7 +671,6 @@ class MutationRepositoryImpl implements MutationRepository {
     await Future.delayed(const Duration(milliseconds: 300));
 
     final index = _mutations.indexWhere((m) => m.id == mutationId);
-
     if (index == -1) {
       return const Result.failure(
         NotFoundFailure(message: 'Pengajuan mutasi tidak ditemukan.'),
@@ -673,7 +678,6 @@ class MutationRepositoryImpl implements MutationRepository {
     }
 
     final current = _mutations[index];
-
     final updated = current.copyWith(
       status: MutationStatus.returned,
       returnReason: reason,
@@ -682,20 +686,18 @@ class MutationRepositoryImpl implements MutationRepository {
     );
 
     _mutations[index] = updated;
-
     return Result.success(updated);
   }
 
   @override
-  Future<Result<Mutation>> approveMutationKabag({
+  Future<Result<Mutation>> assetSectionForward({
     required String mutationId,
-    required String kabagName,
-    required bool requiresKadivApproval,
+    required String verifierName,
+    String? newPic,
   }) async {
     await Future.delayed(const Duration(milliseconds: 300));
 
     final index = _mutations.indexWhere((m) => m.id == mutationId);
-
     if (index == -1) {
       return const Result.failure(
         NotFoundFailure(message: 'Pengajuan mutasi tidak ditemukan.'),
@@ -703,35 +705,48 @@ class MutationRepositoryImpl implements MutationRepository {
     }
 
     final current = _mutations[index];
+    final effectivePic = (newPic != null && newPic.trim().isNotEmpty)
+        ? newPic.trim()
+        : current.targetPic.trim();
 
-    // Jika membutuhkan approval Kadiv → waitingKadivApproval
-    // Jika tidak → approved (langsung ke antrian Staff Aset)
-    final nextStatus = requiresKadivApproval
-        ? MutationStatus.waitingKadivApproval
-        : MutationStatus.approved;
+    if (effectivePic.isEmpty) {
+      return const Result.failure(
+        ValidationFailure(
+          message:
+              'PIC baru wajib ditentukan oleh Bagian Aset sebelum meneruskan pengajuan.',
+        ),
+      );
+    }
 
     final updated = current.copyWith(
-      status: nextStatus,
-      requiresKadivApproval: requiresKadivApproval,
+      targetPic: effectivePic,
+      status: MutationStatus.waitingDivisionHeadApproval,
+      requiresKadivApproval: true,
+      assetVerifiedAt: DateTime.now(),
+      assetVerifiedBy: verifierName,
       approvedAt: DateTime.now(),
-      approvedBy: kabagName,
+      approvedBy: verifierName,
     );
 
     _mutations[index] = updated;
-
     return Result.success(updated);
   }
 
   @override
-  Future<Result<Mutation>> rejectMutationKabag({
+  Future<Result<Mutation>> assetSectionReturn({
     required String mutationId,
     required String reason,
-    required String kabagName,
+    required String verifierName,
   }) async {
     await Future.delayed(const Duration(milliseconds: 300));
 
-    final index = _mutations.indexWhere((m) => m.id == mutationId);
+    if (reason.trim().isEmpty) {
+      return const Result.failure(
+        ValidationFailure(message: 'Alasan pengembalian wajib diisi.'),
+      );
+    }
 
+    final index = _mutations.indexWhere((m) => m.id == mutationId);
     if (index == -1) {
       return const Result.failure(
         NotFoundFailure(message: 'Pengajuan mutasi tidak ditemukan.'),
@@ -739,28 +754,28 @@ class MutationRepositoryImpl implements MutationRepository {
     }
 
     final current = _mutations[index];
-
     final updated = current.copyWith(
-      status: MutationStatus.rejected,
-      rejectionReason: reason,
+      status: MutationStatus.returned,
+      assetReturnReason: reason,
+      returnReason: reason,
+      assetVerifiedAt: DateTime.now(),
+      assetVerifiedBy: verifierName,
       rejectedAt: DateTime.now(),
-      rejectedBy: kabagName,
+      rejectedBy: verifierName,
     );
 
     _mutations[index] = updated;
-
     return Result.success(updated);
   }
 
   @override
-  Future<Result<Mutation>> approveMutationKadiv({
+  Future<Result<Mutation>> divisionApprove({
     required String mutationId,
-    required String kadivName,
+    required String divisionHeadName,
   }) async {
     await Future.delayed(const Duration(milliseconds: 300));
 
     final index = _mutations.indexWhere((m) => m.id == mutationId);
-
     if (index == -1) {
       return const Result.failure(
         NotFoundFailure(message: 'Pengajuan mutasi tidak ditemukan.'),
@@ -768,28 +783,27 @@ class MutationRepositoryImpl implements MutationRepository {
     }
 
     final current = _mutations[index];
-
     final updated = current.copyWith(
-      status: MutationStatus.approved,
+      status: MutationStatus.waitingConfirmation,
       kadivApprovedAt: DateTime.now(),
-      kadivApprovedBy: kadivName,
+      kadivApprovedBy: divisionHeadName,
+      approvedAt: DateTime.now(),
+      approvedBy: divisionHeadName,
     );
 
     _mutations[index] = updated;
-
     return Result.success(updated);
   }
 
   @override
-  Future<Result<Mutation>> rejectMutationKadiv({
+  Future<Result<Mutation>> divisionReject({
     required String mutationId,
     required String reason,
-    required String kadivName,
+    required String divisionHeadName,
   }) async {
     await Future.delayed(const Duration(milliseconds: 300));
 
     final index = _mutations.indexWhere((m) => m.id == mutationId);
-
     if (index == -1) {
       return const Result.failure(
         NotFoundFailure(message: 'Pengajuan mutasi tidak ditemukan.'),
@@ -797,31 +811,42 @@ class MutationRepositoryImpl implements MutationRepository {
     }
 
     final current = _mutations[index];
-
     final updated = current.copyWith(
       status: MutationStatus.rejected,
       rejectionReason: reason,
       rejectedAt: DateTime.now(),
-      rejectedBy: kadivName,
+      rejectedBy: divisionHeadName,
       kadivRejectedAt: DateTime.now(),
-      kadivRejectedBy: kadivName,
+      kadivRejectedBy: divisionHeadName,
       kadivRejectionReason: reason,
     );
 
     _mutations[index] = updated;
 
+    // Buka lock pada master aset
+    if (current.assetId != null && current.assetId!.isNotEmpty) {
+      final assetRes = await assetRepository.getAssetById(current.assetId!);
+      if (assetRes is Success<Asset>) {
+        final a = assetRes.data;
+        await assetRepository.updateAsset(
+          a.copyWith(hasActiveMutation: false, status: AssetStatus.available),
+        );
+      }
+    }
+
     return Result.success(updated);
   }
 
   @override
-  Future<Result<Mutation>> confirmMutation({
+  Future<Result<Mutation>> confirmMutationResult({
     required String mutationId,
     required String confirmedBy,
+    required bool isSesuai,
+    String? reason,
   }) async {
     await Future.delayed(const Duration(milliseconds: 300));
 
     final index = _mutations.indexWhere((m) => m.id == mutationId);
-
     if (index == -1) {
       return const Result.failure(
         NotFoundFailure(message: 'Pengajuan mutasi tidak ditemukan.'),
@@ -830,8 +855,7 @@ class MutationRepositoryImpl implements MutationRepository {
 
     final current = _mutations[index];
 
-    // Validasi ketat: hanya mutasi dengan status pendingConfirmation yang dapat dikonfirmasi
-    if (current.status != MutationStatus.pendingConfirmation) {
+    if (!current.status.isWaitingConfirmation) {
       return const Result.failure(
         ValidationFailure(
           message:
@@ -840,17 +864,155 @@ class MutationRepositoryImpl implements MutationRepository {
       );
     }
 
-    // Staff Aset sudah memperbarui master aset (lokasi & PIC) saat proses update.
-    // Konfirmasi Pemohon HANYA memvalidasi & memfinalisasi mutasi ke status completed.
-    // Tidak menimpa master aset, tidak merubah ketersediaan tanpa perlu,
-    // tidak membuat update aset baru, dan mempertahankan lokasi & PIC dari Staff Aset.
+    if (!isSesuai) {
+      if (reason == null || reason.trim().isEmpty) {
+        return const Result.failure(
+          ValidationFailure(message: 'Alasan ketidaksesuaian wajib diisi.'),
+        );
+      }
+
+      final updated = current.copyWith(
+        status: MutationStatus.waitingAssetVerification,
+        confirmationReason: reason.trim(),
+      );
+
+      _mutations[index] = updated;
+      return Result.success(updated);
+    }
+
+    // Pemohon memilih 'Sesuai':
+    // 1. Server otomatis update lokasi & PIC aset master (PRD V1.1 §6.6)
+    Asset updatedAsset = current.asset;
+    if (current.assetId != null && current.assetId!.isNotEmpty) {
+      final assetUpdateResult = await assetRepository.updateAssetLocationAndPic(
+        assetId: current.assetId!,
+        newLocation: current.targetLocation,
+        newPic: current.targetPic,
+        ticketNumber: current.ticketNumber,
+        updatedBy: confirmedBy,
+      );
+
+      if (assetUpdateResult is Success<Asset>) {
+        updatedAsset = assetUpdateResult.data;
+      } else {
+        updatedAsset = current.asset.copyWith(
+          location: current.targetLocation,
+          pic: current.targetPic,
+          hasActiveMutation: false,
+          status: AssetStatus.available,
+        );
+      }
+    } else {
+      updatedAsset = current.asset.copyWith(
+        location: current.targetLocation,
+        pic: current.targetPic,
+        hasActiveMutation: false,
+        status: AssetStatus.available,
+      );
+    }
+
+    // 2. Status berubah menjadi Selesai & simpan riwayat mutasi
     final updated = current.copyWith(
+      asset: updatedAsset,
       status: MutationStatus.completed,
     );
 
     _mutations[index] = updated;
-
     return Result.success(updated);
+  }
+
+  // ─── Legacy Compatibility Methods ──────────────────────────────────────────
+
+  @override
+  Future<Result<Mutation>> verifyMutation({
+    required String mutationId,
+    required String operatorName,
+    bool requiresKadivApproval = false,
+  }) async {
+    return operatorForward(
+      mutationId: mutationId,
+      operatorName: operatorName,
+      requiresKadivApproval: requiresKadivApproval,
+    );
+  }
+
+  @override
+  Future<Result<Mutation>> returnMutation({
+    required String mutationId,
+    required String reason,
+    required String operatorName,
+  }) async {
+    return operatorReturn(
+      mutationId: mutationId,
+      reason: reason,
+      operatorName: operatorName,
+    );
+  }
+
+  @override
+  Future<Result<Mutation>> approveMutationKabag({
+    required String mutationId,
+    required String kabagName,
+    required bool requiresKadivApproval,
+  }) async {
+    final index = _mutations.indexWhere((m) => m.id == mutationId);
+    final targetPic = index != -1 && _mutations[index].targetPic.isNotEmpty
+        ? _mutations[index].targetPic
+        : 'PIC Ditentukan';
+    return assetSectionForward(
+      mutationId: mutationId,
+      verifierName: kabagName,
+      newPic: targetPic,
+    );
+  }
+
+  @override
+  Future<Result<Mutation>> rejectMutationKabag({
+    required String mutationId,
+    required String reason,
+    required String kabagName,
+  }) async {
+    return assetSectionReturn(
+      mutationId: mutationId,
+      reason: reason,
+      verifierName: kabagName,
+    );
+  }
+
+  @override
+  Future<Result<Mutation>> approveMutationKadiv({
+    required String mutationId,
+    required String kadivName,
+  }) async {
+    return divisionApprove(
+      mutationId: mutationId,
+      divisionHeadName: kadivName,
+    );
+  }
+
+  @override
+  Future<Result<Mutation>> rejectMutationKadiv({
+    required String mutationId,
+    required String reason,
+    required String kadivName,
+  }) async {
+    return divisionReject(
+      mutationId: mutationId,
+      reason: reason,
+      divisionHeadName: kadivName,
+    );
+  }
+
+  @override
+  Future<Result<Mutation>> confirmMutation({
+    required String mutationId,
+    required String confirmedBy,
+  }) async {
+    return confirmMutationResult(
+      mutationId: mutationId,
+      confirmedBy: confirmedBy,
+      isSesuai: true,
+    );
   }
 
   @override
@@ -871,7 +1033,9 @@ class MutationRepositoryImpl implements MutationRepository {
 
     final current = _mutations[index];
 
-    if (current.status != MutationStatus.approved) {
+    if (current.status != MutationStatus.approved &&
+        current.status != MutationStatus.waitingDivisionHeadApproval &&
+        current.status != MutationStatus.waitingConfirmation) {
       return const Result.failure(
         ValidationFailure(
           message:

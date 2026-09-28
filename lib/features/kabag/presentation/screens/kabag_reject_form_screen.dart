@@ -11,6 +11,8 @@ import '../../../../app/theme/app_colors.dart';
 import '../../../../app/theme/app_spacing.dart';
 import '../../../mutation/presentation/providers/mutation_provider.dart';
 import '../../../../core/widgets/app_feedback.dart';
+import '../../../auth/domain/entities/user_role.dart';
+import '../../../auth/presentation/providers/auth_provider.dart';
 import '../providers/kabag_approval_provider.dart';
 
 class KabagRejectFormScreen extends ConsumerStatefulWidget {
@@ -43,14 +45,21 @@ class _KabagRejectFormScreenState extends ConsumerState<KabagRejectFormScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Tolak Pengajuan'),
+        title: Text(
+          ref.watch(authStateProvider).user?.role == UserRole.bagianAset
+              ? 'Kembalikan Pengajuan'
+              : 'Tolak Pengajuan',
+        ),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
           onPressed: () {
             if (context.canPop()) {
               context.pop();
             } else {
-              context.go(RouteNames.kabagApprovalsPath);
+              final userRole = ref.read(authStateProvider).user?.role;
+              context.go(userRole == UserRole.bagianAset
+                  ? RouteNames.bagianAsetVerificationsPath
+                  : RouteNames.kabagApprovalsPath);
             }
           },
         ),
@@ -274,34 +283,43 @@ class _KabagRejectFormScreenState extends ConsumerState<KabagRejectFormScreen> {
 
     if (context.mounted) {
       if (success) {
+        final isBagianAset =
+            ref.read(authStateProvider).user?.role == UserRole.bagianAset;
         AppFeedback.showSuccess(
           context,
-          'Pengajuan mutasi berhasil ditolak.',
+          isBagianAset
+              ? 'Pengajuan mutasi berhasil dikembalikan.'
+              : 'Pengajuan mutasi berhasil ditolak.',
         );
         _safePopBackToList(context);
       } else {
         final err = ref.read(kabagApprovalActionProvider).error;
         AppFeedback.showError(
           context,
-          err ?? 'Gagal menolak pengajuan.',
+          err ?? 'Gagal memproses pengajuan.',
         );
       }
     }
   }
 
   void _safePopBackToList(BuildContext context) {
+    final userRole = ref.read(authStateProvider).user?.role;
+    final fallbackRoute = userRole == UserRole.bagianAset
+        ? RouteNames.bagianAsetVerificationsPath
+        : RouteNames.kabagApprovalsPath;
+
     if (Navigator.of(context).canPop()) {
       Navigator.of(context).pop();
       if (Navigator.of(context).canPop()) {
         Navigator.of(context).pop();
       } else {
         try {
-          context.go(RouteNames.kabagApprovalsPath);
+          context.go(fallbackRoute);
         } catch (_) {}
       }
     } else {
       try {
-        context.go(RouteNames.kabagApprovalsPath);
+        context.go(fallbackRoute);
       } catch (_) {}
     }
   }

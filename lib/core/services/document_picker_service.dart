@@ -73,36 +73,39 @@ class DocumentPickerService {
   static Future<DocumentPickerResult> Function()? testPicker;
 
   /// Memilih dokumen dari sistem operasi / browser.
-  static Future<DocumentPickerResult> pickDocument() async {
+  static Future<DocumentPickerResult> pickDocument({
+    List<String>? allowedExtensions,
+  }) async {
     // 1. Jika dalam mode pengujian, gunakan testPicker hook
     if (testPicker != null) {
       return await testPicker!();
     }
 
+    final effectiveExtensions =
+        allowedExtensions ?? DocumentPickerService.allowedExtensions;
+
     try {
-      var result;
+      dynamic rawResult;
 
       if (kIsWeb) {
         // Coba FilePicker platform terlebih dahulu di Web
         try {
-          result = await FilePicker.pickFiles(
+          rawResult = await FilePicker.pickFiles(
             type: FileType.custom,
-            allowedExtensions: allowedExtensions,
-            withData: true,
+            allowedExtensions: effectiveExtensions,
           );
         } on MissingPluginException {
           // Fallback ke browser native HTML file input
-          return await _pickViaWebHtml();
+          return await _pickViaWebHtml(allowedExtensions: effectiveExtensions);
         } catch (_) {
-          return await _pickViaWebHtml();
+          return await _pickViaWebHtml(allowedExtensions: effectiveExtensions);
         }
       } else {
         // Desktop / Mobile
         try {
-          result = await FilePicker.pickFiles(
+          rawResult = await FilePicker.pickFiles(
             type: FileType.custom,
-            allowedExtensions: allowedExtensions,
-            withData: true,
+            allowedExtensions: effectiveExtensions,
           );
         } on MissingPluginException {
           return const DocumentPickerResult.failure(
@@ -111,39 +114,103 @@ class DocumentPickerService {
         }
       }
 
-      if (result == null || result.files.isEmpty) {
+      // 2. Ekstraksi files secara tangguh (mendukung List<PlatformFile>, JSArray<PlatformFile>, legacy FilePickerResult)
+      List<PlatformFile> platformFiles = const [];
+      if (rawResult is List<PlatformFile>) {
+        platformFiles = rawResult;
+      } else if (rawResult is List) {
+        platformFiles = rawResult.whereType<PlatformFile>().toList();
+      } else if (rawResult != null) {
+        try {
+          final dynamic filesProp = (rawResult as dynamic).files;
+          if (filesProp is List<PlatformFile>) {
+            platformFiles = filesProp;
+          } else if (filesProp is List) {
+            platformFiles = filesProp.whereType<PlatformFile>().toList();
+          } else {
+            platformFiles = const [];
+          }
+        } catch (_) {
+          platformFiles = const [];
+        }
+      }
+
+      if (platformFiles.isEmpty) {
         return const DocumentPickerResult.canceled();
       }
 
-      final file = result.files.first;
+      final file = platformFiles.first;
 
-      // 2. Validasi Ekstensi
-      final ext = _getExtension(file.name);
-      if (!allowedExtensions.contains(ext)) {
+      // 3. Validasi Ekstensi
+      final fileName = file.name.trim().isNotEmpty ? file.name : 'dokumen.pdf';
+      final ext = (file.extension?.trim().isNotEmpty == true
+              ? file.extension!
+              : _getExtension(fileName))
+          .toLowerCase();
+
+      if (allowedExtensions != null && !allowedExtensions.contains(ext)) {
         return DocumentPickerResult.failure(
           'Format file .$ext tidak didukung. Format yang diizinkan: PDF, JPG, JPEG, PNG, WEBP.',
         );
       }
 
-      // 3. Validasi Ukuran (Maksimal 30 MB)
-      if (file.size > maxFileSizeBytes) {
-        final sizeMb = (file.size / (1024 * 1024)).toStringAsFixed(1);
-        return DocumentPickerResult.failure(
-          'Ukuran file melebihi batas maksimal 30 MB (ukuran: $sizeMb MB).',
+      // 4. Validasi Ukuran (Maksimal 30 MB)
+      int fileSize = 0;
+      final syncLength = file.lengthSync();
+      if (syncLength != null && syncLength > 0) {
+        fileSize = syncLength;
+      } else {
+        try {
+          fileSize = await file.length();
+        } catch (_) {
+          try {
+            fileSize = (file as dynamic).size as int? ?? 0;
+          } catch (_) {}
+        }
+      }
+
+      if (fileSize > maxFileSizeBytes) {
+        return const DocumentPickerResult.failure(
+          'Upload gagal. Ukuran file maksimal 30 MB.',
         );
       }
 
-      // 4. Ekstraksi Bytes secara nyata (bukan hanya nama file)
-      Uint8List? bytes = file.bytes;
-      if ((bytes == null || bytes.isEmpty) &&
-          file.path != null &&
-          file.path!.isNotEmpty) {
+      // 5. Ekstraksi Bytes secara nyata (bukan hanya nama file)
+      Uint8List? bytes;
+      try {
+        bytes = await file.readAsBytes();
+      } catch (_) {
         try {
-          final f = File(file.path!);
-          if (await f.exists()) {
-            bytes = await f.readAsBytes();
+          final dynamic legacyBytes = (file as dynamic).bytes;
+          if (legacyBytes is Uint8List) {
+            bytes = legacyBytes;
           }
         } catch (_) {}
+
+        if ((bytes == null || bytes.isEmpty) &&
+            !kIsWeb &&
+            file.path != null &&
+            file.path!.isNotEmpty) {
+          try {
+            final f = File(file.path!);
+            if (await f.exists()) {
+              bytes = await f.readAsBytes();
+            }
+          } catch (_) {}
+        }
+      }
+
+      if (bytes != null && bytes.isNotEmpty) {
+        if (fileSize <= 0) {
+          fileSize = bytes.length;
+        }
+      }
+
+      // Validasi kembali ukuran jika sebelumnya belum terdeteksi dari metadata
+      if (fileSize > maxFileSizeBytes) {
+        return const DocumentPickerResult.failure(
+          'Upload gagal. Ukuran file maksimal 30 MB.',
+        );
       }
 
       if (bytes == null || bytes.isEmpty) {
@@ -152,12 +219,17 @@ class DocumentPickerService {
         );
       }
 
+      String? filePath;
+      try {
+        filePath = file.path;
+      } catch (_) {}
+
       return DocumentPickerResult.success(
         PickedDocument(
-          name: file.name,
-          size: file.size,
+          name: fileName,
+          size: fileSize,
           bytes: bytes,
-          path: file.path,
+          path: filePath,
         ),
       );
     } on MissingPluginException {
@@ -172,10 +244,14 @@ class DocumentPickerService {
     }
   }
 
-  static Future<DocumentPickerResult> _pickViaWebHtml() async {
+  static Future<DocumentPickerResult> _pickViaWebHtml({
+    List<String>? allowedExtensions,
+  }) async {
+    final effectiveExtensions =
+        allowedExtensions ?? DocumentPickerService.allowedExtensions;
     try {
       final webResult = await WebDocumentPicker.pickFileWeb(
-        allowedExtensions: allowedExtensions,
+        allowedExtensions: effectiveExtensions,
       );
 
       if (webResult == null) {
@@ -187,16 +263,15 @@ class DocumentPickerService {
       final bytes = webResult['bytes'] as Uint8List?;
 
       final ext = _getExtension(name);
-      if (!allowedExtensions.contains(ext)) {
+      if (allowedExtensions != null && !allowedExtensions.contains(ext)) {
         return DocumentPickerResult.failure(
           'Format file .$ext tidak didukung. Format yang diizinkan: PDF, JPG, JPEG, PNG, WEBP.',
         );
       }
 
       if (size > maxFileSizeBytes) {
-        final sizeMb = (size / (1024 * 1024)).toStringAsFixed(1);
-        return DocumentPickerResult.failure(
-          'Ukuran file melebihi batas maksimal 30 MB (ukuran: $sizeMb MB).',
+        return const DocumentPickerResult.failure(
+          'Upload gagal. Ukuran file maksimal 30 MB.',
         );
       }
 

@@ -746,7 +746,13 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
         Wrap(
           spacing: 6,
           runSpacing: 6,
-          children: UserRole.values.map((role) {
+          children: const [
+            UserRole.pemohon,
+            UserRole.operator,
+            UserRole.bagianAset,
+            UserRole.kadiv,
+            UserRole.admin,
+          ].map((role) {
             final selected =
                 _usernameController.text.toLowerCase() == role.apiValue;
             return GestureDetector(

@@ -236,15 +236,22 @@ bool isNotificationVisibleToUser(NotificationItem item, dynamic user) {
     if (!matchesUserId(item.targetUserId, userId)) {
       return false; // Notifikasi user A tidak pernah tampil untuk user B
     }
-    if (item.targetRole != null && item.targetRole != userRole) {
-      return false;
+    if (item.targetRole != null) {
+      final matchesRole = item.targetRole == userRole ||
+          (userRole == UserRole.bagianAset && item.targetRole == UserRole.kabagAset) ||
+          (userRole == UserRole.kabagAset && item.targetRole == UserRole.bagianAset);
+      if (!matchesRole) {
+        return false;
+      }
     }
     return true;
   }
 
   // 2. Jika notifikasi ditujukan ke seluruh role:
   if (item.targetRole != null) {
-    return item.targetRole == userRole;
+    return item.targetRole == userRole ||
+        (userRole == UserRole.bagianAset && item.targetRole == UserRole.kabagAset) ||
+        (userRole == UserRole.kabagAset && item.targetRole == UserRole.bagianAset);
   }
 
   // 3. Notifikasi tanpa target role & user tidak boleh bocor

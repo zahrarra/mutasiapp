@@ -72,7 +72,7 @@ class KadivApprovalDetailScreen extends ConsumerWidget {
     KadivApprovalActionState actionState,
   ) {
     final isWaitingApproval =
-        mutation.status == MutationStatus.waitingKadivApproval;
+        mutation.status.isWaitingDivisionApproval;
 
     return Column(
       children: [
@@ -778,7 +778,7 @@ class KadivApprovalDetailScreen extends ConsumerWidget {
               ),
               const SizedBox(height: AppSpacing.sm),
               const Text(
-                'Setelah disetujui, pengajuan akan diteruskan ke Staff Aset untuk pembaruan lokasi aset.',
+                'Setelah disetujui, pengajuan akan diteruskan ke Pemohon untuk konfirmasi hasil mutasi.',
                 style: TextStyle(
                   fontSize: 11,
                   color: AppColors.textSecondary,

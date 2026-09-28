@@ -109,11 +109,12 @@ final kadivStatsProvider = Provider<KadivApprovalStats>((ref) {
   return asyncMutations.when(
     data: (mutations) {
       final waiting = mutations
-          .where((m) => m.status == MutationStatus.waitingKadivApproval)
+          .where((m) => m.status.isWaitingDivisionApproval)
           .length;
       final approved = mutations
           .where((m) =>
               (m.status == MutationStatus.approved ||
+                  m.status == MutationStatus.waitingConfirmation ||
                   m.status == MutationStatus.pendingConfirmation ||
                   m.status == MutationStatus.completed) &&
               (m.kadivApprovedBy != null || m.kadivApprovedAt != null))
@@ -158,9 +159,10 @@ final filteredKadivApprovalsProvider =
     var list = mutations.where((m) {
       return switch (statusFilter) {
         KadivStatusFilter.waiting =>
-          m.status == MutationStatus.waitingKadivApproval,
+          m.status.isWaitingDivisionApproval,
         KadivStatusFilter.approved =>
           (m.status == MutationStatus.approved ||
+                  m.status == MutationStatus.waitingConfirmation ||
                   m.status == MutationStatus.pendingConfirmation ||
                   m.status == MutationStatus.completed) &&
               (m.kadivApprovedBy != null || m.kadivApprovedAt != null),
@@ -170,11 +172,12 @@ final filteredKadivApprovalsProvider =
                   m.kadivRejectedAt != null ||
                   m.kadivRejectionReason != null),
         KadivStatusFilter.all =>
-          m.status == MutationStatus.waitingKadivApproval ||
+          m.status.isWaitingDivisionApproval ||
               m.kadivApprovedBy != null ||
               m.kadivRejectedBy != null ||
               (m.requiresKadivApproval &&
                   (m.status == MutationStatus.approved ||
+                      m.status == MutationStatus.waitingConfirmation ||
                       m.status == MutationStatus.rejected ||
                       m.status == MutationStatus.pendingConfirmation ||
                       m.status == MutationStatus.completed)),
@@ -279,10 +282,10 @@ class KadivApprovalActionNotifier
 
       try {
         ref.read(notificationProvider.notifier).notifyRole(
-              targetRole: UserRole.staffAset,
-              title: 'Tugas Pembaruan Fisik Aset',
+              targetRole: UserRole.pemohon,
+              title: 'Persetujuan Final Selesai',
               message:
-                  'Pengajuan mutasi ${result.data.ticketNumber} (${result.data.asset.name}) telah disetujui Kadiv. Silakan perbarui fisik aset.',
+                  'Pengajuan mutasi ${result.data.ticketNumber} (${result.data.asset.name}) telah disetujui Pemimpin Divisi. Silakan periksa aset dan berikan konfirmasi.',
               type: NotificationType.action,
               relatedMutationId: mutationId,
             );

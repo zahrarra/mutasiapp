@@ -26,7 +26,10 @@ class SubmitMutationParams {
   final String? documentPath;
   final List<int>? documentBytes;
 
-  /// Menandakan apakah mutasi untuk aset yang belum terdaftar di database.
+  /// Pertanyaan: "Aset ikut saya pindah?" (Ya / Tidak) (PRD V1.1 §6.2).
+  final bool isAssetMovingWithApplicant;
+
+  /// Menandakan apakah mutasi untuk aset yang belum terdaftar di database (legacy).
   final bool isUnregisteredAsset;
 
   /// Nama aset manual (jika [isUnregisteredAsset] true).
@@ -48,6 +51,7 @@ class SubmitMutationParams {
     this.documentName,
     this.documentPath,
     this.documentBytes,
+    this.isAssetMovingWithApplicant = true,
     this.isUnregisteredAsset = false,
     this.customAssetName,
     this.customSerialNumber,
@@ -82,59 +86,109 @@ abstract class MutationRepository {
   /// Digunakan oleh Operator untuk melihat seluruh pengajuan.
   Future<Result<List<Mutation>>> getAllMutations();
 
-  /// Verifikasi mutasi oleh Operator.
+  // ─── PRD V1.1 Workflow Operations ──────────────────────────────────────────
+
+  /// Pemeriksaan kelengkapan oleh Operator: Teruskan ke Bagian Aset (PRD V1.1 §6.3).
+  Future<Result<Mutation>> operatorForward({
+    required String mutationId,
+    required String operatorName,
+  });
+
+  /// Pemeriksaan kelengkapan oleh Operator: Kembalikan ke Pemohon dengan alasan (PRD V1.1 §6.3).
+  Future<Result<Mutation>> operatorReturn({
+    required String mutationId,
+    required String reason,
+    required String operatorName,
+  });
+
+  /// Verifikasi data aset oleh Bagian Aset: Teruskan ke Pemimpin Divisi (PRD V1.1 §6.4).
+  /// [newPic] wajib diisi jika saat pengajuan pemohon tidak membawa aset (PIC kosong).
+  Future<Result<Mutation>> assetSectionForward({
+    required String mutationId,
+    required String verifierName,
+    String? newPic,
+  });
+
+  /// Verifikasi data aset oleh Bagian Aset: Kembalikan ke Pemohon dengan alasan (PRD V1.1 §6.4).
+  Future<Result<Mutation>> assetSectionReturn({
+    required String mutationId,
+    required String reason,
+    required String verifierName,
+  });
+
+  /// Persetujuan final oleh Pemimpin Divisi (PRD V1.1 §6.5).
+  Future<Result<Mutation>> divisionApprove({
+    required String mutationId,
+    required String divisionHeadName,
+  });
+
+  /// Penolakan final oleh Pemimpin Divisi dengan alasan (PRD V1.1 §6.5).
+  Future<Result<Mutation>> divisionReject({
+    required String mutationId,
+    required String reason,
+    required String divisionHeadName,
+  });
+
+  /// Konfirmasi hasil mutasi oleh Pemohon (PRD V1.1 §6.6):
+  /// - [isSesuai] true -> status Selesai, server otomatis update lokasi & PIC aset master, riwayat disimpan.
+  /// - [isSesuai] false -> status kembali ke Bagian Aset dengan [reason].
+  Future<Result<Mutation>> confirmMutationResult({
+    required String mutationId,
+    required String confirmedBy,
+    required bool isSesuai,
+    String? reason,
+  });
+
+  // ─── Legacy Compatibility Methods ──────────────────────────────────────────
+
+  /// Verifikasi mutasi oleh Operator (Legacy).
   Future<Result<Mutation>> verifyMutation({
     required String mutationId,
     required String operatorName,
     bool requiresKadivApproval = false,
   });
 
-  /// Kembalikan pengajuan mutasi ke Pemohon.
+  /// Kembalikan pengajuan mutasi ke Pemohon (Legacy).
   Future<Result<Mutation>> returnMutation({
     required String mutationId,
     required String reason,
     required String operatorName,
   });
 
-  /// Persetujuan mutasi oleh Kabag Aset.
-  ///
-  /// Jika [requiresKadivApproval] true, status menjadi [waitingKadivApproval].
-  /// Jika false, status menjadi [approved] (langsung ke Staff Aset).
+  /// Persetujuan mutasi oleh Kabag Aset (Legacy).
   Future<Result<Mutation>> approveMutationKabag({
     required String mutationId,
     required String kabagName,
     required bool requiresKadivApproval,
   });
 
-  /// Penolakan mutasi oleh Kabag Aset.
+  /// Penolakan mutasi oleh Kabag Aset (Legacy).
   Future<Result<Mutation>> rejectMutationKabag({
     required String mutationId,
     required String reason,
     required String kabagName,
   });
 
-  /// Persetujuan mutasi oleh Kadiv.
+  /// Persetujuan mutasi oleh Kadiv (Legacy).
   Future<Result<Mutation>> approveMutationKadiv({
     required String mutationId,
     required String kadivName,
   });
 
-  /// Penolakan mutasi oleh Kadiv.
+  /// Penolakan mutasi oleh Kadiv (Legacy).
   Future<Result<Mutation>> rejectMutationKadiv({
     required String mutationId,
     required String reason,
     required String kadivName,
   });
 
-  /// Konfirmasi mutasi oleh Pemohon.
+  /// Konfirmasi mutasi oleh Pemohon (Legacy).
   Future<Result<Mutation>> confirmMutation({
     required String mutationId,
     required String confirmedBy,
   });
 
-  /// Pembaruan lokasi dan PIC fisik aset oleh Staff Aset.
-  ///
-  /// Mengubah status mutasi dari [approved] menjadi [pendingConfirmation].
+  /// Pembaruan lokasi dan PIC fisik aset oleh Staff Aset (Legacy).
   Future<Result<Mutation>> processStaffAssetUpdate({
     required String mutationId,
     required String newLocation,

@@ -506,8 +506,10 @@ class MutationDetailScreen extends ConsumerWidget {
 
     switch (status) {
       case MutationStatus.submitted:
+      case MutationStatus.waitingAssetVerification:
       case MutationStatus.waitingKabagApproval:
       case MutationStatus.waitingKadivApproval:
+      case MutationStatus.waitingDivisionHeadApproval:
         bg = const Color(0xFFF59E0B).withValues(alpha: 0.2);
         border = const Color(0xFFF59E0B).withValues(alpha: 0.35);
         text = const Color(0xFFFDE68A);
@@ -526,9 +528,14 @@ class MutationDetailScreen extends ConsumerWidget {
         border = const Color(0xFFEF4444).withValues(alpha: 0.35);
         text = const Color(0xFFFECACA);
       case MutationStatus.pendingConfirmation:
+      case MutationStatus.waitingConfirmation:
         bg = const Color(0xFF06B6D4).withValues(alpha: 0.2);
         border = const Color(0xFF06B6D4).withValues(alpha: 0.35);
         text = const Color(0xFFA5F3FC);
+      case MutationStatus.waitingSync:
+        bg = const Color(0xFF6B7280).withValues(alpha: 0.2);
+        border = const Color(0xFF6B7280).withValues(alpha: 0.35);
+        text = const Color(0xFFD1D5DB);
     }
 
     return Container(
@@ -1646,13 +1653,19 @@ class MutationDetailScreen extends ConsumerWidget {
       MutationStatus.submitted ||
       MutationStatus.returned =>
         mutation.verifiedBy ?? 'Siti Rahma',
+      MutationStatus.waitingAssetVerification ||
       MutationStatus.verified ||
       MutationStatus.waitingKabagApproval =>
-        mutation.approvedBy ?? 'Bpk. Budi Santoso',
-      MutationStatus.waitingKadivApproval => 'Drs. Hendra',
+        mutation.approvedBy ?? 'Hendra Setiawan',
+      MutationStatus.waitingKadivApproval ||
+      MutationStatus.waitingDivisionHeadApproval =>
+        'Drs. Hendra',
       MutationStatus.approved => mutation.staffUpdatedBy ?? 'Agus Pratama',
-      MutationStatus.pendingConfirmation => mutation.applicantName,
+      MutationStatus.pendingConfirmation ||
+      MutationStatus.waitingConfirmation =>
+        mutation.applicantName,
       MutationStatus.completed => 'Sistem Terverifikasi',
+      MutationStatus.waitingSync => 'Antrean Sinkronisasi',
       MutationStatus.rejected =>
         mutation.kadivRejectionReason != null ? 'Drs. Hendra' : 'Bpk. Budi Santoso',
     };
@@ -1663,13 +1676,19 @@ class MutationDetailScreen extends ConsumerWidget {
       MutationStatus.submitted ||
       MutationStatus.returned =>
         'Operator Aset & Logistik',
+      MutationStatus.waitingAssetVerification ||
       MutationStatus.verified ||
       MutationStatus.waitingKabagApproval =>
-        'Kabag Aset & Logistik',
-      MutationStatus.waitingKadivApproval => 'Kepala Divisi (Kadiv)',
+        'Bagian Aset',
+      MutationStatus.waitingKadivApproval ||
+      MutationStatus.waitingDivisionHeadApproval =>
+        'Pemimpin Divisi',
       MutationStatus.approved => 'Staff Aset (Fisik & Inventaris)',
-      MutationStatus.pendingConfirmation => 'Pemohon (Konfirmasi Akhir)',
+      MutationStatus.pendingConfirmation ||
+      MutationStatus.waitingConfirmation =>
+        'Pemohon (Konfirmasi Akhir)',
       MutationStatus.completed => 'Siklus Mutasi Selesai',
+      MutationStatus.waitingSync => 'Penyimpanan Offline',
       MutationStatus.rejected => 'Peninjau Mutasi',
     };
   }

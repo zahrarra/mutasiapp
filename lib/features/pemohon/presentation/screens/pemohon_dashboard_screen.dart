@@ -970,18 +970,22 @@ class _PemohonDashboardScreenState
       case MutationStatus.submitted:
       case MutationStatus.returned:
         return 0;
+      case MutationStatus.waitingAssetVerification:
       case MutationStatus.verified:
         return 1;
+      case MutationStatus.waitingDivisionHeadApproval:
       case MutationStatus.waitingKabagApproval:
       case MutationStatus.waitingKadivApproval:
         return 2;
       case MutationStatus.approved:
         return 3;
+      case MutationStatus.waitingConfirmation:
       case MutationStatus.pendingConfirmation:
         return 4;
       case MutationStatus.completed:
         return 5;
       case MutationStatus.rejected:
+      case MutationStatus.waitingSync:
         return 0;
     }
   }
@@ -1299,15 +1303,19 @@ class _PemohonDashboardScreenState
 
   Color _pillBg(MutationStatus s) {
     switch (s) {
+      case MutationStatus.waitingConfirmation:
       case MutationStatus.pendingConfirmation:
         return _S.pendingBg;
       case MutationStatus.returned:
+      case MutationStatus.waitingSync:
         return const Color(0xFFEDF2F7);
       case MutationStatus.approved:
       case MutationStatus.completed:
       case MutationStatus.submitted:
       case MutationStatus.verified:
         return _S.approvedBg;
+      case MutationStatus.waitingAssetVerification:
+      case MutationStatus.waitingDivisionHeadApproval:
       case MutationStatus.waitingKabagApproval:
       case MutationStatus.waitingKadivApproval:
         return _S.pendingBg;
@@ -1318,15 +1326,19 @@ class _PemohonDashboardScreenState
 
   Color _pillFg(MutationStatus s) {
     switch (s) {
+      case MutationStatus.waitingConfirmation:
       case MutationStatus.pendingConfirmation:
         return _S.pendingText;
       case MutationStatus.returned:
+      case MutationStatus.waitingSync:
         return const Color(0xFF4A5568);
       case MutationStatus.approved:
       case MutationStatus.completed:
       case MutationStatus.submitted:
       case MutationStatus.verified:
         return _S.approvedText;
+      case MutationStatus.waitingAssetVerification:
+      case MutationStatus.waitingDivisionHeadApproval:
       case MutationStatus.waitingKabagApproval:
       case MutationStatus.waitingKadivApproval:
         return _S.pendingText;
@@ -1341,18 +1353,24 @@ class _PemohonDashboardScreenState
         return 'Diajukan';
       case MutationStatus.returned:
         return 'Dikembalikan';
+      case MutationStatus.waitingAssetVerification:
+        return 'Verifikasi Aset';
       case MutationStatus.waitingKabagApproval:
         return 'Menunggu Kabag';
+      case MutationStatus.waitingDivisionHeadApproval:
       case MutationStatus.waitingKadivApproval:
         return 'Menunggu Kadiv';
       case MutationStatus.verified:
         return 'Terverifikasi';
       case MutationStatus.approved:
         return 'Disetujui';
+      case MutationStatus.waitingConfirmation:
       case MutationStatus.pendingConfirmation:
         return 'Menunggu Konfirmasi';
       case MutationStatus.completed:
         return 'Selesai';
+      case MutationStatus.waitingSync:
+        return 'Offline';
       case MutationStatus.rejected:
         return 'Ditolak';
     }
@@ -1458,8 +1476,11 @@ class _FilterSheet extends StatelessWidget {
         return 'Diajukan';
       case MutationStatus.returned:
         return 'Dikembalikan';
+      case MutationStatus.waitingAssetVerification:
+        return 'Verifikasi Aset';
       case MutationStatus.waitingKabagApproval:
         return 'Menunggu Kabag';
+      case MutationStatus.waitingDivisionHeadApproval:
       case MutationStatus.waitingKadivApproval:
         return 'Menunggu Kadiv';
       case MutationStatus.verified:
@@ -1468,10 +1489,13 @@ class _FilterSheet extends StatelessWidget {
         return 'Disetujui';
       case MutationStatus.rejected:
         return 'Ditolak';
+      case MutationStatus.waitingConfirmation:
       case MutationStatus.pendingConfirmation:
         return 'Konfirmasi';
       case MutationStatus.completed:
         return 'Selesai';
+      case MutationStatus.waitingSync:
+        return 'Offline';
     }
   }
 }

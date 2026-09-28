@@ -28,7 +28,7 @@ void main() {
       expect(list.any((m) => m.status == MutationStatus.submitted), true);
     });
 
-    test('verifyMutation updates status to waitingKabagApproval', () async {
+    test('verifyMutation updates status to waitingAssetVerification', () async {
       // Ambil mutasi pertama (mut_001 berstatus submitted)
       final all = await repository.getAllMutations();
       final target =
@@ -41,7 +41,7 @@ void main() {
 
       expect(result.isSuccess, true);
       final updated = result.dataOrNull!;
-      expect(updated.status, MutationStatus.waitingKabagApproval);
+      expect(updated.status, MutationStatus.waitingAssetVerification);
       expect(updated.verifiedBy, 'Operator Test');
       expect(updated.verifiedAt, isNotNull);
     });

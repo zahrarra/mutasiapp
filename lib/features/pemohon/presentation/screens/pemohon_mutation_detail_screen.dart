@@ -583,6 +583,8 @@ class PemohonMutationDetailScreen extends ConsumerWidget {
 
     switch (status) {
       case MutationStatus.submitted:
+      case MutationStatus.waitingAssetVerification:
+      case MutationStatus.waitingDivisionHeadApproval:
       case MutationStatus.waitingKabagApproval:
       case MutationStatus.waitingKadivApproval:
         bg = const Color(0xFFF59E0B).withValues(alpha: 0.2);
@@ -595,6 +597,7 @@ class PemohonMutationDetailScreen extends ConsumerWidget {
         border = const Color(0xFF10B981).withValues(alpha: 0.35);
         text = const Color(0xFFA7F3D0);
       case MutationStatus.returned:
+      case MutationStatus.waitingSync:
         bg = const Color(0xFFF97316).withValues(alpha: 0.2);
         border = const Color(0xFFF97316).withValues(alpha: 0.35);
         text = const Color(0xFFFED7AA);
@@ -602,6 +605,7 @@ class PemohonMutationDetailScreen extends ConsumerWidget {
         bg = const Color(0xFFEF4444).withValues(alpha: 0.2);
         border = const Color(0xFFEF4444).withValues(alpha: 0.35);
         text = const Color(0xFFFECACA);
+      case MutationStatus.waitingConfirmation:
       case MutationStatus.pendingConfirmation:
         bg = const Color(0xFF06B6D4).withValues(alpha: 0.2);
         border = const Color(0xFF06B6D4).withValues(alpha: 0.35);
@@ -1791,14 +1795,20 @@ class PemohonMutationDetailScreen extends ConsumerWidget {
   String _getReviewerName(Mutation mutation) {
     return switch (mutation.status) {
       MutationStatus.submitted ||
-      MutationStatus.returned =>
+      MutationStatus.returned ||
+      MutationStatus.waitingSync =>
         mutation.verifiedBy ?? 'Siti Rahma',
+      MutationStatus.waitingAssetVerification ||
       MutationStatus.verified ||
       MutationStatus.waitingKabagApproval =>
-        mutation.approvedBy ?? 'Bpk. Budi Santoso',
-      MutationStatus.waitingKadivApproval => 'Drs. Hendra',
+        mutation.approvedBy ?? 'Hendra Setiawan',
+      MutationStatus.waitingDivisionHeadApproval ||
+      MutationStatus.waitingKadivApproval =>
+        'Drs. Hendra',
       MutationStatus.approved => mutation.staffUpdatedBy ?? 'Agus Pratama',
-      MutationStatus.pendingConfirmation => mutation.applicantName,
+      MutationStatus.waitingConfirmation ||
+      MutationStatus.pendingConfirmation =>
+        mutation.applicantName,
       MutationStatus.completed => 'Sistem Terverifikasi',
       MutationStatus.rejected =>
         mutation.kadivRejectionReason != null ? 'Drs. Hendra' : 'Bpk. Budi Santoso',
@@ -1808,14 +1818,20 @@ class PemohonMutationDetailScreen extends ConsumerWidget {
   String _getReviewerRole(Mutation mutation) {
     return switch (mutation.status) {
       MutationStatus.submitted ||
-      MutationStatus.returned =>
+      MutationStatus.returned ||
+      MutationStatus.waitingSync =>
         'Operator Aset & Logistik',
+      MutationStatus.waitingAssetVerification ||
       MutationStatus.verified ||
       MutationStatus.waitingKabagApproval =>
-        'Kabag Aset & Logistik',
-      MutationStatus.waitingKadivApproval => 'Kepala Divisi (Kadiv)',
+        'Bagian Aset',
+      MutationStatus.waitingDivisionHeadApproval ||
+      MutationStatus.waitingKadivApproval =>
+        'Pemimpin Divisi',
       MutationStatus.approved => 'Staff Aset (Fisik & Inventaris)',
-      MutationStatus.pendingConfirmation => 'Pemohon (Konfirmasi Akhir)',
+      MutationStatus.waitingConfirmation ||
+      MutationStatus.pendingConfirmation =>
+        'Pemohon (Konfirmasi Akhir)',
       MutationStatus.completed => 'Siklus Mutasi Selesai',
       MutationStatus.rejected => 'Peninjau Mutasi',
     };

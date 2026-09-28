@@ -26,7 +26,6 @@ abstract final class _C {
   static const bg = Color(0xFFF6F8FA);
   static const white = Color(0xFFFFFFFF);
   static const primary = Color(0xFF00273A);
-  static const primaryContainer = Color(0xFF0F3D56);
   static const textPrimary = Color(0xFF172B4D);
   static const textSecondary = Color(0xFF52606D);
   static const border = Color(0xFFD0D5DD);
@@ -290,15 +289,11 @@ class _PemohonConfirmationScreenState
     PemohonConfirmationActionState actionState,
   ) {
     final m = actionState.result ?? mutation;
-    final isPending = m.status == MutationStatus.pendingConfirmation;
+    final isPending = m.status == MutationStatus.waitingConfirmation ||
+        m.status == MutationStatus.pendingConfirmation;
     final isCompleted = m.status == MutationStatus.completed;
-    // Heuristik: Operator mengembalikan pengajuan SEBELUM Staff Aset sempat
-    // update data (staffUpdatedAt masih null). Sebaliknya, laporan
-    // ketidaksesuaian dari Pemohon hanya terjadi SETELAH Staff Aset update
-    // (staffUpdatedAt sudah terisi). Dengan ini kita bisa membedakan konteks
-    // tanpa perlu menambah status/enum baru.
-    final isDisputedByApplicant =
-        m.status == MutationStatus.returned && m.staffUpdatedAt != null;
+    final isDisputedByApplicant = (m.status == MutationStatus.returned && m.staffUpdatedAt != null) ||
+        (m.status == MutationStatus.waitingAssetVerification && m.confirmationReason != null);
 
     return Stack(
       children: [
@@ -358,7 +353,7 @@ class _PemohonConfirmationScreenState
               const SizedBox(height: 12),
             ] else if (!isPending) ...[
               _banner(
-                'Pengajuan berstatus "${m.status.displayName}". Konfirmasi hanya saat "Menunggu Konfirmasi".',
+                'Pengajuan ini berstatus "${m.status.displayName}". Konfirmasi hanya dapat dilakukan saat berstatus "Menunggu Konfirmasi".',
                 _C.warning,
                 const Color(0xFFFFFBEB),
                 const Color(0xFFFEDF89),
@@ -1217,8 +1212,8 @@ class _PemohonConfirmationScreenState
               if (success) {
                 AppFeedback.showSuccess(
                   context,
-                  'Laporan ketidaksesuaian terkirim. Staff Aset akan '
-                  'meninjau dan memperbaiki data aset Anda.',
+                  'Laporan ketidaksesuaian terkirim. Bagian Aset akan '
+                  'memverifikasi dan memperbaiki data mutasi Anda.',
                 );
 
                 final currentMutation = ref
@@ -1227,22 +1222,10 @@ class _PemohonConfirmationScreenState
                 ref
                     .read(notificationProvider.notifier)
                     .notifyRole(
-                      targetRole: UserRole.staffAset,
+                      targetRole: UserRole.bagianAset,
                       title: 'Ketidaksesuaian Ditemukan',
                       message:
                           'Pemohon melaporkan ketidaksesuaian untuk pengajuan ${currentMutation?.ticketNumber ?? widget.mutationId}: $reason',
-                      type: NotificationType.action,
-                      relatedMutationId: widget.mutationId,
-                    );
-                ref
-                    .read(notificationProvider.notifier)
-                    .notifyRole(
-                      targetRole: UserRole.operator,
-                      title: 'Ketidaksesuaian Dilaporkan Pemohon',
-                      message:
-                          'Pemohon melaporkan ketidaksesuaian pada hasil '
-                          'update aset untuk pengajuan '
-                          '${currentMutation?.ticketNumber ?? widget.mutationId}: $reason',
                       type: NotificationType.action,
                       relatedMutationId: widget.mutationId,
                     );

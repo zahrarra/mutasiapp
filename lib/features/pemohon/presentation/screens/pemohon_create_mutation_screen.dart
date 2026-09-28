@@ -4,16 +4,18 @@
 // Font: Montserrat.
 // Functionality: submit, dokumen, validasi, provider.
 
+import 'dart:typed_data';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:mutasiku/features/operator/presentation/providers/operator_verification_provider.dart';
 
 import '../../../../app/router/route_names.dart';
 import '../../../../core/services/document_picker_service.dart';
+import '../../../../core/services/mutation_draft_service.dart';
 import '../../../../core/widgets/app_feedback.dart';
-import '../../../../core/widgets/searchable_picker_bottom_sheet.dart';
+import '../../../../core/widgets/document_preview_dialog.dart';
 import '../../../auth/domain/entities/user_role.dart';
 import '../../../auth/presentation/providers/auth_provider.dart';
 import '../../../mutation/domain/repositories/mutation_repository.dart';
@@ -62,8 +64,6 @@ class _PemohonCreateMutationScreenState
   String? _documentPath;
   List<int>? _documentBytes;
 
-  bool _isFallbackMode = true;
-
   /// true = dibawa sendiri, false = ditinggalkan
   bool _bringAsset = true;
 
@@ -87,6 +87,10 @@ class _PemohonCreateMutationScreenState
       if (mounted) {
         setState(() {});
       }
+    });
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _loadSavedDraft();
     });
   }
 
@@ -147,35 +151,110 @@ class _PemohonCreateMutationScreenState
   }
 
   // ---------------------------------------------------------------------------
+  // DRAFT
+  // ---------------------------------------------------------------------------
+
+  Future<void> _loadSavedDraft() async {
+    final user = ref.read(authStateProvider).user;
+    final draft = await MutationDraftService.loadDraft(userId: user?.id);
+    if (draft != null && mounted) {
+      setState(() {
+        _selectedAssetId = draft.assetId;
+        _assetNameController.text = draft.assetName;
+        _assetCodeController.text = draft.assetCode;
+        _sourceLocationController.text = draft.sourceLocation;
+        _currentPicController.text = draft.currentPic;
+        _locationController.text = draft.targetLocation;
+        _roomController.text = draft.room;
+        _bringAsset = draft.bringAsset;
+        _picController.text = draft.targetPic;
+        _reasonController.text = draft.reason;
+        _documentName = draft.documentName;
+        _documentSize = draft.documentSize;
+        _documentPath = draft.documentPath;
+        _documentBytes = draft.documentBytes;
+      });
+      AppFeedback.showInfo(context, 'Draf pengajuan mutasi dimuat.');
+    }
+  }
+
+  Future<void> _saveDraft() async {
+    final user = ref.read(authStateProvider).user;
+    final draft = MutationDraft(
+      assetId: _selectedAssetId,
+      assetName: _assetNameController.text.trim(),
+      assetCode: _assetCodeController.text.trim(),
+      sourceLocation: _sourceLocationController.text.trim(),
+      currentPic: _currentPicController.text.trim(),
+      targetLocation: _locationController.text.trim(),
+      room: _roomController.text.trim(),
+      bringAsset: _bringAsset,
+      targetPic: _picController.text.trim(),
+      reason: _reasonController.text.trim(),
+      documentName: _documentName,
+      documentSize: _documentSize,
+      documentPath: _documentPath,
+      documentBytes: _documentBytes,
+      savedAt: DateTime.now(),
+    );
+    await MutationDraftService.saveDraft(draft, userId: user?.id);
+    if (mounted) {
+      AppFeedback.showSuccess(context, 'Draf pengajuan berhasil disimpan.');
+      _safePop();
+    }
+  }
+
+  // ---------------------------------------------------------------------------
   // DOCUMENT
   // ---------------------------------------------------------------------------
 
+  void _previewDocument() {
+    if (_documentName == null) return;
+    DocumentPreviewDialog.showFile(
+      context,
+      fileName: _documentName!,
+      bytes: _documentBytes != null ? Uint8List.fromList(_documentBytes!) : null,
+      filePath: _documentPath,
+    );
+  }
+
   Future<void> _pickDocument() async {
-    final result = await DocumentPickerService.pickDocument();
-
-    if (!mounted) return;
-
-    if (result.isCanceled) return;
-
-    if (result.isFailure) {
-      AppFeedback.showError(
-        context,
-        result.errorMessage ?? 'Gagal mengunggah dokumen.',
+    try {
+      final result = await DocumentPickerService.pickDocument(
+        allowedExtensions: const ['pdf'],
       );
-      return;
-    }
 
-    final doc = result.document;
+      if (!mounted) return;
 
-    if (doc != null) {
-      setState(() {
-        _documentName = doc.name;
-        _documentSize = doc.size;
-        _documentPath = doc.path;
-        _documentBytes = doc.bytes;
-      });
+      if (result.isCanceled) return;
 
-      AppFeedback.showSuccess(context, 'Dokumen diunggah: ${doc.name}');
+      if (result.isFailure) {
+        AppFeedback.showError(
+          context,
+          result.errorMessage ?? 'Upload gagal. Ukuran file maksimal 30 MB.',
+        );
+        return;
+      }
+
+      final doc = result.document;
+
+      if (doc != null) {
+        setState(() {
+          _documentName = doc.name;
+          _documentSize = doc.size;
+          _documentPath = doc.path;
+          _documentBytes = doc.bytes;
+        });
+
+        AppFeedback.showSuccess(context, 'Dokumen diunggah: ${doc.name}');
+      }
+    } catch (e) {
+      if (mounted) {
+        AppFeedback.showError(
+          context,
+          'Gagal mengunggah dokumen: $e',
+        );
+      }
     }
   }
 
@@ -193,27 +272,7 @@ class _PemohonCreateMutationScreenState
     return '${(bytes / (1024 * 1024)).toStringAsFixed(1)} MB';
   }
 
-  // ---------------------------------------------------------------------------
-  // LOCATION PICKER
-  // ---------------------------------------------------------------------------
 
-  Future<void> _pickLocation(List<String> locations) async {
-    final selected = await SearchablePickerBottomSheet.show(
-      context: context,
-      title: 'Pilih Unit / Cabang Tujuan',
-      items: locations,
-      selectedItem: _locationController.text.trim().isEmpty
-          ? null
-          : _locationController.text.trim(),
-      searchHint: 'Cari lokasi...',
-    );
-
-    if (selected != null) {
-      setState(() {
-        _locationController.text = selected;
-      });
-    }
-  }
 
   // ---------------------------------------------------------------------------
   // SUBMIT
@@ -246,46 +305,37 @@ class _PemohonCreateMutationScreenState
       return;
     }
 
+    if (_documentName == null || _documentName!.trim().isEmpty) {
+      AppFeedback.showError(
+        context,
+        'Surat Keputusan (SK) SDM wajib diunggah untuk pengajuan mutasi.',
+      );
+      return;
+    }
+
+    final targetPic = _bringAsset
+        ? (_picController.text.trim().isNotEmpty
+            ? _picController.text.trim()
+            : (user?.name ?? ''))
+        : '';
+
     final params = SubmitMutationParams(
       applicantId: user?.id,
       applicantName: user?.name,
-
-      assetId: _isFallbackMode
-          ? null
-          : (_selectedAssetId ??
-                (_assetCodeController.text.trim().isNotEmpty
-                    ? _assetCodeController.text.trim()
-                    : null)),
-
+      assetId: _selectedAssetId ??
+          (_assetCodeController.text.trim().isNotEmpty
+              ? _assetCodeController.text.trim()
+              : 'AST-001'),
       assetName: _assetNameController.text.trim(),
-
-      isUnregisteredAsset: _isFallbackMode,
-
-      customAssetName: _isFallbackMode
-          ? _assetNameController.text.trim()
-          : null,
-
-      customSerialNumber: _isFallbackMode
-          ? _assetCodeController.text.trim()
-          : null,
-
-      // PENTING:
-      // Lokasi aset saat ini diambil langsung dari field
-      // "Unit kerja & lokasi asal".
+      isAssetMovingWithApplicant: _bringAsset,
+      isUnregisteredAsset: false,
       sourceLocation: sourceLocation,
-
       targetLocation: fullTarget,
-
       currentPic: _currentPicController.text.trim().isNotEmpty
           ? _currentPicController.text.trim()
           : (user?.name ?? ''),
-
-      targetPic: _picController.text.trim().isNotEmpty
-          ? _picController.text.trim()
-          : (user?.name ?? ''),
-
+      targetPic: targetPic,
       reason: _reasonController.text.trim(),
-
       documentName: _documentName,
       documentPath: _documentPath,
       documentBytes: _documentBytes,
@@ -298,6 +348,9 @@ class _PemohonCreateMutationScreenState
     if (!mounted) return;
 
     if (mutation != null) {
+      await MutationDraftService.clearDraft(userId: user?.id);
+      if (!mounted) return;
+
       ref
           .read(notificationProvider.notifier)
           .notifyRole(
@@ -735,43 +788,32 @@ class _PemohonCreateMutationScreenState
 
           const SizedBox(height: 6),
 
-          InkWell(
-            onTap: locations.isEmpty ? null : () => _pickLocation(locations),
-            borderRadius: BorderRadius.circular(8),
-            child: Container(
-              padding: const EdgeInsets.all(10),
-              decoration: BoxDecoration(
-                color: _C.white,
-                borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: _C.border),
-              ),
-              child: Row(
-                children: [
-                  const Icon(Icons.business, size: 20, color: _C.navy),
-
-                  const SizedBox(width: 10),
-
-                  Expanded(
-                    child: TextFormField(
-                      controller: _locationController,
-                      style: _inputTextStyle(),
-                      decoration: InputDecoration(
-                        hintText: 'Pilih atau ketik unit tujuan *',
-                        hintStyle: _inputTextStyle(color: _C.muted),
-                        border: InputBorder.none,
-                        isDense: true,
-                        contentPadding: EdgeInsets.zero,
-                      ),
-                      validator: (v) => (v == null || v.trim().isEmpty)
-                          ? 'Lokasi tujuan wajib diisi'
-                          : null,
-                    ),
-                  ),
-
-                  const Icon(Icons.expand_more, color: _C.muted),
-                ],
-              ),
+          DropdownButtonFormField<String>(
+            key: const Key('dropdown_target_location'),
+            initialValue: locations.contains(_locationController.text.trim())
+                ? _locationController.text.trim()
+                : null,
+            style: _inputTextStyle(),
+            decoration: _inputDeco('Pilih unit / cabang tujuan *').copyWith(
+              prefixIcon: const Icon(Icons.business, size: 20, color: _C.navy),
             ),
+            icon: const Icon(Icons.expand_more, color: _C.muted),
+            items: locations.map((loc) {
+              return DropdownMenuItem<String>(
+                value: loc,
+                child: Text(loc, style: _inputTextStyle()),
+              );
+            }).toList(),
+            onChanged: (val) {
+              if (val != null) {
+                setState(() {
+                  _locationController.text = val;
+                });
+              }
+            },
+            validator: (v) => (v == null || v.trim().isEmpty)
+                ? 'Lokasi tujuan wajib dipilih'
+                : null,
           ),
 
           const SizedBox(height: 14),
@@ -804,7 +846,7 @@ class _PemohonCreateMutationScreenState
           const SizedBox(height: 14),
 
           Text(
-            'STATUS FISIK ASET SAAT MUTASI *',
+            'ASET IKUT SAYA PINDAH? *',
             style: _m(
               size: 11,
               weight: FontWeight.w700,
@@ -817,8 +859,8 @@ class _PemohonCreateMutationScreenState
 
           _radioHandling(
             selected: _bringAsset,
-            title: 'Aset Dibawa Sendiri',
-            badge: 'Rekomendasi',
+            title: 'Ya, Aset Ikut Saya Pindah',
+            badge: 'Bawa Sendiri',
             badgeGreen: true,
             body: 'Perangkat tetap digunakan & dibawa pemohon ke unit penugasan baru.',
             icon: Icons.work_outline,
@@ -829,10 +871,10 @@ class _PemohonCreateMutationScreenState
 
           _radioHandling(
             selected: !_bringAsset,
-            title: 'Aset Ditinggalkan di Unit Asal / Alih Kelola',
-            badge: 'Pool Aset',
+            title: 'Tidak, Aset Ditinggalkan di Unit Asal',
+            badge: 'Tinggalkan',
             badgeGreen: false,
-            body: 'Aset fisik ditinggalkan di unit kerja saat ini untuk diserahterimakan ke Staff Aset lokal.',
+            body: 'Aset fisik ditinggalkan di unit kerja saat ini. PIC baru akan ditentukan oleh Bagian Aset melalui sistem.',
             icon: Icons.warehouse_outlined,
             onTap: () => setState(() => _bringAsset = false),
           ),
@@ -862,8 +904,10 @@ class _PemohonCreateMutationScreenState
                           text: 'Ketentuan Tata Kelola Inventaris:\n',
                           style: _m(size: 12, weight: FontWeight.w700),
                         ),
-                        const TextSpan(
-                          text: 'Pemohon hanya menentukan intensi penanganan fisik. Penentuan PIC baru & pembaruan master inventaris dieksekusi oleh Staff Aset pada tahap otorisasi berikutnya.',
+                        TextSpan(
+                          text: _bringAsset
+                              ? 'Aset dibawa ke unit baru dan PIC tetap Pemohon. Master inventaris akan diperbarui setelah konfirmasi serah terima.'
+                              : 'Aset ditinggalkan di lokasi asal. PIC baru akan ditentukan oleh Bagian Aset melalui sistem saat verifikasi.',
                         ),
                       ],
                     ),
@@ -873,15 +917,17 @@ class _PemohonCreateMutationScreenState
             ),
           ),
 
-          const SizedBox(height: 12),
+          if (_bringAsset) ...[
+            const SizedBox(height: 12),
 
-          TextFormField(
-            controller: _picController,
-            style: _inputTextStyle(),
-            decoration: _inputDeco(
-              'PIC tujuan (opsional — diisi Staff jika kosong)',
+            TextFormField(
+              controller: _picController,
+              style: _inputTextStyle(),
+              decoration: _inputDeco(
+                'PIC tujuan (otomatis Pemohon, atau nama PIC baru)',
+              ),
             ),
-          ),
+          ],
         ],
       ),
     );
@@ -1056,12 +1102,23 @@ class _PemohonCreateMutationScreenState
           const SizedBox(height: 14),
 
           Text(
-            'DOKUMEN OTORISASI (SK / BERITA ACARA)',
+            'SURAT KEPUTUSAN (SK) SDM *',
             style: _m(
               size: 11,
-              weight: FontWeight.w600,
+              weight: FontWeight.w700,
               color: _C.muted,
               letterSpacing: 0.5,
+            ),
+          ),
+
+          const SizedBox(height: 2),
+
+          Text(
+            'PDF wajib, maksimal 30 MB',
+            style: _m(
+              size: 11,
+              weight: FontWeight.w500,
+              color: _C.muted,
             ),
           ),
 
@@ -1112,6 +1169,12 @@ class _PemohonCreateMutationScreenState
                     ),
                   ),
 
+                  IconButton(
+                    tooltip: 'Lihat dokumen',
+                    icon: const Icon(Icons.visibility_outlined, size: 20, color: _C.navy),
+                    onPressed: _previewDocument,
+                  ),
+
                   TextButton(
                     onPressed: () {
                       setState(() {
@@ -1126,7 +1189,7 @@ class _PemohonCreateMutationScreenState
                       style: _m(
                         size: 12,
                         weight: FontWeight.w600,
-                        color: _C.navy,
+                        color: const Color(0xFFDC2626),
                       ),
                     ),
                   ),
@@ -1187,7 +1250,7 @@ class _PemohonCreateMutationScreenState
               Row(
                 children: [
                   OutlinedButton.icon(
-                    onPressed: loading ? null : _safePop,
+                    onPressed: loading ? null : _saveDraft,
                     style: OutlinedButton.styleFrom(
                       foregroundColor: _C.text,
                       side: const BorderSide(color: _C.border),

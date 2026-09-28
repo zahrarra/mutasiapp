@@ -272,7 +272,40 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         builder: (context, state) => const NotificationScreen(),
       ),
 
-      // ─── Kabag ────────────────────────────────────────────────────────────
+      // ─── Bagian Aset (PRD V1.1 §6.4) ──────────────────────────────────────
+      GoRoute(
+        path: RouteNames.bagianAsetDashboardPath,
+        name: RouteNames.bagianAsetDashboardName,
+        builder: (context, state) => const KabagDashboardScreen(),
+      ),
+      GoRoute(
+        path: RouteNames.bagianAsetVerificationsPath,
+        name: RouteNames.bagianAsetVerificationsName,
+        builder: (context, state) => const KabagApprovalsScreen(),
+      ),
+      GoRoute(
+        path: RouteNames.bagianAsetVerificationDetailPath,
+        name: RouteNames.bagianAsetVerificationDetailName,
+        builder: (context, state) {
+          final id = state.pathParameters['id'] ?? '';
+          return KabagApprovalDetailScreen(mutationId: id);
+        },
+      ),
+      GoRoute(
+        path: RouteNames.bagianAsetReturnFormPath,
+        name: RouteNames.bagianAsetReturnFormName,
+        builder: (context, state) {
+          final id = state.pathParameters['id'] ?? '';
+          return KabagRejectFormScreen(mutationId: id);
+        },
+      ),
+      GoRoute(
+        path: RouteNames.bagianAsetNotificationsPath,
+        name: RouteNames.bagianAsetNotificationsName,
+        builder: (context, state) => const NotificationScreen(),
+      ),
+
+      // ─── Kabag (Legacy Alias for Bagian Aset) ──────────────────────────────
       GoRoute(
         path: RouteNames.kabagDashboardPath,
         name: RouteNames.kabagDashboardName,

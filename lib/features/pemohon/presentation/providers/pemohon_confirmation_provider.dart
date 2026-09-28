@@ -131,10 +131,10 @@ class PemohonConfirmationActionNotifier
           }
         }
         notifNotifier.notifyRole(
-          targetRole: UserRole.staffAset,
+          targetRole: UserRole.bagianAset,
           title: 'Mutasi Selesai',
           message:
-              'Pemohon telah mengonfirmasi penerimaan aset untuk pengajuan ${result.data.ticketNumber}.',
+              'Pemohon telah mengonfirmasi kesesuaian aset untuk pengajuan ${result.data.ticketNumber}.',
           type: NotificationType.success,
           relatedMutationId: mutationId,
         );
@@ -198,18 +198,18 @@ class PemohonConfirmationActionNotifier
     );
 
     final repo = ref.read(mutationRepositoryProvider);
-    final result = await repo.returnMutation(
+    final result = await repo.confirmMutationResult(
       mutationId: mutationId,
+      confirmedBy: pemohonName,
+      isSesuai: false,
       reason: reason,
-      operatorName: pemohonName,
     );
 
     if (result is Success<Mutation>) {
       state = PemohonConfirmationActionState(
         isLoading: false,
         successMessage:
-            'Laporan ketidaksesuaian terkirim. Staff Aset akan '
-            'meninjau dan memperbaiki data aset Anda.',
+            'Laporan ketidaksesuaian terkirim. Pengajuan dikembalikan ke Bagian Aset untuk verifikasi ulang.',
         result: result.data,
       );
       ref.invalidate(mutationListProvider);
@@ -233,7 +233,7 @@ class PemohonConfirmationActionNotifier
             title: 'Laporan Ketidaksesuaian Terkirim',
             message:
                 'Laporan ketidaksesuaian untuk pengajuan ${result.data.ticketNumber} '
-                'telah diteruskan ke Staff Aset: $reason',
+                'telah diteruskan ke Bagian Aset: $reason',
             type: NotificationType.warning,
             createdAt: DateTime.now(),
             isRead: false,

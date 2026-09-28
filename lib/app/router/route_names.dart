@@ -60,7 +60,29 @@ abstract final class RouteNames {
   static const String operatorNotificationsPath = '/operator/notifications';
   static const String operatorNotificationsName = 'operatorNotifications';
 
-  // ─── Kabag Aset Routes ────────────────────────────────────────────────────
+  // ─── Bagian Aset Routes (PRD V1.1 §6.4) ───────────────────────────────────
+  static const String bagianAsetDashboardPath = '/bagian-aset/dashboard';
+  static const String bagianAsetDashboardName = 'bagianAsetDashboard';
+
+  static const String bagianAsetVerificationsPath = '/bagian-aset/verifications';
+  static const String bagianAsetVerificationsName = 'bagianAsetVerifications';
+
+  static const String bagianAsetVerificationDetailPath =
+      '/bagian-aset/verifications/:id';
+  static const String bagianAsetVerificationDetailName =
+      'bagianAsetVerificationDetail';
+
+  static const String bagianAsetReturnFormPath =
+      '/bagian-aset/verifications/:id/return';
+  static const String bagianAsetReturnFormName = 'bagianAsetReturnForm';
+
+  static const String bagianAsetHistoryPath = '/bagian-aset/history';
+  static const String bagianAsetHistoryName = 'bagianAsetHistory';
+
+  static const String bagianAsetNotificationsPath = '/bagian-aset/notifications';
+  static const String bagianAsetNotificationsName = 'bagianAsetNotifications';
+
+  // ─── Kabag Aset Routes (Legacy Alias for Bagian Aset) ────────────────────
   static const String kabagDashboardPath = '/kabag/dashboard';
   static const String kabagDashboardName = 'kabagDashboard';
 

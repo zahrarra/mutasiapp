@@ -52,10 +52,12 @@ class ProfileScreen extends ConsumerWidget {
         return 'Pemohon';
       case UserRole.operator:
         return 'Operator';
+      case UserRole.bagianAset:
+        return 'Bagian Aset';
       case UserRole.kabagAset:
         return 'Kabag Aset';
       case UserRole.kadiv:
-        return 'Kadiv';
+        return 'Pemimpin Divisi';
       case UserRole.staffAset:
         return 'Staff Aset';
       case UserRole.admin:

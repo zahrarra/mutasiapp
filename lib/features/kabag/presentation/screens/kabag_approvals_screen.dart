@@ -10,6 +10,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../../app/router/route_names.dart';
 import '../../../auth/domain/entities/user_role.dart';
+import '../../../auth/presentation/providers/auth_provider.dart';
 import '../../../../core/widgets/custom_floating_nav_bar.dart';
 import '../../../mutation/domain/entities/mutation.dart';
 import '../providers/kabag_approval_provider.dart';
@@ -62,6 +63,9 @@ class _KabagApprovalsScreenState extends ConsumerState<KabagApprovalsScreen> {
       KabagStatusFilter.all => 'Semua Pengajuan',
     };
 
+    final role = ref.watch(authStateProvider).user?.role;
+    final isBagianAset = role == UserRole.bagianAset;
+
     return Scaffold(
       backgroundColor: _C.background,
       extendBody: true,
@@ -70,12 +74,18 @@ class _KabagApprovalsScreenState extends ConsumerState<KabagApprovalsScreen> {
           // ── Custom Top Bar ──────────────────────────────────────────
           _ApprovalsTopBar(
             title: title,
-            subtitle: 'Antrean Approval Kabag Aset',
+            subtitle: isBagianAset
+                ? 'Antrean Verifikasi Data Aset'
+                : 'Antrean Approval Kabag Aset',
             onBack: () {
               if (context.canPop()) {
                 context.pop();
               } else {
-                context.go(RouteNames.kabagDashboardPath);
+                context.go(
+                  isBagianAset
+                      ? RouteNames.bagianAsetDashboardPath
+                      : RouteNames.kabagDashboardPath,
+                );
               }
             },
           ),
@@ -187,8 +197,13 @@ class _KabagApprovalsScreenState extends ConsumerState<KabagApprovalsScreen> {
                     separatorBuilder: (_, _) => const SizedBox(height: 10),
                     itemBuilder: (context, i) => _KabagApprovalCard(
                       mutation: mutations[i],
-                      onTap: () =>
-                          context.push('/kabag/approvals/${mutations[i].id}'),
+                      onTap: () {
+                        final path = isBagianAset
+                            ? RouteNames.bagianAsetVerificationDetailPath
+                                .replaceFirst(':id', mutations[i].id)
+                            : '/kabag/approvals/${mutations[i].id}';
+                        context.push(path);
+                      },
                     ),
                   ),
                 );
@@ -206,7 +221,9 @@ class _KabagApprovalsScreenState extends ConsumerState<KabagApprovalsScreen> {
         ],
       ),
       bottomNavigationBar: CustomFloatingNavBar.scaffoldBottomBar(
-        items: RoleNavConfig.getNavItemsForRole(UserRole.kabagAset),
+        items: RoleNavConfig.getNavItemsForRole(
+          role ?? UserRole.bagianAset,
+        ),
       ),
     );
   }

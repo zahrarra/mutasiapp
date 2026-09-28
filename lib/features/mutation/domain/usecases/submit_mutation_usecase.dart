@@ -84,10 +84,12 @@ class SubmitMutationUseCase {
       );
     }
 
-    // Validasi PIC baru.
-    if (params.targetPic.trim().isEmpty) {
+    // Validasi PIC baru (PRD V1.1 §6.2):
+    // Jika aset ikut pindah -> PIC baru wajib ada (biasanya Pemohon).
+    // Jika aset ditinggalkan -> PIC dikosongkan untuk ditentukan oleh Bagian Aset.
+    if (params.isAssetMovingWithApplicant && params.targetPic.trim().isEmpty) {
       return const Result.failure(
-        ValidationFailure(message: 'Penanggung jawab baru wajib dipilih.'),
+        ValidationFailure(message: 'Penanggung jawab baru wajib dipilih jika aset ikut pindah.'),
       );
     }
 

@@ -16,7 +16,6 @@ import '../../../auth/domain/entities/user_role.dart';
 import '../../../kadiv/presentation/providers/kadiv_approval_provider.dart';
 import '../../../notification/domain/entities/notification_item.dart';
 import '../../../notification/presentation/providers/notification_provider.dart';
-import '../../../staff/presentation/providers/staff_mutation_provider.dart';
 
 // ─── Use Case Providers ───────────────────────────────────────────────────────
 
@@ -106,18 +105,18 @@ final kabagStatsProvider = Provider<KabagApprovalStats>((ref) {
   return asyncMutations.when(
     data: (mutations) {
       final waiting = mutations
-          .where((m) => m.status == MutationStatus.waitingKabagApproval)
+          .where((m) => m.status.isWaitingAssetVerification)
           .length;
       final approved = mutations.where((m) {
         return m.approvedBy != null ||
             m.approvedAt != null ||
-            m.status == MutationStatus.waitingKadivApproval ||
-            m.status == MutationStatus.approved ||
-            m.status == MutationStatus.pendingConfirmation ||
+            m.status.isWaitingDivisionApproval ||
+            m.status.isWaitingConfirmation ||
             m.status == MutationStatus.completed;
       }).length;
       final rejected = mutations.where((m) {
-        return m.status == MutationStatus.rejected;
+        return m.status == MutationStatus.rejected ||
+            m.status == MutationStatus.returned;
       }).length;
 
       return KabagApprovalStats(
@@ -139,7 +138,7 @@ final kabagStatsProvider = Provider<KabagApprovalStats>((ref) {
   );
 });
 
-/// Provider antrean mutasi untuk Kabag Aset dengan filter status, pencarian, dan sorting.
+/// Provider antrean mutasi untuk Bagian Aset dengan filter status, pencarian, dan sorting.
 final filteredKabagApprovalsProvider =
     Provider<AsyncValue<List<Mutation>>>((ref) {
   final asyncAll = ref.watch(kabagAllMutationsProvider);
@@ -152,22 +151,22 @@ final filteredKabagApprovalsProvider =
     var list = mutations.where((m) {
       return switch (statusFilter) {
         KabagStatusFilter.waiting =>
-          m.status == MutationStatus.waitingKabagApproval,
+          m.status.isWaitingAssetVerification,
         KabagStatusFilter.approved =>
           m.approvedBy != null ||
               m.approvedAt != null ||
-              m.status == MutationStatus.waitingKadivApproval ||
-              m.status == MutationStatus.approved ||
-              m.status == MutationStatus.pendingConfirmation ||
+              m.status.isWaitingDivisionApproval ||
+              m.status.isWaitingConfirmation ||
               m.status == MutationStatus.completed,
         KabagStatusFilter.rejected =>
-          m.status == MutationStatus.rejected,
+          m.status == MutationStatus.rejected ||
+              m.status == MutationStatus.returned,
         KabagStatusFilter.all =>
-          m.status == MutationStatus.waitingKabagApproval ||
-              m.status == MutationStatus.waitingKadivApproval ||
-              m.status == MutationStatus.approved ||
+          m.status.isWaitingAssetVerification ||
+              m.status.isWaitingDivisionApproval ||
               m.status == MutationStatus.rejected ||
-              m.status == MutationStatus.pendingConfirmation ||
+              m.status == MutationStatus.returned ||
+              m.status.isWaitingConfirmation ||
               m.status == MutationStatus.completed ||
               m.approvedBy != null ||
               m.rejectedBy != null,
@@ -243,13 +242,14 @@ class KabagApprovalActionNotifier
     required this.ref,
   }) : super(const KabagApprovalActionState());
 
-  /// Eksekusi Approve oleh Kabag Aset
+  /// Eksekusi Verifikasi & Teruskan ke Pemimpin Divisi oleh Bagian Aset (PRD V1.1 §6.4)
   Future<bool> approve({
     required String mutationId,
+    String? newPic,
     bool? requiresKadivApproval,
   }) async {
     final authState = ref.read(authStateProvider);
-    final kabagName = authState.user?.name ?? 'Kabag Aset';
+    final verifierName = authState.user?.name ?? 'Bagian Aset';
 
     state = state.copyWith(
       isLoading: true,
@@ -257,108 +257,34 @@ class KabagApprovalActionNotifier
       clearSuccess: true,
     );
 
-    final result = await approveUseCase(
+    final repo = ref.read(mutationRepositoryProvider);
+    final result = await repo.assetSectionForward(
       mutationId: mutationId,
-      kabagName: kabagName,
-      requiresKadivApproval: requiresKadivApproval,
-    );
-
-    if (result is Success<Mutation>) {
-      final isKadiv = result.data.requiresKadivApproval;
-      state = KabagApprovalActionState(
-        isLoading: false,
-        successMessage: isKadiv
-            ? 'Pengajuan disetujui dan diteruskan ke Kadiv.'
-            : 'Pengajuan mutasi berhasil disetujui.',
-        result: result.data,
-      );
-      ref.invalidate(kabagAllMutationsProvider);
-      ref.invalidate(mutationDetailProvider(mutationId));
-      ref.invalidate(mutationListProvider);
-
-      if (isKadiv) {
-        ref.invalidate(kadivAllMutationsProvider);
-        try {
-          ref.read(notificationProvider.notifier).notifyRole(
-                targetRole: UserRole.kadiv,
-                title: 'Menunggu Approval Kadiv',
-                message:
-                    'Pengajuan mutasi ${result.data.ticketNumber} (${result.data.asset.name}) disetujui Kabag dan memerlukan persetujuan akhir Kadiv.',
-                type: NotificationType.action,
-                relatedMutationId: mutationId,
-              );
-        } catch (_) {}
-      } else {
-        ref.invalidate(staffAllMutationsProvider);
-        try {
-          ref.read(notificationProvider.notifier).notifyRole(
-                targetRole: UserRole.staffAset,
-                title: 'Menunggu Pembaruan Aset',
-                message:
-                    'Pengajuan mutasi ${result.data.ticketNumber} (${result.data.asset.name}) telah disetujui Kabag dan siap diperbarui oleh Staff Aset.',
-                type: NotificationType.action,
-                relatedMutationId: mutationId,
-              );
-        } catch (_) {}
-      }
-      return true;
-    } else if (result is AppFailure<Mutation>) {
-      state = KabagApprovalActionState(
-        isLoading: false,
-        error: result.failure.userMessage,
-      );
-      return false;
-    }
-
-    state = const KabagApprovalActionState(
-      isLoading: false,
-      error: 'Terjadi kesalahan sistem saat menyetujui mutasi.',
-    );
-    return false;
-  }
-
-  /// Eksekusi Reject oleh Kabag Aset
-  Future<bool> reject({
-    required String mutationId,
-    required String reason,
-  }) async {
-    final authState = ref.read(authStateProvider);
-    final kabagName = authState.user?.name ?? 'Kabag Aset';
-
-    state = state.copyWith(
-      isLoading: true,
-      clearError: true,
-      clearSuccess: true,
-    );
-
-    final result = await rejectUseCase(
-      mutationId: mutationId,
-      reason: reason,
-      kabagName: kabagName,
+      verifierName: verifierName,
+      newPic: newPic,
     );
 
     if (result is Success<Mutation>) {
       state = KabagApprovalActionState(
         isLoading: false,
-        successMessage: 'Pengajuan mutasi berhasil ditolak.',
+        successMessage:
+            'Data aset diverifikasi dan diteruskan ke Pemimpin Divisi.',
         result: result.data,
       );
       ref.invalidate(kabagAllMutationsProvider);
       ref.invalidate(mutationDetailProvider(mutationId));
       ref.invalidate(mutationListProvider);
+      ref.invalidate(kadivAllMutationsProvider);
 
       try {
-        if (result.data.applicantId != null) {
-          ref.read(notificationProvider.notifier).notifyUser(
-                targetUserId: result.data.applicantId!,
-                targetRole: UserRole.pemohon,
-                title: 'Pengajuan Mutasi Ditolak Kabag',
-                message:
-                    'Pengajuan mutasi ${result.data.ticketNumber} ditolak oleh Kabag Aset dengan alasan: $reason',
-                type: NotificationType.warning,
-                relatedMutationId: mutationId,
-              );
-        }
+        ref.read(notificationProvider.notifier).notifyRole(
+              targetRole: UserRole.kadiv,
+              title: 'Menunggu Persetujuan Final',
+              message:
+                  'Pengajuan mutasi ${result.data.ticketNumber} (${result.data.asset.name}) telah diverifikasi oleh Bagian Aset dan memerlukan persetujuan Pemimpin Divisi.',
+              type: NotificationType.action,
+              relatedMutationId: mutationId,
+            );
       } catch (_) {}
       return true;
     } else if (result is AppFailure<Mutation>) {
@@ -371,7 +297,64 @@ class KabagApprovalActionNotifier
 
     state = const KabagApprovalActionState(
       isLoading: false,
-      error: 'Terjadi kesalahan sistem saat menolak mutasi.',
+      error: 'Terjadi kesalahan sistem saat memverifikasi mutasi.',
+    );
+    return false;
+  }
+
+  /// Eksekusi Kembalikan Pengajuan ke Pemohon oleh Bagian Aset (PRD V1.1 §6.4)
+  Future<bool> reject({
+    required String mutationId,
+    required String reason,
+  }) async {
+    final authState = ref.read(authStateProvider);
+    final verifierName = authState.user?.name ?? 'Bagian Aset';
+
+    state = state.copyWith(
+      isLoading: true,
+      clearError: true,
+      clearSuccess: true,
+    );
+
+    final repo = ref.read(mutationRepositoryProvider);
+    final result = await repo.assetSectionReturn(
+      mutationId: mutationId,
+      reason: reason,
+      verifierName: verifierName,
+    );
+
+    if (result is Success<Mutation>) {
+      state = KabagApprovalActionState(
+        isLoading: false,
+        successMessage: 'Pengajuan mutasi berhasil dikembalikan ke Pemohon.',
+        result: result.data,
+      );
+      ref.invalidate(kabagAllMutationsProvider);
+      ref.invalidate(mutationDetailProvider(mutationId));
+      ref.invalidate(mutationListProvider);
+
+      try {
+        ref.read(notificationProvider.notifier).notifyRole(
+              targetRole: UserRole.pemohon,
+              title: 'Pengajuan Dikembalikan Bagian Aset',
+              message:
+                  'Pengajuan mutasi ${result.data.ticketNumber} dikembalikan: $reason',
+              type: NotificationType.warning,
+              relatedMutationId: mutationId,
+            );
+      } catch (_) {}
+      return true;
+    } else if (result is AppFailure<Mutation>) {
+      state = KabagApprovalActionState(
+        isLoading: false,
+        error: result.failure.userMessage,
+      );
+      return false;
+    }
+
+    state = const KabagApprovalActionState(
+      isLoading: false,
+      error: 'Terjadi kesalahan sistem saat mengembalikan mutasi.',
     );
     return false;
   }

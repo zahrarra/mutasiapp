@@ -18,7 +18,12 @@ enum TrackingStepState {
   upcoming,
 
   /// Langkah mengalami peringatan atau pengembalian/penolakan (merah / oranye).
-  alert,
+  alert;
+
+  bool get isAlert => this == TrackingStepState.alert;
+  bool get isCompleted => this == TrackingStepState.completed;
+  bool get isCurrent => this == TrackingStepState.current;
+  bool get isUpcoming => this == TrackingStepState.upcoming;
 }
 
 /// Item langkah tracking untuk UI stepper & timeline.
@@ -48,20 +53,17 @@ class MutationTrackingStep {
 /// Helper sentral untuk menghasilkan daftar tracking step secara deterministik
 /// dari status mutasi dan flag [requiresKadivApproval].
 abstract final class MutationTrackingHelper {
-  /// Membangun daftar langkah alur mutasi secara dinamis.
-  ///
-  /// Alur tanpa Kadiv (5 tahap):
-  /// submitted -> waitingKabagApproval -> approvedWaitingAssetUpdate -> pendingConfirmation -> completed
-  ///
-  /// Alur dengan Kadiv (6 tahap):
-  /// submitted -> waitingKabagApproval -> waitingKadivApproval -> approvedWaitingAssetUpdate -> pendingConfirmation -> completed
+  /// Membangun daftar langkah alur mutasi secara dinamis sesuai PRD V1.1:
+  /// Pengajuan -> Pemeriksaan Kelengkapan -> Verifikasi Data Aset -> Approval Final -> Konfirmasi -> Pembaruan Data Aset
   static List<MutationTrackingStep> buildTrackingSteps({
     required MutationStatus status,
-    required bool requiresKadivApproval,
+    bool requiresKadivApproval = true,
     String? applicantName,
     DateTime? createdAt,
     String? verifiedBy,
     String? returnReason,
+    String? assetVerifiedBy,
+    String? assetReturnReason,
     String? approvedBy,
     String? rejectedBy,
     String? rejectionReason,
@@ -70,252 +72,206 @@ abstract final class MutationTrackingHelper {
     String? kadivRejectionReason,
     DateTime? kadivRejectedAt,
     String? staffUpdatedBy,
+    String? confirmationReason,
   }) {
-    final isKadivRejected = status == MutationStatus.rejected &&
-        (kadivRejectionReason != null || kadivRejectedAt != null);
-    final isKabagRejected =
-        status == MutationStatus.rejected && !isKadivRejected;
+    final isRejected = status == MutationStatus.rejected;
+    final isReturned = status == MutationStatus.returned;
+    final isWaitingOperator = status == MutationStatus.submitted;
+    final isWaitingAsset = status.isWaitingAssetVerification;
+    final isWaitingDivision = status.isWaitingDivisionApproval;
+    final isWaitingConfirmation = status.isWaitingConfirmation;
+    final isCompleted = status == MutationStatus.completed;
 
     final steps = <MutationTrackingStep>[];
 
-    // ── 1. Step: Diajukan ────────────────────────────────────────────────
-    final step1State = switch (status) {
-      MutationStatus.returned => TrackingStepState.alert,
-      MutationStatus.submitted => TrackingStepState.current,
-      _ => TrackingStepState.completed,
-    };
-    final step1Badge = switch (status) {
-      MutationStatus.returned => 'Perlu Perbaikan',
-      MutationStatus.submitted => 'Menunggu Verifikasi',
-      _ => 'Tiket Dibuat',
-    };
-    final step1Subtitle = switch (status) {
-      MutationStatus.returned =>
-        'Pengajuan dikembalikan oleh Operator: ${returnReason?.trim().isNotEmpty == true ? returnReason : "Perlu perbaikan kelengkapan"}',
-      MutationStatus.submitted =>
-        'Pemohon: ${applicantName ?? "-"} • Menunggu verifikasi Operator',
-      _ =>
-        'Diajukan oleh ${applicantName ?? "Pemohon"}${verifiedBy != null ? " • Diverifikasi oleh $verifiedBy" : ""}',
-    };
+    // ── 1. Step: Pengajuan (Pemohon) ─────────────────────────────────────
+    final step1State = isWaitingOperator
+        ? TrackingStepState.current
+        : TrackingStepState.completed;
+    final step1Badge = isWaitingOperator ? 'Diproses' : 'Selesai';
+    final step1Subtitle = 'Diajukan oleh ${applicantName ?? "Pemohon"}';
 
     steps.add(
       MutationTrackingStep(
         key: 'submitted',
-        title: 'Diajukan oleh Pemohon',
-        shortLabel: 'Diajukan',
+        title: 'Pengajuan Mutasi',
+        shortLabel: 'Pengajuan',
         subtitle: step1Subtitle,
         badgeText: step1Badge,
         state: step1State,
       ),
     );
 
-    // ── 2. Step: Approval Kabag Aset ─────────────────────────────────────
+    // ── 2. Step: Pemeriksaan Kelengkapan (Operator) ──────────────────────
     final step2State = () {
-      if (isKabagRejected) return TrackingStepState.alert;
-      if (status == MutationStatus.submitted ||
-          status == MutationStatus.returned) {
-        return TrackingStepState.upcoming;
+      if (isReturned && (returnReason != null && returnReason.isNotEmpty)) {
+        return TrackingStepState.alert;
       }
-      if (status == MutationStatus.waitingKabagApproval ||
-          status == MutationStatus.verified) {
-        return TrackingStepState.current;
-      }
+      if (isWaitingOperator) return TrackingStepState.current;
       return TrackingStepState.completed;
     }();
     final step2Badge = () {
-      if (isKabagRejected) return 'Ditolak';
-      if (status == MutationStatus.waitingKabagApproval ||
-          status == MutationStatus.verified) {
-        return 'Pemeriksaan Wewenang';
+      if (isReturned && (returnReason != null && returnReason.isNotEmpty)) {
+        return 'Perlu Perbaikan';
       }
-      if (status == MutationStatus.submitted ||
-          status == MutationStatus.returned) {
-        return 'Menunggu';
-      }
-      return 'Disetujui';
+      if (isWaitingOperator) return 'Sedang Diperiksa';
+      return 'Lengkap';
     }();
     final step2Subtitle = () {
-      if (isKabagRejected) {
-        return 'Ditolak oleh ${rejectedBy ?? "Kabag Aset"}${rejectionReason != null ? ": $rejectionReason" : ""}';
+      if (isReturned && (returnReason != null && returnReason.isNotEmpty)) {
+        return 'Dikembalikan oleh Operator: $returnReason';
       }
-      if (status == MutationStatus.waitingKabagApproval ||
-          status == MutationStatus.verified) {
-        return 'Menunggu peninjauan batas wewenang & keputusan Kabag Aset';
+      if (isWaitingOperator) {
+        return 'Pemeriksaan kelengkapan data & SK SDM oleh Operator';
       }
-      if (status == MutationStatus.submitted ||
-          status == MutationStatus.returned) {
-        return 'Menunggu verifikasi pengajuan selesai';
-      }
-      return 'Disetujui oleh ${approvedBy ?? "Kabag Aset"}';
+      return 'Dinyatakan lengkap${verifiedBy != null ? " oleh $verifiedBy" : ""} dan diteruskan';
     }();
 
     steps.add(
       MutationTrackingStep(
-        key: 'waitingKabagApproval',
-        title: 'Approval Kabag Aset',
-        shortLabel: 'Approval Kabag',
+        key: 'operatorCheck',
+        title: 'Pemeriksaan Kelengkapan',
+        shortLabel: 'Kelengkapan',
         subtitle: step2Subtitle,
         badgeText: step2Badge,
         state: step2State,
       ),
     );
 
-    // ── 3. Step: Approval Kadiv (HANYA MUNCUL JIKA requiresKadivApproval == true) ──
-    if (requiresKadivApproval) {
-      final stepKadivState = () {
-        if (isKadivRejected) return TrackingStepState.alert;
-        if (status == MutationStatus.submitted ||
-            status == MutationStatus.returned ||
-            status == MutationStatus.waitingKabagApproval ||
-            status == MutationStatus.verified ||
-            isKabagRejected) {
-          return TrackingStepState.upcoming;
-        }
-        if (status == MutationStatus.waitingKadivApproval) {
-          return TrackingStepState.current;
-        }
-        return TrackingStepState.completed;
-      }();
-      final stepKadivBadge = () {
-        if (isKadivRejected) return 'Ditolak';
-        if (status == MutationStatus.waitingKadivApproval) {
-          return 'Menunggu Kadiv';
-        }
-        if (status == MutationStatus.approved ||
-            status == MutationStatus.pendingConfirmation ||
-            status == MutationStatus.completed) {
-          return 'Disetujui';
-        }
-        return 'Menunggu';
-      }();
-      final stepKadivSubtitle = () {
-        if (isKadivRejected) {
-          return 'Ditolak oleh ${kadivRejectedBy ?? "Kadiv"}${kadivRejectionReason != null ? ": $kadivRejectionReason" : ""}';
-        }
-        if (status == MutationStatus.waitingKadivApproval) {
-          return 'Menunggu peninjauan & persetujuan Kepala Divisi';
-        }
-        if (status == MutationStatus.approved ||
-            status == MutationStatus.pendingConfirmation ||
-            status == MutationStatus.completed) {
-          return 'Disetujui oleh ${kadivApprovedBy ?? "Kepala Divisi"}';
-        }
-        return 'Menunggu persetujuan Kabag Aset';
-      }();
-
-      steps.add(
-        MutationTrackingStep(
-          key: 'waitingKadivApproval',
-          title: 'Approval Kepala Divisi (Kadiv)',
-          shortLabel: 'Approval Kadiv',
-          subtitle: stepKadivSubtitle,
-          badgeText: stepKadivBadge,
-          state: stepKadivState,
-        ),
-      );
-    }
-
-    // ── 4. Step: Disetujui — Menunggu Update Aset ─────────────────────────
-    final stepApprovedState = () {
-      if (status == MutationStatus.pendingConfirmation ||
-          status == MutationStatus.completed) {
-        return TrackingStepState.completed;
+    // ── 3. Step: Verifikasi Data Aset (Bagian Aset) ───────────────────────
+    final step3State = () {
+      if (isReturned && (assetReturnReason != null && assetReturnReason.isNotEmpty)) {
+        return TrackingStepState.alert;
       }
-      if (status == MutationStatus.approved) {
-        return TrackingStepState.current;
+      if (isWaitingOperator || (isReturned && !step2State.isAlert)) {
+        return TrackingStepState.upcoming;
       }
-      return TrackingStepState.upcoming;
+      if (isWaitingAsset) return TrackingStepState.current;
+      return TrackingStepState.completed;
     }();
-    final stepApprovedBadge = () {
-      if (status == MutationStatus.pendingConfirmation ||
-          status == MutationStatus.completed) {
-        return 'Fisik Terpindah';
+    final step3Badge = () {
+      if (isReturned && (assetReturnReason != null && assetReturnReason.isNotEmpty)) {
+        return 'Tidak Valid';
       }
-      if (status == MutationStatus.approved) {
-        return 'Dalam Proses';
-      }
-      return 'Menunggu';
+      if (isWaitingAsset) return 'Sedang Diverifikasi';
+      if (isWaitingOperator) return 'Menunggu';
+      return 'Valid';
     }();
-    final stepApprovedSubtitle = () {
-      if (status == MutationStatus.pendingConfirmation ||
-          status == MutationStatus.completed) {
-        return 'Pembaruan fisik & lokasi selesai oleh ${staffUpdatedBy ?? "Staff Aset"}';
+    final step3Subtitle = () {
+      if (isReturned && (assetReturnReason != null && assetReturnReason.isNotEmpty)) {
+        return 'Dikembalikan oleh Bagian Aset: $assetReturnReason';
       }
-      if (status == MutationStatus.approved) {
-        return 'Disetujui. Menugaskan pemindahan fisik & update data ke Staff Aset';
+      if (isWaitingAsset) {
+        return 'Verifikasi keabsahan aset, lokasi, SK SDM, dan penentuan PIC baru';
       }
-      return 'Menunggu persetujuan pejabat berwenang';
+      if (isWaitingOperator) {
+        return 'Menunggu pemeriksaan kelengkapan Operator selesai';
+      }
+      return 'Terverifikasi valid${assetVerifiedBy != null ? " oleh $assetVerifiedBy" : ""}';
     }();
 
     steps.add(
       MutationTrackingStep(
-        key: 'approvedWaitingAssetUpdate',
-        title: 'Disetujui — Menunggu Update Aset',
-        shortLabel: 'Update Aset',
-        subtitle: stepApprovedSubtitle,
-        badgeText: stepApprovedBadge,
-        state: stepApprovedState,
+        key: 'assetVerification',
+        title: 'Verifikasi Bagian Aset',
+        shortLabel: 'Verifikasi Aset',
+        subtitle: step3Subtitle,
+        badgeText: step3Badge,
+        state: step3State,
       ),
     );
 
-    // ── 5. Step: Konfirmasi Penerimaan Aset (pendingConfirmation) ──────────
-    final stepConfirmState = () {
-      if (status == MutationStatus.completed) {
-        return TrackingStepState.completed;
+    // ── 4. Step: Approval Final (Pemimpin Divisi) ─────────────────────────
+    final step4State = () {
+      if (isRejected) return TrackingStepState.alert;
+      if (isWaitingDivision) return TrackingStepState.current;
+      if (isWaitingOperator || isWaitingAsset || isReturned) {
+        return TrackingStepState.upcoming;
       }
-      if (status == MutationStatus.pendingConfirmation) {
-        return TrackingStepState.current;
-      }
-      return TrackingStepState.upcoming;
+      return TrackingStepState.completed;
     }();
-    final stepConfirmBadge = () {
-      if (status == MutationStatus.completed) {
-        return 'Terkonfirmasi';
-      }
-      if (status == MutationStatus.pendingConfirmation) {
-        return 'Konfirmasi Diperlukan';
-      }
-      return 'Menunggu';
+    final step4Badge = () {
+      if (isRejected) return 'Ditolak';
+      if (isWaitingDivision) return 'Menunggu Approval';
+      if (isWaitingOperator || isWaitingAsset || isReturned) return 'Menunggu';
+      return 'Disetujui';
     }();
-    final stepConfirmSubtitle = () {
-      if (status == MutationStatus.completed) {
-        return 'Penerimaan fisik aset telah dikonfirmasi sesuai oleh Pemohon (${applicantName ?? "-"})';
+    final step4Subtitle = () {
+      if (isRejected) {
+        final reason = kadivRejectionReason ?? rejectionReason ?? 'Pengajuan ditolak';
+        final by = kadivRejectedBy ?? rejectedBy ?? 'Pemimpin Divisi';
+        return 'Ditolak oleh $by: $reason';
       }
-      if (status == MutationStatus.pendingConfirmation) {
-        return 'Staff Aset telah menyelesaikan update aset. Pemohon wajib memeriksa fisik dan mengonfirmasi.';
+      if (isWaitingDivision) {
+        return 'Menunggu approval final dari Pemimpin Divisi';
       }
-      return 'Pemeriksaan fisik unit di lokasi tujuan oleh Pemohon';
+      if (isWaitingOperator || isWaitingAsset || isReturned) {
+        return 'Menunggu hasil verifikasi Bagian Aset';
+      }
+      final approver = kadivApprovedBy ?? approvedBy ?? 'Pemimpin Divisi';
+      return 'Disetujui oleh $approver';
     }();
 
     steps.add(
       MutationTrackingStep(
-        key: 'pendingConfirmation',
-        title: 'Konfirmasi Penerimaan Aset',
+        key: 'divisionApproval',
+        title: 'Approval Pemimpin Divisi',
+        shortLabel: 'Approval Final',
+        subtitle: step4Subtitle,
+        badgeText: step4Badge,
+        state: step4State,
+      ),
+    );
+
+    // ── 5. Step: Konfirmasi Pemohon ──────────────────────────────────────
+    final step5State = () {
+      if (isCompleted) return TrackingStepState.completed;
+      if (isWaitingConfirmation) return TrackingStepState.current;
+      return TrackingStepState.upcoming;
+    }();
+    final step5Badge = () {
+      if (isCompleted) return 'Sesuai';
+      if (isWaitingConfirmation) return 'Perlu Konfirmasi';
+      return 'Menunggu';
+    }();
+    final step5Subtitle = () {
+      if (isCompleted) {
+        return 'Fisik aset telah diperiksa dan dikonfirmasi sesuai oleh Pemohon';
+      }
+      if (isWaitingConfirmation) {
+        return 'Pengajuan disetujui. Pemohon memeriksa fisik aset di lokasi tujuan.';
+      }
+      return 'Pemeriksaan fisik aset di lokasi tujuan oleh Pemohon';
+    }();
+
+    steps.add(
+      MutationTrackingStep(
+        key: 'confirmation',
+        title: 'Konfirmasi Pemohon',
         shortLabel: 'Konfirmasi',
-        subtitle: stepConfirmSubtitle,
-        badgeText: stepConfirmBadge,
-        state: stepConfirmState,
+        subtitle: step5Subtitle,
+        badgeText: step5Badge,
+        state: step5State,
       ),
     );
 
-    // ── 6. Step: Selesai (completed) ──────────────────────────────────────
-    final stepCompletedState = status == MutationStatus.completed
+    // ── 6. Step: Selesai & Pembaruan Data Aset ────────────────────────────
+    final step6State = isCompleted
         ? TrackingStepState.completed
         : TrackingStepState.upcoming;
-    final stepCompletedBadge =
-        status == MutationStatus.completed ? 'Selesai' : 'Menunggu';
-    final stepCompletedSubtitle = status == MutationStatus.completed
-        ? 'Mutasi selesai secara menyeluruh dan terarsip ke buku besar aset'
-        : 'Penyelesaian akhir seluruh alur mutasi aset';
+    final step6Badge = isCompleted ? 'Selesai' : 'Menunggu';
+    final step6Subtitle = isCompleted
+        ? 'Data lokasi dan PIC aset berhasil diperbarui otomatis pada sistem'
+        : 'Pembaruan otomatis data master lokasi dan PIC aset';
 
     steps.add(
       MutationTrackingStep(
         key: 'completed',
-        title: 'Selesai',
+        title: 'Selesai & Pembaruan Data',
         shortLabel: 'Selesai',
-        subtitle: stepCompletedSubtitle,
-        badgeText: stepCompletedBadge,
-        state: stepCompletedState,
+        subtitle: step6Subtitle,
+        badgeText: step6Badge,
+        state: step6State,
       ),
     );
 
@@ -337,6 +293,8 @@ abstract final class MutationTrackingHelper {
       createdAt: mutation?.createdAt,
       verifiedBy: mutation?.verifiedBy,
       returnReason: mutation?.returnReason,
+      assetVerifiedBy: mutation?.assetVerifiedBy,
+      assetReturnReason: mutation?.assetReturnReason,
       approvedBy: mutation?.approvedBy,
       rejectedBy: mutation?.rejectedBy,
       rejectionReason: mutation?.rejectionReason,
@@ -345,6 +303,7 @@ abstract final class MutationTrackingHelper {
       kadivRejectionReason: mutation?.kadivRejectionReason,
       kadivRejectedAt: mutation?.kadivRejectedAt,
       staffUpdatedBy: mutation?.staffUpdatedBy,
+      confirmationReason: mutation?.confirmationReason,
     );
   }
 
