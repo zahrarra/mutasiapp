@@ -4,6 +4,7 @@
 // Sumber: ROLE-FLOW.md §4, SCREEN-SPEC.md OPR-001–004.
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+
 import '../../../../core/errors/result.dart';
 import '../../../asset/domain/entities/asset.dart';
 import '../../../asset/presentation/providers/asset_provider.dart';
@@ -31,13 +32,15 @@ final returnMutationUseCaseProvider = Provider<ReturnMutationUseCase>((ref) {
 
 final getPendingVerificationsUseCaseProvider =
     Provider<GetPendingVerificationsUseCase>((ref) {
-  final repo = ref.watch(mutationRepositoryProvider);
-  return GetPendingVerificationsUseCase(repository: repo);
-});
+      final repo = ref.watch(mutationRepositoryProvider);
+      return GetPendingVerificationsUseCase(repository: repo);
+    });
 
 /// Otomatis load asset dari AssetRepository berdasarkan assetId (SIMAK BMN).
-final operatorMasterAssetProvider =
-    FutureProvider.family<Asset?, String>((ref, assetId) async {
+final operatorMasterAssetProvider = FutureProvider.family<Asset?, String>((
+  ref,
+  assetId,
+) async {
   final cleanId = assetId.trim();
   if (cleanId.isEmpty) return null;
   final assetRepo = ref.watch(assetRepositoryProvider);
@@ -62,9 +65,9 @@ enum MutationSortOrder {
   oldest;
 
   String get displayName => switch (this) {
-        MutationSortOrder.newest => 'Terbaru',
-        MutationSortOrder.oldest => 'Terlama',
-      };
+    MutationSortOrder.newest => 'Terbaru',
+    MutationSortOrder.oldest => 'Terlama',
+  };
 }
 
 enum OperatorStatusFilter {
@@ -73,24 +76,28 @@ enum OperatorStatusFilter {
   all;
 
   String get displayName => switch (this) {
-        OperatorStatusFilter.submitted => 'Menunggu Verifikasi',
-        OperatorStatusFilter.returned => 'Dikembalikan',
-        OperatorStatusFilter.all => 'Semua Status',
-      };
+    OperatorStatusFilter.submitted => 'Menunggu Verifikasi',
+    OperatorStatusFilter.returned => 'Dikembalikan',
+    OperatorStatusFilter.all => 'Semua Status',
+  };
 }
 
 final operatorSearchQueryProvider = StateProvider<String>((ref) => '');
 
-final operatorSortOrderProvider =
-    StateProvider<MutationSortOrder>((ref) => MutationSortOrder.newest);
+final operatorSortOrderProvider = StateProvider<MutationSortOrder>(
+  (ref) => MutationSortOrder.newest,
+);
 
 final operatorStatusFilterProvider = StateProvider<OperatorStatusFilter>(
-    (ref) => OperatorStatusFilter.submitted);
+  (ref) => OperatorStatusFilter.submitted,
+);
 
 // ─── Mutations Data Providers ────────────────────────────────────────────────
 
 /// Provider seluruh mutasi untuk Operator (in-memory mock / API).
-final operatorAllMutationsProvider = FutureProvider<List<Mutation>>((ref) async {
+final operatorAllMutationsProvider = FutureProvider<List<Mutation>>((
+  ref,
+) async {
   final useCase = ref.watch(getPendingVerificationsUseCaseProvider);
   final result = await useCase();
 
@@ -150,7 +157,9 @@ final verificationStatsProvider = Provider<VerificationStats>((ref) {
 });
 
 /// Provider daftar pengajuan masuk yang difilter dan di-sort untuk Operator.
-final filteredIncomingMutationsProvider = Provider<AsyncValue<List<Mutation>>>((ref) {
+final filteredIncomingMutationsProvider = Provider<AsyncValue<List<Mutation>>>((
+  ref,
+) {
   final asyncAll = ref.watch(operatorAllMutationsProvider);
   final query = ref.watch(operatorSearchQueryProvider).toLowerCase().trim();
   final sortOrder = ref.watch(operatorSortOrderProvider);
@@ -162,9 +171,10 @@ final filteredIncomingMutationsProvider = Provider<AsyncValue<List<Mutation>>>((
       return switch (statusFilter) {
         OperatorStatusFilter.submitted => m.status == MutationStatus.submitted,
         OperatorStatusFilter.returned => m.status == MutationStatus.returned,
-        OperatorStatusFilter.all => m.status == MutationStatus.submitted ||
-            m.status == MutationStatus.returned ||
-            m.status == MutationStatus.waitingKabagApproval,
+        OperatorStatusFilter.all =>
+          m.status == MutationStatus.submitted ||
+              m.status == MutationStatus.returned ||
+              m.status == MutationStatus.waitingKabagApproval,
       };
     }).toList();
 
@@ -172,7 +182,8 @@ final filteredIncomingMutationsProvider = Provider<AsyncValue<List<Mutation>>>((
     if (query.isNotEmpty) {
       list = list.where((m) {
         final matchTicket = m.ticketNumber.toLowerCase().contains(query);
-        final matchAsset = m.asset.name.toLowerCase().contains(query) ||
+        final matchAsset =
+            m.asset.name.toLowerCase().contains(query) ||
             m.displayAssetName.toLowerCase().contains(query) ||
             m.asset.assetCode.toLowerCase().contains(query) ||
             m.displayAssetCode.toLowerCase().contains(query) ||
@@ -223,14 +234,16 @@ class VerificationActionState {
     return VerificationActionState(
       isLoading: isLoading ?? this.isLoading,
       error: clearError ? null : (error ?? this.error),
-      successMessage:
-          clearSuccess ? null : (successMessage ?? this.successMessage),
+      successMessage: clearSuccess
+          ? null
+          : (successMessage ?? this.successMessage),
       result: result ?? this.result,
     );
   }
 }
 
-class VerificationActionNotifier extends StateNotifier<VerificationActionState> {
+class VerificationActionNotifier
+    extends StateNotifier<VerificationActionState> {
   final VerifyMutationUseCase verifyUseCase;
   final ReturnMutationUseCase returnUseCase;
   final Ref ref;
@@ -268,7 +281,7 @@ class VerificationActionNotifier extends StateNotifier<VerificationActionState> 
         result: result.data,
       );
       // Invalidate list agar ter-refresh
-      ref.invalidate(operatorAllMutationsProvider);
+
       ref.invalidate(mutationDetailProvider(mutationId));
       ref.invalidate(mutationListProvider);
       ref.invalidate(kabagAllMutationsProvider);
@@ -315,7 +328,7 @@ class VerificationActionNotifier extends StateNotifier<VerificationActionState> 
         successMessage: 'Pengajuan mutasi berhasil dikembalikan ke Pemohon.',
         result: result.data,
       );
-      ref.invalidate(operatorAllMutationsProvider);
+
       ref.invalidate(mutationDetailProvider(mutationId));
       ref.invalidate(mutationListProvider);
       ref.invalidate(kabagAllMutationsProvider);
@@ -341,13 +354,14 @@ class VerificationActionNotifier extends StateNotifier<VerificationActionState> 
 }
 
 final verificationActionProvider =
-    StateNotifierProvider<VerificationActionNotifier, VerificationActionState>(
-        (ref) {
-  final verifyUseCase = ref.watch(verifyMutationUseCaseProvider);
-  final returnUseCase = ref.watch(returnMutationUseCaseProvider);
-  return VerificationActionNotifier(
-    verifyUseCase: verifyUseCase,
-    returnUseCase: returnUseCase,
-    ref: ref,
-  );
-});
+    StateNotifierProvider<VerificationActionNotifier, VerificationActionState>((
+      ref,
+    ) {
+      final verifyUseCase = ref.watch(verifyMutationUseCaseProvider);
+      final returnUseCase = ref.watch(returnMutationUseCaseProvider);
+      return VerificationActionNotifier(
+        verifyUseCase: verifyUseCase,
+        returnUseCase: returnUseCase,
+        ref: ref,
+      );
+    });

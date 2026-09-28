@@ -1,12 +1,14 @@
 // lib/features/pemohon/presentation/screens/pemohon_create_mutation_screen.dart
 //
 // Form Pengajuan Mutasi — visual Stitch “Executive Clean Form”.
-// Font: Montserrat. Functionality: submit, dokumen, validasi, provider (kode lama).
+// Font: Montserrat.
+// Functionality: submit, dokumen, validasi, provider.
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:mutasiku/features/operator/presentation/providers/operator_verification_provider.dart';
 
 import '../../../../app/router/route_names.dart';
 import '../../../../core/services/document_picker_service.dart';
@@ -14,12 +16,11 @@ import '../../../../core/widgets/app_feedback.dart';
 import '../../../../core/widgets/searchable_picker_bottom_sheet.dart';
 import '../../../auth/domain/entities/user_role.dart';
 import '../../../auth/presentation/providers/auth_provider.dart';
-import '../../../mutation/domain/repositories/mutation_repository.dart'; // SubmitMutationParams
+import '../../../mutation/domain/repositories/mutation_repository.dart';
 import '../../../mutation/presentation/providers/mutation_form_provider.dart';
-import '../../../mutation/presentation/providers/mutation_provider.dart'; // submit + locations
+import '../../../mutation/presentation/providers/mutation_provider.dart';
 import '../../../notification/domain/entities/notification_item.dart';
 import '../../../notification/presentation/providers/notification_provider.dart';
-import '../../../operator/presentation/providers/operator_verification_provider.dart';
 
 abstract final class _C {
   static const bg = Color(0xFFF6F8FA);
@@ -46,6 +47,7 @@ class PemohonCreateMutationScreen extends ConsumerStatefulWidget {
 class _PemohonCreateMutationScreenState
     extends ConsumerState<PemohonCreateMutationScreen> {
   final _formKey = GlobalKey<FormState>();
+
   final _assetNameController = TextEditingController();
   final _assetCodeController = TextEditingController();
   final _sourceLocationController = TextEditingController();
@@ -59,9 +61,12 @@ class _PemohonCreateMutationScreenState
   int? _documentSize;
   String? _documentPath;
   List<int>? _documentBytes;
-  bool _isFallbackMode = true; // input manual (PRD)
+
+  bool _isFallbackMode = true;
+
   /// true = dibawa sendiri, false = ditinggalkan
   bool _bringAsset = true;
+
   String? _selectedAssetId;
 
   static const _maxReason = 250;
@@ -69,7 +74,20 @@ class _PemohonCreateMutationScreenState
   @override
   void initState() {
     super.initState();
-    _reasonController.addListener(() => setState(() {}));
+
+    _reasonController.addListener(() {
+      if (mounted) {
+        setState(() {});
+      }
+    });
+
+    // Agar tampilan lokasi read-only ikut berubah
+    // ketika lokasi asal diketik.
+    _sourceLocationController.addListener(() {
+      if (mounted) {
+        setState(() {});
+      }
+    });
   }
 
   @override
@@ -83,6 +101,21 @@ class _PemohonCreateMutationScreenState
     _picController.dispose();
     _reasonController.dispose();
     super.dispose();
+  }
+
+  // ---------------------------------------------------------------------------
+  // TYPOGRAPHY
+  // ---------------------------------------------------------------------------
+
+  /// Style untuk teks yang diketik user.
+  /// Sengaja dibuat kecil dan regular agar tidak terlalu besar/bold.
+  TextStyle _inputTextStyle({Color color = _C.text, double size = 13}) {
+    return GoogleFonts.montserrat(
+      fontSize: size,
+      fontWeight: FontWeight.w400,
+      color: color,
+      height: 1.35,
+    );
   }
 
   TextStyle _m({
@@ -101,6 +134,10 @@ class _PemohonCreateMutationScreenState
     );
   }
 
+  // ---------------------------------------------------------------------------
+  // NAVIGATION
+  // ---------------------------------------------------------------------------
+
   void _safePop() {
     if (context.canPop()) {
       context.pop();
@@ -109,10 +146,17 @@ class _PemohonCreateMutationScreenState
     }
   }
 
+  // ---------------------------------------------------------------------------
+  // DOCUMENT
+  // ---------------------------------------------------------------------------
+
   Future<void> _pickDocument() async {
     final result = await DocumentPickerService.pickDocument();
+
     if (!mounted) return;
+
     if (result.isCanceled) return;
+
     if (result.isFailure) {
       AppFeedback.showError(
         context,
@@ -120,7 +164,9 @@ class _PemohonCreateMutationScreenState
       );
       return;
     }
+
     final doc = result.document;
+
     if (doc != null) {
       setState(() {
         _documentName = doc.name;
@@ -128,18 +174,28 @@ class _PemohonCreateMutationScreenState
         _documentPath = doc.path;
         _documentBytes = doc.bytes;
       });
+
       AppFeedback.showSuccess(context, 'Dokumen diunggah: ${doc.name}');
     }
   }
 
   String _formatFileSize(int? bytes) {
     if (bytes == null || bytes <= 0) return '—';
-    if (bytes < 1024) return '$bytes B';
+
+    if (bytes < 1024) {
+      return '$bytes B';
+    }
+
     if (bytes < 1024 * 1024) {
       return '${(bytes / 1024).toStringAsFixed(1)} KB';
     }
+
     return '${(bytes / (1024 * 1024)).toStringAsFixed(1)} MB';
   }
+
+  // ---------------------------------------------------------------------------
+  // LOCATION PICKER
+  // ---------------------------------------------------------------------------
 
   Future<void> _pickLocation(List<String> locations) async {
     final selected = await SearchablePickerBottomSheet.show(
@@ -151,45 +207,85 @@ class _PemohonCreateMutationScreenState
           : _locationController.text.trim(),
       searchHint: 'Cari lokasi...',
     );
+
     if (selected != null) {
-      setState(() => _locationController.text = selected);
+      setState(() {
+        _locationController.text = selected;
+      });
     }
   }
 
+  // ---------------------------------------------------------------------------
+  // SUBMIT
+  // ---------------------------------------------------------------------------
+
   Future<void> _submit() async {
-    if (!(_formKey.currentState?.validate() ?? false)) return;
+    FocusScope.of(context).unfocus();
+
+    if (!(_formKey.currentState?.validate() ?? false)) {
+      return;
+    }
 
     final user = ref.read(authStateProvider).user;
+
+    final sourceLocation = _sourceLocationController.text.trim();
     final targetLoc = _locationController.text.trim();
     final room = _roomController.text.trim();
+
+    // Lokasi tujuan lengkap.
     final fullTarget = room.isEmpty ? targetLoc : '$targetLoc — $room';
+
+    // Pastikan lokasi asal benar-benar tersedia.
+    if (sourceLocation.isEmpty) {
+      AppFeedback.showError(context, 'Lokasi aset saat ini wajib diisi.');
+      return;
+    }
+
+    if (targetLoc.isEmpty) {
+      AppFeedback.showError(context, 'Lokasi tujuan wajib diisi.');
+      return;
+    }
 
     final params = SubmitMutationParams(
       applicantId: user?.id,
       applicantName: user?.name,
+
       assetId: _isFallbackMode
           ? null
           : (_selectedAssetId ??
                 (_assetCodeController.text.trim().isNotEmpty
                     ? _assetCodeController.text.trim()
                     : null)),
+
       assetName: _assetNameController.text.trim(),
+
       isUnregisteredAsset: _isFallbackMode,
+
       customAssetName: _isFallbackMode
           ? _assetNameController.text.trim()
           : null,
+
       customSerialNumber: _isFallbackMode
           ? _assetCodeController.text.trim()
           : null,
-      sourceLocation: _sourceLocationController.text.trim(),
+
+      // PENTING:
+      // Lokasi aset saat ini diambil langsung dari field
+      // "Unit kerja & lokasi asal".
+      sourceLocation: sourceLocation,
+
       targetLocation: fullTarget,
+
       currentPic: _currentPicController.text.trim().isNotEmpty
           ? _currentPicController.text.trim()
           : (user?.name ?? ''),
+
       targetPic: _picController.text.trim().isNotEmpty
           ? _picController.text.trim()
           : (user?.name ?? ''),
+
       reason: _reasonController.text.trim(),
+
       documentName: _documentName,
       documentPath: _documentPath,
       documentBytes: _documentBytes,
@@ -212,8 +308,9 @@ class _PemohonCreateMutationScreenState
             type: NotificationType.action,
             relatedMutationId: mutation.id,
           );
+
       ref.invalidate(mutationListProvider);
-      ref.invalidate(operatorAllMutationsProvider);
+
       context.go(
         '${RouteNames.pemohonSubmitSuccessPath}'
         '?ticket=${Uri.encodeComponent(mutation.ticketNumber)}'
@@ -221,9 +318,14 @@ class _PemohonCreateMutationScreenState
       );
     } else {
       final err = ref.read(submitMutationProvider).error;
+
       AppFeedback.showError(context, err ?? 'Gagal mengajukan mutasi');
     }
   }
+
+  // ---------------------------------------------------------------------------
+  // BUILD
+  // ---------------------------------------------------------------------------
 
   @override
   Widget build(BuildContext context) {
@@ -237,6 +339,7 @@ class _PemohonCreateMutationScreenState
       body: Column(
         children: [
           _buildHeader(initials),
+
           Expanded(
             child: Form(
               key: _formKey,
@@ -247,22 +350,26 @@ class _PemohonCreateMutationScreenState
                   children: [
                     Text(
                       'Form Pengajuan Mutasi',
-                      style: _m(
-                        size: 20,
-                        weight: FontWeight.w700,
-                        color: _C.text,
-                      ),
+                      style: _m(size: 20, weight: FontWeight.w700),
                     ),
+
                     const SizedBox(height: 2),
+
                     Text(
                       'Pengalihan lokasi fisik dan penanggung jawab (PIC) aset dinas',
                       style: _m(size: 13, color: _C.muted),
                     ),
+
                     const SizedBox(height: 20),
+
                     _sectionAsset(),
+
                     const SizedBox(height: 16),
+
                     _sectionRoute(locations),
+
                     const SizedBox(height: 16),
+
                     _sectionReasonDoc(),
                   ],
                 ),
@@ -275,7 +382,9 @@ class _PemohonCreateMutationScreenState
     );
   }
 
-  // ── Header Stitch ─────────────────────────────────────────────────────────
+  // ---------------------------------------------------------------------------
+  // HEADER
+  // ---------------------------------------------------------------------------
 
   Widget _buildHeader(String initials) {
     return Material(
@@ -302,7 +411,9 @@ class _PemohonCreateMutationScreenState
                     ),
                   ),
                 ),
+
                 const Spacer(),
+
                 Container(
                   padding: const EdgeInsets.symmetric(
                     horizontal: 12,
@@ -328,7 +439,7 @@ class _PemohonCreateMutationScreenState
                       ),
                       const SizedBox(width: 6),
                       Text(
-                        'MUTASIKU PEMOHON',
+                        'MUTASIKU',
                         style: _m(
                           size: 11,
                           weight: FontWeight.w700,
@@ -339,7 +450,9 @@ class _PemohonCreateMutationScreenState
                     ],
                   ),
                 ),
+
                 const Spacer(),
+
                 Stack(
                   clipBehavior: Clip.none,
                   children: [
@@ -384,7 +497,9 @@ class _PemohonCreateMutationScreenState
     );
   }
 
-  // ── Section 1: Aset ───────────────────────────────────────────────────────
+  // ---------------------------------------------------------------------------
+  // SECTION ASET
+  // ---------------------------------------------------------------------------
 
   Widget _sectionAsset() {
     return _card(
@@ -429,9 +544,13 @@ class _PemohonCreateMutationScreenState
               ),
             ],
           ),
+
           const SizedBox(height: 12),
+
           const Divider(height: 1, color: Color(0x99D0D5DD)),
+
           const SizedBox(height: 14),
+
           Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -445,23 +564,27 @@ class _PemohonCreateMutationScreenState
                 ),
                 child: const Icon(Icons.laptop_mac, size: 26, color: _C.text),
               ),
+
               const SizedBox(width: 14),
+
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     TextFormField(
                       controller: _assetNameController,
-                      style: _m(size: 16, weight: FontWeight.w700),
+                      style: _inputTextStyle(),
                       decoration: _inputDeco('Nama aset *'),
                       validator: (v) => (v == null || v.trim().isEmpty)
                           ? 'Wajib diisi'
                           : null,
                     ),
+
                     const SizedBox(height: 8),
+
                     TextFormField(
                       controller: _assetCodeController,
-                      style: _m(size: 12, color: _C.muted),
+                      style: _inputTextStyle(color: _C.muted),
                       decoration: _inputDeco('Kode / SN aset'),
                     ),
                   ],
@@ -469,7 +592,9 @@ class _PemohonCreateMutationScreenState
               ),
             ],
           ),
+
           const SizedBox(height: 12),
+
           Container(
             width: double.infinity,
             padding: const EdgeInsets.all(14),
@@ -482,16 +607,19 @@ class _PemohonCreateMutationScreenState
               children: [
                 TextFormField(
                   controller: _currentPicController,
-                  style: _m(size: 12, weight: FontWeight.w600),
+                  style: _inputTextStyle(),
                   decoration: _inputDeco('Pemegang / PIC saat ini'),
                 ),
+
                 const SizedBox(height: 8),
+
                 TextFormField(
                   controller: _sourceLocationController,
-                  style: _m(size: 12, weight: FontWeight.w500),
+                  style: _inputTextStyle(),
                   decoration: _inputDeco('Unit kerja & lokasi asal *'),
-                  validator: (v) =>
-                      (v == null || v.trim().isEmpty) ? 'Wajib diisi' : null,
+                  validator: (v) => (v == null || v.trim().isEmpty)
+                      ? 'Lokasi aset saat ini wajib diisi'
+                      : null,
                 ),
               ],
             ),
@@ -501,9 +629,13 @@ class _PemohonCreateMutationScreenState
     );
   }
 
-  // ── Section 2: Rute ───────────────────────────────────────────────────────
+  // ---------------------------------------------------------------------------
+  // SECTION RUTE
+  // ---------------------------------------------------------------------------
 
   Widget _sectionRoute(List<String> locations) {
+    final sourceLocation = _sourceLocationController.text.trim();
+
     return _card(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -519,13 +651,16 @@ class _PemohonCreateMutationScreenState
                 ),
                 child: const Icon(Icons.alt_route, size: 18, color: _C.navy),
               ),
+
               const SizedBox(width: 8),
+
               Expanded(
                 child: Text(
                   'Rute & Status Pengelolaan Fisik',
                   style: _m(size: 14, weight: FontWeight.w700),
                 ),
               ),
+
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                 decoration: BoxDecoration(
@@ -540,9 +675,13 @@ class _PemohonCreateMutationScreenState
               ),
             ],
           ),
+
           const SizedBox(height: 12),
+
           const Divider(height: 1, color: Color(0x99D0D5DD)),
+
           const SizedBox(height: 14),
+
           Text(
             'LOKASI ASAL (READ-ONLY)',
             style: _m(
@@ -552,7 +691,9 @@ class _PemohonCreateMutationScreenState
               letterSpacing: 0.6,
             ),
           ),
+
           const SizedBox(height: 6),
+
           Container(
             padding: const EdgeInsets.all(10),
             decoration: BoxDecoration(
@@ -563,19 +704,25 @@ class _PemohonCreateMutationScreenState
             child: Row(
               children: [
                 const Icon(Icons.apartment, size: 18, color: _C.muted),
+
                 const SizedBox(width: 10),
+
                 Expanded(
                   child: Text(
-                    _sourceLocationController.text.trim().isEmpty
+                    sourceLocation.isEmpty
                         ? 'Isi lokasi asal di bagian aset'
-                        : _sourceLocationController.text.trim(),
-                    style: _m(size: 13, weight: FontWeight.w500),
+                        : sourceLocation,
+                    style: _inputTextStyle(
+                      color: sourceLocation.isEmpty ? _C.muted : _C.text,
+                    ),
                   ),
                 ),
               ],
             ),
           ),
+
           const SizedBox(height: 14),
+
           Text(
             'UNIT / CABANG PENUGASAN BARU',
             style: _m(
@@ -585,7 +732,9 @@ class _PemohonCreateMutationScreenState
               letterSpacing: 0.6,
             ),
           ),
+
           const SizedBox(height: 6),
+
           InkWell(
             onTap: locations.isEmpty ? null : () => _pickLocation(locations),
             borderRadius: BorderRadius.circular(8),
@@ -599,29 +748,34 @@ class _PemohonCreateMutationScreenState
               child: Row(
                 children: [
                   const Icon(Icons.business, size: 20, color: _C.navy),
+
                   const SizedBox(width: 10),
+
                   Expanded(
                     child: TextFormField(
                       controller: _locationController,
-                      style: _m(size: 13, weight: FontWeight.w700),
+                      style: _inputTextStyle(),
                       decoration: InputDecoration(
                         hintText: 'Pilih atau ketik unit tujuan *',
-                        hintStyle: _m(size: 13, color: _C.muted),
+                        hintStyle: _inputTextStyle(color: _C.muted),
                         border: InputBorder.none,
                         isDense: true,
                         contentPadding: EdgeInsets.zero,
                       ),
                       validator: (v) => (v == null || v.trim().isEmpty)
-                          ? 'Wajib diisi'
+                          ? 'Lokasi tujuan wajib diisi'
                           : null,
                     ),
                   ),
+
                   const Icon(Icons.expand_more, color: _C.muted),
                 ],
               ),
             ),
           ),
+
           const SizedBox(height: 14),
+
           Text(
             'RUANGAN / AREA PENEMPATAN',
             style: _m(
@@ -631,10 +785,12 @@ class _PemohonCreateMutationScreenState
               letterSpacing: 0.6,
             ),
           ),
+
           const SizedBox(height: 6),
+
           TextFormField(
             controller: _roomController,
-            style: _m(size: 13, weight: FontWeight.w500),
+            style: _inputTextStyle(),
             decoration: _inputDeco('Contoh: Lantai 1 — Ruang Operasional')
                 .copyWith(
                   prefixIcon: const Icon(
@@ -644,6 +800,9 @@ class _PemohonCreateMutationScreenState
                   ),
                 ),
           ),
+
+          const SizedBox(height: 14),
+
           Text(
             'STATUS FISIK ASET SAAT MUTASI *',
             style: _m(
@@ -653,7 +812,9 @@ class _PemohonCreateMutationScreenState
               letterSpacing: 0.6,
             ),
           ),
+
           const SizedBox(height: 8),
+
           _radioHandling(
             selected: _bringAsset,
             title: 'Aset Dibawa Sendiri',
@@ -663,7 +824,9 @@ class _PemohonCreateMutationScreenState
             icon: Icons.work_outline,
             onTap: () => setState(() => _bringAsset = true),
           ),
+
           const SizedBox(height: 10),
+
           _radioHandling(
             selected: !_bringAsset,
             title: 'Aset Ditinggalkan di Unit Asal / Alih Kelola',
@@ -673,7 +836,9 @@ class _PemohonCreateMutationScreenState
             icon: Icons.warehouse_outlined,
             onTap: () => setState(() => _bringAsset = false),
           ),
+
           const SizedBox(height: 12),
+
           Container(
             padding: const EdgeInsets.all(14),
             decoration: BoxDecoration(
@@ -685,7 +850,9 @@ class _PemohonCreateMutationScreenState
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 const Icon(Icons.policy_outlined, size: 18, color: _C.teal),
+
                 const SizedBox(width: 10),
+
                 Expanded(
                   child: Text.rich(
                     TextSpan(
@@ -705,10 +872,12 @@ class _PemohonCreateMutationScreenState
               ],
             ),
           ),
+
           const SizedBox(height: 12),
+
           TextFormField(
             controller: _picController,
-            style: _m(size: 13),
+            style: _inputTextStyle(),
             decoration: _inputDeco(
               'PIC tujuan (opsional — diisi Staff jika kosong)',
             ),
@@ -717,6 +886,10 @@ class _PemohonCreateMutationScreenState
       ),
     );
   }
+
+  // ---------------------------------------------------------------------------
+  // RADIO
+  // ---------------------------------------------------------------------------
 
   Widget _radioHandling({
     required bool selected,
@@ -750,7 +923,9 @@ class _PemohonCreateMutationScreenState
                 size: 20,
                 color: selected ? _C.navy : _C.muted,
               ),
+
               const SizedBox(width: 10),
+
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -762,13 +937,16 @@ class _PemohonCreateMutationScreenState
                           size: 16,
                           color: selected ? _C.navy : _C.muted,
                         ),
+
                         const SizedBox(width: 6),
+
                         Expanded(
                           child: Text(
                             title,
                             style: _m(size: 13, weight: FontWeight.w700),
                           ),
                         ),
+
                         Container(
                           padding: const EdgeInsets.symmetric(
                             horizontal: 8,
@@ -794,7 +972,9 @@ class _PemohonCreateMutationScreenState
                         ),
                       ],
                     ),
+
                     const SizedBox(height: 4),
+
                     Text(
                       body,
                       style: _m(size: 12, color: _C.muted, height: 1.35),
@@ -809,10 +989,13 @@ class _PemohonCreateMutationScreenState
     );
   }
 
-  // ── Section 3: Alasan & dokumen ───────────────────────────────────────────
+  // ---------------------------------------------------------------------------
+  // SECTION ALASAN & DOKUMEN
+  // ---------------------------------------------------------------------------
 
   Widget _sectionReasonDoc() {
     final len = _reasonController.text.length;
+
     return _card(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -820,16 +1003,22 @@ class _PemohonCreateMutationScreenState
           Row(
             children: [
               const Icon(Icons.description_outlined, size: 20, color: _C.navy),
+
               const SizedBox(width: 8),
+
               Text(
                 'Alasan & Dokumen Otorisasi',
                 style: _m(size: 14, weight: FontWeight.w700),
               ),
             ],
           ),
+
           const SizedBox(height: 12),
+
           const Divider(height: 1, color: Color(0x99D0D5DD)),
+
           const SizedBox(height: 14),
+
           Row(
             children: [
               Text(
@@ -841,25 +1030,31 @@ class _PemohonCreateMutationScreenState
                   letterSpacing: 0.5,
                 ),
               ),
+
               const Spacer(),
+
               Text(
                 '$len / $_maxReason',
                 style: _m(size: 11, weight: FontWeight.w500, color: _C.muted),
               ),
             ],
           ),
+
           const SizedBox(height: 6),
+
           TextFormField(
             controller: _reasonController,
             maxLength: _maxReason,
             maxLines: 3,
-            style: _m(size: 13, height: 1.4),
+            style: _inputTextStyle(size: 13),
             decoration: _inputDeco('Jelaskan alasan mutasi...')
                 .copyWith(counterText: ''),
             validator: (v) =>
                 (v == null || v.trim().isEmpty) ? 'Alasan wajib diisi' : null,
           ),
+
           const SizedBox(height: 14),
+
           Text(
             'DOKUMEN OTORISASI (SK / BERITA ACARA)',
             style: _m(
@@ -869,7 +1064,9 @@ class _PemohonCreateMutationScreenState
               letterSpacing: 0.5,
             ),
           ),
+
           const SizedBox(height: 8),
+
           if (_documentName != null) ...[
             Container(
               padding: const EdgeInsets.all(10),
@@ -894,7 +1091,9 @@ class _PemohonCreateMutationScreenState
                       color: Color(0xFFDC2626),
                     ),
                   ),
+
                   const SizedBox(width: 10),
+
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -903,7 +1102,7 @@ class _PemohonCreateMutationScreenState
                           _documentName!,
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
-                          style: _m(size: 13, weight: FontWeight.w600),
+                          style: _m(size: 13, weight: FontWeight.w500),
                         ),
                         Text(
                           _formatFileSize(_documentSize),
@@ -912,13 +1111,16 @@ class _PemohonCreateMutationScreenState
                       ],
                     ),
                   ),
+
                   TextButton(
-                    onPressed: () => setState(() {
-                      _documentName = null;
-                      _documentSize = null;
-                      _documentPath = null;
-                      _documentBytes = null;
-                    }),
+                    onPressed: () {
+                      setState(() {
+                        _documentName = null;
+                        _documentSize = null;
+                        _documentPath = null;
+                        _documentBytes = null;
+                      });
+                    },
                     child: Text(
                       'Hapus',
                       style: _m(
@@ -931,8 +1133,10 @@ class _PemohonCreateMutationScreenState
                 ],
               ),
             ),
+
             const SizedBox(height: 8),
           ],
+
           OutlinedButton.icon(
             onPressed: _pickDocument,
             style: OutlinedButton.styleFrom(
@@ -956,7 +1160,9 @@ class _PemohonCreateMutationScreenState
     );
   }
 
-  // ── Bottom bar ────────────────────────────────────────────────────────────
+  // ---------------------------------------------------------------------------
+  // BOTTOM BAR
+  // ---------------------------------------------------------------------------
 
   Widget _bottomBar(bool loading) {
     return Container(
@@ -997,7 +1203,9 @@ class _PemohonCreateMutationScreenState
                       style: _m(size: 13, weight: FontWeight.w700),
                     ),
                   ),
+
                   const SizedBox(width: 12),
+
                   Expanded(
                     child: ElevatedButton(
                       onPressed: loading ? null : _submit,
@@ -1038,12 +1246,16 @@ class _PemohonCreateMutationScreenState
                   ),
                 ],
               ),
+
               const SizedBox(height: 8),
+
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   const Icon(Icons.verified_user, size: 12, color: _C.teal),
+
                   const SizedBox(width: 4),
+
                   Flexible(
                     child: Text(
                       'Sesuai PRD MutasiKu • Tiket diterbitkan otomatis',
@@ -1064,7 +1276,9 @@ class _PemohonCreateMutationScreenState
     );
   }
 
-  // ── Helpers ───────────────────────────────────────────────────────────────
+  // ---------------------------------------------------------------------------
+  // HELPERS
+  // ---------------------------------------------------------------------------
 
   Widget _card({required Widget child}) {
     return Container(
@@ -1099,28 +1313,45 @@ class _PemohonCreateMutationScreenState
     );
   }
 
+  // ---------------------------------------------------------------------------
+  // INPUT DECORATION
+  // ---------------------------------------------------------------------------
+
   InputDecoration _inputDeco(String hint) {
     return InputDecoration(
       hintText: hint,
-      hintStyle: _m(size: 13, color: _C.muted),
+
+      // Hint juga tidak bold.
+      hintStyle: _inputTextStyle(color: _C.muted, size: 12.5),
+
       filled: true,
       fillColor: _C.white,
+
       contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+
       border: OutlineInputBorder(
         borderRadius: BorderRadius.circular(8),
         borderSide: const BorderSide(color: _C.border),
       ),
+
       enabledBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(8),
         borderSide: const BorderSide(color: _C.border),
       ),
+
       focusedBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(8),
         borderSide: const BorderSide(color: _C.navy, width: 1.5),
       ),
+
       errorBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(8),
         borderSide: const BorderSide(color: Color(0xFFB42318)),
+      ),
+
+      focusedErrorBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(8),
+        borderSide: const BorderSide(color: Color(0xFFB42318), width: 1.5),
       ),
     );
   }
@@ -1131,12 +1362,15 @@ class _PemohonCreateMutationScreenState
         .split(RegExp(r'\s+'))
         .where((e) => e.isNotEmpty)
         .toList();
+
     if (p.isEmpty) return 'P';
+
     if (p.length == 1) {
       return p.first.length >= 2
           ? p.first.substring(0, 2).toUpperCase()
           : p.first.toUpperCase();
     }
+
     return '${p.first[0]}${p.last[0]}'.toUpperCase();
   }
 }

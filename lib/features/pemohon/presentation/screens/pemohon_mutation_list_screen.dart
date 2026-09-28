@@ -7,6 +7,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:mutasiku/core/widgets/custom_floating_nav_bar.dart';
+import 'package:mutasiku/features/auth/domain/entities/user_role.dart';
 
 import '../../../../app/router/route_names.dart';
 import '../../../auth/presentation/providers/auth_provider.dart';
@@ -239,7 +241,9 @@ class _PemohonMutationListScreenState
           ),
         ),
       ),
-      bottomNavigationBar: _bottomNav(context),
+      bottomNavigationBar: CustomFloatingNavBar.scaffoldBottomBar(
+        items: RoleNavConfig.getNavItemsForRole(UserRole.pemohon),
+      ),
     );
   }
 
@@ -256,7 +260,7 @@ class _PemohonMutationListScreenState
             padding: const EdgeInsets.symmetric(horizontal: 16),
             child: Row(
               children: [
-                _circleBtn(Icons.menu_rounded, () {
+                _circleBtn(Icons.arrow_back, () {
                   if (context.canPop()) {
                     context.pop();
                   } else {
@@ -289,7 +293,7 @@ class _PemohonMutationListScreenState
                       ),
                       const SizedBox(width: 6),
                       Text(
-                        'MUTASIKU PEMOHON',
+                        'MUTASIKU',
                         style: _inter(
                           size: 11,
                           weight: FontWeight.w700,
@@ -556,93 +560,22 @@ class _PemohonMutationListScreenState
     );
   }
 
-  Widget _bottomNav(BuildContext context) {
-    return SafeArea(
-      top: false,
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
-          decoration: BoxDecoration(
-            color: _C.surface.withValues(alpha: 0.95),
-            borderRadius: BorderRadius.circular(999),
-            border: Border.all(
-              color: const Color(0xFFCBD5E1).withValues(alpha: 0.8),
-            ),
-            boxShadow: [
-              BoxShadow(
-                color: const Color(0xFF0F172A).withValues(alpha: 0.06),
-                blurRadius: 16,
-                offset: const Offset(0, 4),
-              ),
-            ],
-          ),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceAround,
-            children: [
-              _nav(Icons.home_outlined, 'Beranda', false, () {
-                context.go(RouteNames.pemohonDashboardPath);
-              }),
-              _nav(Icons.sync_alt_rounded, 'Mutasi', true, () {}),
-              _nav(Icons.notifications_outlined, 'Notifikasi', false, () {
-                context.pushNamed(RouteNames.pemohonNotificationsName);
-              }),
-              _nav(Icons.person_outline, 'Profil', false, () {
-                context.pushNamed(RouteNames.pemohonProfileName);
-              }),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _nav(IconData icon, String label, bool active, VoidCallback onTap) {
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(999),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-            decoration: active
-                ? BoxDecoration(
-                    color: _C.primaryContainer.withValues(alpha: 0.1),
-                    borderRadius: BorderRadius.circular(999),
-                  )
-                : null,
-            child: Icon(
-              icon,
-              size: 20,
-              color: active ? _C.primaryContainer : const Color(0xFF94A3B8),
-            ),
-          ),
-          Text(
-            label,
-            style: _inter(
-              size: 10,
-              weight: active ? FontWeight.w700 : FontWeight.w500,
-              color: active ? _C.primaryContainer : const Color(0xFF94A3B8),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
   Widget _circleBtn(IconData icon, VoidCallback onTap) {
     return Material(
-      color: Colors.transparent,
+      color: _C.surface,
+      shape: const CircleBorder(),
+      elevation: 1,
+      shadowColor: Colors.black.withValues(alpha: 0.15),
       child: InkWell(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(999),
+        customBorder: const CircleBorder(),
         child: Container(
-          width: 40,
-          height: 40,
+          width: 35,
+          height: 35,
+          alignment: Alignment.center,
           decoration: BoxDecoration(
             shape: BoxShape.circle,
-            border: Border.all(color: _C.border.withValues(alpha: 0.7)),
+            border: Border.all(color: _C.border.withValues(alpha: 0.6)),
           ),
           child: Icon(icon, size: 20, color: _C.textPrimary),
         ),
@@ -716,7 +649,7 @@ class _MutationCard extends StatelessWidget {
                       overflow: TextOverflow.ellipsis,
                     ),
                   ),
-                  _badge(status),
+                  _badge(m),
                 ],
               ),
               const SizedBox(height: 8),
@@ -766,14 +699,27 @@ class _MutationCard extends StatelessWidget {
                 const SizedBox(height: 6),
                 Row(
                   children: [
-                    const Icon(Icons.info_outline, size: 13, color: _C.warning),
+                    Icon(
+                      m.staffUpdatedAt != null
+                          ? Icons.hourglass_top
+                          : Icons.info_outline,
+                      size: 13,
+                      color: m.staffUpdatedAt != null
+                          ? const Color(0xFF175CD3)
+                          : _C.warning,
+                    ),
                     const SizedBox(width: 4),
                     Expanded(
                       child: Text(
                         m.returnReason!,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
-                        style: style(size: 11, color: _C.warning),
+                        style: style(
+                          size: 11,
+                          color: m.staffUpdatedAt != null
+                              ? const Color(0xFF175CD3)
+                              : _C.warning,
+                        ),
                       ),
                     ),
                   ],
@@ -800,7 +746,11 @@ class _MutationCard extends StatelessWidget {
                         pathParameters: {'id': m.id},
                       ),
                     )
-                  else if (status == MutationStatus.returned)
+                  else if (status == MutationStatus.returned &&
+                      m.staffUpdatedAt == null)
+                    // Operator mengembalikan pengajuan di tahap awal
+                    // (sebelum Staff Aset update) → pemohon memang perlu
+                    // memperbaiki data pengajuannya.
                     _actionBtn(
                       context,
                       'Perbaiki Berkas',
@@ -808,6 +758,19 @@ class _MutationCard extends StatelessWidget {
                       onTap: () => context.pushNamed(
                         RouteNames.pemohonMutasiEditName,
                         pathParameters: {'id': m.id},
+                      ),
+                    )
+                  else if (status == MutationStatus.returned &&
+                      m.staffUpdatedAt != null)
+                    // Pemohon sudah melaporkan ketidaksesuaian; tidak ada
+                    // tindakan lain yang perlu ia lakukan — tinggal menunggu
+                    // Staff Aset memperbaiki data.
+                    Text(
+                      'Menunggu perbaikan Staff Aset',
+                      style: style(
+                        size: 11,
+                        weight: FontWeight.w500,
+                        color: const Color(0xFF175CD3),
                       ),
                     )
                   else if (status == MutationStatus.completed)
@@ -828,12 +791,26 @@ class _MutationCard extends StatelessWidget {
     );
   }
 
-  Widget _badge(MutationStatus s) {
+  Widget _badge(Mutation m) {
+    final s = m.status;
+    // Heuristik yang sama dengan pemohon_confirmation_screen.dart: jika
+    // status returned TAPI staffUpdatedAt sudah terisi, ini adalah laporan
+    // ketidaksesuaian yang dikirim Pemohon setelah Staff Aset update data —
+    // bukan pengembalian pengajuan oleh Operator. Pemohon tidak perlu
+    // "memperbaiki" apa pun di sini, sehingga label & warna dibedakan.
+    final isDisputedByApplicant =
+        s == MutationStatus.returned && m.staffUpdatedAt != null;
+
     final (bg, fg, label) = switch (s) {
       MutationStatus.pendingConfirmation => (
         _C.primary,
         Colors.white,
         'Perlu Tindakan',
+      ),
+      MutationStatus.returned when isDisputedByApplicant => (
+        const Color(0xFFEFF6FF),
+        const Color(0xFF175CD3),
+        'Menunggu Staff Aset',
       ),
       MutationStatus.returned => (
         _C.warning.withValues(alpha: 0.15),
@@ -878,9 +855,10 @@ class _MutationCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: bg,
         borderRadius: BorderRadius.circular(999),
-        border:
-            s == MutationStatus.returned ||
-                s == MutationStatus.waitingKabagApproval
+        border: isDisputedByApplicant
+            ? Border.all(color: const Color(0xFF175CD3).withValues(alpha: 0.3))
+            : (s == MutationStatus.returned ||
+                  s == MutationStatus.waitingKabagApproval)
             ? Border.all(color: _C.warning.withValues(alpha: 0.3))
             : null,
       ),

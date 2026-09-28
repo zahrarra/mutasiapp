@@ -183,7 +183,7 @@ class _NotificationScreenState extends ConsumerState<NotificationScreen> {
   String _badge(UserRole? role) {
     switch (role) {
       case UserRole.pemohon:
-        return 'MUTASIKU PEMOHON';
+        return 'MUTASIKU';
       case UserRole.operator:
         return 'MUTASIKU OPS';
       case UserRole.kabagAset:

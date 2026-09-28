@@ -8,13 +8,14 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:mutasiku/core/widgets/custom_floating_nav_bar.dart';
+import 'package:mutasiku/features/auth/domain/entities/user_role.dart';
 
 import '../../../../app/router/route_names.dart';
 import '../../../auth/presentation/providers/auth_provider.dart';
 import '../../../mutation/domain/entities/mutation.dart';
 import '../../../mutation/domain/entities/mutation_status.dart';
 import '../../../mutation/presentation/providers/mutation_provider.dart';
-import '../../../notification/presentation/providers/notification_provider.dart';
 
 abstract final class _S {
   static const navy = Color(0xFF0F2E42);
@@ -110,8 +111,6 @@ class _PemohonDashboardScreenState
   Widget build(BuildContext context) {
     final user = ref.watch(authStateProvider).user;
     final mutationsAsync = ref.watch(mutationListProvider);
-    ref.watch(unreadNotificationCountProvider);
-
     return Scaffold(
       backgroundColor: _S.surface,
       body: SafeArea(
@@ -120,7 +119,6 @@ class _PemohonDashboardScreenState
           color: _S.navyCard,
           onRefresh: () async {
             ref.invalidate(mutationListProvider);
-            ref.invalidate(unreadNotificationCountProvider);
             await ref.read(mutationListProvider.future);
           },
           child: CustomScrollView(
@@ -152,7 +150,9 @@ class _PemohonDashboardScreenState
           ),
         ),
       ),
-      bottomNavigationBar: _buildBottomNav(),
+      bottomNavigationBar: CustomFloatingNavBar.scaffoldBottomBar(
+        items: RoleNavConfig.getNavItemsForRole(UserRole.pemohon),
+      ),
     );
   }
 
@@ -181,7 +181,7 @@ class _PemohonDashboardScreenState
               ),
               const SizedBox(width: 6),
               Text(
-                'MUTASIKU PEMOHON',
+                'MUTASIKU',
                 style: _montserrat(
                   size: 11,
                   weight: FontWeight.w600,
@@ -1146,87 +1146,6 @@ class _PemohonDashboardScreenState
           Text(
             _shortStatus(status),
             style: _montserrat(size: 10, weight: FontWeight.w600, color: fg),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildBottomNav() {
-    return SafeArea(
-      top: false,
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
-          decoration: BoxDecoration(
-            color: _S.white.withValues(alpha: 0.95),
-            borderRadius: BorderRadius.circular(999),
-            border: Border.all(color: _S.border.withValues(alpha: 0.8)),
-            boxShadow: [
-              BoxShadow(
-                color: const Color(0xFF0F172A).withValues(alpha: 0.06),
-                blurRadius: 16,
-                offset: const Offset(0, 4),
-              ),
-            ],
-          ),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceAround,
-            children: [
-              _navItem(Icons.home_rounded, 'Beranda', true, () {
-                context.go(RouteNames.pemohonDashboardPath);
-              }),
-              _navItem(Icons.sync_alt_rounded, 'Mutasi', false, () {
-                context.go(RouteNames.pemohonMutasiPath);
-              }),
-              _navItem(Icons.notifications_outlined, 'Notifikasi', false, () {
-                context.go(RouteNames.pemohonNotificationsPath);
-              }),
-              _navItem(Icons.person_outline_rounded, 'Profil', false, () {
-                context.go(RouteNames.pemohonProfilePath);
-              }),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _navItem(
-    IconData icon,
-    String label,
-    bool active,
-    VoidCallback onTap,
-  ) {
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(999),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-            decoration: active
-                ? BoxDecoration(
-                    color: _S.navyCard.withValues(alpha: 0.1),
-                    borderRadius: BorderRadius.circular(999),
-                  )
-                : null,
-            child: Icon(
-              icon,
-              size: 20,
-              color: active ? _S.navyCard : _S.text400,
-            ),
-          ),
-          const SizedBox(height: 2),
-          Text(
-            label,
-            style: _montserrat(
-              size: 10,
-              weight: active ? FontWeight.w700 : FontWeight.w500,
-              color: active ? _S.navyCard : _S.text400,
-            ),
           ),
         ],
       ),

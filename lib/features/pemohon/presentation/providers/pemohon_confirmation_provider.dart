@@ -4,6 +4,7 @@
 // Sumber: ROLE-FLOW.md §3, SCREEN-SPEC.md REQ-009, TECHNICAL-DESIGN.md.
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+
 import '../../../../core/errors/result.dart';
 import '../../../auth/domain/entities/user_role.dart';
 import '../../../auth/presentation/providers/auth_provider.dart';
@@ -28,7 +29,9 @@ final confirmMutationUseCaseProvider = Provider<ConfirmMutationUseCase>((ref) {
 ///
 /// Filter: status == pendingConfirmation.
 /// Sumber: ROLE-FLOW.md §3, SCREEN-SPEC.md REQ-001 & REQ-009.
-final pendingConfirmationsProvider = FutureProvider<List<Mutation>>((ref) async {
+final pendingConfirmationsProvider = FutureProvider<List<Mutation>>((
+  ref,
+) async {
   final asyncMutations = await ref.watch(mutationListProvider.future);
 
   return asyncMutations
@@ -62,8 +65,9 @@ class PemohonConfirmationActionState {
     return PemohonConfirmationActionState(
       isLoading: isLoading ?? this.isLoading,
       error: clearError ? null : (error ?? this.error),
-      successMessage:
-          clearSuccess ? null : (successMessage ?? this.successMessage),
+      successMessage: clearSuccess
+          ? null
+          : (successMessage ?? this.successMessage),
       result: result ?? this.result,
     );
   }
@@ -161,8 +165,25 @@ class PemohonConfirmationActionNotifier
     return false;
   }
 
-  /// Mengembalikan mutasi untuk diperbaiki Pemohon karena kondisi tidak sesuai.
-  /// Status diubah menjadi [MutationStatus.returned] dengan alasan perbaikan.
+  /// Melaporkan ketidaksesuaian hasil update aset saat proses konfirmasi.
+  ///
+  /// PENTING (koreksi semantik): method ini dipanggil oleh Pemohon ketika
+  /// hasil update data aset dari Staff Aset TIDAK sesuai dengan kondisi
+  /// fisik (mis. SN tidak cocok, lokasi/PIC salah). Pemohon di sini berperan
+  /// sebagai PELAPOR, bukan pihak yang melakukan kesalahan — pihak yang
+  /// perlu memperbaiki data adalah Staff Aset.
+  ///
+  /// Catatan teknis: karena `MutationStatus` belum punya status khusus untuk
+  /// membedakan "Operator mengembalikan ke Pemohon di tahap awal" vs
+  /// "Pemohon melaporkan ketidaksesuaian setelah update aset", keduanya
+  /// masih memakai [MutationStatus.returned] yang sama (lihat catatan di
+  /// `mutation_status.dart`). UI (pemohon_confirmation_screen.dart,
+  /// pemohon_mutation_list_screen.dart) membedakan kedua kasus ini secara
+  /// kontekstual menggunakan `staffUpdatedAt != null` sebagai penanda bahwa
+  /// ini adalah laporan ketidaksesuaian dari Pemohon, bukan pengembalian
+  /// oleh Operator. Jika suatu saat status baru (mis.
+  /// `disputedByApplicant`) ditambahkan di backend, method ini sebaiknya
+  /// diarahkan ke status tersebut, bukan `returned`.
   Future<bool> returnForRevision({
     required String mutationId,
     required String reason,
@@ -186,7 +207,9 @@ class PemohonConfirmationActionNotifier
     if (result is Success<Mutation>) {
       state = PemohonConfirmationActionState(
         isLoading: false,
-        successMessage: 'Pengajuan dikembalikan untuk perbaikan data.',
+        successMessage:
+            'Laporan ketidaksesuaian terkirim. Staff Aset akan '
+            'meninjau dan memperbaiki data aset Anda.',
         result: result.data,
       );
       ref.invalidate(mutationListProvider);
@@ -202,12 +225,15 @@ class PemohonConfirmationActionNotifier
             notifNotifier.markAsRead(n.id);
           }
         }
+        // Notifikasi ke Pemohon sendiri: konfirmasi bahwa laporannya
+        // diteruskan, BUKAN menyuruhnya memperbaiki apa pun.
         notifNotifier.addNotification(
           NotificationItem(
             id: 'notif_${DateTime.now().millisecondsSinceEpoch}',
-            title: 'Pengajuan Dikembalikan',
+            title: 'Laporan Ketidaksesuaian Terkirim',
             message:
-                'Pengajuan mutasi ${result.data.ticketNumber} dikembalikan untuk perbaikan data: $reason',
+                'Laporan ketidaksesuaian untuk pengajuan ${result.data.ticketNumber} '
+                'telah diteruskan ke Staff Aset: $reason',
             type: NotificationType.warning,
             createdAt: DateTime.now(),
             isRead: false,
@@ -229,7 +255,7 @@ class PemohonConfirmationActionNotifier
 
     state = const PemohonConfirmationActionState(
       isLoading: false,
-      error: 'Terjadi kesalahan sistem saat memproses perbaikan.',
+      error: 'Terjadi kesalahan sistem saat memproses laporan.',
     );
     return false;
   }
@@ -241,11 +267,14 @@ class PemohonConfirmationActionNotifier
 
 // ─── Provider ────────────────────────────────────────────────────────────────
 
-final pemohonConfirmationActionProvider = StateNotifierProvider<
-    PemohonConfirmationActionNotifier, PemohonConfirmationActionState>((ref) {
-  final useCase = ref.watch(confirmMutationUseCaseProvider);
-  return PemohonConfirmationActionNotifier(
-    confirmUseCase: useCase,
-    ref: ref,
-  );
-});
+final pemohonConfirmationActionProvider =
+    StateNotifierProvider<
+      PemohonConfirmationActionNotifier,
+      PemohonConfirmationActionState
+    >((ref) {
+      final useCase = ref.watch(confirmMutationUseCaseProvider);
+      return PemohonConfirmationActionNotifier(
+        confirmUseCase: useCase,
+        ref: ref,
+      );
+    });

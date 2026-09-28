@@ -230,7 +230,7 @@ class _PemohonConfirmationScreenState
                     ),
                     const SizedBox(width: 6),
                     Text(
-                      'MUTASIKU PEMOHON',
+                      'MUTASIKU',
                       style: _t(size: 11, w: FontWeight.w600, ls: 0.5),
                     ),
                   ],
@@ -292,6 +292,13 @@ class _PemohonConfirmationScreenState
     final m = actionState.result ?? mutation;
     final isPending = m.status == MutationStatus.pendingConfirmation;
     final isCompleted = m.status == MutationStatus.completed;
+    // Heuristik: Operator mengembalikan pengajuan SEBELUM Staff Aset sempat
+    // update data (staffUpdatedAt masih null). Sebaliknya, laporan
+    // ketidaksesuaian dari Pemohon hanya terjadi SETELAH Staff Aset update
+    // (staffUpdatedAt sudah terisi). Dengan ini kita bisa membedakan konteks
+    // tanpa perlu menambah status/enum baru.
+    final isDisputedByApplicant =
+        m.status == MutationStatus.returned && m.staffUpdatedAt != null;
 
     return Stack(
       children: [
@@ -338,6 +345,17 @@ class _PemohonConfirmationScreenState
                 Icons.check_circle_outline,
               ),
               const SizedBox(height: 12),
+            ] else if (isDisputedByApplicant) ...[
+              _banner(
+                'Laporan ketidaksesuaian Anda sudah diteruskan ke Staff Aset. '
+                'Tidak ada tindakan lain yang perlu Anda lakukan saat ini — '
+                'konfirmasi akan tersedia kembali setelah data diperbaiki.',
+                _C.info,
+                const Color(0xFFEFF6FF),
+                const Color(0xFFBFDBFE),
+                Icons.info_outline,
+              ),
+              const SizedBox(height: 12),
             ] else if (!isPending) ...[
               _banner(
                 'Pengajuan berstatus "${m.status.displayName}". Konfirmasi hanya saat "Menunggu Konfirmasi".',
@@ -349,7 +367,7 @@ class _PemohonConfirmationScreenState
               const SizedBox(height: 12),
             ],
 
-            _ticketCard(m),
+            _ticketCard(m, isDisputedByApplicant: isDisputedByApplicant),
             const SizedBox(height: 12),
             _assetUpdateCard(m),
             const SizedBox(height: 12),
@@ -360,8 +378,6 @@ class _PemohonConfirmationScreenState
               const SizedBox(height: 16),
               _actionButtons(m, actionState),
             ],
-            const SizedBox(height: 8),
-            _reasonCard(m),
           ],
         ),
         if (actionState.isLoading)
@@ -432,9 +448,45 @@ class _PemohonConfirmationScreenState
     );
   }
 
-  Widget _ticketCard(Mutation m) {
+  Widget _ticketCard(Mutation m, {required bool isDisputedByApplicant}) {
     final pending = m.status == MutationStatus.pendingConfirmation;
     final done = m.status == MutationStatus.completed;
+
+    // Untuk kasus laporan ketidaksesuaian oleh pemohon, tampilkan badge
+    // netral ("Menunggu Staff Aset") — bukan "Dikembalikan ke Pemohon" yang
+    // secara semantik menyalahkan pemohon padahal justru pemohon yang lapor.
+    final badgeLabel = isDisputedByApplicant
+        ? 'Menunggu Staff Aset'
+        : m.status.displayName;
+    final badgeIcon = isDisputedByApplicant
+        ? Icons.hourglass_top
+        : pending
+        ? Icons.pending_actions
+        : done
+        ? Icons.check_circle_outline
+        : Icons.info_outline;
+    final badgeColor = isDisputedByApplicant
+        ? _C.info
+        : done
+        ? _C.success
+        : pending
+        ? _C.warning
+        : _C.error;
+    final badgeBg = isDisputedByApplicant
+        ? const Color(0xFFEFF6FF)
+        : done
+        ? const Color(0xFFECFDF3)
+        : pending
+        ? const Color(0xFFFEF3C7)
+        : const Color(0xFFFEF3F2);
+    final badgeBorder = isDisputedByApplicant
+        ? const Color(0xFFBFDBFE)
+        : done
+        ? const Color(0xFFD1FADF)
+        : pending
+        ? const Color(0xFFFDE68A)
+        : const Color(0xFFFECDCA);
+
     return _card(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -456,47 +508,21 @@ class _PemohonConfirmationScreenState
                   vertical: 4,
                 ),
                 decoration: BoxDecoration(
-                  color: done
-                      ? const Color(0xFFECFDF3)
-                      : pending
-                      ? const Color(0xFFFEF3C7)
-                      : const Color(0xFFFEF3F2),
+                  color: badgeBg,
                   borderRadius: BorderRadius.circular(999),
-                  border: Border.all(
-                    color: done
-                        ? const Color(0xFFD1FADF)
-                        : pending
-                        ? const Color(0xFFFDE68A)
-                        : const Color(0xFFFECDCA),
-                  ),
+                  border: Border.all(color: badgeBorder),
                 ),
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Icon(
-                      pending
-                          ? Icons.pending_actions
-                          : done
-                          ? Icons.check_circle_outline
-                          : Icons.info_outline,
-                      size: 14,
-                      color: done
-                          ? _C.success
-                          : pending
-                          ? _C.warning
-                          : _C.error,
-                    ),
+                    Icon(badgeIcon, size: 14, color: badgeColor),
                     const SizedBox(width: 4),
                     Text(
-                      m.status.displayName,
+                      badgeLabel,
                       style: _t(
                         size: 11,
                         w: FontWeight.w600,
-                        color: done
-                            ? _C.success
-                            : pending
-                            ? _C.warning
-                            : _C.error,
+                        color: badgeColor,
                       ),
                     ),
                   ],
@@ -975,19 +1001,6 @@ class _PemohonConfirmationScreenState
     );
   }
 
-  Widget _reasonCard(Mutation m) {
-    return _card(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text('Alasan Mutasi', style: _t(size: 13, w: FontWeight.w700)),
-          const SizedBox(height: 6),
-          Text(m.reason, style: _t(size: 12, color: _C.textSecondary, h: 1.4)),
-        ],
-      ),
-    );
-  }
-
   Widget _actionButtons(
     Mutation m,
     PemohonConfirmationActionState actionState,
@@ -1153,7 +1166,9 @@ class _PemohonConfirmationScreenState
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                'Silakan berikan alasan atau catatan ketidaksesuaian aset/lokasi yang diterima agar pengajuan dapat diperbaiki.',
+                'Silakan berikan alasan atau catatan ketidaksesuaian aset/lokasi '
+                'yang diterima. Laporan ini akan dikirim ke Staff Aset agar '
+                'data aset dapat diperbaiki — bukan data pengajuan Anda.',
                 style: _t(size: 12, color: _C.textSecondary, h: 1.4),
               ),
               const SizedBox(height: 12),
@@ -1202,7 +1217,8 @@ class _PemohonConfirmationScreenState
               if (success) {
                 AppFeedback.showSuccess(
                   context,
-                  'Pengajuan dikembalikan untuk perbaikan data.',
+                  'Laporan ketidaksesuaian terkirim. Staff Aset akan '
+                  'meninjau dan memperbaiki data aset Anda.',
                 );
 
                 final currentMutation = ref
@@ -1222,19 +1238,22 @@ class _PemohonConfirmationScreenState
                     .read(notificationProvider.notifier)
                     .notifyRole(
                       targetRole: UserRole.operator,
-                      title: 'Pengajuan Dikembalikan oleh Pemohon',
+                      title: 'Ketidaksesuaian Dilaporkan Pemohon',
                       message:
-                          'Pengajuan ${currentMutation?.ticketNumber ?? widget.mutationId} dikembalikan untuk penyesuaian: $reason',
+                          'Pemohon melaporkan ketidaksesuaian pada hasil '
+                          'update aset untuk pengajuan '
+                          '${currentMutation?.ticketNumber ?? widget.mutationId}: $reason',
                       type: NotificationType.action,
                       relatedMutationId: widget.mutationId,
                     );
                 ref.invalidate(mutationDetailProvider(widget.mutationId));
-                context.go(
-                  RouteNames.pemohonMutasiEditPath.replaceFirst(
-                    ':id',
-                    widget.mutationId,
-                  ),
-                );
+                // PENTING: pemohon TIDAK diarahkan ke halaman Edit Pengajuan.
+                // Yang perlu diperbaiki adalah hasil update data aset oleh
+                // Staff Aset (SN/kondisi/lokasi fisik), bukan data pengajuan
+                // (lokasi tujuan/PIC/alasan mutasi) milik pemohon. Form Edit
+                // Pengajuan bukan tujuan yang tepat untuk kasus ini, jadi
+                // cukup tetap di halaman ini — statusnya sudah ter-refresh
+                // via invalidate() di atas.
               } else {
                 final state = ref.read(pemohonConfirmationActionProvider);
                 AppFeedback.showError(
@@ -1247,7 +1266,7 @@ class _PemohonConfirmationScreenState
               backgroundColor: _C.warning,
               foregroundColor: Colors.white,
             ),
-            child: const Text('Perbaiki Pengajuan'),
+            child: const Text('Kirim Laporan'),
           ),
         ],
       ),

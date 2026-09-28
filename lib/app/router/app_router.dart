@@ -38,7 +38,6 @@ import '../../features/mutation/presentation/screens/mutation_submit_success_scr
 import '../../features/pemohon/presentation/screens/pemohon_edit_mutation_screen.dart';
 import '../../features/pemohon/presentation/screens/pemohon_mutation_detail_screen.dart';
 import '../../features/pemohon/presentation/screens/pemohon_mutation_list_screen.dart';
-import '../../features/pemohon/presentation/screens/pemohon_profile_screen.dart';
 import '../../features/profile/presentation/screens/profile_screen.dart';
 import '../../features/staff/presentation/screens/staff_dashboard_screen.dart';
 import '../../features/staff/presentation/screens/staff_mutation_detail_screen.dart';
@@ -237,7 +236,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: RouteNames.pemohonProfilePath,
         name: RouteNames.pemohonProfileName,
-        builder: (context, state) => const PemohonProfileScreen(),
+        builder: (context, state) => const ProfileScreen(),
       ),
 
       // ─── Operator ─────────────────────────────────────────────────────────

@@ -17,19 +17,19 @@ import '../providers/operator_verification_provider.dart';
 
 // ─── Design tokens (Stitch baseline) ─────────────────────────────────────────
 class _C {
-  static const navy    = Color(0xFF0F3D56);
-  static const teal    = Color(0xFF0F766E);
+  static const navy = Color(0xFF0F3D56);
+  static const teal = Color(0xFF0F766E);
   static const surface = Color(0xFFFFFFFF);
-  static const bg      = Color(0xFFF6F8FA);
-  static const textPrimary   = Color(0xFF172B4D);
+  static const bg = Color(0xFFF6F8FA);
+  static const textPrimary = Color(0xFF172B4D);
   static const textSecondary = Color(0xFF52606D);
-  static const border  = Color(0xFFD0D5DD);
+  static const border = Color(0xFFD0D5DD);
   static const success = Color(0xFF10B981);
   static const successBg = Color(0xFFECFDF5);
-  static const error   = Color(0xFFEF4444);
+  static const error = Color(0xFFEF4444);
   static const errorBg = Color(0xFFFEF2F2);
-  static const info    = Color(0xFF3B82F6);
-  static const infoBg  = Color(0xFFEFF6FF);
+  static const info = Color(0xFF3B82F6);
+  static const infoBg = Color(0xFFEFF6FF);
 }
 
 // ─── Filter tab enum ──────────────────────────────────────────────────────────
@@ -37,15 +37,15 @@ enum _Tab { all, submitted, returned }
 
 extension _TabExt on _Tab {
   String label(int count) => switch (this) {
-        _Tab.all       => 'Semua ($count)',
-        _Tab.submitted => 'Menunggu',
-        _Tab.returned  => 'Dikembalikan',
-      };
+    _Tab.all => 'Semua ($count)',
+    _Tab.submitted => 'Menunggu',
+    _Tab.returned => 'Dikembalikan',
+  };
   OperatorStatusFilter get statusFilter => switch (this) {
-        _Tab.all       => OperatorStatusFilter.all,
-        _Tab.submitted => OperatorStatusFilter.submitted,
-        _Tab.returned  => OperatorStatusFilter.returned,
-      };
+    _Tab.all => OperatorStatusFilter.all,
+    _Tab.submitted => OperatorStatusFilter.submitted,
+    _Tab.returned => OperatorStatusFilter.returned,
+  };
 }
 
 // ─── Screen ───────────────────────────────────────────────────────────────────
@@ -67,7 +67,6 @@ class _OperatorMutationsScreenState
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) {
-        ref.invalidate(operatorAllMutationsProvider);
         // Sync provider filter ke tab awal
         ref.read(operatorStatusFilterProvider.notifier).state =
             _activeTab.statusFilter;
@@ -89,7 +88,7 @@ class _OperatorMutationsScreenState
   @override
   Widget build(BuildContext context) {
     final asyncIncoming = ref.watch(filteredIncomingMutationsProvider);
-    final asyncAll      = ref.watch(operatorAllMutationsProvider);
+    final asyncAll = ref.watch(operatorAllMutationsProvider);
 
     // Hitung badge jumlah (dari data mentah)
     final totalCount = asyncAll.valueOrNull?.length ?? 0;
@@ -113,7 +112,7 @@ class _OperatorMutationsScreenState
           // ── List ──────────────────────────────────────────────────────
           Expanded(
             child: asyncIncoming.when(
-              data:    (list) => _buildList(list),
+              data: (list) => _buildList(list),
               loading: () => const Center(
                 child: CircularProgressIndicator(
                   strokeWidth: 2,
@@ -141,9 +140,7 @@ class _OperatorMutationsScreenState
           padding: const EdgeInsets.fromLTRB(16, 14, 16, 14),
           decoration: const BoxDecoration(
             color: _C.surface,
-            border: Border(
-              bottom: BorderSide(color: _C.border, width: 1),
-            ),
+            border: Border(bottom: BorderSide(color: _C.border, width: 1)),
           ),
           child: Row(
             children: [
@@ -189,10 +186,7 @@ class _OperatorMutationsScreenState
                     ),
                     Text(
                       'Antrean berkas mutasi menunggu verifikasi',
-                      style: TextStyle(
-                        fontSize: 11,
-                        color: _C.textSecondary,
-                      ),
+                      style: TextStyle(fontSize: 11, color: _C.textSecondary),
                     ),
                   ],
                 ),
@@ -265,10 +259,7 @@ class _OperatorMutationsScreenState
             child: TextField(
               key: const Key('input_search_mutations'),
               controller: _searchController,
-              style: const TextStyle(
-                fontSize: 13,
-                color: _C.textPrimary,
-              ),
+              style: const TextStyle(fontSize: 13, color: _C.textPrimary),
               decoration: InputDecoration(
                 hintText: 'Cari no. tiket, aset, pemohon...',
                 hintStyle: TextStyle(
@@ -283,13 +274,16 @@ class _OperatorMutationsScreenState
                     color: _C.textSecondary,
                   ),
                 ),
-                prefixIconConstraints:
-                    const BoxConstraints(minWidth: 0, minHeight: 0),
+                prefixIconConstraints: const BoxConstraints(
+                  minWidth: 0,
+                  minHeight: 0,
+                ),
                 suffixIcon: _searchController.text.isNotEmpty
                     ? GestureDetector(
                         onTap: () {
                           _searchController.clear();
-                          ref.read(operatorSearchQueryProvider.notifier).state = '';
+                          ref.read(operatorSearchQueryProvider.notifier).state =
+                              '';
                           setState(() {});
                         },
                         child: const Icon(
@@ -331,24 +325,30 @@ class _OperatorMutationsScreenState
                       value: statusFilter,
                       isDense: true,
                       isExpanded: true,
-                      icon: const Icon(Icons.filter_list_rounded,
-                          size: 16, color: _C.teal),
+                      icon: const Icon(
+                        Icons.filter_list_rounded,
+                        size: 16,
+                        color: _C.teal,
+                      ),
                       style: const TextStyle(
                         fontSize: 12,
                         fontWeight: FontWeight.w500,
                         color: _C.textPrimary,
                       ),
                       items: OperatorStatusFilter.values
-                          .map((s) => DropdownMenuItem(
-                                value: s,
-                                child: Text(s.displayName),
-                              ))
+                          .map(
+                            (s) => DropdownMenuItem(
+                              value: s,
+                              child: Text(s.displayName),
+                            ),
+                          )
                           .toList(),
                       onChanged: (val) {
                         if (val != null) {
                           ref
-                              .read(operatorStatusFilterProvider.notifier)
-                              .state = val;
+                                  .read(operatorStatusFilterProvider.notifier)
+                                  .state =
+                              val;
                           setState(() {
                             _activeTab = switch (val) {
                               OperatorStatusFilter.all => _Tab.all,
@@ -378,24 +378,28 @@ class _OperatorMutationsScreenState
                     key: const Key('dropdown_filter_operator_sort'),
                     value: sortOrder,
                     isDense: true,
-                    icon: const Icon(Icons.sort_rounded,
-                        size: 16, color: _C.textSecondary),
+                    icon: const Icon(
+                      Icons.sort_rounded,
+                      size: 16,
+                      color: _C.textSecondary,
+                    ),
                     style: const TextStyle(
                       fontSize: 12,
                       fontWeight: FontWeight.w500,
                       color: _C.textPrimary,
                     ),
                     items: MutationSortOrder.values
-                        .map((s) => DropdownMenuItem(
-                              value: s,
-                              child: Text(s.displayName),
-                            ))
+                        .map(
+                          (s) => DropdownMenuItem(
+                            value: s,
+                            child: Text(s.displayName),
+                          ),
+                        )
                         .toList(),
                     onChanged: (val) {
                       if (val != null) {
-                        ref
-                            .read(operatorSortOrderProvider.notifier)
-                            .state = val;
+                        ref.read(operatorSortOrderProvider.notifier).state =
+                            val;
                         setState(() {});
                       }
                     },
@@ -413,10 +417,12 @@ class _OperatorMutationsScreenState
   Widget _buildFilterTabs(AsyncValue<List<Mutation>> asyncAll) {
     final allList = asyncAll.valueOrNull ?? [];
     final totalAll = allList.length;
-    final totalSubmitted =
-        allList.where((m) => m.status == MutationStatus.submitted).length;
-    final totalReturned =
-        allList.where((m) => m.status == MutationStatus.returned).length;
+    final totalSubmitted = allList
+        .where((m) => m.status == MutationStatus.submitted)
+        .length;
+    final totalReturned = allList
+        .where((m) => m.status == MutationStatus.returned)
+        .length;
 
     final counts = {
       _Tab.all: totalAll,
@@ -464,11 +470,8 @@ class _OperatorMutationsScreenState
                     tab.label(counts[tab] ?? 0),
                     style: TextStyle(
                       fontSize: 12,
-                      fontWeight:
-                          active ? FontWeight.w700 : FontWeight.w500,
-                      color: active
-                          ? Colors.white
-                          : _C.textSecondary,
+                      fontWeight: active ? FontWeight.w700 : FontWeight.w500,
+                      color: active ? Colors.white : _C.textSecondary,
                     ),
                   ),
                 ),
@@ -504,8 +507,7 @@ class _OperatorMutationsScreenState
 
   // ── Empty state ───────────────────────────────────────────────────────────
   Widget _buildEmptyState() {
-    final isSearch =
-        ref.watch(operatorSearchQueryProvider).trim().isNotEmpty;
+    final isSearch = ref.watch(operatorSearchQueryProvider).trim().isNotEmpty;
 
     return Center(
       child: Padding(
@@ -530,9 +532,7 @@ class _OperatorMutationsScreenState
             ),
             const SizedBox(height: 16),
             Text(
-              isSearch
-                  ? 'Tidak Ditemukan'
-                  : 'Tidak Ada Pengajuan Masuk',
+              isSearch ? 'Tidak Ditemukan' : 'Tidak Ada Pengajuan Masuk',
               style: const TextStyle(
                 fontSize: 16,
                 fontWeight: FontWeight.w700,
@@ -545,10 +545,7 @@ class _OperatorMutationsScreenState
                   ? 'Coba kata kunci lain atau ubah filter.'
                   : 'Semua pengajuan telah diproses.',
               textAlign: TextAlign.center,
-              style: const TextStyle(
-                fontSize: 13,
-                color: _C.textSecondary,
-              ),
+              style: const TextStyle(fontSize: 13, color: _C.textSecondary),
             ),
           ],
         ),
@@ -590,10 +587,7 @@ class _OperatorMutationsScreenState
             Text(
               '$err',
               textAlign: TextAlign.center,
-              style: const TextStyle(
-                fontSize: 12,
-                color: _C.textSecondary,
-              ),
+              style: const TextStyle(fontSize: 12, color: _C.textSecondary),
             ),
             const SizedBox(height: 20),
             GestureDetector(
@@ -610,11 +604,7 @@ class _OperatorMutationsScreenState
                 child: const Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Icon(
-                      Icons.refresh_rounded,
-                      size: 16,
-                      color: Colors.white,
-                    ),
+                    Icon(Icons.refresh_rounded, size: 16, color: Colors.white),
                     SizedBox(width: 6),
                     Text(
                       'Coba Lagi',
@@ -651,8 +641,18 @@ class _MutationCard extends StatelessWidget {
     if (diff.inHours < 24) return '${diff.inHours} jam lalu';
     if (diff.inDays == 1) return 'Kemarin';
     const months = [
-      'Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun',
-      'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des',
+      'Jan',
+      'Feb',
+      'Mar',
+      'Apr',
+      'Mei',
+      'Jun',
+      'Jul',
+      'Agu',
+      'Sep',
+      'Okt',
+      'Nov',
+      'Des',
     ];
     return '${dt.day} ${months[dt.month - 1]} ${dt.year}';
   }
@@ -727,11 +727,11 @@ class _MutationCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final m   = mutation;
-    final si  = _statusInfo(m.status);
+    final m = mutation;
+    final si = _statusInfo(m.status);
     final ini = _initials(m.applicantName);
-    final bg  = _avatarBg(m.applicantName);
-    final fg  = _avatarFg(m.applicantName);
+    final bg = _avatarBg(m.applicantName);
+    final fg = _avatarFg(m.applicantName);
 
     return GestureDetector(
       key: Key('card_mutation_${m.id}'),
@@ -790,9 +790,7 @@ class _MutationCard extends StatelessWidget {
                   decoration: BoxDecoration(
                     color: si.bg,
                     borderRadius: BorderRadius.circular(999),
-                    border: Border.all(
-                      color: si.fg.withValues(alpha: 0.25),
-                    ),
+                    border: Border.all(color: si.fg.withValues(alpha: 0.25)),
                   ),
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
@@ -830,9 +828,7 @@ class _MutationCard extends StatelessWidget {
                   decoration: BoxDecoration(
                     color: bg,
                     shape: BoxShape.circle,
-                    border: Border.all(
-                      color: fg.withValues(alpha: 0.18),
-                    ),
+                    border: Border.all(color: fg.withValues(alpha: 0.18)),
                   ),
                   alignment: Alignment.center,
                   child: Text(
@@ -930,10 +926,7 @@ class _MutationCard extends StatelessWidget {
                   // Divider
                   Padding(
                     padding: const EdgeInsets.symmetric(vertical: 8),
-                    child: Container(
-                      height: 1,
-                      color: const Color(0xFFE5E7EB),
-                    ),
+                    child: Container(height: 1, color: const Color(0xFFE5E7EB)),
                   ),
                   // Lokasi: asal → tujuan
                   Row(
