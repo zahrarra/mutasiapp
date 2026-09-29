@@ -98,7 +98,7 @@ class KabagDashboardScreen extends ConsumerWidget {
                 child: _StatCard(
                   key: const Key('stat_approved'),
                   icon: Icons.check_circle_outline,
-                  label: 'Disetujui',
+                  label: isBagianAset ? 'Lolos Verifikasi' : 'Disetujui',
                   count: stats.approvedCount,
                   iconColor: _C.success,
                   iconBg: _C.successLight,
@@ -115,7 +115,7 @@ class KabagDashboardScreen extends ConsumerWidget {
                 child: _StatCard(
                   key: const Key('stat_rejected'),
                   icon: Icons.cancel_outlined,
-                  label: 'Ditolak',
+                  label: isBagianAset ? 'Dikembalikan' : 'Ditolak',
                   count: stats.rejectedCount,
                   iconColor: _C.error,
                   iconBg: _C.errorLight,

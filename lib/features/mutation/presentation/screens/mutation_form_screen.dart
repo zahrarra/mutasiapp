@@ -72,16 +72,16 @@ class MutationFormScreen extends ConsumerWidget {
 
             _buildLabel('Lokasi Aset Saat Ini *'),
             const SizedBox(height: AppSpacing.xs),
-            TextFormField(
-              initialValue: formState.sourceLocation,
-              onChanged: notifier.setSourceLocation,
-              decoration: InputDecoration(
-                hintText: 'Contoh: Kantor Pusat',
-                errorText: formState.fieldErrors['sourceLocation'],
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
-                ),
-              ),
+            _buildDropdown(
+              value: formState.sourceLocation.isEmpty
+                  ? null
+                  : formState.sourceLocation,
+              hint: 'Pilih lokasi aset saat ini',
+              items: locations,
+              errorText: formState.fieldErrors['sourceLocation'],
+              onChanged: (value) {
+                notifier.setSourceLocation(value ?? '');
+              },
             ),
 
             const SizedBox(height: AppSpacing.lg),
@@ -141,12 +141,12 @@ class MutationFormScreen extends ConsumerWidget {
 
             const SizedBox(height: AppSpacing.lg),
 
-            _buildLabel('Dokumen Pendukung (Opsional)'),
+            _buildLabel('Surat Keputusan (SK) SDM *'),
             const SizedBox(height: AppSpacing.xs),
             InkWell(
               onTap: () {
                 notifier.setDocumentName(
-                  formState.documentName == null ? 'surat_pengantar.pdf' : null,
+                  formState.documentName == null ? 'SK_SDM_Mutasi.pdf' : null,
                 );
               },
               borderRadius: BorderRadius.circular(AppRadius.button),
@@ -155,7 +155,11 @@ class MutationFormScreen extends ConsumerWidget {
                 decoration: BoxDecoration(
                   color: AppColors.surface,
                   borderRadius: BorderRadius.circular(AppRadius.button),
-                  border: Border.all(color: AppColors.border),
+                  border: Border.all(
+                    color: formState.fieldErrors['documentName'] != null
+                        ? AppColors.error
+                        : AppColors.border,
+                  ),
                 ),
                 child: Row(
                   children: [
@@ -163,16 +167,20 @@ class MutationFormScreen extends ConsumerWidget {
                       formState.documentName != null
                           ? Icons.description
                           : Icons.upload_file_outlined,
-                      color: AppColors.textSecondary,
+                      color: formState.fieldErrors['documentName'] != null
+                          ? AppColors.error
+                          : AppColors.textSecondary,
                     ),
                     const SizedBox(width: AppSpacing.sm),
                     Expanded(
                       child: Text(
                         formState.documentName ??
-                            'Ketuk untuk melampirkan dokumen',
-                        style: const TextStyle(
+                            'Pilih dokumen SK SDM (PDF wajib, maks 30 MB)',
+                        style: TextStyle(
                           fontSize: 13,
-                          color: AppColors.textSecondary,
+                          color: formState.fieldErrors['documentName'] != null
+                              ? AppColors.error
+                              : AppColors.textSecondary,
                         ),
                       ),
                     ),
@@ -186,6 +194,16 @@ class MutationFormScreen extends ConsumerWidget {
                 ),
               ),
             ),
+            if (formState.fieldErrors['documentName'] != null) ...[
+              const SizedBox(height: 4),
+              Text(
+                formState.fieldErrors['documentName']!,
+                style: const TextStyle(
+                  fontSize: 12,
+                  color: AppColors.error,
+                ),
+              ),
+            ],
 
             const SizedBox(height: AppSpacing.xxxl),
 

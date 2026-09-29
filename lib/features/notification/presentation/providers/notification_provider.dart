@@ -19,7 +19,8 @@ class NotificationNotifier extends StateNotifier<List<NotificationItem>> {
       NotificationItem(
         id: 'notif_1',
         title: 'Pengajuan Diverifikasi',
-        message: 'Pengajuan mutasi FURNITUR-2026-00018 telah diverifikasi oleh Operator dan diteruskan ke Kabag.',
+        message:
+            'Pengajuan mutasi FURNITUR-2026-00018 telah dinyatakan lengkap & diverifikasi oleh Operator dan diteruskan ke Bagian Aset.',
         type: NotificationType.info,
         createdAt: now.subtract(const Duration(minutes: 30)),
         relatedMutationId: 'mut_004',
@@ -30,7 +31,8 @@ class NotificationNotifier extends StateNotifier<List<NotificationItem>> {
       NotificationItem(
         id: 'notif_opr_1',
         title: 'Pengajuan Baru Masuk',
-        message: 'Pengajuan mutasi FURNITUR-2026-00018 (Meja Kerja Eksekutif) diajukan oleh Dewi Lestari dan menunggu verifikasi Anda.',
+        message:
+            'Pengajuan mutasi FURNITUR-2026-00018 (Meja Kerja Eksekutif) diajukan oleh Dewi Lestari dan menunggu pemeriksaan kelengkapan Anda.',
         type: NotificationType.action,
         createdAt: now.subtract(const Duration(hours: 1)),
         relatedMutationId: 'mut_004',
@@ -39,51 +41,66 @@ class NotificationNotifier extends StateNotifier<List<NotificationItem>> {
       NotificationItem(
         id: 'notif_opr_2',
         title: 'Pengajuan Baru Masuk',
-        message: 'Pengajuan mutasi KENDARAAN-2026-00042 (Toyota Avanza) diajukan oleh Budi Santoso dan menunggu verifikasi Anda.',
+        message:
+            'Pengajuan mutasi KENDARAAN-2026-00042 (Toyota Avanza) diajukan oleh Budi Santoso dan menunggu pemeriksaan kelengkapan Anda.',
         type: NotificationType.action,
         createdAt: now.subtract(const Duration(hours: 5)),
         relatedMutationId: 'mut_002',
         targetRole: UserRole.operator,
       ),
 
-      // ── Kabag Aset Notifications ─────────────────────────────────────────
+      // ── Bagian Aset Notifications ────────────────────────────────────────
       NotificationItem(
         id: 'notif_kbg_1',
-        title: 'Menunggu Approval Kabag',
-        message: 'Pengajuan mutasi FURNITUR-2026-00018 (Meja Kerja Eksekutif) telah diverifikasi Operator dan siap ditinjau.',
+        title: 'Menunggu Verifikasi Bagian Aset',
+        message:
+            'Pengajuan mutasi FURNITUR-2026-00018 (Meja Kerja Eksekutif) telah dinyatakan lengkap oleh Operator dan menunggu verifikasi keabsahan aset Anda.',
         type: NotificationType.action,
         createdAt: now.subtract(const Duration(hours: 4)),
         relatedMutationId: 'mut_004',
-        targetRole: UserRole.kabagAset,
+        targetRole: UserRole.bagianAset,
       ),
-
-      // ── Kadiv Notifications ──────────────────────────────────────────────
       NotificationItem(
-        id: 'notif_kdv_1',
-        title: 'Menunggu Approval Kadiv',
-        message: 'Pengajuan mutasi ELEKTRONIK-2026-00088 (Server Rack Enterprise) telah disetujui Kabag dan memerlukan penetapan akhir Kadiv.',
+        id: 'notif_ast_2',
+        title: 'Penentuan PIC Baru Diperlukan',
+        message:
+            'Pengajuan mutasi ELEKTRONIK-2026-00077: aset fisik ditinggalkan di unit asal. Bagian Aset menentukan PIC baru melalui sistem saat verifikasi.',
         type: NotificationType.action,
-        createdAt: now.subtract(const Duration(hours: 2)),
-        relatedMutationId: 'mut_005',
-        targetRole: UserRole.kadiv,
+        createdAt: now.subtract(const Duration(hours: 3)),
+        relatedMutationId: 'mut_007',
+        targetRole: UserRole.bagianAset,
       ),
 
-      // ── Staff Aset Notifications ─────────────────────────────────────────
+      // ── Legacy Staff Aset Notifications (Compatibility) ──────────────────
       NotificationItem(
         id: 'notif_stf_1',
         title: 'Tugas Pembaruan Fisik Aset',
-        message: 'Pengajuan mutasi ELEKTRONIK-2026-00077 telah disetujui. Silakan lakukan pemindahan fisik dan perbarui lokasi & PIC aset.',
+        message:
+            'Pengajuan mutasi ELEKTRONIK-2026-00077 telah disetujui. Silakan lakukan pemindahan fisik dan perbarui lokasi & PIC aset.',
         type: NotificationType.action,
         createdAt: now.subtract(const Duration(hours: 3)),
         relatedMutationId: 'mut_007',
         targetRole: UserRole.staffAset,
       ),
 
+      // ── Kadiv Notifications ──────────────────────────────────────────────
+      NotificationItem(
+        id: 'notif_kdv_1',
+        title: 'Menunggu Persetujuan Final',
+        message:
+            'Pengajuan mutasi ELEKTRONIK-2026-00088 (Server Rack Enterprise) telah lolos verifikasi Bagian Aset dan memerlukan persetujuan final Pemimpin Divisi.',
+        type: NotificationType.action,
+        createdAt: now.subtract(const Duration(hours: 2)),
+        relatedMutationId: 'mut_005',
+        targetRole: UserRole.kadiv,
+      ),
+
       // ── Pemohon Notifications ────────────────────────────────────────────
       NotificationItem(
         id: 'notif_pmh_1',
         title: 'Pengajuan Dikembalikan Operator',
-        message: 'Pengajuan mutasi ELEKTRONIK-2026-00105 dikembalikan: Dokumen pendukung SK Mutasi belum dilampirkan.',
+        message:
+            'Pengajuan mutasi ELEKTRONIK-2026-00105 dikembalikan: Dokumen wajib SK SDM belum dilampirkan.',
         type: NotificationType.warning,
         createdAt: now.subtract(const Duration(days: 1)),
         relatedMutationId: 'mut_003',
@@ -93,7 +110,8 @@ class NotificationNotifier extends StateNotifier<List<NotificationItem>> {
       NotificationItem(
         id: 'notif_pmh_2',
         title: 'Menunggu Konfirmasi Anda',
-        message: 'Data fisik aset kursi ergonomis (FURNITUR-2026-00055) telah diperbarui Staff Aset. Silakan konfirmasi penerimaan fisik.',
+        message:
+            'Pengajuan mutasi kursi ergonomis (FURNITUR-2026-00055) telah disetujui Pemimpin Divisi. Silakan periksa kondisi fisik aset dan konfirmasi penerimaan.',
         type: NotificationType.action,
         createdAt: now.subtract(const Duration(days: 2)),
         relatedMutationId: 'mut_006',
@@ -103,7 +121,8 @@ class NotificationNotifier extends StateNotifier<List<NotificationItem>> {
       NotificationItem(
         id: 'notif_pmh_3',
         title: 'Mutasi Selesai',
-        message: 'Mutasi aset Laptop Dell Latitude (ELEKTRONIK-2026-00124) telah dikonfirmasi dan selesai.',
+        message:
+            'Mutasi aset Laptop Dell Latitude (ELEKTRONIK-2026-00124) telah dikonfirmasi sesuai dan data inventaris telah diperbarui.',
         type: NotificationType.success,
         createdAt: now.subtract(const Duration(days: 3)),
         isRead: true,
@@ -115,7 +134,8 @@ class NotificationNotifier extends StateNotifier<List<NotificationItem>> {
       NotificationItem(
         id: 'notif_adm_1',
         title: 'Laporan Master Data & Sistem',
-        message: 'Kategori aset dan kriteria approval Kadiv telah aktif dan terkonfigurasi.',
+        message:
+            'Master lokasi dan kategori aset aktif dan terkonfigurasi sesuai alur PRD V1.1.',
         type: NotificationType.info,
         createdAt: now.subtract(const Duration(hours: 6)),
         targetRole: UserRole.admin,
@@ -157,6 +177,16 @@ class NotificationNotifier extends StateNotifier<List<NotificationItem>> {
     ];
   }
 
+  static bool _matchesRole(UserRole? targetRole, UserRole? currentRole) {
+    if (targetRole == null || currentRole == null) return true;
+    if (targetRole == currentRole) return true;
+    if ((targetRole == UserRole.bagianAset && currentRole == UserRole.kabagAset) ||
+        (targetRole == UserRole.kabagAset && currentRole == UserRole.bagianAset)) {
+      return true;
+    }
+    return false;
+  }
+
   static bool _isTargetedFor(
     NotificationItem item, {
     UserRole? role,
@@ -166,13 +196,13 @@ class NotificationNotifier extends StateNotifier<List<NotificationItem>> {
       if (userId != null && !matchesUserId(item.targetUserId, userId)) {
         return false;
       }
-      if (role != null && item.targetRole != null && item.targetRole != role) {
+      if (role != null && item.targetRole != null && !_matchesRole(item.targetRole, role)) {
         return false;
       }
       return true;
     }
     if (item.targetRole != null) {
-      if (role != null && item.targetRole != role) {
+      if (role != null && !_matchesRole(item.targetRole, role)) {
         return false;
       }
       return true;

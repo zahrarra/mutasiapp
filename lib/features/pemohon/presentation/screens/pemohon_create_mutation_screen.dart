@@ -16,6 +16,7 @@ import '../../../../core/services/document_picker_service.dart';
 import '../../../../core/services/mutation_draft_service.dart';
 import '../../../../core/widgets/app_feedback.dart';
 import '../../../../core/widgets/document_preview_dialog.dart';
+import '../../../../core/widgets/inline_searchable_dropdown.dart';
 import '../../../auth/domain/entities/user_role.dart';
 import '../../../auth/presentation/providers/auth_provider.dart';
 import '../../../mutation/domain/repositories/mutation_repository.dart';
@@ -415,7 +416,7 @@ class _PemohonCreateMutationScreenState
 
                     const SizedBox(height: 20),
 
-                    _sectionAsset(),
+                    _sectionAsset(locations),
 
                     const SizedBox(height: 16),
 
@@ -554,7 +555,7 @@ class _PemohonCreateMutationScreenState
   // SECTION ASET
   // ---------------------------------------------------------------------------
 
-  Widget _sectionAsset() {
+  Widget _sectionAsset(List<String> locations) {
     return _card(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -666,10 +667,12 @@ class _PemohonCreateMutationScreenState
 
                 const SizedBox(height: 8),
 
-                TextFormField(
+                InlineSearchableDropdown(
+                  fieldKey: const Key('dropdown_source_location'),
                   controller: _sourceLocationController,
-                  style: _inputTextStyle(),
-                  decoration: _inputDeco('Unit kerja & lokasi asal *'),
+                  labelText: 'Unit kerja & lokasi asal *',
+                  hintText: 'Pilih unit kerja & lokasi asal',
+                  items: locations,
                   validator: (v) => (v == null || v.trim().isEmpty)
                       ? 'Lokasi aset saat ini wajib diisi'
                       : null,
@@ -920,12 +923,13 @@ class _PemohonCreateMutationScreenState
           if (_bringAsset) ...[
             const SizedBox(height: 12),
 
-            TextFormField(
+            InlineSearchableDropdown(
               controller: _picController,
-              style: _inputTextStyle(),
-              decoration: _inputDeco(
-                'PIC tujuan (otomatis Pemohon, atau nama PIC baru)',
-              ),
+              labelText: 'PIC tujuan (otomatis Pemohon, atau nama PIC baru) *',
+              hintText: 'Pilih atau cari PIC tujuan',
+              items: ref.watch(availablePicsProvider),
+              validator: (v) =>
+                  (v == null || v.trim().isEmpty) ? 'Wajib diisi' : null,
             ),
           ],
         ],

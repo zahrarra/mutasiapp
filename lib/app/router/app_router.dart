@@ -305,37 +305,38 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         builder: (context, state) => const NotificationScreen(),
       ),
 
-      // ─── Kabag (Legacy Alias for Bagian Aset) ──────────────────────────────
+      // ─── Kabag (Legacy Alias -> Redirect ke Bagian Aset PRD V1.1) ──────────
       GoRoute(
         path: RouteNames.kabagDashboardPath,
         name: RouteNames.kabagDashboardName,
-        builder: (context, state) => const KabagDashboardScreen(),
+        redirect: (context, state) => RouteNames.bagianAsetDashboardPath,
       ),
       GoRoute(
         path: RouteNames.kabagApprovalsPath,
         name: RouteNames.kabagApprovalsName,
-        builder: (context, state) => const KabagApprovalsScreen(),
+        redirect: (context, state) => RouteNames.bagianAsetVerificationsPath,
       ),
       GoRoute(
         path: RouteNames.kabagApprovalDetailPath,
         name: RouteNames.kabagApprovalDetailName,
-        builder: (context, state) {
+        redirect: (context, state) {
           final id = state.pathParameters['id'] ?? '';
-          return KabagApprovalDetailScreen(mutationId: id);
+          return RouteNames.bagianAsetVerificationDetailPath
+              .replaceFirst(':id', id);
         },
       ),
       GoRoute(
         path: RouteNames.kabagRejectFormPath,
         name: RouteNames.kabagRejectFormName,
-        builder: (context, state) {
+        redirect: (context, state) {
           final id = state.pathParameters['id'] ?? '';
-          return KabagRejectFormScreen(mutationId: id);
+          return RouteNames.bagianAsetReturnFormPath.replaceFirst(':id', id);
         },
       ),
       GoRoute(
         path: RouteNames.kabagNotificationsPath,
         name: RouteNames.kabagNotificationsName,
-        builder: (context, state) => const NotificationScreen(),
+        redirect: (context, state) => RouteNames.bagianAsetNotificationsPath,
       ),
 
       // ─── Kadiv ────────────────────────────────────────────────────────────

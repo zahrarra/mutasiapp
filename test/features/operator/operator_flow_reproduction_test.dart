@@ -75,6 +75,7 @@ void main() {
       currentPic: 'Budi Santoso',
       targetPic: 'Direktur Keuangan',
       reason: 'Kebutuhan presentasi direksi.',
+      documentName: 'SK-SDM-2026-001.pdf',
     );
 
     final newMutation =
@@ -148,6 +149,7 @@ void main() {
       currentPic: 'Staff Gudang',
       targetPic: 'Sekretaris Direksi',
       reason: 'Penggantian proyektor ruang rapat yang rusak.',
+      documentName: 'SK-SDM-2026-001.pdf',
     );
 
     final unregMutation =
@@ -234,6 +236,7 @@ void main() {
       currentPic: 'Ahmad PIC',
       targetPic: 'Rudi HRD',
       reason: 'Mutasi karyawan baru.',
+      documentName: 'SK-SDM-2026-001.pdf',
     );
 
     // Submit using the same container / repository

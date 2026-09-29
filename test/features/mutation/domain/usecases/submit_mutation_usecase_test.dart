@@ -75,6 +75,7 @@ void main() {
         currentPic: 'Budi',
         targetPic: 'Ahmad',
         reason: 'Rotasi perangkat kantor',
+        documentName: 'sk_sdm_001.pdf',
       );
 
       final result = await useCase(params);
@@ -82,6 +83,26 @@ void main() {
       expect(result.isSuccess, isTrue);
       expect(mockRepo.lastParams?.assetId, equals('AST-ELK-001'));
       expect(mockRepo.lastParams?.isUnregisteredAsset, isFalse);
+    });
+
+    test('fails when documentName SK SDM is null or empty', () async {
+      final params = const SubmitMutationParams(
+        applicantId: 'usr_1',
+        applicantName: 'Budi',
+        assetId: 'AST-ELK-001',
+        assetName: 'ThinkPad T14',
+        sourceLocation: 'Ruang IT',
+        targetLocation: 'Cabang Bandung',
+        currentPic: 'Budi',
+        targetPic: 'Ahmad',
+        reason: 'Rotasi perangkat kantor',
+        documentName: null,
+      );
+
+      final result = await useCase(params);
+
+      expect(result.isFailure, isTrue);
+      expect(result.failureOrNull?.userMessage, contains('Surat Keputusan (SK) SDM wajib dilampirkan'));
     });
 
     test('fails when registered asset has null assetId', () async {
@@ -133,6 +154,7 @@ void main() {
         currentPic: 'Staff Lama',
         targetPic: 'Staff Baru',
         reason: 'Aset hibah kantor lama',
+        documentName: 'sk_sdm_unregistered.pdf',
       );
 
       final result = await useCase(params);

@@ -13,9 +13,7 @@ class SecureStorage {
 
   final FlutterSecureStorage _storage;
 
-  static const _options = AndroidOptions(
-    encryptedSharedPreferences: true,
-  );
+  static const _options = AndroidOptions();
 
   // ─── Write ────────────────────────────────────────────────────────────────
 

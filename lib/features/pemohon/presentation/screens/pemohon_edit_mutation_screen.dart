@@ -261,6 +261,7 @@ class _PemohonEditMutationScreenState
     final asyncDetail = ref.watch(mutationDetailProvider(widget.mutationId));
     final submitState = ref.watch(updateMutationProvider);
     final availableLocations = ref.watch(availableLocationsProvider);
+    final availablePics = ref.watch(availablePicsProvider);
     final currentUser = ref.watch(authStateProvider).user;
 
     return Scaffold(
@@ -339,7 +340,7 @@ class _PemohonEditMutationScreenState
                       const SizedBox(height: 14),
 
                       // ── 4. Form Fields Card (Editable) ────────────────
-                      _buildFormFieldsCard(availableLocations),
+                      _buildFormFieldsCard(availableLocations, availablePics),
                       const SizedBox(height: 20),
 
                       // ── 5. Action Buttons ─────────────────────────────
@@ -746,7 +747,10 @@ class _PemohonEditMutationScreenState
     );
   }
 
-  Widget _buildFormFieldsCard(List<String> availableLocations) {
+  Widget _buildFormFieldsCard(
+    List<String> availableLocations,
+    List<String> availablePics,
+  ) {
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(16),
@@ -854,34 +858,43 @@ class _PemohonEditMutationScreenState
             ],
           ),
           const SizedBox(height: 6),
-          TextField(
-            key: const Key('input_edit_target_pic'),
-            controller: _picController,
-            style: _t(size: 13, color: _EditColors.textPrimary),
-            decoration: InputDecoration(
-              hintText: 'Masukkan nama PIC penerima',
-              hintStyle: _t(size: 13, color: const Color(0xFF94A3B8)),
-              contentPadding: const EdgeInsets.symmetric(
-                horizontal: 14,
-                vertical: 12,
-              ),
-              filled: true,
-              fillColor: Colors.white,
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
-                borderSide: const BorderSide(color: _EditColors.border),
-              ),
-              enabledBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
-                borderSide: const BorderSide(color: _EditColors.border),
-              ),
-              focusedBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
-                borderSide: const BorderSide(
-                  color: _EditColors.primary,
-                  width: 1.5,
+          Theme(
+            data: Theme.of(context).copyWith(
+              inputDecorationTheme: InputDecorationTheme(
+                filled: true,
+                fillColor: Colors.white,
+                contentPadding: const EdgeInsets.symmetric(
+                  horizontal: 14,
+                  vertical: 12,
                 ),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: const BorderSide(color: _EditColors.border),
+                ),
+                enabledBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: const BorderSide(color: _EditColors.border),
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: const BorderSide(
+                    color: _EditColors.primary,
+                    width: 1.5,
+                  ),
+                ),
+                labelStyle: _t(size: 13, color: _EditColors.textSlate),
+                hintStyle: _t(size: 13, color: const Color(0xFF94A3B8)),
               ),
+            ),
+            child: InlineSearchableDropdown(
+              key: const Key('dropdown_edit_target_pic'),
+              fieldKey: const Key('input_edit_target_pic'),
+              labelText: 'PIC Baru *',
+              hintText: 'Pilih PIC baru dari master data',
+              controller: _picController,
+              items: availablePics,
+              validator: (v) =>
+                  (v == null || v.trim().isEmpty) ? 'Wajib diisi' : null,
             ),
           ),
           const SizedBox(height: 16),

@@ -277,7 +277,7 @@ class VerificationActionNotifier
     if (result is Success<Mutation>) {
       state = VerificationActionState(
         isLoading: false,
-        successMessage: 'Pengajuan mutasi berhasil diverifikasi dan diteruskan ke Kabag Aset.',
+        successMessage: 'Pengajuan mutasi berhasil diverifikasi dan diteruskan ke Bagian Aset.',
         result: result.data,
       );
       // Invalidate list agar ter-refresh

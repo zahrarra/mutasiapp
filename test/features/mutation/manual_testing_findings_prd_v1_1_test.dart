@@ -302,7 +302,7 @@ void main() {
         // Temuan 2: Dropdown widget ditemukan
         final dropdownFinder = find.byKey(const Key('dropdown_target_location'));
         expect(dropdownFinder, findsOneWidget);
-        expect(find.byType(DropdownButtonFormField<String>), findsOneWidget);
+        expect(find.byType(DropdownButtonFormField<String>), findsWidgets);
 
         // Buka dropdown dan pilih item
         await tester.ensureVisible(dropdownFinder);

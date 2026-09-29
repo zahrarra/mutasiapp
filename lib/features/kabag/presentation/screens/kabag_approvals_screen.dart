@@ -56,15 +56,18 @@ class _KabagApprovalsScreenState extends ConsumerState<KabagApprovalsScreen> {
     final sortOrder = ref.watch(kabagSortOrderProvider);
     final statusFilter = ref.watch(kabagStatusFilterProvider);
 
-    final title = switch (statusFilter) {
-      KabagStatusFilter.waiting => 'Menunggu Approval',
-      KabagStatusFilter.approved => 'Disetujui',
-      KabagStatusFilter.rejected => 'Ditolak',
-      KabagStatusFilter.all => 'Semua Pengajuan',
-    };
-
     final role = ref.watch(authStateProvider).user?.role;
     final isBagianAset = role == UserRole.bagianAset;
+
+    final title = switch (statusFilter) {
+      KabagStatusFilter.waiting =>
+        isBagianAset ? 'Menunggu Verifikasi' : 'Menunggu Approval',
+      KabagStatusFilter.approved =>
+        isBagianAset ? 'Lolos Verifikasi' : 'Disetujui',
+      KabagStatusFilter.rejected =>
+        isBagianAset ? 'Dikembalikan' : 'Ditolak',
+      KabagStatusFilter.all => 'Semua Pengajuan',
+    };
 
     return Scaffold(
       backgroundColor: _C.background,
@@ -133,7 +136,19 @@ class _KabagApprovalsScreenState extends ConsumerState<KabagApprovalsScreen> {
                                 color: _C.textPrimary),
                             items: KabagStatusFilter.values
                                 .map((s) => DropdownMenuItem(
-                                    value: s, child: Text(s.displayName)))
+                                    value: s,
+                                    child: Text(isBagianAset
+                                        ? switch (s) {
+                                            KabagStatusFilter.waiting =>
+                                              'Menunggu Verifikasi',
+                                            KabagStatusFilter.approved =>
+                                              'Lolos Verifikasi',
+                                            KabagStatusFilter.rejected =>
+                                              'Dikembalikan',
+                                            KabagStatusFilter.all =>
+                                              'Semua',
+                                          }
+                                        : s.displayName)))
                                 .toList(),
                             onChanged: (val) {
                               if (val != null) {

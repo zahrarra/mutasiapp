@@ -54,7 +54,8 @@ class MutationFormState {
       sourceLocation.trim().isNotEmpty &&
       targetLocation.trim().isNotEmpty &&
       targetPic.trim().isNotEmpty &&
-      reason.trim().isNotEmpty;
+      reason.trim().isNotEmpty &&
+      (documentName != null && documentName!.trim().isNotEmpty);
 
   /// Apakah ada error validasi aktif.
   bool get hasErrors =>
@@ -169,6 +170,10 @@ class MutationFormNotifier extends StateNotifier<MutationFormState> {
 
     if (state.reason.trim().isEmpty) {
       errors['reason'] = 'Alasan mutasi wajib diisi.';
+    }
+
+    if (state.documentName == null || state.documentName!.trim().isEmpty) {
+      errors['documentName'] = 'Surat Keputusan (SK) SDM wajib dilampirkan.';
     }
 
     state = state.copyWith(fieldErrors: errors);

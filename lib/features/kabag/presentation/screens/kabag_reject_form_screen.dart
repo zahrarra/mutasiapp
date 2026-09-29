@@ -247,9 +247,12 @@ class _KabagRejectFormScreenState extends ConsumerState<KabagRejectFormScreen> {
                                     color: Colors.white,
                                   ),
                                 )
-                              : const Text(
-                                  'Tolak Pengajuan',
-                                  style: TextStyle(
+                              : Text(
+                                  ref.read(authStateProvider).user?.role ==
+                                          UserRole.bagianAset
+                                      ? 'Kembalikan Pengajuan'
+                                      : 'Tolak Pengajuan',
+                                  style: const TextStyle(
                                     fontWeight: FontWeight.bold,
                                     fontSize: 14,
                                   ),

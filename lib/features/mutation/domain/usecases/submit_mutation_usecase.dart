@@ -100,6 +100,13 @@ class SubmitMutationUseCase {
       );
     }
 
+    // Validasi SK SDM (PRD V1.1 §6.2, Aturan Bisnis 7: SK SDM wajib dilampirkan).
+    if (params.documentName == null || params.documentName!.trim().isEmpty) {
+      return const Result.failure(
+        ValidationFailure(message: 'Surat Keputusan (SK) SDM wajib dilampirkan.'),
+      );
+    }
+
     // Semua validasi berhasil.
     //
     // Tidak ada pencarian AssetRepository di sini.
