@@ -7,70 +7,123 @@ import 'package:flutter/material.dart';
 import '../../../../app/theme/app_colors.dart';
 
 /// Enum status workflow mutasi aset.
+/// Enum status workflow mutasi aset.
+/// Sumber: PRD V1.1 §7.
 enum MutationStatus {
-  /// Baru diajukan oleh Pemohon, menunggu verifikasi Operator.
+  /// Baru diajukan oleh Pemohon, menunggu pemeriksaan kelengkapan Operator.
   submitted,
 
-  /// Dikembalikan oleh Operator ke Pemohon karena tidak valid / dokumen tidak lengkap.
+  /// Telah dinyatakan lengkap oleh Operator dan sedang diverifikasi oleh Bagian Aset.
+  waitingAssetVerification,
+
+  /// Pengajuan dikembalikan oleh Operator atau Bagian Aset ke Pemohon.
   returned,
 
-  /// Telah diverifikasi Operator valid, menunggu approval Kabag Aset.
-  waitingKabagApproval,
+  /// Lolos verifikasi Bagian Aset, menunggu approval Pemimpin Divisi.
+  waitingDivisionHeadApproval,
 
-  /// Telah disetujui Kabag Aset dan memenuhi kriteria Kadiv, menunggu approval Kadiv.
-  waitingKadivApproval,
-
-  /// Telah diverifikasi Operator (alias / kompatibilitas).
-  verified,
-
-  /// Disetujui oleh Kabag (dan Kadiv jika diperlukan), menunggu update lokasi oleh Staff Aset.
-  approved,
-
-  /// Ditolak oleh Kabag Aset atau Kadiv.
+  /// Pengajuan ditolak oleh Pemimpin Divisi.
   rejected,
 
-  /// Telah di-update oleh Staff Aset, menunggu konfirmasi Pemohon.
-  pendingConfirmation,
+  /// Disetujui Pemimpin Divisi, menunggu konfirmasi fisik oleh Pemohon.
+  waitingConfirmation,
 
-  /// Mutasi selesai dan dikonfirmasi oleh Pemohon.
-  completed;
+  /// Pemohon telah memilih 'Sesuai' dan pembaruan data aset selesai.
+  completed,
 
-  /// Label tampilan bahasa Indonesia.
+  /// Status lokal: pengajuan disimpan saat offline menunggu sinkronisasi server.
+  waitingSync,
+
+  // ─── Legacy Compatibility Aliases ──────────────────────────────────────────
+  /// Legacy alias: waitingKabagApproval -> waitingAssetVerification.
+  waitingKabagApproval,
+
+  /// Legacy alias: waitingKadivApproval -> waitingDivisionHeadApproval.
+  waitingKadivApproval,
+
+  /// Legacy alias.
+  verified,
+
+  /// Legacy alias: approved -> waitingConfirmation.
+  approved,
+
+  /// Legacy alias: pendingConfirmation -> waitingConfirmation.
+  pendingConfirmation;
+
+  /// Label tampilan bahasa Indonesia sesuai PRD V1.1 §7.
   String get displayName => switch (this) {
         MutationStatus.submitted => 'Diajukan',
+        MutationStatus.waitingAssetVerification =>
+          'Menunggu Verifikasi Bagian Aset',
         MutationStatus.returned => 'Dikembalikan ke Pemohon',
-        MutationStatus.waitingKabagApproval => 'Menunggu Approval Kabag',
-        MutationStatus.waitingKadivApproval => 'Menunggu Approval Kadiv',
-        MutationStatus.verified => 'Terverifikasi',
-        MutationStatus.approved => 'Disetujui — Menunggu Update Aset',
+        MutationStatus.waitingDivisionHeadApproval =>
+          'Menunggu Approval Pemimpin Divisi',
         MutationStatus.rejected => 'Ditolak',
-        MutationStatus.pendingConfirmation => 'Menunggu Konfirmasi',
+        MutationStatus.waitingConfirmation => 'Menunggu Konfirmasi Pemohon',
         MutationStatus.completed => 'Selesai',
+        MutationStatus.waitingSync => 'Menunggu Sinkronisasi',
+
+        // Legacy compatibility
+        MutationStatus.waitingKabagApproval => 'Menunggu Verifikasi Bagian Aset',
+        MutationStatus.waitingKadivApproval =>
+          'Menunggu Approval Pemimpin Divisi',
+        MutationStatus.verified => 'Terverifikasi',
+        MutationStatus.approved => 'Disetujui',
+        MutationStatus.pendingConfirmation => 'Menunggu Konfirmasi Pemohon',
       };
 
   /// Warna teks badge.
   Color get color => switch (this) {
         MutationStatus.submitted => AppColors.info,
+        MutationStatus.waitingAssetVerification => AppColors.warning,
         MutationStatus.returned => AppColors.warning,
+        MutationStatus.waitingDivisionHeadApproval => AppColors.warning,
+        MutationStatus.rejected => AppColors.error,
+        MutationStatus.waitingConfirmation => AppColors.warning,
+        MutationStatus.completed => AppColors.success,
+        MutationStatus.waitingSync => AppColors.textSecondary,
+
+        // Legacy
         MutationStatus.waitingKabagApproval => AppColors.warning,
         MutationStatus.waitingKadivApproval => AppColors.warning,
         MutationStatus.verified => AppColors.info,
         MutationStatus.approved => AppColors.success,
-        MutationStatus.rejected => AppColors.error,
         MutationStatus.pendingConfirmation => AppColors.warning,
-        MutationStatus.completed => AppColors.success,
       };
 
   /// Warna container badge.
   Color get backgroundColor => switch (this) {
         MutationStatus.submitted => AppColors.infoContainer,
+        MutationStatus.waitingAssetVerification => AppColors.warningContainer,
         MutationStatus.returned => AppColors.warningContainer,
+        MutationStatus.waitingDivisionHeadApproval =>
+          AppColors.warningContainer,
+        MutationStatus.rejected => AppColors.errorContainer,
+        MutationStatus.waitingConfirmation => AppColors.warningContainer,
+        MutationStatus.completed => AppColors.successContainer,
+        MutationStatus.waitingSync => AppColors.surface,
+
+        // Legacy
         MutationStatus.waitingKabagApproval => AppColors.warningContainer,
         MutationStatus.waitingKadivApproval => AppColors.warningContainer,
         MutationStatus.verified => AppColors.infoContainer,
         MutationStatus.approved => AppColors.successContainer,
-        MutationStatus.rejected => AppColors.errorContainer,
         MutationStatus.pendingConfirmation => AppColors.warningContainer,
-        MutationStatus.completed => AppColors.successContainer,
       };
+
+  /// Helper untuk mengecek status verifikasi bagian aset.
+  bool get isWaitingAssetVerification =>
+      this == MutationStatus.waitingAssetVerification ||
+      this == MutationStatus.waitingKabagApproval;
+
+  /// Helper untuk mengecek status approval pemimpin divisi.
+  bool get isWaitingDivisionApproval =>
+      this == MutationStatus.waitingDivisionHeadApproval ||
+      this == MutationStatus.waitingKadivApproval;
+
+  /// Helper untuk mengecek status konfirmasi pemohon.
+  bool get isWaitingConfirmation =>
+      this == MutationStatus.waitingConfirmation ||
+      this == MutationStatus.pendingConfirmation ||
+      this == MutationStatus.approved;
 }

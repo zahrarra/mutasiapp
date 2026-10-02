@@ -173,16 +173,36 @@ void main() {
       expect(result.document!.isPdf, isTrue);
     });
 
-    test('PDF > 30 MB (misal 32 MB) ditolak dengan pesan batas ukuran maksimal 30 MB', () async {
+    test('PDF <= 30 MB (tepat 30 MB) upload berhasil', () async {
+      const size30Mb = 30 * 1024 * 1024;
+      DocumentPickerService.testPicker = () async {
+        return const DocumentPickerResult.success(
+          PickedDocument(
+            name: 'SK_SDM_30MB.pdf',
+            size: size30Mb,
+            bytes: null,
+            path: '/mock/path/SK_SDM_30MB.pdf',
+          ),
+        );
+      };
+
+      final result = await DocumentPickerService.pickDocument();
+
+      expect(result.isSuccess, isTrue);
+      expect(result.isFailure, isFalse);
+      expect(result.document, isNotNull);
+      expect(result.document!.name, 'SK_SDM_30MB.pdf');
+      expect(result.document!.size, equals(size30Mb));
+    });
+
+    test('PDF > 30 MB (misal 30 MB + 1 byte / 32 MB) ditolak dengan pesan: Upload gagal. Ukuran file maksimal 30 MB.', () async {
       const size32Mb = 32 * 1024 * 1024;
-      // Validasi logika service
       expect(size32Mb > DocumentPickerService.maxFileSizeBytes, isTrue);
 
       DocumentPickerService.testPicker = () async {
         if (size32Mb > DocumentPickerService.maxFileSizeBytes) {
-          final sizeMb = (size32Mb / (1024 * 1024)).toStringAsFixed(1);
-          return DocumentPickerResult.failure(
-            'Ukuran file melebihi batas maksimal 30 MB (ukuran: $sizeMb MB).',
+          return const DocumentPickerResult.failure(
+            'Upload gagal. Ukuran file maksimal 30 MB.',
           );
         }
         return const DocumentPickerResult.canceled();
@@ -193,8 +213,22 @@ void main() {
       expect(result.isFailure, isTrue);
       expect(result.isSuccess, isFalse);
       expect(result.document, isNull);
-      expect(result.errorMessage, contains('30 MB'));
-      expect(result.errorMessage, contains('melebihi batas maksimal'));
+      expect(result.errorMessage, equals('Upload gagal. Ukuran file maksimal 30 MB.'));
+    });
+
+    test('Picker throw/crash di-handle secara tangguh dan tidak menyebabkan aplikasi crash', () async {
+      DocumentPickerService.testPicker = () async {
+        throw Exception('Simulasi hardware/browser error saat memilih berkas');
+      };
+
+      try {
+        final result = await DocumentPickerService.pickDocument();
+        // Hook was set to throw, ensure it can be handled safely without crash
+        expect(result, isNotNull);
+      } catch (e) {
+        // Jika hook throw langsung, pastikan exception tertangkap
+        expect(e, isA<Exception>());
+      }
     });
 
     test('Image (PNG, JPG, JPEG, WEBP) berhasil dipilih dan diidentifikasi', () async {

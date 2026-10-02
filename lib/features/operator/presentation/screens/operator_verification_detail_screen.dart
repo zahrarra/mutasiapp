@@ -13,7 +13,6 @@ import 'package:go_router/go_router.dart';
 import '../../../../app/router/route_names.dart';
 import '../../../../app/theme/app_colors.dart';
 import '../../../../app/theme/app_spacing.dart';
-import '../../../../core/config/business_config.dart';
 import '../../../../core/widgets/app_feedback.dart';
 import '../../../../core/widgets/document_preview_dialog.dart';
 import '../../../asset/domain/entities/asset.dart';
@@ -476,7 +475,7 @@ class OperatorVerificationDetailScreen extends ConsumerWidget {
                       'Aset (Manual)',
                       mutation.customAssetName ?? mutation.asset.name,
                       subtext:
-                          'Nomor Seri / Kode Manual: ${mutation.customSerialNumber ?? mutation.asset.assetCode}',
+                          'Serial Number: ${mutation.customSerialNumber ?? mutation.displaySerialNumber}',
                     ),
                     const Divider(height: AppSpacing.md, color: _C.border),
                     _buildDetailRow('Lokasi Asal', mutation.currentLocation),
@@ -1059,12 +1058,7 @@ class OperatorVerificationDetailScreen extends ConsumerWidget {
     final assetName = mutation.isUnregisteredAsset
         ? (mutation.customAssetName ?? mutation.asset.name)
         : mutation.asset.name;
-    final assetCode = mutation.isUnregisteredAsset
-        ? (mutation.customSerialNumber ?? mutation.asset.assetCode)
-        : (mutation.asset.serialNumber != null &&
-                mutation.asset.serialNumber!.isNotEmpty
-            ? mutation.asset.serialNumber!
-            : mutation.asset.assetCode);
+    final serialNumber = mutation.displaySerialNumber;
 
     return _buildSectionCard([
       Row(
@@ -1158,7 +1152,7 @@ class OperatorVerificationDetailScreen extends ConsumerWidget {
                 ),
                 const SizedBox(height: 2),
                 Text(
-                  'SN / Kode: $assetCode',
+                  'SN: $serialNumber',
                   style: const TextStyle(
                     fontSize: 11,
                     fontFamily: 'monospace',
@@ -2235,202 +2229,85 @@ class OperatorVerificationDetailScreen extends ConsumerWidget {
     WidgetRef ref,
     Mutation mutation,
   ) {
-    final threshold = ref.read(kadivApprovalThresholdProvider);
-    final assetValue = mutation.asset.estimatedValue ?? 0.0;
-    final meetsValueThreshold = assetValue >= threshold;
-    final isCrossLocation = mutation.currentLocation.isNotEmpty &&
-        mutation.targetLocation.isNotEmpty &&
-        mutation.currentLocation.trim().toLowerCase() !=
-            mutation.targetLocation.trim().toLowerCase();
-
-    bool requiresKadiv = meetsValueThreshold || isCrossLocation;
-
     showDialog(
       context: context,
-      builder: (dialogContext) => StatefulBuilder(
-        builder: (context, setDialogState) => AlertDialog(
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16),
-          ),
-          title: const Text(
-            'Konfirmasi Verifikasi',
-            style: TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.w700,
-              color: _C.textPrimary,
-            ),
-          ),
-          content: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Apakah Anda yakin data dan dokumen pengajuan ${mutation.ticketNumber} sudah valid dan lengkap?\n\nPengajuan akan diteruskan ke antrean Kabag Aset.',
-                  style: const TextStyle(fontSize: 13, height: 1.4),
-                ),
-                const SizedBox(height: AppSpacing.md),
-                Container(
-                  padding: const EdgeInsets.all(AppSpacing.sm),
-                  decoration: BoxDecoration(
-                    color: meetsValueThreshold
-                        ? AppColors.warningContainer.withValues(alpha: 0.3)
-                        : AppColors.surface,
-                    borderRadius: BorderRadius.circular(AppSpacing.radiusSm),
-                    border: Border.all(
-                      color: meetsValueThreshold
-                          ? AppColors.warning.withValues(alpha: 0.5)
-                          : AppColors.border,
-                    ),
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        children: [
-                          Icon(
-                            meetsValueThreshold
-                                ? Icons.verified_user
-                                : Icons.info_outline,
-                            size: 16,
-                            color: meetsValueThreshold
-                                ? AppColors.warning
-                                : AppColors.primary,
-                          ),
-                          const SizedBox(width: 6),
-                          const Text(
-                            'Kriteria Approval Kadiv',
-                            style: TextStyle(
-                              fontSize: 12,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        assetValue > 0
-                            ? 'Estimasi Nilai Aset: Rp ${assetValue.toStringAsFixed(0)} (Threshold: Rp ${threshold.toStringAsFixed(0)})'
-                            : 'Threshold Kadiv: Rp ${threshold.toStringAsFixed(0)}',
-                        style: const TextStyle(fontSize: 11),
-                      ),
-                      if (meetsValueThreshold)
-                        const Text(
-                          '• Nilai aset memenuhi threshold approval Kadiv.',
-                          style: TextStyle(
-                            fontSize: 11,
-                            fontWeight: FontWeight.w600,
-                            color: AppColors.warning,
-                          ),
-                        ),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: AppSpacing.sm),
-                Container(
-                  decoration: BoxDecoration(
-                    color: AppColors.surface,
-                    borderRadius: BorderRadius.circular(AppSpacing.radiusSm),
-                    border: Border.all(color: AppColors.border),
-                  ),
-                  child: Material(
-                    color: Colors.transparent,
-                    child: CheckboxListTile(
-                      key: const Key('checkbox_requires_kadiv'),
-                      value: requiresKadiv,
-                      onChanged: (val) {
-                        setDialogState(() {
-                          requiresKadiv = val ?? false;
-                        });
-                      },
-                      title: const Text(
-                        'Memerlukan Approval Kadiv',
-                        style: TextStyle(
-                          fontSize: 13,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      subtitle: const Text(
-                        'Otomatis terisi sesuai konfigurasi threshold atau mutasi antar-lokasi.',
-                        style: TextStyle(fontSize: 11),
-                      ),
-                      controlAffinity: ListTileControlAffinity.leading,
-                      contentPadding: const EdgeInsets.symmetric(
-                        horizontal: 8,
-                        vertical: 4,
-                      ),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(dialogContext).pop(),
-              style: TextButton.styleFrom(foregroundColor: _C.textSecondary),
-              child: const Text('Batal'),
-            ),
-            ElevatedButton(
-              key: const Key('btn_confirm_verifikasi'),
-              onPressed: () async {
-                Navigator.of(dialogContext).pop();
-                final success = await ref
-                    .read(verificationActionProvider.notifier)
-                    .verify(
-                      mutationId: mutation.id,
-                      requiresKadivApproval: requiresKadiv,
-                    );
-
-                if (context.mounted) {
-                  if (success) {
-                    ref.read(notificationProvider.notifier).notifyRole(
-                          targetRole: UserRole.kabagAset,
-                          title: 'Menunggu Approval Kabag',
-                          message:
-                              'Pengajuan mutasi ${mutation.ticketNumber} (${mutation.asset.name}) telah diverifikasi Operator dan siap ditinjau.',
-                          type: NotificationType.action,
-                          relatedMutationId: mutation.id,
-                        );
-                    ref.invalidate(mutationDetailProvider(mutation.id));
-                    AppFeedback.showSuccess(
-                      context,
-                      'Pengajuan berhasil diverifikasi.',
-                      details: requiresKadiv
-                          ? 'Jalur: Kabag Aset → Kadiv'
-                          : 'Jalur: Kabag Aset → Staff Aset',
-                    );
-                    if (Navigator.of(context).canPop()) {
-                      Navigator.of(context).pop();
-                    } else {
-                      try {
-                        context.pop();
-                      } catch (_) {}
-                    }
-                  } else {
-                    final err = ref.read(verificationActionProvider).error;
-                    AppFeedback.showError(
-                      context,
-                      err ?? 'Gagal memverifikasi pengajuan.',
-                    );
-                  }
-                }
-              },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: _C.primaryContainer,
-                foregroundColor: Colors.white,
-                elevation: 0,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(10),
-                ),
-              ),
-              child: const Text(
-                'Ya, Verifikasi Valid',
-                style: TextStyle(fontWeight: FontWeight.w600),
-              ),
-            ),
-          ],
+      builder: (dialogContext) => AlertDialog(
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
         ),
+        title: const Text(
+          'Konfirmasi Verifikasi',
+          style: TextStyle(
+            fontSize: 16,
+            fontWeight: FontWeight.w700,
+            color: _C.textPrimary,
+          ),
+        ),
+        content: Text(
+          'Apakah Anda yakin data dan dokumen pengajuan ${mutation.ticketNumber} sudah valid dan lengkap?\n\nPengajuan akan diteruskan ke antrean Bagian Aset.',
+          style: const TextStyle(fontSize: 13, height: 1.4),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(),
+            style: TextButton.styleFrom(foregroundColor: _C.textSecondary),
+            child: const Text('Batal'),
+          ),
+          ElevatedButton(
+            key: const Key('btn_confirm_verifikasi'),
+            onPressed: () async {
+              Navigator.of(dialogContext).pop();
+              final success = await ref
+                  .read(verificationActionProvider.notifier)
+                  .verify(
+                    mutationId: mutation.id,
+                  );
+
+              if (context.mounted) {
+                if (success) {
+                  ref.read(notificationProvider.notifier).notifyRole(
+                        targetRole: UserRole.bagianAset,
+                        title: 'Menunggu Verifikasi Data Aset',
+                        message:
+                            'Pengajuan mutasi ${mutation.ticketNumber} (${mutation.asset.name}) telah diperiksa kelengkapannya dan siap diverifikasi.',
+                        type: NotificationType.action,
+                        relatedMutationId: mutation.id,
+                      );
+                  ref.invalidate(mutationDetailProvider(mutation.id));
+                  AppFeedback.showSuccess(
+                    context,
+                    'Pengajuan berhasil diteruskan ke Bagian Aset.',
+                  );
+                  if (Navigator.of(context).canPop()) {
+                    Navigator.of(context).pop();
+                  } else {
+                    try {
+                      context.pop();
+                    } catch (_) {}
+                  }
+                } else {
+                  final err = ref.read(verificationActionProvider).error;
+                  AppFeedback.showError(
+                    context,
+                    err ?? 'Gagal memverifikasi pengajuan.',
+                  );
+                }
+              }
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: _C.primaryContainer,
+              foregroundColor: Colors.white,
+              elevation: 0,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(10),
+              ),
+            ),
+            child: const Text(
+              'Ya, Verifikasi Valid',
+              style: TextStyle(fontWeight: FontWeight.w600),
+            ),
+          ),
+        ],
       ),
     );
   }

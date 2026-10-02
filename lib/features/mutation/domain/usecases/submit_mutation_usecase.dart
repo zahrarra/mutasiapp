@@ -36,38 +36,17 @@ class SubmitMutationUseCase {
   const SubmitMutationUseCase({required this.mutationRepository});
 
   Future<Result<Mutation>> call(SubmitMutationParams params) async {
-    // Validasi Aset berdasarkan tipe pendaftaran.
-    if (params.isUnregisteredAsset) {
-      // Unregistered asset:
-      // 1. assetId harus null / tidak diisi.
-      if (params.assetId != null && params.assetId!.trim().isNotEmpty) {
-        return const Result.failure(
-          ValidationFailure(
-            message: 'Aset belum terdaftar tidak boleh memiliki ID aset.',
-          ),
-        );
-      }
-      // 2. customAssetName wajib ada (atau assetName untuk kompatibilitas).
-      final customName = (params.customAssetName?.trim().isNotEmpty == true)
-          ? params.customAssetName!.trim()
-          : params.assetName.trim();
-      if (customName.isEmpty) {
-        return const Result.failure(
-          ValidationFailure(
-            message: 'Nama aset tidak terdaftar wajib diisi.',
-          ),
-        );
-      }
-    } else {
-      // Registered asset:
-      // assetId wajib ada dan tidak boleh kosong.
-      if (params.assetId == null || params.assetId!.trim().isEmpty) {
-        return const Result.failure(
-          ValidationFailure(
-            message: 'ID Aset terdaftar wajib diisi.',
-          ),
-        );
-      }
+    // PRD V1.1 §8 Aturan 3: Aset yang dimutasi harus merupakan aset terdaftar.
+    // Input aset bebas/manual tidak didukung.
+    if (params.isUnregisteredAsset ||
+        params.assetId == null ||
+        params.assetId!.trim().isEmpty) {
+      return const Result.failure(
+        ValidationFailure(
+          message:
+              'Aset yang dimutasi harus merupakan aset terdaftar. Input aset bebas/manual tidak didukung.',
+        ),
+      );
     }
 
     // Validasi lokasi aset saat ini.
@@ -84,10 +63,12 @@ class SubmitMutationUseCase {
       );
     }
 
-    // Validasi PIC baru.
-    if (params.targetPic.trim().isEmpty) {
+    // Validasi PIC baru (PRD V1.1 §6.2):
+    // Jika aset ikut pindah -> PIC baru wajib ada (biasanya Pemohon).
+    // Jika aset ditinggalkan -> PIC dikosongkan untuk ditentukan oleh Bagian Aset.
+    if (params.isAssetMovingWithApplicant && params.targetPic.trim().isEmpty) {
       return const Result.failure(
-        ValidationFailure(message: 'Penanggung jawab baru wajib dipilih.'),
+        ValidationFailure(message: 'Penanggung jawab baru wajib dipilih jika aset ikut pindah.'),
       );
     }
 
@@ -95,6 +76,13 @@ class SubmitMutationUseCase {
     if (params.reason.trim().isEmpty) {
       return const Result.failure(
         ValidationFailure(message: 'Alasan mutasi wajib diisi.'),
+      );
+    }
+
+    // Validasi SK SDM (PRD V1.1 §6.2, Aturan Bisnis 7: SK SDM wajib dilampirkan).
+    if (params.documentName == null || params.documentName!.trim().isEmpty) {
+      return const Result.failure(
+        ValidationFailure(message: 'Surat Keputusan (SK) SDM wajib dilampirkan.'),
       );
     }
 

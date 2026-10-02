@@ -33,24 +33,24 @@ class _C {
 }
 
 // ─── Filter tab enum ──────────────────────────────────────────────────────────
-enum _Tab { all, submitted, returned }
+enum _Tab { all, submitted, allocated, returned, ti, umum }
 
 extension _TabExt on _Tab {
   String label(int count) => switch (this) {
     _Tab.all => 'Semua ($count)',
-    _Tab.submitted => 'Menunggu',
-    _Tab.returned => 'Dikembalikan',
-  };
-  OperatorStatusFilter get statusFilter => switch (this) {
-    _Tab.all => OperatorStatusFilter.all,
-    _Tab.submitted => OperatorStatusFilter.submitted,
-    _Tab.returned => OperatorStatusFilter.returned,
+    _Tab.submitted => 'Menunggu ($count)',
+    _Tab.allocated => 'Dialokasikan ($count)',
+    _Tab.returned => 'Dikembalikan ($count)',
+    _Tab.ti => 'Aset TI ($count)',
+    _Tab.umum => 'Aset Umum ($count)',
   };
 }
 
 // ─── Screen ───────────────────────────────────────────────────────────────────
 class OperatorMutationsScreen extends ConsumerStatefulWidget {
-  const OperatorMutationsScreen({super.key});
+  final String? initialFilter;
+
+  const OperatorMutationsScreen({super.key, this.initialFilter});
 
   @override
   ConsumerState<OperatorMutationsScreen> createState() =>
@@ -65,13 +65,57 @@ class _OperatorMutationsScreenState
   @override
   void initState() {
     super.initState();
+    _activeTab = _parseFilter(widget.initialFilter);
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) {
-        // Sync provider filter ke tab awal
-        ref.read(operatorStatusFilterProvider.notifier).state =
-            _activeTab.statusFilter;
+        _applyTabFilter(_activeTab);
       }
     });
+  }
+
+  @override
+  void didUpdateWidget(covariant OperatorMutationsScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.initialFilter != oldWidget.initialFilter) {
+      final newTab = _parseFilter(widget.initialFilter);
+      setState(() => _activeTab = newTab);
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) {
+          _applyTabFilter(newTab);
+        }
+      });
+    }
+  }
+
+  _Tab _parseFilter(String? filter) {
+    if (filter == null) return _Tab.submitted;
+    final f = filter.toLowerCase().trim();
+    if (f == 'submitted' || f == 'pending' || f == 'menunggu' || f == 'menunggu_verifikasi') {
+      return _Tab.submitted;
+    }
+    if (f == 'allocated' ||
+        f == 'dialokasikan' ||
+        f == 'disetujui' ||
+        f == 'approved' ||
+        f == 'accepted' ||
+        f == 'diterima' ||
+        f == 'forwarded' ||
+        f == 'diteruskan') {
+      return _Tab.allocated;
+    }
+    if (f == 'returned' || f == 'dikembalikan') {
+      return _Tab.returned;
+    }
+    if (f == 'ti' || f == 'it' || f == 'aset_ti' || f == 'asetti') {
+      return _Tab.ti;
+    }
+    if (f == 'umum' || f == 'non_ti' || f == 'aset_umum' || f == 'asetumum') {
+      return _Tab.umum;
+    }
+    if (f == 'all' || f == 'semua') {
+      return _Tab.all;
+    }
+    return _Tab.submitted;
   }
 
   @override
@@ -82,7 +126,48 @@ class _OperatorMutationsScreenState
 
   void _switchTab(_Tab tab) {
     setState(() => _activeTab = tab);
-    ref.read(operatorStatusFilterProvider.notifier).state = tab.statusFilter;
+    _applyTabFilter(tab);
+  }
+
+  void _applyTabFilter(_Tab tab) {
+    switch (tab) {
+      case _Tab.all:
+        ref.read(operatorStatusFilterProvider.notifier).state =
+            OperatorStatusFilter.all;
+        ref.read(operatorCategoryFilterProvider.notifier).state =
+            OperatorCategoryFilter.all;
+        break;
+      case _Tab.submitted:
+        ref.read(operatorStatusFilterProvider.notifier).state =
+            OperatorStatusFilter.submitted;
+        ref.read(operatorCategoryFilterProvider.notifier).state =
+            OperatorCategoryFilter.all;
+        break;
+      case _Tab.allocated:
+        ref.read(operatorStatusFilterProvider.notifier).state =
+            OperatorStatusFilter.allocated;
+        ref.read(operatorCategoryFilterProvider.notifier).state =
+            OperatorCategoryFilter.all;
+        break;
+      case _Tab.returned:
+        ref.read(operatorStatusFilterProvider.notifier).state =
+            OperatorStatusFilter.returned;
+        ref.read(operatorCategoryFilterProvider.notifier).state =
+            OperatorCategoryFilter.all;
+        break;
+      case _Tab.ti:
+        ref.read(operatorStatusFilterProvider.notifier).state =
+            OperatorStatusFilter.submitted;
+        ref.read(operatorCategoryFilterProvider.notifier).state =
+            OperatorCategoryFilter.ti;
+        break;
+      case _Tab.umum:
+        ref.read(operatorStatusFilterProvider.notifier).state =
+            OperatorStatusFilter.submitted;
+        ref.read(operatorCategoryFilterProvider.notifier).state =
+            OperatorCategoryFilter.umum;
+        break;
+    }
   }
 
   @override
@@ -346,13 +431,16 @@ class _OperatorMutationsScreenState
                       onChanged: (val) {
                         if (val != null) {
                           ref
-                                  .read(operatorStatusFilterProvider.notifier)
-                                  .state =
-                              val;
+                              .read(operatorStatusFilterProvider.notifier)
+                              .state = val;
+                          ref
+                              .read(operatorCategoryFilterProvider.notifier)
+                              .state = OperatorCategoryFilter.all;
                           setState(() {
                             _activeTab = switch (val) {
                               OperatorStatusFilter.all => _Tab.all,
                               OperatorStatusFilter.submitted => _Tab.submitted,
+                              OperatorStatusFilter.allocated => _Tab.allocated,
                               OperatorStatusFilter.returned => _Tab.returned,
                             };
                           });
@@ -420,14 +508,35 @@ class _OperatorMutationsScreenState
     final totalSubmitted = allList
         .where((m) => m.status == MutationStatus.submitted)
         .length;
+    final totalAllocated = allList
+        .where((m) =>
+            m.status == MutationStatus.waitingAssetVerification ||
+            m.status == MutationStatus.waitingKabagApproval ||
+            m.status == MutationStatus.verified ||
+            m.status == MutationStatus.waitingDivisionHeadApproval ||
+            m.status == MutationStatus.waitingKadivApproval ||
+            m.status == MutationStatus.waitingConfirmation ||
+            m.status == MutationStatus.approved ||
+            m.status == MutationStatus.pendingConfirmation ||
+            m.status == MutationStatus.completed)
+        .length;
     final totalReturned = allList
         .where((m) => m.status == MutationStatus.returned)
+        .length;
+    final totalTi = allList
+        .where((m) => m.status == MutationStatus.submitted && isTiAsset(m))
+        .length;
+    final totalUmum = allList
+        .where((m) => m.status == MutationStatus.submitted && !isTiAsset(m))
         .length;
 
     final counts = {
       _Tab.all: totalAll,
       _Tab.submitted: totalSubmitted,
+      _Tab.allocated: totalAllocated,
       _Tab.returned: totalReturned,
+      _Tab.ti: totalTi,
+      _Tab.umum: totalUmum,
     };
 
     return Container(
@@ -703,15 +812,22 @@ class _MutationCard extends StatelessWidget {
           bg: const Color(0xFFFFF7ED),
           label: 'Dikembalikan',
         ),
-        MutationStatus.waitingKabagApproval => (
-          fg: const Color(0xFF1D4ED8),
-          bg: const Color(0xFFEFF6FF),
-          label: 'Menunggu Kabag',
-        ),
-        MutationStatus.approved => (
+        MutationStatus.waitingAssetVerification ||
+        MutationStatus.waitingKabagApproval ||
+        MutationStatus.verified ||
+        MutationStatus.waitingDivisionHeadApproval ||
+        MutationStatus.waitingKadivApproval ||
+        MutationStatus.waitingConfirmation ||
+        MutationStatus.approved ||
+        MutationStatus.pendingConfirmation => (
           fg: const Color(0xFF059669),
           bg: const Color(0xFFECFDF5),
-          label: 'Disetujui',
+          label: 'Dialokasikan',
+        ),
+        MutationStatus.completed => (
+          fg: const Color(0xFF059669),
+          bg: const Color(0xFFECFDF5),
+          label: 'Selesai',
         ),
         MutationStatus.rejected => (
           fg: const Color(0xFFDC2626),
@@ -912,7 +1028,11 @@ class _MutationCard extends StatelessWidget {
                               overflow: TextOverflow.ellipsis,
                             ),
                             Text(
-                              m.displayAssetCode,
+                              m.isUnregisteredAsset
+                                  ? 'SN: ${m.displaySerialNumber}'
+                                  : (m.displaySerialNumber != '-'
+                                      ? '${m.displayAssetCode} • SN: ${m.displaySerialNumber}'
+                                      : m.displayAssetCode),
                               style: const TextStyle(
                                 fontSize: 10,
                                 color: _C.textSecondary,

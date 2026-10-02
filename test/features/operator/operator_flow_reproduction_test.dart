@@ -75,6 +75,7 @@ void main() {
       currentPic: 'Budi Santoso',
       targetPic: 'Direktur Keuangan',
       reason: 'Kebutuhan presentasi direksi.',
+      documentName: 'SK-SDM-2026-001.pdf',
     );
 
     final newMutation =
@@ -134,7 +135,7 @@ void main() {
     // 1. Operator caches mutation list initially
     await container.read(operatorAllMutationsProvider.future);
 
-    // 2. Pemohon submits unregistered asset mutation
+    // 2. Pemohon submits unregistered asset mutation -> rejected per PRD V1.1 §8 Rule 3
     final params = SubmitMutationParams(
       applicantId: pemohonUser.id,
       applicantName: pemohonUser.name,
@@ -148,50 +149,13 @@ void main() {
       currentPic: 'Staff Gudang',
       targetPic: 'Sekretaris Direksi',
       reason: 'Penggantian proyektor ruang rapat yang rusak.',
+      documentName: 'SK-SDM-2026-001.pdf',
     );
 
     final unregMutation =
         await container.read(submitMutationProvider.notifier).submit(params);
 
-    expect(unregMutation, isNotNull);
-    expect(unregMutation!.id, isNotEmpty);
-    expect(unregMutation.status, equals(MutationStatus.submitted));
-    expect(unregMutation.applicantId, equals('usr_pemohon'));
-    expect(unregMutation.assetId, isNull);
-    expect(unregMutation.isUnregisteredAsset, isTrue);
-    expect(unregMutation.customAssetName, equals('Proyektor Epson EB-X500'));
-    expect(unregMutation.customSerialNumber, equals('SN-EPSON-9988'));
-
-    // 3. Operator list checks
-    final operatorMutations =
-        await container.read(operatorAllMutationsProvider.future);
-    final found = operatorMutations.any((m) => m.id == unregMutation.id);
-    expect(found, isTrue);
-
-    // Search by serial number
-    container.read(operatorSearchQueryProvider.notifier).state = 'SN-EPSON-9988';
-    final searchBySerialAsync = container.read(filteredIncomingMutationsProvider);
-    final searchBySerialList = searchBySerialAsync.valueOrNull ?? [];
-    expect(searchBySerialList.any((m) => m.id == unregMutation.id), isTrue);
-
-    // Search by custom asset name
-    container.read(operatorSearchQueryProvider.notifier).state = 'Proyektor Epson';
-    final searchByNameAsync = container.read(filteredIncomingMutationsProvider);
-    final searchByNameList = searchByNameAsync.valueOrNull ?? [];
-    expect(searchByNameList.any((m) => m.id == unregMutation.id), isTrue);
-
-    // Reset search
-    container.read(operatorSearchQueryProvider.notifier).state = '';
-
-    // 4. Operator detail access for unregistered asset
-    final detail =
-        await container.read(mutationDetailProvider(unregMutation.id).future);
-    expect(detail.id, equals(unregMutation.id));
-    expect(detail.status, equals(MutationStatus.submitted));
-    expect(detail.isUnregisteredAsset, isTrue);
-    expect(detail.assetId, isNull);
-    expect(detail.displayAssetName, equals('Proyektor Epson EB-X500'));
-    expect(detail.displayAssetCode, equals('SN-EPSON-9988'));
+    expect(unregMutation, isNull);
   });
 
   testWidgets('Widget regression: Operator sees new Pemohon mutation in Dashboard and Mutations screen', (tester) async {
@@ -234,6 +198,7 @@ void main() {
       currentPic: 'Ahmad PIC',
       targetPic: 'Rudi HRD',
       reason: 'Mutasi karyawan baru.',
+      documentName: 'SK-SDM-2026-001.pdf',
     );
 
     // Submit using the same container / repository

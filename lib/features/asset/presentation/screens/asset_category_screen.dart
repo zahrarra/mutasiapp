@@ -451,7 +451,7 @@ class _AssetCategoryScreenState extends ConsumerState<AssetCategoryScreen> {
                       ),
                       const SizedBox(height: 8),
                       const Text(
-                        'Aturan penentuan otomatis jalur approval saat verifikasi oleh Operator:',
+                        'Aturan alur approval mutasi aset sesuai PRD Baru:',
                         style: TextStyle(
                           fontSize: 12,
                           color: AppColors.textSecondary,
@@ -459,31 +459,20 @@ class _AssetCategoryScreenState extends ConsumerState<AssetCategoryScreen> {
                       ),
                       const SizedBox(height: 8),
                       _buildCriteriaRow(
-                        icon: Icons.payments_outlined,
-                        title:
-                            'Nilai Aset >= ${_formatRupiah(currentThreshold)} (Aktif)',
+                        icon: Icons.verified_user_outlined,
+                        title: 'Semua Pengajuan Memerlukan Approval Kadiv',
                         desc:
-                            'Aset bernilai tinggi otomatis memerlukan persetujuan Kepala Divisi.',
+                            'Seluruh mutasi yang telah diverifikasi Bagian Aset langsung masuk antrean Pemimpin Divisi/Kadiv.',
                         badge: 'Jalur Kadiv',
                         badgeColor: AppColors.warning,
                       ),
                       const SizedBox(height: 6),
                       _buildCriteriaRow(
-                        icon: Icons.alt_route_outlined,
-                        title: 'Mutasi Antar-Cabang / Regional',
+                        icon: Icons.merge_type_outlined,
+                        title: 'Penyatuan Role Bagian Aset',
                         desc:
-                            'Perpindahan lintas gedung/cabang memerlukan persetujuan Kadiv.',
-                        badge: 'Jalur Kadiv',
-                        badgeColor: AppColors.warning,
-                      ),
-                      const SizedBox(height: 6),
-                      _buildCriteriaRow(
-                        icon: Icons.check_circle_outline,
-                        title:
-                            'Nilai Aset < ${_formatRupiah(currentThreshold)} & Internal',
-                        desc:
-                            'Langsung ke antrean Staff Aset setelah disetujui Kabag.',
-                        badge: 'Tanpa Kadiv',
+                            'Role Kabag telah disatukan ke Bagian Aset untuk verifikasi kelengkapan dan penunjukan PIC baru.',
+                        badge: 'Bagian Aset',
                         badgeColor: AppColors.info,
                       ),
                     ],

@@ -152,10 +152,12 @@ class RoleDashboardLayout extends ConsumerWidget {
     switch (role) {
       case UserRole.operator:
         return 'Operator Aset';
+      case UserRole.bagianAset:
+        return 'Bagian Aset';
       case UserRole.kabagAset:
         return 'Kabag Aset';
       case UserRole.kadiv:
-        return 'Kepala Divisi';
+        return 'Pemimpin Divisi';
       case UserRole.staffAset:
         return 'Staff Aset';
       case UserRole.admin:

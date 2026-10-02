@@ -1,4 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:mutasiku/core/errors/failures.dart';
 import 'package:mutasiku/features/asset/data/repositories/asset_repository_impl.dart';
 import 'package:mutasiku/features/asset/domain/entities/asset_status.dart';
 import 'package:mutasiku/features/mutation/data/repositories/mutation_repository_impl.dart';
@@ -10,6 +11,7 @@ void main() {
   late MutationRepositoryImpl mutationRepo;
 
   setUp(() {
+    AssetRepositoryImpl.resetForTesting();
     MutationRepositoryImpl.resetForTesting();
     assetRepo = AssetRepositoryImpl();
     mutationRepo = MutationRepositoryImpl(assetRepository: assetRepo);
@@ -24,9 +26,8 @@ void main() {
           applicantId: 'usr_pemohon_1',
           applicantName: 'Pemohon Test',
           assetId: 'ast_1',
-          sourceLocation: 'Lokasi Asal di Form',
+          sourceLocation: '', // Empty to test snapshotting from master asset
           targetLocation: 'Cabang Medan',
-          currentPic: 'PIC di Form',
           targetPic: 'PIC Baru Medan',
           reason: 'Peremajaan cabang Medan',
         ),
@@ -43,7 +44,7 @@ void main() {
       expect(mutation.status, equals(MutationStatus.submitted));
     });
 
-    test('master asset in AssetRepository remains unchanged during submission', () async {
+    test('master asset in AssetRepository location and pic remain unchanged during submission, status locked to inMutation', () async {
       final initialAsset = (await assetRepo.getAssetById('ast_1')).dataOrNull!;
       expect(initialAsset.location, equals('Lantai 3 — Ruang IT Developer'));
       expect(initialAsset.status, equals(AssetStatus.available));
@@ -60,11 +61,13 @@ void main() {
         ),
       );
 
-      // Verify master asset in asset repository is UNCHANGED
+      // Verify master asset in asset repository location and pic are UNCHANGED during submission,
+      // but asset is locked to inMutation per PRD V1.1 §8 Rule 5
       final afterAsset = (await assetRepo.getAssetById('ast_1')).dataOrNull!;
       expect(afterAsset.location, equals('Lantai 3 — Ruang IT Developer'));
       expect(afterAsset.pic, equals(initialAsset.pic));
-      expect(afterAsset.status, equals(AssetStatus.available));
+      expect(afterAsset.status, equals(AssetStatus.inMutation));
+      expect(afterAsset.hasActiveMutation, isTrue);
     });
 
     test('prevents duplicate active mutation for the same asset', () async {
@@ -101,8 +104,8 @@ void main() {
     });
   });
 
-  group('MutationRepositoryImpl - Unregistered Asset Submissions', () {
-    test('submits unregistered asset with assetId == null and isUnregisteredAsset == true', () async {
+  group('MutationRepositoryImpl - Unregistered Asset Submissions (PRD V1.1 §8 Rule 3)', () {
+    test('rejects unregistered asset with isUnregisteredAsset == true', () async {
       final submitResult = await mutationRepo.submitMutation(
         const SubmitMutationParams(
           applicantId: 'usr_pemohon_1',
@@ -119,26 +122,21 @@ void main() {
         ),
       );
 
-      expect(submitResult.isSuccess, isTrue);
-      final mutation = submitResult.dataOrNull!;
-      expect(mutation.assetId, isNull);
-      expect(mutation.isUnregisteredAsset, isTrue);
-      expect(mutation.customAssetName, equals('Printer Epson L3210 (Manual)'));
-      expect(mutation.customSerialNumber, equals('SN-UNREG-8821'));
-      expect(mutation.displayAssetName, equals('Printer Epson L3210 (Manual)'));
-      expect(mutation.displayAssetCode, equals('SN-UNREG-8821'));
-      // No dummy id
-      expect(mutation.asset.id, isEmpty);
+      expect(submitResult.isFailure, isTrue);
+      expect(submitResult.failureOrNull, isA<ValidationFailure>());
+      expect(
+        submitResult.failureOrNull?.userMessage,
+        contains('Aset yang dimutasi harus merupakan aset terdaftar'),
+      );
     });
 
-    test('Staff Aset does not fail or call updateAssetLocationAndPic for unregistered asset', () async {
+    test('rejects submission when assetId is null or empty', () async {
       final submitResult = await mutationRepo.submitMutation(
         const SubmitMutationParams(
           applicantId: 'usr_pemohon_1',
           applicantName: 'Pemohon Test',
-          assetId: null,
-          isUnregisteredAsset: true,
-          customAssetName: 'Meja Rapat Kayu Jati',
+          assetId: '',
+          isUnregisteredAsset: false,
           sourceLocation: 'Lantai 2',
           targetLocation: 'Lantai 5',
           targetPic: 'Staff Umum',
@@ -146,37 +144,8 @@ void main() {
         ),
       );
 
-      expect(submitResult.isSuccess, isTrue);
-      final mutationId = submitResult.dataOrNull!.id;
-
-      // Operator verifies
-      await mutationRepo.verifyMutation(
-        mutationId: mutationId,
-        operatorName: 'Siti Rahma',
-        requiresKadivApproval: false,
-      );
-
-      // Kabag approves -> status becomes approved
-      await mutationRepo.approveMutationKabag(
-        mutationId: mutationId,
-        kabagName: 'Budi Santoso',
-        requiresKadivApproval: false,
-      );
-
-      // Staff Aset updates location and pic for unregistered asset
-      final staffUpdateResult = await mutationRepo.processStaffAssetUpdate(
-        mutationId: mutationId,
-        newLocation: 'Lantai 5 — Ruang VIP',
-        newPic: 'Staff Umum',
-        staffName: 'Agus Pratama',
-      );
-
-      expect(staffUpdateResult.isSuccess, isTrue);
-      final updated = staffUpdateResult.dataOrNull!;
-      expect(updated.status, equals(MutationStatus.pendingConfirmation));
-      expect(updated.targetLocation, equals('Lantai 5 — Ruang VIP'));
-      expect(updated.isUnregisteredAsset, isTrue);
-      expect(updated.assetId, isNull);
+      expect(submitResult.isFailure, isTrue);
+      expect(submitResult.failureOrNull, isA<ValidationFailure>());
     });
   });
 }

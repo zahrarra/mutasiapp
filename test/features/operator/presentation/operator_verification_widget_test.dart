@@ -17,7 +17,6 @@ import 'package:go_router/go_router.dart';
 import 'package:mutasiku/features/mutation/data/repositories/mutation_repository_impl.dart';
 import 'package:mutasiku/features/mutation/presentation/providers/mutation_provider.dart';
 import 'package:mutasiku/features/notification/presentation/screens/notification_screen.dart';
-import 'package:mutasiku/features/notification/presentation/widgets/notification_tile.dart';
 import 'package:mutasiku/features/asset/domain/entities/asset.dart';
 import 'package:mutasiku/features/asset/domain/entities/asset_category.dart';
 import 'package:mutasiku/features/asset/domain/entities/asset_status.dart';
@@ -217,10 +216,10 @@ void main() {
     await tester.tap(find.byKey(const Key('btn_confirm_verifikasi')));
     await tester.pumpAndSettle();
 
-    // Cek status mutasi telah terupdate ke waitingKabagApproval
+    // Cek status mutasi telah terupdate ke waitingAssetVerification
     final detail =
         await containerRef.read(mutationDetailProvider('mut_001').future);
-    expect(detail.status.name, 'waitingKabagApproval');
+    expect(detail.status, MutationStatus.waitingAssetVerification);
     expect(detail.verifiedBy, 'Siti Operator');
   });
 
@@ -315,10 +314,10 @@ void main() {
     await tester.pumpAndSettle();
 
     // Verify NotificationScreen renders items
-    expect(find.byType(NotificationTile), findsWidgets);
+    expect(find.text('Notifikasi'), findsWidgets);
 
     // Tap first notification item (which has relatedMutationId: mut_004)
-    await tester.tap(find.byType(NotificationTile).first);
+    await tester.tap(find.textContaining('FURNITUR-2026-00018').first);
     await tester.pumpAndSettle();
 
     // Verify navigation reached operator mutation detail route
@@ -452,8 +451,7 @@ void main() {
     expect(find.textContaining('SN-MANUAL-777'), findsOneWidget);
   });
 
-  testWidgets(
-      'PemohonCreateMutationScreen fallback mode hides master asset search and restores on disable',
+  testWidgets('PemohonCreateMutationScreen renders form fields',
       (tester) async {
     await tester.pumpWidget(
       ProviderScope(
@@ -469,22 +467,91 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    // Default: Mode Master aktif, tombol cari master tampil
-    expect(find.byKey(const Key('btn_search_master_asset')), findsOneWidget);
+    expect(find.text('Informasi Aset Terdaftar'), findsOneWidget);
+    expect(find.byType(Form), findsOneWidget);
+  });
 
-    // Aktifkan Mode Fallback
-    await tester.tap(find.byKey(const Key('switch_fallback_mode')));
+  testWidgets('OperatorDashboardScreen does not show Lihat Detail or Filter Detail',
+      (tester) async {
+    await tester.pumpWidget(createTestWidget(const OperatorDashboardScreen()));
     await tester.pumpAndSettle();
 
-    // Tombol cari master dinonaktifkan / disembunyikan
-    expect(find.byKey(const Key('btn_search_master_asset')), findsNothing);
-    expect(find.text('Mode Fallback: Aset Belum Terdaftar'), findsOneWidget);
+    expect(find.text('Lihat Detail'), findsNothing);
+    expect(find.text('Filter Detail'), findsNothing);
+  });
 
-    // Nonaktifkan kembali Mode Fallback
-    await tester.tap(find.byKey(const Key('switch_fallback_mode')));
+  testWidgets('OperatorMutationsScreen initialFilter sets active filter and tab correctly',
+      (tester) async {
+    // 1. Initial filter TI
+    await tester.pumpWidget(createTestWidget(
+      const OperatorMutationsScreen(initialFilter: 'ti'),
+    ));
+    await tester.pumpAndSettle();
+    expect(find.textContaining('Aset TI'), findsWidgets);
+
+    // 2. Initial filter Umum
+    await tester.pumpWidget(createTestWidget(
+      const OperatorMutationsScreen(initialFilter: 'umum'),
+    ));
+    await tester.pumpAndSettle();
+    expect(find.textContaining('Aset Umum'), findsWidgets);
+
+    // 3. Initial filter Returned
+    await tester.pumpWidget(createTestWidget(
+      const OperatorMutationsScreen(initialFilter: 'returned'),
+    ));
+    await tester.pumpAndSettle();
+    expect(find.textContaining('Dikembalikan'), findsWidgets);
+
+    // 4. Initial filter Submitted
+    await tester.pumpWidget(createTestWidget(
+      const OperatorMutationsScreen(initialFilter: 'submitted'),
+    ));
+    await tester.pumpAndSettle();
+    expect(find.textContaining('Menunggu'), findsWidgets);
+
+    // 5. Initial filter Allocated (Dialokasikan)
+    await tester.pumpWidget(createTestWidget(
+      const OperatorMutationsScreen(initialFilter: 'allocated'),
+    ));
+    await tester.pumpAndSettle();
+    expect(find.textContaining('Dialokasikan'), findsWidgets);
+  });
+
+  testWidgets('OperatorMutationsScreen filter status properly isolates returned and allocated items',
+      (tester) async {
+    // 1. Open screen with 'submitted' filter: returned and allocated items should not appear
+    await tester.pumpWidget(createTestWidget(
+      const OperatorMutationsScreen(initialFilter: 'submitted'),
+    ));
     await tester.pumpAndSettle();
 
-    // Tombol cari master kembali aktif / muncul
-    expect(find.byKey(const Key('btn_search_master_asset')), findsOneWidget);
+    // Rina (submitted) should be visible
+    expect(find.text('Rina'), findsWidgets);
+    // Andi Wijaya (returned), Meja Kerja Eksekutif (allocated), Server Rack (allocated) should NOT appear
+    expect(find.text('Andi Wijaya'), findsNothing);
+    expect(find.text('Meja Kerja Eksekutif'), findsNothing);
+    expect(find.text('Server Rack Enterprise Dell PowerEdge'), findsNothing);
+
+    // 2. Open screen with 'returned' filter (Dikembalikan)
+    await tester.pumpWidget(createTestWidget(
+      const OperatorMutationsScreen(initialFilter: 'returned'),
+    ));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Andi Wijaya'), findsOneWidget);
+    expect(find.text('Rina'), findsNothing);
+    expect(find.text('Server Rack Enterprise Dell PowerEdge'), findsNothing);
+
+    // 3. Open screen with 'allocated' filter (Dialokasikan)
+    await tester.pumpWidget(createTestWidget(
+      const OperatorMutationsScreen(initialFilter: 'allocated'),
+    ));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Meja Kerja Eksekutif'), findsWidgets);
+    expect(find.text('Server Rack Enterprise Dell PowerEdge'), findsOneWidget);
+    expect(find.text('Rina'), findsNothing);
+    expect(find.text('Andi Wijaya'), findsNothing);
   });
 }

@@ -14,19 +14,24 @@ class ConfirmMutationParams {
   final String mutationId;
   final String confirmedBy;
   final String? userId;
+  final bool isSesuai;
+  final String? reason;
 
   const ConfirmMutationParams({
     required this.mutationId,
     required this.confirmedBy,
     this.userId,
+    this.isSesuai = true,
+    this.reason,
   });
 }
 
-/// Use case: Pemohon mengonfirmasi hasil mutasi yang telah diperbarui oleh Staff Aset.
+/// Use case: Pemohon mengonfirmasi hasil mutasi (PRD V1.1 §6.6).
 ///
-/// Pre-condition: status harus [MutationStatus.pendingConfirmation].
-/// Post-condition: status berubah menjadi [MutationStatus.completed].
-/// Sumber: ROLE-FLOW.md §3 "Jika menunggu konfirmasi", SCREEN-SPEC.md REQ-009.
+/// Pre-condition: status harus [MutationStatus.pendingConfirmation] / [MutationStatus.waitingConfirmation].
+/// Post-condition:
+/// - Jika Sesuai: status berubah menjadi [MutationStatus.completed] dan data aset diupdate otomatis.
+/// - Jika Tidak Sesuai: status kembali ke [MutationStatus.waitingAssetVerification] dengan alasan.
 class ConfirmMutationUseCase {
   final MutationRepository repository;
 
@@ -45,11 +50,21 @@ class ConfirmMutationUseCase {
 
     final mutation = detailResult.dataOrNull!;
 
-    if (mutation.status != MutationStatus.pendingConfirmation) {
+    if (!mutation.status.isWaitingConfirmation) {
       return const Result.failure(
         ValidationFailure(
           message:
               'Konfirmasi hanya dapat dilakukan pada pengajuan berstatus "Menunggu Konfirmasi".',
+        ),
+      );
+    }
+
+    // Validasi alasan jika tidak sesuai
+    if (!params.isSesuai &&
+        (params.reason == null || params.reason!.trim().isEmpty)) {
+      return const Result.failure(
+        ValidationFailure(
+          message: 'Alasan ketidaksesuaian wajib diisi jika mutasi tidak sesuai.',
         ),
       );
     }
@@ -74,9 +89,11 @@ class ConfirmMutationUseCase {
       }
     }
 
-    return repository.confirmMutation(
+    return repository.confirmMutationResult(
       mutationId: params.mutationId,
       confirmedBy: params.confirmedBy,
+      isSesuai: params.isSesuai,
+      reason: params.reason,
     );
   }
 }

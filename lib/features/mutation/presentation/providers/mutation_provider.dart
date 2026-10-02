@@ -233,7 +233,7 @@ class SubmitMutationNotifier extends StateNotifier<SubmitMutationState> {
 
       // Invalidate list agar mutationListProvider dan operatorAllMutationsProvider langsung diperbarui dengan data baru
       ref.invalidate(mutationListProvider);
-
+      ref.invalidate(operatorAllMutationsProvider);
       ref.invalidate(mutationDetailProvider(result.data.id));
 
       return result.data;
@@ -333,6 +333,7 @@ class UpdateMutationNotifier extends StateNotifier<UpdateMutationState> {
       // Refresh list & detail Pemohon + Operator.
       ref.invalidate(mutationListProvider);
       ref.invalidate(mutationDetailProvider(params.mutationId));
+      ref.invalidate(operatorAllMutationsProvider);
 
       return result.data;
     }

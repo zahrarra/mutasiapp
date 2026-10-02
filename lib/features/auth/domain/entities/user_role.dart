@@ -18,17 +18,29 @@ enum UserRole {
   /// Pemohon — mengajukan dan mengkonfirmasi mutasi.
   pemohon,
 
-  /// Operator — memverifikasi pengajuan.
+  /// Operator — memeriksa kelengkapan pengajuan & dokumen.
   operator,
 
-  /// Kepala Bagian Aset — menyetujui atau menolak pengajuan.
+  /// Bagian Aset — memverifikasi keabsahan data aset & menentukan PIC baru.
+  bagianAset,
+
+  /// Kepala Bagian Aset (Legacy alias untuk bagianAset).
   kabagAset,
 
-  /// Kepala Divisi — approval kondisional.
+  /// Pemimpin Divisi Umum dan Aset (Kadiv) — approval final.
   kadiv,
 
-  /// Staff Aset — memperbarui data aset setelah approval.
+  /// Staff Aset (Legacy).
   staffAset;
+
+  /// Daftar role aktif resmi sesuai PRD V1.1 §5.
+  static const List<UserRole> activeRoles = [
+    UserRole.admin,
+    UserRole.pemohon,
+    UserRole.operator,
+    UserRole.bagianAset,
+    UserRole.kadiv,
+  ];
 
   // ─── Display ──────────────────────────────────────────────────────────────
 
@@ -37,8 +49,9 @@ enum UserRole {
         UserRole.admin => 'Admin',
         UserRole.pemohon => 'Pemohon',
         UserRole.operator => 'Operator',
+        UserRole.bagianAset => 'Bagian Aset',
         UserRole.kabagAset => 'Kabag Aset',
-        UserRole.kadiv => 'Kadiv',
+        UserRole.kadiv => 'Pemimpin Divisi',
         UserRole.staffAset => 'Staff Aset',
       };
 
@@ -48,11 +61,12 @@ enum UserRole {
   // ─── Default Route ────────────────────────────────────────────────────────
 
   /// Path navigasi default (home) setelah login untuk role ini.
-  /// Sumber: ROLE-FLOW.md §10.
+  /// Sumber: ROLE-FLOW.md §10 & PRD V1.1.
   String get defaultRoute => switch (this) {
         UserRole.admin => '/admin/dashboard',
         UserRole.pemohon => '/pemohon/dashboard',
         UserRole.operator => '/operator/dashboard',
+        UserRole.bagianAset => '/bagian-aset/dashboard',
         UserRole.kabagAset => '/kabag/dashboard',
         UserRole.kadiv => '/kadiv/dashboard',
         UserRole.staffAset => '/staff-aset/dashboard',
@@ -65,6 +79,7 @@ enum UserRole {
         UserRole.admin => '/admin',
         UserRole.pemohon => '/pemohon',
         UserRole.operator => '/operator',
+        UserRole.bagianAset => '/bagian-aset',
         UserRole.kabagAset => '/kabag',
         UserRole.kadiv => '/kadiv',
         UserRole.staffAset => '/staff-aset',
@@ -73,7 +88,7 @@ enum UserRole {
   // ─── Permissions ──────────────────────────────────────────────────────────
 
   /// Daftar permission yang dimiliki oleh role ini.
-  /// Sumber: ROLE-FLOW.md §9.
+  /// Sumber: PRD V1.1 §5.
   Set<UserPermission> get permissions => switch (this) {
         UserRole.admin => {
             UserPermission.manageMasterData,
@@ -88,7 +103,14 @@ enum UserRole {
             UserPermission.verifyMutation,
             UserPermission.viewNotifications,
           },
+        UserRole.bagianAset => {
+            UserPermission.verifyAssetData,
+            UserPermission.approveKabag,
+            UserPermission.updateAssetLocation,
+            UserPermission.viewNotifications,
+          },
         UserRole.kabagAset => {
+            UserPermission.verifyAssetData,
             UserPermission.approveKabag,
             UserPermission.viewNotifications,
           },
@@ -113,6 +135,7 @@ enum UserRole {
         UserRole.admin => 'admin',
         UserRole.pemohon => 'pemohon',
         UserRole.operator => 'operator',
+        UserRole.bagianAset => 'bagian_aset',
         UserRole.kabagAset => 'kabag_aset',
         UserRole.kadiv => 'kadiv',
         UserRole.staffAset => 'staff_aset',
@@ -125,8 +148,9 @@ enum UserRole {
       'admin' => UserRole.admin,
       'pemohon' => UserRole.pemohon,
       'operator' => UserRole.operator,
+      'bagian_aset' || 'bagianaset' || 'bagian aset' || 'aset' => UserRole.bagianAset,
       'kabag_aset' || 'kabagaset' || 'kabag aset' => UserRole.kabagAset,
-      'kadiv' => UserRole.kadiv,
+      'kadiv' || 'pemimpin_divisi' || 'pemimpin divisi' => UserRole.kadiv,
       'staff_aset' || 'staffaset' || 'staff aset' => UserRole.staffAset,
       _ => null,
     };

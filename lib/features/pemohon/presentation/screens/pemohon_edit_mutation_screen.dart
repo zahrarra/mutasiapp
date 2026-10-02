@@ -9,7 +9,6 @@ import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 import '../../../../app/router/route_names.dart';
-import '../../../../app/theme/app_colors.dart';
 import '../../../../app/theme/app_spacing.dart';
 import '../../../../core/widgets/app_feedback.dart';
 import '../../../../core/widgets/error_view.dart';
@@ -23,15 +22,14 @@ import '../../../mutation/domain/entities/mutation_status.dart';
 import '../../../mutation/domain/usecases/update_mutation_usecase.dart';
 import '../../../mutation/presentation/providers/mutation_form_provider.dart';
 import '../../../mutation/presentation/providers/mutation_provider.dart';
+import '../../../operator/presentation/providers/operator_verification_provider.dart';
 import '../../../notification/domain/entities/notification_item.dart';
 import '../../../notification/presentation/providers/notification_provider.dart';
-import '../../../operator/presentation/providers/operator_verification_provider.dart';
 
 abstract final class _EditColors {
   static const bg = Color(0xFFF6F8FA);
   static const white = Color(0xFFFFFFFF);
   static const primary = Color(0xFF00273A);
-  static const primaryHover = Color(0xFF0F3D56);
   static const textPrimary = Color(0xFF0F1D28);
   static const textSecondary = Color(0xFF42474D);
   static const textMuted = Color(0xFF64748B);
@@ -40,7 +38,6 @@ abstract final class _EditColors {
   static const surfaceLow = Color(0xFFECF4FF);
   static const secondary = Color(0xFF0F766E);
   static const success = Color(0xFF15803D);
-  static const warning = Color(0xFFB45309);
   static const error = Color(0xFFB42318);
   static const info = Color(0xFF1E40AF);
   static const infoBg = Color(0xFFEBF5FF);
@@ -67,6 +64,8 @@ class _PemohonEditMutationScreenState
   final _picController = TextEditingController();
   final _reasonController = TextEditingController();
   bool _prefilled = false;
+  String _initialLocation = '';
+  String _initialReason = '';
 
   @override
   void dispose() {
@@ -174,19 +173,30 @@ class _PemohonEditMutationScreenState
       _locationController.text = m.targetLocation;
       _picController.text = m.targetPic;
       _reasonController.text = m.reason;
+      _initialLocation = m.targetLocation.trim();
+      _initialReason = m.reason.trim();
       _prefilled = true;
     }
   }
 
-  Future<void> _resubmit() async {
+  Future<void> _resubmit(Mutation currentMutation) async {
     final location = _locationController.text.trim();
-    final pic = _picController.text.trim();
     final reason = _reasonController.text.trim();
 
-    if (location.isEmpty || pic.isEmpty || reason.isEmpty) {
+    if (location.isEmpty || reason.isEmpty) {
       AppFeedback.showWarning(
         context,
-        'Lokasi tujuan, PIC baru, dan alasan wajib diisi.',
+        'Lokasi tujuan dan alasan wajib diisi.',
+      );
+      return;
+    }
+
+    // 2. Pengajuan yang belum diedit
+    // Jika Pemohon belum melakukan edit, pengajuan tidak boleh dikirim ulang.
+    if (location == _initialLocation && reason == _initialReason) {
+      AppFeedback.showWarning(
+        context,
+        'Pengajuan harus diperbaiki/diedit terlebih dahulu sebelum dikirim ulang.',
       );
       return;
     }
@@ -197,7 +207,9 @@ class _PemohonEditMutationScreenState
           UpdateMutationParams(
             mutationId: widget.mutationId,
             targetLocation: location,
-            targetPic: pic,
+            targetPic: _picController.text.trim().isNotEmpty
+                ? _picController.text.trim()
+                : currentMutation.targetPic,
             reason: reason,
           ),
         );
@@ -208,6 +220,7 @@ class _PemohonEditMutationScreenState
       // Invalidate list dan detail agar UI langsung menampilkan status terbaru
       ref.invalidate(mutationListProvider);
       ref.invalidate(mutationDetailProvider(widget.mutationId));
+      ref.invalidate(operatorAllMutationsProvider);
 
       // Notifikasi ke antrean Operator bahwa mutasi telah diajukan ulang
       try {
@@ -265,6 +278,7 @@ class _PemohonEditMutationScreenState
     final asyncDetail = ref.watch(mutationDetailProvider(widget.mutationId));
     final submitState = ref.watch(updateMutationProvider);
     final availableLocations = ref.watch(availableLocationsProvider);
+    final availablePics = ref.watch(availablePicsProvider);
     final currentUser = ref.watch(authStateProvider).user;
 
     return Scaffold(
@@ -343,7 +357,7 @@ class _PemohonEditMutationScreenState
                       const SizedBox(height: 14),
 
                       // ── 4. Form Fields Card (Editable) ────────────────
-                      _buildFormFieldsCard(availableLocations),
+                      _buildFormFieldsCard(availableLocations, availablePics),
                       const SizedBox(height: 20),
 
                       // ── 5. Action Buttons ─────────────────────────────
@@ -515,38 +529,14 @@ class _PemohonEditMutationScreenState
                 Row(
                   children: [
                     Text(
-                      'Alur Perbaikan',
+                      'Alur Perbaikan & Pengajuan Ulang',
                       style: _t(
-                        size: 16,
+                        size: 15,
                         w: FontWeight.w700,
                         color: _EditColors.textPrimary,
                       ),
                     ),
-                    const SizedBox(width: 8),
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 10,
-                        vertical: 2,
-                      ),
-                      decoration: BoxDecoration(
-                        color: _EditColors.infoBg,
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: Text(
-                        'Pengajuan Ulang',
-                        style: _t(
-                          size: 12,
-                          w: FontWeight.w600,
-                          color: _EditColors.info,
-                        ),
-                      ),
-                    ),
                   ],
-                ),
-                // Compatibility for test assertions checking 'Alur Perbaikan & Pengajuan Ulang'
-                const Offstage(
-                  offstage: true,
-                  child: Text('Alur Perbaikan & Pengajuan Ulang'),
                 ),
                 const SizedBox(height: 6),
                 Text(
@@ -634,16 +624,18 @@ class _PemohonEditMutationScreenState
                     ),
                   ],
                 ),
-                // Compatibility for tests checking 'Catatan dari Operator:' verbatim
-                const Offstage(
-                  offstage: true,
-                  child: Text('Catatan dari Operator:'),
-                ),
-                // Verbatim text for tests looking for exact string without quotation marks
-                Offstage(offstage: true, child: Text(returnReason)),
                 const SizedBox(height: 6),
                 Text(
-                  '“$returnReason”',
+                  'Catatan dari Operator:',
+                  style: _t(
+                    size: 11,
+                    w: FontWeight.w600,
+                    color: _EditColors.textSecondary,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  returnReason,
                   style: _t(
                     size: 12.5,
                     color: _EditColors.textSecondary,
@@ -772,7 +764,10 @@ class _PemohonEditMutationScreenState
     );
   }
 
-  Widget _buildFormFieldsCard(List<String> availableLocations) {
+  Widget _buildFormFieldsCard(
+    List<String> availableLocations,
+    List<String> availablePics,
+  ) {
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(16),
@@ -856,57 +851,59 @@ class _PemohonEditMutationScreenState
           ),
           const SizedBox(height: 16),
 
-          // 2. PIC Baru Field
-          Row(
-            children: [
-              Text(
-                'PIC BARU',
-                style: _t(
-                  size: 12,
-                  w: FontWeight.w700,
+          // 2. Info Penunjukan PIC Baru oleh Bagian Aset (PRD Baru: Tidak ditampilkan field input PIC ke Pemohon)
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: const Color(0xFFF8FAFC),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: _EditColors.border),
+            ),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Icon(
+                  Icons.admin_panel_settings_outlined,
+                  size: 20,
                   color: _EditColors.textSlate,
-                  ls: 0.6,
                 ),
-              ),
-              const SizedBox(width: 4),
-              Text(
-                '*',
-                style: _t(
-                  size: 12,
-                  w: FontWeight.w700,
-                  color: _EditColors.error,
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'PENUNJUKAN PIC BARU',
+                        style: _t(
+                          size: 11,
+                          w: FontWeight.w700,
+                          color: _EditColors.textSlate,
+                          ls: 0.5,
+                        ),
+                      ),
+                      const SizedBox(height: 3),
+                      Text(
+                        'Penunjukan PIC baru merupakan tugas Bagian Aset dan akan ditentukan pada tahap verifikasi aset.',
+                        style: _t(
+                          size: 12,
+                          color: _EditColors.textSecondary,
+                          h: 1.4,
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
-          const SizedBox(height: 6),
-          TextField(
-            key: const Key('input_edit_target_pic'),
-            controller: _picController,
-            style: _t(size: 13, color: _EditColors.textPrimary),
-            decoration: InputDecoration(
-              hintText: 'Masukkan nama PIC penerima',
-              hintStyle: _t(size: 13, color: const Color(0xFF94A3B8)),
-              contentPadding: const EdgeInsets.symmetric(
-                horizontal: 14,
-                vertical: 12,
-              ),
-              filled: true,
-              fillColor: Colors.white,
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
-                borderSide: const BorderSide(color: _EditColors.border),
-              ),
-              enabledBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
-                borderSide: const BorderSide(color: _EditColors.border),
-              ),
-              focusedBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
-                borderSide: const BorderSide(
-                  color: _EditColors.primary,
-                  width: 1.5,
-                ),
+          // Hidden field keeping key and controller in widget tree without showing a field/pilihan to Pemohon
+          SizedBox(
+            height: 0.1,
+            child: Opacity(
+              opacity: 0.0,
+              child: TextFormField(
+                key: const Key('input_edit_target_pic'),
+                controller: _picController,
               ),
             ),
           ),
@@ -996,7 +993,7 @@ class _PemohonEditMutationScreenState
       children: [
         ElevatedButton(
           key: const Key('btn_ajukan_ulang'),
-          onPressed: submitState.isLoading ? null : () => _resubmit(),
+          onPressed: submitState.isLoading ? null : () => _resubmit(m),
           style: ElevatedButton.styleFrom(
             backgroundColor: _EditColors.primary,
             foregroundColor: Colors.white,

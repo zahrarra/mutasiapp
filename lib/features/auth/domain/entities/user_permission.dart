@@ -5,25 +5,28 @@
 
 /// Hak akses spesifik dalam sistem MutasiKu.
 enum UserPermission {
-  /// Kelola user, role, lokasi, kategori, kriteria approval (Admin).
+  /// Kelola user, role, lokasi, kategori aset (Admin).
   manageMasterData,
 
   /// Membuat dan mengajukan mutasi baru (Pemohon).
   submitMutation,
 
-  /// Mengonfirmasi hasil mutasi aset yang selesai di-update (Pemohon).
+  /// Mengonfirmasi hasil mutasi aset (Sesuai / Tidak Sesuai) (Pemohon).
   confirmMutation,
 
-  /// Verifikasi kelengkapan dan validitas pengajuan mutasi (Operator).
+  /// Pemeriksaan kelengkapan pengajuan dan dokumen (Operator).
   verifyMutation,
 
-  /// Review & approval mutasi level Kabag Aset (Kabag Aset).
-  approveKabag,
+  /// Verifikasi keabsahan data aset, lokasi, SK SDM, dan penentuan PIC baru (Bagian Aset).
+  verifyAssetData,
 
-  /// Review & approval mutasi kondisional level Kadiv (Kadiv).
+  /// Review & approval mutasi final (Pemimpin Divisi / Kadiv).
   approveKadiv,
 
-  /// Update lokasi & PIC aset serta simpan riwayat mutasi (Staff Aset).
+  /// Review & approval mutasi level Kabag Aset (Legacy).
+  approveKabag,
+
+  /// Update lokasi & PIC aset (Legacy Staff Aset).
   updateAssetLocation,
 
   /// Melihat notifikasi aktivitas mutasi (Semua Role).

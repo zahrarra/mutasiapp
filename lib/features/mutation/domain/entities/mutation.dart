@@ -31,7 +31,7 @@ class Mutation {
     if (existing != null) return existing;
     return Asset(
       id: '',
-      assetCode: customSerialNumber ?? '-',
+      assetCode: '-',
       name: customAssetName ?? 'Aset Tidak Terdaftar',
       category: const AssetCategory(
         id: 'cat_unregistered',
@@ -56,13 +56,20 @@ class Mutation {
   /// Nomor seri aset manual (jika [isUnregisteredAsset] true)
   final String? customSerialNumber;
 
-  /// Getter helper untuk nama aset yang ditampilkan
-  String get displayAssetName =>
-      isUnregisteredAsset ? (customAssetName ?? 'Aset Tidak Terdaftar') : asset.name;
+  /// Getter helper untuk nama aset yang ditampilkan (selalu Nama Aset master)
+  String get displayAssetName => asset.name;
 
-  /// Getter helper untuk kode/nomor seri aset yang ditampilkan
-  String get displayAssetCode =>
-      isUnregisteredAsset ? (customSerialNumber ?? '-') : asset.assetCode;
+  /// Getter helper untuk kode aset yang ditampilkan (selalu Kode Aset master)
+  String get displayAssetCode => asset.assetCode;
+
+  /// Getter helper untuk serial number aset (selalu Serial Number dari master Asset)
+  String get displaySerialNumber {
+    final sn = asset.serialNumber?.trim();
+    if (sn != null && sn.isNotEmpty) {
+      return sn;
+    }
+    return '-';
+  }
 
   /// ID Pemohon (user login yang mengajukan)
   final String? applicantId;
@@ -149,6 +156,23 @@ class Mutation {
   /// Waktu pembuatan pengajuan
   final DateTime createdAt;
 
+  /// Pertanyaan PRD V1.1: "Aset ikut saya pindah?" (Ya / Tidak).
+  /// - Ya -> targetPic otomatis Pemohon sendiri.
+  /// - Tidak -> targetPic dikosongkan dan ditentukan oleh Bagian Aset.
+  final bool isAssetMovingWithApplicant;
+
+  /// Catatan / alasan ketidaksesuaian dari Pemohon saat konfirmasi jika memilih "Tidak Sesuai"
+  final String? confirmationReason;
+
+  /// Nama petugas Bagian Aset yang memverifikasi pengajuan
+  final String? assetVerifiedBy;
+
+  /// Tanggal verifikasi dilakukan oleh Bagian Aset
+  final DateTime? assetVerifiedAt;
+
+  /// Alasan pengembalian oleh Bagian Aset jika data tidak valid
+  final String? assetReturnReason;
+
   const Mutation({
     required this.id,
     required this.ticketNumber,
@@ -168,11 +192,16 @@ class Mutation {
     this.documentPath,
     this.documentBytes,
     required this.status,
+    this.isAssetMovingWithApplicant = true,
+    this.confirmationReason,
     this.returnReason,
     this.requiresKadivApproval = false,
     this.rejectionReason,
     this.verifiedAt,
     this.verifiedBy,
+    this.assetVerifiedAt,
+    this.assetVerifiedBy,
+    this.assetReturnReason,
     this.approvedAt,
     this.approvedBy,
     this.rejectedAt,
@@ -209,11 +238,16 @@ class Mutation {
     String? documentPath,
     List<int>? documentBytes,
     MutationStatus? status,
+    bool? isAssetMovingWithApplicant,
+    String? confirmationReason,
     String? returnReason,
     bool? requiresKadivApproval,
     String? rejectionReason,
     DateTime? verifiedAt,
     String? verifiedBy,
+    DateTime? assetVerifiedAt,
+    String? assetVerifiedBy,
+    String? assetReturnReason,
     DateTime? approvedAt,
     String? approvedBy,
     DateTime? rejectedAt,
@@ -246,12 +280,18 @@ class Mutation {
       documentPath: documentPath ?? this.documentPath,
       documentBytes: documentBytes ?? this.documentBytes,
       status: status ?? this.status,
+      isAssetMovingWithApplicant:
+          isAssetMovingWithApplicant ?? this.isAssetMovingWithApplicant,
+      confirmationReason: confirmationReason ?? this.confirmationReason,
       returnReason: returnReason ?? this.returnReason,
       requiresKadivApproval:
           requiresKadivApproval ?? this.requiresKadivApproval,
       rejectionReason: rejectionReason ?? this.rejectionReason,
       verifiedAt: verifiedAt ?? this.verifiedAt,
       verifiedBy: verifiedBy ?? this.verifiedBy,
+      assetVerifiedAt: assetVerifiedAt ?? this.assetVerifiedAt,
+      assetVerifiedBy: assetVerifiedBy ?? this.assetVerifiedBy,
+      assetReturnReason: assetReturnReason ?? this.assetReturnReason,
       approvedAt: approvedAt ?? this.approvedAt,
       approvedBy: approvedBy ?? this.approvedBy,
       rejectedAt: rejectedAt ?? this.rejectedAt,

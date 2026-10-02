@@ -30,7 +30,6 @@ import 'package:mutasiku/features/mutation/presentation/providers/mutation_provi
 import 'package:mutasiku/features/notification/domain/entities/notification_item.dart';
 import 'package:mutasiku/features/notification/presentation/providers/notification_provider.dart';
 import 'package:mutasiku/features/notification/presentation/screens/notification_screen.dart';
-import 'package:mutasiku/features/staff/presentation/providers/staff_mutation_provider.dart';
 
 class _FakeAuthRepository implements AuthRepository {
   final User? user;
@@ -111,14 +110,14 @@ void main() {
       );
       expect(kabagApproveRes.isSuccess, true);
       final mutation = kabagApproveRes.dataOrNull!;
-      expect(mutation.status, MutationStatus.waitingKadivApproval);
+      expect(mutation.status.isWaitingDivisionApproval, true);
       expect(mutation.requiresKadivApproval, true);
-      expect(mutation.approvedBy, 'H. M. Yusuf (Kabag Aset)');
+      expect(mutation.assetVerifiedBy, 'H. M. Yusuf (Kabag Aset)');
 
       // Invalidate Kadiv provider and test queues
       container.invalidate(kadivAllMutationsProvider);
       final kadivAll = await container.read(kadivAllMutationsProvider.future);
-      expect(kadivAll.any((m) => m.id == 'mut_002' && m.status == MutationStatus.waitingKadivApproval), true);
+      expect(kadivAll.any((m) => m.id == 'mut_002' && m.status.isWaitingDivisionApproval), true);
 
       // 1. Kadiv pending count
       final stats = container.read(kadivStatsProvider);
@@ -159,7 +158,7 @@ void main() {
 
       // Verify repository data
       final postDetail = await container.read(mutationDetailProvider('mut_005').future);
-      expect(postDetail.status, MutationStatus.approved);
+      expect(postDetail.status, MutationStatus.waitingConfirmation);
       expect(postDetail.kadivApprovedBy, 'Drs. Ahmad Dahlan (Kadiv)');
       expect(postDetail.kadivApprovedAt, isNotNull);
 
@@ -180,16 +179,12 @@ void main() {
       expect(postStats.waitingApprovalCount, lessThan(initialWaitingCount));
       expect(postStats.approvedCount, greaterThan(initialApprovedCount));
 
-      // Verify Staff Aset queue received the mutation
-      final staffList = await container.read(staffAllMutationsProvider.future);
-      expect(staffList.any((m) => m.id == 'mut_005'), true);
-
-      // Verify Staff Aset received notification
+      // Verify notification sent after Kadiv approval
       final notifs = container.read(notificationProvider);
       expect(
         notifs.any((n) =>
             n.relatedMutationId == 'mut_005' &&
-            n.targetRole == UserRole.staffAset),
+            (n.targetRole == UserRole.pemohon || n.title.contains('Disetujui'))),
         true,
       );
     });

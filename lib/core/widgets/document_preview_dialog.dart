@@ -20,13 +20,19 @@ import '../../features/mutation/domain/entities/mutation.dart';
 import 'app_feedback.dart';
 
 class DocumentPreviewDialog extends StatelessWidget {
-  final Mutation mutation;
+  final Mutation? mutation;
   final User? currentUser;
+  final String? customFileName;
+  final Uint8List? customBytes;
+  final String? customFilePath;
 
   const DocumentPreviewDialog({
     super.key,
-    required this.mutation,
-    required this.currentUser,
+    this.mutation,
+    this.currentUser,
+    this.customFileName,
+    this.customBytes,
+    this.customFilePath,
   });
 
   /// Method statis untuk membuka dialog preview dengan pengecekan otorisasi role.
@@ -62,6 +68,29 @@ class DocumentPreviewDialog extends StatelessWidget {
     );
   }
 
+  /// Method statis untuk preview berkas langsung (seperti SK SDM yang baru diunggah).
+  static Future<void> showFile(
+    BuildContext context, {
+    required String fileName,
+    Uint8List? bytes,
+    String? filePath,
+  }) async {
+    if (fileName.trim().isEmpty) {
+      AppFeedback.showInfo(context, 'Tidak ada dokumen untuk dilihat.');
+      return;
+    }
+
+    await showDialog<void>(
+      context: context,
+      barrierDismissible: true,
+      builder: (ctx) => DocumentPreviewDialog(
+        customFileName: fileName,
+        customBytes: bytes,
+        customFilePath: filePath,
+      ),
+    );
+  }
+
   /// Memeriksa hak akses user terhadap dokumen mutasi.
   static bool hasAccess(Mutation mutation, User? user) {
     if (user == null) return false;
@@ -78,6 +107,7 @@ class DocumentPreviewDialog extends StatelessWidget {
             user.username.toLowerCase().trim() == 'pemohon';
 
       case UserRole.operator:
+      case UserRole.bagianAset:
       case UserRole.kabagAset:
       case UserRole.staffAset:
       case UserRole.kadiv:
@@ -89,21 +119,26 @@ class DocumentPreviewDialog extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final docName = mutation.documentName ?? 'Dokumen';
+    final docName = customFileName ?? mutation?.documentName ?? 'Dokumen';
     final ext = _getExtension(docName);
     final isPdf = ext == 'pdf';
     final isImage = ['png', 'jpg', 'jpeg', 'webp', 'gif', 'bmp'].contains(ext);
 
-    Uint8List? bytes;
-    if (mutation.documentBytes != null && mutation.documentBytes!.isNotEmpty) {
-      bytes = Uint8List.fromList(mutation.documentBytes!);
-    } else if (mutation.documentPath != null && mutation.documentPath!.isNotEmpty) {
-      try {
-        final f = File(mutation.documentPath!);
-        if (f.existsSync()) {
-          bytes = f.readAsBytesSync();
+    Uint8List? bytes = customBytes;
+    if (bytes == null || bytes.isEmpty) {
+      if (mutation?.documentBytes != null && mutation!.documentBytes!.isNotEmpty) {
+        bytes = Uint8List.fromList(mutation!.documentBytes!);
+      } else {
+        final path = customFilePath ?? mutation?.documentPath;
+        if (path != null && path.isNotEmpty) {
+          try {
+            final f = File(path);
+            if (f.existsSync()) {
+              bytes = f.readAsBytesSync();
+            }
+          } catch (_) {}
         }
-      } catch (_) {}
+      }
     }
 
     final screenHeight = MediaQuery.of(context).size.height;
@@ -172,7 +207,9 @@ class DocumentPreviewDialog extends StatelessWidget {
                         ),
                         const SizedBox(height: 2),
                         Text(
-                          'Tiket: ${mutation.ticketNumber} • ${mutation.asset.name}',
+                          mutation != null
+                              ? 'Tiket: ${mutation!.ticketNumber} • ${mutation!.asset.name}'
+                              : 'Berkas SK SDM (Lampiran Pengajuan Mutasi)',
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                           style: const TextStyle(

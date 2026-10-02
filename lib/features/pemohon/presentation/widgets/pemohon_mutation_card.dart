@@ -46,14 +46,17 @@ class PemohonMutationCard extends StatelessWidget {
       case MutationStatus.submitted:
         return 'Tahap 1/6: Diajukan';
       case MutationStatus.verified:
-        return 'Tahap 2/6: Terverifikasi Operator';
+        return 'Tahap 2/6: Pemeriksaan Kelengkapan';
+      case MutationStatus.waitingAssetVerification:
       case MutationStatus.waitingKabagApproval:
-        return 'Tahap 3/6: Kabag Review';
+        return 'Tahap 3/6: Verifikasi Bagian Aset';
       case MutationStatus.waitingKadivApproval:
-        return 'Tahap 4/6: Kadiv Review';
+      case MutationStatus.waitingDivisionHeadApproval:
+        return 'Tahap 4/6: Approval Pemimpin Divisi';
       case MutationStatus.approved:
-        return 'Tahap 5/6: Eksekusi Staff';
+        return 'Tahap 5/6: Disetujui';
       case MutationStatus.pendingConfirmation:
+      case MutationStatus.waitingConfirmation:
         return 'Tahap 6/6: Konfirmasi Pemohon';
       case MutationStatus.completed:
         return 'Selesai';
@@ -61,6 +64,8 @@ class PemohonMutationCard extends StatelessWidget {
         return 'Perlu Perbaikan';
       case MutationStatus.rejected:
         return 'Ditolak';
+      case MutationStatus.waitingSync:
+        return 'Menunggu Sinkronisasi';
     }
   }
 
@@ -110,6 +115,12 @@ class PemohonMutationCard extends StatelessWidget {
         statusBorderColor = const Color(0xFFFECDCA);
         statusBadgeLabel = 'Ditolak';
         break;
+      case MutationStatus.waitingAssetVerification:
+        statusBgColor = const Color(0xFFFEF0C7);
+        statusTextColor = const Color(0xFFB45309);
+        statusBorderColor = const Color(0xFFFEDF89);
+        statusBadgeLabel = 'Verifikasi Bagian Aset';
+        break;
       case MutationStatus.waitingKabagApproval:
         statusBgColor = const Color(0xFFFEF0C7);
         statusTextColor = const Color(0xFFB45309);
@@ -117,10 +128,11 @@ class PemohonMutationCard extends StatelessWidget {
         statusBadgeLabel = 'Approval Kabag';
         break;
       case MutationStatus.waitingKadivApproval:
+      case MutationStatus.waitingDivisionHeadApproval:
         statusBgColor = const Color(0xFFFEF0C7);
         statusTextColor = const Color(0xFFB45309);
         statusBorderColor = const Color(0xFFFEDF89);
-        statusBadgeLabel = 'Approval Kadiv';
+        statusBadgeLabel = 'Approval Pemimpin Divisi';
         break;
       case MutationStatus.verified:
         statusBgColor = const Color(0xFFEFF8FF);
@@ -133,6 +145,19 @@ class PemohonMutationCard extends StatelessWidget {
         statusTextColor = const Color(0xFF0369A1);
         statusBorderColor = const Color(0xFFBAE6FD);
         statusBadgeLabel = 'Eksekusi Staff';
+        break;
+      case MutationStatus.waitingConfirmation:
+        borderColor = const Color(0xFFB2DDFF);
+        statusBgColor = const Color(0xFF175CD3);
+        statusTextColor = Colors.white;
+        statusBorderColor = const Color(0xFF175CD3);
+        statusBadgeLabel = 'Perlu Konfirmasi';
+        break;
+      case MutationStatus.waitingSync:
+        statusBgColor = const Color(0xFFF3F4F6);
+        statusTextColor = const Color(0xFF4B5563);
+        statusBorderColor = const Color(0xFFE5E7EB);
+        statusBadgeLabel = 'Offline';
         break;
       case MutationStatus.submitted:
         statusBgColor = const Color(0xFFEFF8FF);
@@ -244,7 +269,11 @@ class PemohonMutationCard extends StatelessWidget {
                 if (mutation.asset.assetCode.isNotEmpty) ...[
                   const SizedBox(height: 2),
                   Text(
-                    mutation.asset.assetCode,
+                    mutation.isUnregisteredAsset
+                        ? 'SN: ${mutation.displaySerialNumber}'
+                        : (mutation.displaySerialNumber != '-'
+                            ? '${mutation.displayAssetCode} • SN: ${mutation.displaySerialNumber}'
+                            : mutation.displayAssetCode),
                     style: const TextStyle(
                       fontSize: 11,
                       fontFamily: 'monospace',

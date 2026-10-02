@@ -11,9 +11,10 @@ import 'package:mutasiku/features/pemohon/presentation/widgets/mutation_status_s
 void main() {
   Mutation createDummyMutation({
     required MutationStatus status,
-    bool requiresKadivApproval = false,
+    bool requiresKadivApproval = true,
     bool isUnregistered = false,
     String? returnReason,
+    String? assetReturnReason,
     String? rejectionReason,
     String? kadivRejectionReason,
     DateTime? kadivRejectedAt,
@@ -46,6 +47,7 @@ void main() {
       requiresKadivApproval: requiresKadivApproval,
       createdAt: DateTime(2026, 9, 25),
       returnReason: returnReason,
+      assetReturnReason: assetReturnReason,
       rejectionReason: rejectionReason,
       kadivRejectionReason: kadivRejectionReason,
       kadivRejectedAt: kadivRejectedAt,
@@ -66,336 +68,199 @@ void main() {
     );
   }
 
-  group('MutationStatusStepper — Flow without Kadiv (5 steps)', () {
-    testWidgets('renders exactly 5 steps and no Kadiv step', (tester) async {
+  group('MutationStatusStepper — PRD V1.1 Workflow (6 steps)', () {
+    testWidgets('renders all 6 workflow steps', (tester) async {
       final mutation = createDummyMutation(
         status: MutationStatus.submitted,
-        requiresKadivApproval: false,
-      );
-      await tester.pumpWidget(createWidget(
-        status: MutationStatus.submitted,
-        mutation: mutation,
-      ));
-
-      expect(find.text('Diajukan'), findsOneWidget);
-      expect(find.text('Approval Kabag'), findsOneWidget);
-      expect(find.text('Update Aset'), findsOneWidget);
-      expect(find.text('Konfirmasi'), findsOneWidget);
-      expect(find.text('Selesai'), findsOneWidget);
-
-      // Approval Kadiv must NOT appear
-      expect(find.text('Approval Kadiv'), findsNothing);
-      expect(find.text('Verifikasi Operator'), findsNothing);
-    });
-
-    testWidgets('submitted: 0 checkmarks, Diajukan is active/current', (tester) async {
-      final mutation = createDummyMutation(
-        status: MutationStatus.submitted,
-        requiresKadivApproval: false,
       );
       await tester.pumpWidget(createWidget(
         status: MutationStatus.submitted,
         mutation: mutation,
       ));
 
-      // No steps checked yet (Diajukan is waiting for verification)
-      expect(find.byIcon(Icons.check), findsNothing);
-      expect(find.byIcon(Icons.close), findsNothing);
-    });
-
-    testWidgets('waitingKabagApproval: 1 checkmark (Diajukan completed)', (tester) async {
-      final mutation = createDummyMutation(
-        status: MutationStatus.waitingKabagApproval,
-        requiresKadivApproval: false,
-      );
-      await tester.pumpWidget(createWidget(
-        status: MutationStatus.waitingKabagApproval,
-        mutation: mutation,
-      ));
-
-      expect(find.byIcon(Icons.check), findsNWidgets(1));
-    });
-
-    testWidgets('approved (without Kadiv): 2 checkmarks (Diajukan & Kabag)', (tester) async {
-      final mutation = createDummyMutation(
-        status: MutationStatus.approved,
-        requiresKadivApproval: false,
-      );
-      await tester.pumpWidget(createWidget(
-        status: MutationStatus.approved,
-        mutation: mutation,
-      ));
-
-      expect(find.byIcon(Icons.check), findsNWidgets(2));
-    });
-
-    testWidgets('pendingConfirmation (without Kadiv): 3 checkmarks (Diajukan, Kabag, Update Aset)', (tester) async {
-      final mutation = createDummyMutation(
-        status: MutationStatus.pendingConfirmation,
-        requiresKadivApproval: false,
-      );
-      await tester.pumpWidget(createWidget(
-        status: MutationStatus.pendingConfirmation,
-        mutation: mutation,
-      ));
-
-      expect(find.byIcon(Icons.check), findsNWidgets(3));
-    });
-
-    testWidgets('completed (without Kadiv): all 5 steps checked', (tester) async {
-      final mutation = createDummyMutation(
-        status: MutationStatus.completed,
-        requiresKadivApproval: false,
-      );
-      await tester.pumpWidget(createWidget(
-        status: MutationStatus.completed,
-        mutation: mutation,
-      ));
-
-      expect(find.byIcon(Icons.check), findsNWidgets(5));
-    });
-
-    testWidgets('returned: Diajukan shows alert icon and 0 checkmarks', (tester) async {
-      final mutation = createDummyMutation(
-        status: MutationStatus.returned,
-        returnReason: 'Harap perbaiki surat pengantar',
-        requiresKadivApproval: false,
-      );
-      await tester.pumpWidget(createWidget(
-        status: MutationStatus.returned,
-        mutation: mutation,
-      ));
-
-      expect(find.byIcon(Icons.check), findsNothing);
-      expect(find.byIcon(Icons.close), findsOneWidget);
-    });
-
-    testWidgets('rejected by Kabag: 1 checkmark (Diajukan) and alert on Kabag', (tester) async {
-      final mutation = createDummyMutation(
-        status: MutationStatus.rejected,
-        rejectionReason: 'Tidak memenuhi urgensi',
-        requiresKadivApproval: false,
-      );
-      await tester.pumpWidget(createWidget(
-        status: MutationStatus.rejected,
-        mutation: mutation,
-      ));
-
-      expect(find.byIcon(Icons.check), findsNWidgets(1));
-      expect(find.byIcon(Icons.close), findsOneWidget);
-    });
-  });
-
-  group('MutationStatusStepper — Flow with Kadiv (6 steps)', () {
-    testWidgets('renders all 6 steps when requiresKadivApproval is true', (tester) async {
-      final mutation = createDummyMutation(
-        status: MutationStatus.submitted,
-        requiresKadivApproval: true,
-      );
-      await tester.pumpWidget(createWidget(
-        status: MutationStatus.submitted,
-        mutation: mutation,
-      ));
-
-      expect(find.text('Diajukan'), findsOneWidget);
-      expect(find.text('Approval Kabag'), findsOneWidget);
-      expect(find.text('Approval Kadiv'), findsOneWidget);
-      expect(find.text('Update Aset'), findsOneWidget);
+      expect(find.text('Pengajuan'), findsOneWidget);
+      expect(find.text('Kelengkapan'), findsOneWidget);
+      expect(find.text('Verifikasi Aset'), findsOneWidget);
+      expect(find.text('Approval Final'), findsOneWidget);
       expect(find.text('Konfirmasi'), findsOneWidget);
       expect(find.text('Selesai'), findsOneWidget);
     });
 
-    testWidgets('waitingKadivApproval: 2 checkmarks (Diajukan, Kabag) and Kadiv current', (tester) async {
+    testWidgets('submitted: step 1 current, no checkmarks on subsequent steps', (tester) async {
       final mutation = createDummyMutation(
-        status: MutationStatus.waitingKadivApproval,
-        requiresKadivApproval: true,
-      );
-      await tester.pumpWidget(createWidget(
-        status: MutationStatus.waitingKadivApproval,
-        mutation: mutation,
-      ));
-
-      expect(find.byIcon(Icons.check), findsNWidgets(2));
-    });
-
-    testWidgets('approved with Kadiv: 3 checkmarks (Diajukan, Kabag, Kadiv)', (tester) async {
-      final mutation = createDummyMutation(
-        status: MutationStatus.approved,
-        requiresKadivApproval: true,
-      );
-      await tester.pumpWidget(createWidget(
-        status: MutationStatus.approved,
-        mutation: mutation,
-      ));
-
-      expect(find.byIcon(Icons.check), findsNWidgets(3));
-    });
-
-    testWidgets('pendingConfirmation with Kadiv: 4 checkmarks', (tester) async {
-      final mutation = createDummyMutation(
-        status: MutationStatus.pendingConfirmation,
-        requiresKadivApproval: true,
-      );
-      await tester.pumpWidget(createWidget(
-        status: MutationStatus.pendingConfirmation,
-        mutation: mutation,
-      ));
-
-      expect(find.byIcon(Icons.check), findsNWidgets(4));
-    });
-
-    testWidgets('completed with Kadiv: all 6 checkmarks', (tester) async {
-      final mutation = createDummyMutation(
-        status: MutationStatus.completed,
-        requiresKadivApproval: true,
-      );
-      await tester.pumpWidget(createWidget(
-        status: MutationStatus.completed,
-        mutation: mutation,
-      ));
-
-      expect(find.byIcon(Icons.check), findsNWidgets(6));
-    });
-
-    testWidgets('rejected by Kadiv: 2 checkmarks (Diajukan, Kabag) and alert on Kadiv', (tester) async {
-      final mutation = createDummyMutation(
-        status: MutationStatus.rejected,
-        kadivRejectionReason: 'Anggaran divisi tidak mencukupi',
-        kadivRejectedAt: DateTime(2026, 9, 25),
-        requiresKadivApproval: true,
-      );
-      await tester.pumpWidget(createWidget(
-        status: MutationStatus.rejected,
-        mutation: mutation,
-      ));
-
-      expect(find.byIcon(Icons.check), findsNWidgets(2));
-      expect(find.byIcon(Icons.close), findsOneWidget);
-    });
-  });
-
-  group('MutationTrackingHelper — 13 Mandatory Scenarios Unit Test', () {
-    test('1. New submission', () {
-      final steps = MutationTrackingHelper.buildTrackingSteps(
         status: MutationStatus.submitted,
-        requiresKadivApproval: false,
       );
-      expect(steps.length, 5);
-      expect(steps[0].state, TrackingStepState.current);
-      expect(steps[1].state, TrackingStepState.upcoming);
-      expect(MutationTrackingHelper.getActiveStageNumber(steps), 1);
-    });
+      await tester.pumpWidget(createWidget(
+        status: MutationStatus.submitted,
+        mutation: mutation,
+      ));
 
-    test('2. Waiting Kabag', () {
-      final steps = MutationTrackingHelper.buildTrackingSteps(
-        status: MutationStatus.waitingKabagApproval,
-        requiresKadivApproval: false,
+      final steps = MutationTrackingHelper.getStepsForMutation(
+        MutationStatus.submitted,
+        mutation: mutation,
       );
-      expect(steps[0].state, TrackingStepState.completed);
+      expect(steps.length, 6);
       expect(steps[1].state, TrackingStepState.current);
       expect(steps[2].state, TrackingStepState.upcoming);
-      expect(MutationTrackingHelper.getActiveStageNumber(steps), 2);
     });
 
-    test('3. Kabag approved without Kadiv', () {
-      final steps = MutationTrackingHelper.buildTrackingSteps(
-        status: MutationStatus.approved,
-        requiresKadivApproval: false,
+    testWidgets('waitingAssetVerification: step 1 and 2 completed, step 3 current', (tester) async {
+      final mutation = createDummyMutation(
+        status: MutationStatus.waitingAssetVerification,
       );
-      expect(steps.length, 5);
+      await tester.pumpWidget(createWidget(
+        status: MutationStatus.waitingAssetVerification,
+        mutation: mutation,
+      ));
+
+      final steps = MutationTrackingHelper.getStepsForMutation(
+        MutationStatus.waitingAssetVerification,
+        mutation: mutation,
+      );
       expect(steps[0].state, TrackingStepState.completed);
       expect(steps[1].state, TrackingStepState.completed);
-      expect(steps[2].title, 'Disetujui — Menunggu Update Aset');
       expect(steps[2].state, TrackingStepState.current);
-      expect(MutationTrackingHelper.getActiveStageNumber(steps), 3);
     });
 
-    test('4. Waiting Kadiv', () {
-      final steps = MutationTrackingHelper.buildTrackingSteps(
-        status: MutationStatus.waitingKadivApproval,
-        requiresKadivApproval: true,
+    testWidgets('waitingDivisionHeadApproval: step 1-3 completed, step 4 current', (tester) async {
+      final mutation = createDummyMutation(
+        status: MutationStatus.waitingDivisionHeadApproval,
       );
-      expect(steps.length, 6);
-      expect(steps[0].state, TrackingStepState.completed);
-      expect(steps[1].state, TrackingStepState.completed);
-      expect(steps[2].title, 'Approval Kepala Divisi (Kadiv)');
-      expect(steps[2].state, TrackingStepState.current);
-      expect(MutationTrackingHelper.getActiveStageNumber(steps), 3);
-    });
+      await tester.pumpWidget(createWidget(
+        status: MutationStatus.waitingDivisionHeadApproval,
+        mutation: mutation,
+      ));
 
-    test('5. Kadiv approved', () {
-      final steps = MutationTrackingHelper.buildTrackingSteps(
-        status: MutationStatus.approved,
-        requiresKadivApproval: true,
+      final steps = MutationTrackingHelper.getStepsForMutation(
+        MutationStatus.waitingDivisionHeadApproval,
+        mutation: mutation,
       );
-      expect(steps.length, 6);
       expect(steps[0].state, TrackingStepState.completed);
       expect(steps[1].state, TrackingStepState.completed);
       expect(steps[2].state, TrackingStepState.completed);
-      expect(steps[3].title, 'Disetujui — Menunggu Update Aset');
       expect(steps[3].state, TrackingStepState.current);
-      expect(MutationTrackingHelper.getActiveStageNumber(steps), 4);
     });
 
-    test('6. Waiting confirmation (pendingConfirmation)', () {
-      final steps = MutationTrackingHelper.buildTrackingSteps(
-        status: MutationStatus.pendingConfirmation,
-        requiresKadivApproval: false,
+    testWidgets('waitingConfirmation: step 1-4 completed, step 5 current', (tester) async {
+      final mutation = createDummyMutation(
+        status: MutationStatus.waitingConfirmation,
+      );
+      await tester.pumpWidget(createWidget(
+        status: MutationStatus.waitingConfirmation,
+        mutation: mutation,
+      ));
+
+      final steps = MutationTrackingHelper.getStepsForMutation(
+        MutationStatus.waitingConfirmation,
+        mutation: mutation,
       );
       expect(steps[0].state, TrackingStepState.completed);
       expect(steps[1].state, TrackingStepState.completed);
-      expect(steps[2].state, TrackingStepState.completed); // Update Aset completed!
-      expect(steps[3].state, TrackingStepState.current); // Waiting confirmation
-      expect(steps[3].subtitle.contains('Staff Aset telah menyelesaikan update aset'), isTrue);
-      expect(steps[4].state, TrackingStepState.upcoming);
+      expect(steps[2].state, TrackingStepState.completed);
+      expect(steps[3].state, TrackingStepState.completed);
+      expect(steps[4].state, TrackingStepState.current);
     });
 
-    test('7. Completed', () {
-      final steps = MutationTrackingHelper.buildTrackingSteps(
+    testWidgets('completed: all 6 steps completed', (tester) async {
+      final mutation = createDummyMutation(
         status: MutationStatus.completed,
-        requiresKadivApproval: false,
+      );
+      await tester.pumpWidget(createWidget(
+        status: MutationStatus.completed,
+        mutation: mutation,
+      ));
+
+      final steps = MutationTrackingHelper.getStepsForMutation(
+        MutationStatus.completed,
+        mutation: mutation,
       );
       expect(steps.every((s) => s.state == TrackingStepState.completed), isTrue);
-      expect(steps.last.title, 'Selesai');
-      expect(MutationTrackingHelper.getActiveStageNumber(steps), 5);
     });
 
-    test('8. Returned', () {
-      final steps = MutationTrackingHelper.buildTrackingSteps(
+    testWidgets('returned by Operator: shows alert on step 2', (tester) async {
+      final mutation = createDummyMutation(
         status: MutationStatus.returned,
-        returnReason: 'Foto fisik aset buram',
-        requiresKadivApproval: false,
+        returnReason: 'Dokumen SK belum lengkap',
       );
-      expect(steps[0].state, TrackingStepState.alert);
-      expect(steps[0].subtitle.contains('Foto fisik aset buram'), isTrue);
-      expect(steps[1].state, TrackingStepState.upcoming);
+      await tester.pumpWidget(createWidget(
+        status: MutationStatus.returned,
+        mutation: mutation,
+      ));
+
+      final steps = MutationTrackingHelper.getStepsForMutation(
+        MutationStatus.returned,
+        mutation: mutation,
+      );
+      expect(steps[1].state, TrackingStepState.alert);
+      expect(steps[1].subtitle, contains('Dokumen SK belum lengkap'));
     });
 
-    test('9. Rejected (Kabag vs Kadiv)', () {
-      // Kabag rejection
-      final kabagReject = MutationTrackingHelper.buildTrackingSteps(
-        status: MutationStatus.rejected,
-        rejectionReason: 'Tidak ada anggaran relokasi',
-        requiresKadivApproval: false,
+    testWidgets('returned by Bagian Aset: shows alert on step 3', (tester) async {
+      final mutation = createDummyMutation(
+        status: MutationStatus.returned,
+        assetReturnReason: 'Aset tidak berada di lokasi asal',
       );
-      expect(kabagReject[0].state, TrackingStepState.completed);
-      expect(kabagReject[1].state, TrackingStepState.alert);
-      expect(kabagReject[1].subtitle.contains('Tidak ada anggaran relokasi'), isTrue);
+      await tester.pumpWidget(createWidget(
+        status: MutationStatus.returned,
+        mutation: mutation,
+      ));
 
-      // Kadiv rejection
-      final kadivReject = MutationTrackingHelper.buildTrackingSteps(
-        status: MutationStatus.rejected,
-        kadivRejectionReason: 'Ditolak Kadiv',
-        kadivRejectedAt: DateTime(2026, 9, 25),
-        requiresKadivApproval: true,
+      final steps = MutationTrackingHelper.getStepsForMutation(
+        MutationStatus.returned,
+        mutation: mutation,
       );
-      expect(kadivReject[0].state, TrackingStepState.completed);
-      expect(kadivReject[1].state, TrackingStepState.completed);
-      expect(kadivReject[2].state, TrackingStepState.alert);
-      expect(kadivReject[2].subtitle.contains('Ditolak Kadiv'), isTrue);
+      expect(steps[2].state, TrackingStepState.alert);
+      expect(steps[2].subtitle, contains('Aset tidak berada di lokasi asal'));
     });
 
-    test('10 & 11. Registered vs Unregistered Asset works seamlessly', () {
+    testWidgets('rejected by Pemimpin Divisi: shows alert on step 4', (tester) async {
+      final mutation = createDummyMutation(
+        status: MutationStatus.rejected,
+        kadivRejectionReason: 'Pengajuan ditolak oleh Pemimpin Divisi',
+      );
+      await tester.pumpWidget(createWidget(
+        status: MutationStatus.rejected,
+        mutation: mutation,
+      ));
+
+      final steps = MutationTrackingHelper.getStepsForMutation(
+        MutationStatus.rejected,
+        mutation: mutation,
+      );
+      expect(steps[3].state, TrackingStepState.alert);
+      expect(steps[3].subtitle, contains('Pengajuan ditolak oleh Pemimpin Divisi'));
+    });
+  });
+
+  group('MutationTrackingHelper — Unit Tests', () {
+    test('getActiveStageNumber returns correct stage number', () {
+      final subSteps = MutationTrackingHelper.buildTrackingSteps(
+        status: MutationStatus.submitted,
+      );
+      expect(MutationTrackingHelper.getActiveStageNumber(subSteps), 1);
+
+      final assetSteps = MutationTrackingHelper.buildTrackingSteps(
+        status: MutationStatus.waitingAssetVerification,
+      );
+      expect(MutationTrackingHelper.getActiveStageNumber(assetSteps), 3);
+
+      final divSteps = MutationTrackingHelper.buildTrackingSteps(
+        status: MutationStatus.waitingDivisionHeadApproval,
+      );
+      expect(MutationTrackingHelper.getActiveStageNumber(divSteps), 4);
+
+      final confSteps = MutationTrackingHelper.buildTrackingSteps(
+        status: MutationStatus.waitingConfirmation,
+      );
+      expect(MutationTrackingHelper.getActiveStageNumber(confSteps), 5);
+
+      final compSteps = MutationTrackingHelper.buildTrackingSteps(
+        status: MutationStatus.completed,
+      );
+      expect(MutationTrackingHelper.getActiveStageNumber(compSteps), 6);
+    });
+
+    test('Registered vs Unregistered Asset works seamlessly', () {
       final registered = createDummyMutation(
         status: MutationStatus.submitted,
         isUnregistered: false,
@@ -408,26 +273,10 @@ void main() {
       final regSteps = MutationTrackingHelper.getStepsForMutation(registered.status, mutation: registered);
       final unregSteps = MutationTrackingHelper.getStepsForMutation(unreg.status, mutation: unreg);
 
-      expect(regSteps.length, 5);
-      expect(unregSteps.length, 5);
+      expect(regSteps.length, 6);
+      expect(unregSteps.length, 6);
       expect(regSteps[0].state, TrackingStepState.current);
       expect(unregSteps[0].state, TrackingStepState.current);
-    });
-
-    test('12 & 13. requiresKadivApproval true vs false determines steps count', () {
-      final withKadiv = MutationTrackingHelper.buildTrackingSteps(
-        status: MutationStatus.submitted,
-        requiresKadivApproval: true,
-      );
-      final withoutKadiv = MutationTrackingHelper.buildTrackingSteps(
-        status: MutationStatus.submitted,
-        requiresKadivApproval: false,
-      );
-
-      expect(withKadiv.length, 6);
-      expect(withoutKadiv.length, 5);
-      expect(withKadiv.any((s) => s.key == 'waitingKadivApproval'), isTrue);
-      expect(withoutKadiv.any((s) => s.key == 'waitingKadivApproval'), isFalse);
     });
   });
 }

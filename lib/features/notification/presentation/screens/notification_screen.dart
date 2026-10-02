@@ -77,6 +77,11 @@ class _NotificationScreenState extends ConsumerState<NotificationScreen> {
           ':id',
           mutationId,
         ),
+      UserRole.bagianAset =>
+        RouteNames.bagianAsetVerificationDetailPath.replaceFirst(
+          ':id',
+          mutationId,
+        ),
       UserRole.kabagAset => RouteNames.kabagApprovalDetailPath.replaceFirst(
         ':id',
         mutationId,
@@ -186,6 +191,8 @@ class _NotificationScreenState extends ConsumerState<NotificationScreen> {
         return 'MUTASIKU';
       case UserRole.operator:
         return 'MUTASIKU OPS';
+      case UserRole.bagianAset:
+        return 'MUTASIKU ASET';
       case UserRole.kabagAset:
         return 'MUTASIKU KABAG';
       case UserRole.kadiv:
@@ -668,222 +675,6 @@ class _NotificationScreenState extends ConsumerState<NotificationScreen> {
             ),
           ),
         ),
-      ),
-    );
-  }
-
-  // ── Bottom nav (gaya dashboard _buildBottomNav) ─────────────────────────
-
-  Widget _buildBottomNav(UserRole role) {
-    final items = _navItemsFor(role);
-
-    return SafeArea(
-      top: false,
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
-          decoration: BoxDecoration(
-            color: _S.white.withValues(alpha: 0.95),
-            borderRadius: BorderRadius.circular(999),
-            border: Border.all(color: _S.slate200.withValues(alpha: 0.8)),
-            boxShadow: [
-              BoxShadow(
-                color: const Color(0xFF0F172A).withValues(alpha: 0.06),
-                blurRadius: 16,
-                offset: const Offset(0, 4),
-              ),
-            ],
-          ),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceAround,
-            children: [
-              for (final item in items)
-                _navItem(
-                  icon: item.$1,
-                  label: item.$2,
-                  active: item.$3,
-                  onTap: () {
-                    if (!item.$3) context.go(item.$4);
-                  },
-                ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  /// (icon, label, isActive, route)
-  List<(IconData, String, bool, String)> _navItemsFor(UserRole role) {
-    switch (role) {
-      case UserRole.pemohon:
-        return [
-          (
-            Icons.home_rounded,
-            'Beranda',
-            false,
-            RouteNames.pemohonDashboardPath,
-          ),
-          (
-            Icons.sync_alt_rounded,
-            'Mutasi',
-            false,
-            RouteNames.pemohonMutasiPath,
-          ),
-          (
-            Icons.notifications,
-            'Notifikasi',
-            true,
-            RouteNames.pemohonNotificationsPath,
-          ),
-          (
-            Icons.person_outline_rounded,
-            'Profil',
-            false,
-            RouteNames.pemohonProfilePath,
-          ),
-        ];
-      case UserRole.operator:
-        return [
-          (
-            Icons.home_rounded,
-            'Beranda',
-            false,
-            RouteNames.operatorDashboardPath,
-          ),
-          (
-            Icons.assignment_outlined,
-            'Pengajuan',
-            false,
-            RouteNames.operatorMutationsPath,
-          ),
-          (
-            Icons.notifications,
-            'Notifikasi',
-            true,
-            RouteNames.operatorNotificationsPath,
-          ),
-          (
-            Icons.person_outline_rounded,
-            'Profil',
-            false,
-            RouteNames.profilePath,
-          ),
-        ];
-      case UserRole.kabagAset:
-        return [
-          (Icons.home_rounded, 'Beranda', false, RouteNames.kabagDashboardPath),
-          (
-            Icons.fact_check_outlined,
-            'Persetujuan',
-            false,
-            RouteNames.kabagApprovalsPath,
-          ),
-          (
-            Icons.notifications,
-            'Notifikasi',
-            true,
-            RouteNames.kabagNotificationsPath,
-          ),
-          (
-            Icons.person_outline_rounded,
-            'Profil',
-            false,
-            RouteNames.profilePath,
-          ),
-        ];
-      case UserRole.kadiv:
-        return [
-          (Icons.home_rounded, 'Beranda', false, RouteNames.kadivDashboardPath),
-          (
-            Icons.fact_check_outlined,
-            'Persetujuan',
-            false,
-            RouteNames.kadivApprovalsPath,
-          ),
-          (
-            Icons.notifications,
-            'Notifikasi',
-            true,
-            RouteNames.kadivNotificationsPath,
-          ),
-          (
-            Icons.person_outline_rounded,
-            'Profil',
-            false,
-            RouteNames.profilePath,
-          ),
-        ];
-      case UserRole.staffAset:
-        return [
-          (Icons.home_rounded, 'Beranda', false, RouteNames.staffDashboardPath),
-          (
-            Icons.inventory_2_outlined,
-            'Mutasi',
-            false,
-            RouteNames.staffMutationsPath,
-          ),
-          (
-            Icons.notifications,
-            'Notifikasi',
-            true,
-            RouteNames.staffNotificationsPath,
-          ),
-          (
-            Icons.person_outline_rounded,
-            'Profil',
-            false,
-            RouteNames.profilePath,
-          ),
-        ];
-      case UserRole.admin:
-        return [
-          (Icons.home_rounded, 'Beranda', false, RouteNames.adminDashboardPath),
-          (Icons.people_outline, 'Users', false, RouteNames.adminUsersPath),
-          (Icons.notifications, 'Notifikasi', true, RouteNames.profilePath),
-          (
-            Icons.person_outline_rounded,
-            'Profil',
-            false,
-            RouteNames.profilePath,
-          ),
-        ];
-    }
-  }
-
-  Widget _navItem({
-    required IconData icon,
-    required String label,
-    required bool active,
-    required VoidCallback onTap,
-  }) {
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(999),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-            decoration: active
-                ? BoxDecoration(
-                    color: _S.navy.withValues(alpha: 0.1),
-                    borderRadius: BorderRadius.circular(999),
-                  )
-                : null,
-            child: Icon(icon, size: 20, color: active ? _S.navy : _S.slate400),
-          ),
-          const SizedBox(height: 2),
-          Text(
-            label,
-            style: _t(
-              size: 10,
-              w: active ? FontWeight.w700 : FontWeight.w500,
-              color: active ? _S.navy : _S.slate400,
-            ),
-          ),
-        ],
       ),
     );
   }

@@ -109,7 +109,7 @@ void main() {
     );
   }
 
-  testWidgets('KadivDashboardScreen displays greeting, stats, and action button',
+  testWidgets('KadivDashboardScreen displays greeting, action button, category grid, and recent list',
       (tester) async {
     await tester.pumpWidget(createTestWidget(const KadivDashboardScreen()));
     await tester.pumpAndSettle();
@@ -117,13 +117,16 @@ void main() {
     // Verifikasi teks greeting
     expect(find.text('Halo, Drs. Ahmad Dahlan (Kadiv)'), findsOneWidget);
 
-    // Verifikasi stat cards
-    expect(find.text('Menunggu Approval'), findsOneWidget);
-    expect(find.text('Disetujui'), findsOneWidget);
-    expect(find.text('Ditolak'), findsOneWidget);
-
     // Verifikasi tombol primary action
     expect(find.byKey(const Key('btn_lihat_approval_kadiv')), findsOneWidget);
+
+    // Verifikasi 3 stat card tidak ada di tampilan dashboard
+    expect(find.text('Menunggu Approval'), findsNothing);
+    expect(find.text('Disetujui'), findsNothing);
+    expect(find.text('Ditolak'), findsNothing);
+
+    // Verifikasi kategori aset
+    expect(find.text('Kategori Aset'), findsOneWidget);
 
     // Verifikasi section pengajuan terbaru
     expect(find.text('Pengajuan Terbaru'), findsOneWidget);
@@ -144,8 +147,8 @@ void main() {
     expect(find.byKey(const Key('dropdown_filter_kadiv_status')), findsOneWidget);
     expect(find.byKey(const Key('dropdown_filter_kadiv_sort')), findsOneWidget);
 
-    // Verifikasi adanya item mut_005 yang berstatus Menunggu Approval Kadiv
-    expect(find.text('Menunggu Approval Kadiv'), findsWidgets);
+    // Verifikasi adanya item mut_005 yang berstatus Menunggu Approval Pemimpin Divisi
+    expect(find.text('Menunggu Approval Pemimpin Divisi'), findsWidgets);
     expect(find.text('ELEKTRONIK-2026-00088'), findsOneWidget);
   });
 
@@ -164,7 +167,7 @@ void main() {
 
     // Verifikasi Ticket & Status
     expect(find.text('ELEKTRONIK-2026-00088'), findsOneWidget);
-    expect(find.text('Menunggu Approval Kadiv'), findsWidgets);
+    expect(find.text('Menunggu Approval Pemimpin Divisi'), findsWidgets);
 
     // Verifikasi HASIL APPROVAL KABAG ditampilkan (Scope PRD & Task)
     expect(find.text('Hasil Approval Kabag Aset'), findsOneWidget);
@@ -243,14 +246,14 @@ void main() {
     await tester.pump(const Duration(milliseconds: 500));
     await tester.pump(const Duration(milliseconds: 500));
 
-    // Verifikasi pada repository bahwa status mut_005 berubah menjadi approved
+    // Verifikasi pada repository bahwa status mut_005 berubah menjadi waitingConfirmation
     Mutation? updatedMutation;
     await tester.runAsync(() async {
       final updatedResult = await mutationRepository.getMutationById('mut_005');
       updatedMutation = updatedResult.dataOrNull;
     });
     expect(updatedMutation, isNotNull);
-    expect(updatedMutation!.status, MutationStatus.approved);
+    expect(updatedMutation!.status, MutationStatus.waitingConfirmation);
     expect(updatedMutation!.kadivApprovedBy, 'Drs. Ahmad Dahlan (Kadiv)');
     expect(updatedMutation!.kadivApprovedAt, isNotNull);
   });
@@ -328,9 +331,9 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Profil'), findsWidgets);
-    expect(find.text('Drs. Ahmad Dahlan (Kadiv)'), findsOneWidget);
-    expect(find.text('kadiv@mutasiku.id'), findsOneWidget);
-    expect(find.text('Kadiv'), findsWidgets);
-    expect(find.text('Informasi Akun'), findsOneWidget);
+    expect(find.text('Drs. Ahmad Dahlan (Kadiv)'), findsWidgets);
+    expect(find.text('kadiv@mutasiku.id'), findsWidgets);
+    expect(find.text('Pemimpin Divisi'), findsWidgets);
+    expect(find.text('INFORMASI AKUN'), findsOneWidget);
   });
 }

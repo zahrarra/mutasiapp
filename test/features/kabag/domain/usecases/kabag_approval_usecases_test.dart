@@ -17,6 +17,9 @@ import 'package:mutasiku/features/mutation/domain/usecases/get_kabag_approvals_u
 import 'package:mutasiku/features/mutation/domain/usecases/reject_mutation_kabag_usecase.dart';
 
 class FakeKabagMutationRepository implements MutationRepository {
+  @override
+  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
+
   final List<Mutation> mutations;
 
   FakeKabagMutationRepository(this.mutations);

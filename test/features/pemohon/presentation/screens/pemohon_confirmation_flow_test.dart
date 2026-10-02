@@ -39,6 +39,39 @@ class _FakeMutationRepository implements MutationRepository {
   }
 
   @override
+  Future<Result<Mutation>> confirmMutationResult({
+    required String mutationId,
+    required String confirmedBy,
+    required bool isSesuai,
+    String? reason,
+  }) async {
+    final current = _mutations[mutationId];
+    if (current == null) {
+      return const Result.failure(NotFoundFailure(message: 'Not found'));
+    }
+    if (isSesuai) {
+      final updatedAsset = current.asset.copyWith(
+        status: AssetStatus.available,
+        location: current.targetLocation,
+        pic: current.targetPic,
+      );
+      final updated = current.copyWith(
+        asset: updatedAsset,
+        status: MutationStatus.completed,
+      );
+      _mutations[mutationId] = updated;
+      return Result.success(updated);
+    } else {
+      final updated = current.copyWith(
+        status: MutationStatus.waitingAssetVerification,
+        confirmationReason: reason,
+      );
+      _mutations[mutationId] = updated;
+      return Result.success(updated);
+    }
+  }
+
+  @override
   Future<Result<Mutation>> confirmMutation({
     required String mutationId,
     required String confirmedBy,
@@ -214,16 +247,14 @@ void main() {
 
       // Check header and status
       expect(find.text('ELK-2026-00001'), findsOneWidget);
-      expect(find.text('Menunggu Konfirmasi'), findsAtLeastNWidgets(1));
+      expect(find.textContaining('Menunggu Konfirmasi'), findsAtLeastNWidgets(1));
 
       // Check asset card displays updated asset information
       expect(find.text('MacBook Pro M3 Max'), findsOneWidget);
       expect(find.text('AST-ELK-2026-0001'), findsOneWidget);
-      expect(find.text('Lokasi: Cabang Bandung'), findsOneWidget);
-      expect(find.text('PIC: Rudi Hermawan'), findsOneWidget);
 
       // Check Staff Aset update banner and route
-      expect(find.textContaining('Diperbarui oleh Staff Aset: Ahmad Staff Aset'), findsOneWidget);
+      expect(find.textContaining('Ahmad Staff Aset'), findsOneWidget);
       expect(find.text('Kantor Pusat'), findsOneWidget);
       expect(find.text('Cabang Bandung'), findsAtLeastNWidgets(1));
       expect(find.text('Budi Santoso'), findsOneWidget);
@@ -305,6 +336,10 @@ void main() {
         staffUpdatedBy: 'Ahmad Staff Aset',
       );
       final repo = _FakeMutationRepository([mutation]);
+
+      tester.view.physicalSize = const Size(1080, 2400);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.resetPhysicalSize);
 
       await tester.pumpWidget(
         ProviderScope(
@@ -396,7 +431,7 @@ void main() {
       expect(find.text('Mutasi Tidak Sesuai'), findsOneWidget);
 
       // Try submitting without reason (validation test)
-      await tester.tap(find.text('Perbaiki Pengajuan'));
+      await tester.tap(find.text('Kirim Laporan'));
       await tester.pumpAndSettle();
       expect(find.text('Alasan ketidaksesuaian wajib diisi'), findsOneWidget);
 
@@ -408,16 +443,13 @@ void main() {
       await tester.pumpAndSettle();
 
       // Submit
-      await tester.tap(find.text('Perbaiki Pengajuan'));
+      await tester.tap(find.text('Kirim Laporan'));
       await tester.pumpAndSettle();
 
-      // Verify repository updated with returned status and real returnReason
+      // Verify repository updated with waitingAssetVerification status and real confirmationReason (PRD V1.1 §6.6)
       final checkRepo = await repo.getMutationById('mut_conf_tidak_sesuai');
-      expect(checkRepo.dataOrNull!.status, MutationStatus.returned);
-      expect(checkRepo.dataOrNull!.returnReason, 'Barang yang diterima tipe berbeda dari pengajuan');
-
-      // Verify navigated to Edit screen
-      expect(find.text('Halaman Edit Pengajuan'), findsOneWidget);
+      expect(checkRepo.dataOrNull!.status, MutationStatus.waitingAssetVerification);
+      expect(checkRepo.dataOrNull!.confirmationReason, 'Barang yang diterima tipe berbeda dari pengajuan');
     });
   });
 }

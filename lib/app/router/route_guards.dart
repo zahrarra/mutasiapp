@@ -27,12 +27,50 @@ abstract final class RouteGuards {
       return true;
     }
 
+    // Rute alur aktif resmi PRD V1.1
+    final isActiveFlow = location.startsWith('/pemohon') ||
+        location.startsWith('/operator') ||
+        location.startsWith('/bagian-aset') ||
+        location.startsWith('/kadiv');
+
+    // Legacy Kabag & Staff Aset dilarang masuk ke active flow resmi
+    if (role == UserRole.staffAset || role == UserRole.kabagAset) {
+      if (isActiveFlow) return false;
+      if (location.startsWith('/staff-aset/mutations')) return false;
+    }
+
     // Boleh mengakses path sesuai role sendiri.
     if (location.startsWith(role.routePrefix)) {
       return true;
     }
+    if (role == UserRole.bagianAset && location.startsWith('/kabag')) {
+      return true;
+    }
 
     return false;
+  }
+
+  /// Memetakan path legacy /kabag ke rute resmi /bagian-aset PRD V1.1.
+  static String mapKabagToBagianAset(String location) {
+    if (location == RouteNames.kabagDashboardPath) {
+      return RouteNames.bagianAsetDashboardPath;
+    }
+    if (location == RouteNames.kabagApprovalsPath) {
+      return RouteNames.bagianAsetVerificationsPath;
+    }
+    if (location.endsWith('/reject')) {
+      return location
+          .replaceFirst('/kabag/approvals', '/bagian-aset/verifications')
+          .replaceFirst('/reject', '/return');
+    }
+    if (location.startsWith('/kabag/approvals/')) {
+      return location.replaceFirst(
+          '/kabag/approvals', '/bagian-aset/verifications');
+    }
+    if (location == RouteNames.kabagNotificationsPath) {
+      return RouteNames.bagianAsetNotificationsPath;
+    }
+    return RouteNames.bagianAsetDashboardPath;
   }
 
   /// Redirect handler untuk go_router.
@@ -69,7 +107,14 @@ abstract final class RouteGuards {
       return defaultTarget;
     }
 
-    // 3. Memeriksa RBAC untuk route yang terproteksi.
+    // 3. Pengalihan otomatis rute legacy /kabag ke /bagian-aset resmi V1.1
+    if (isAuthenticated && currentLocation.startsWith('/kabag')) {
+      final target = mapKabagToBagianAset(currentLocation);
+      debugPrint('[RouteGuard] Redirecting legacy $currentLocation to $target');
+      return target;
+    }
+
+    // 4. Memeriksa RBAC untuk route yang terproteksi.
     if (isAuthenticated && !canAccessRoute(role, currentLocation)) {
       debugPrint(
         '[RouteGuard] Access denied for role '
@@ -79,7 +124,7 @@ abstract final class RouteGuards {
       return RouteNames.unauthorizedPath;
     }
 
-    // 4. Tidak perlu redirect.
+    // 5. Tidak perlu redirect.
     return null;
   }
 }

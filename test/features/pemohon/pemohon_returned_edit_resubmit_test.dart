@@ -353,9 +353,26 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      // Scroll and tap "Ajukan Ulang"
+      // 1. Requirement 2: jika belum diedit, tampilkan notifikasi warning dan blokir kirim ulang
       await tester.ensureVisible(find.byKey(const Key('btn_ajukan_ulang')));
       await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const Key('btn_ajukan_ulang')));
+      await tester.pumpAndSettle();
+      expect(
+        find.text(
+          'Pengajuan harus diperbaiki/diedit terlebih dahulu sebelum dikirim ulang.',
+        ),
+        findsOneWidget,
+      );
+
+      // 2. Lakukan edit field agar lolos validasi perbaikan
+      await tester.enterText(
+        find.byKey(const Key('input_edit_target_location')),
+        'Lantai 5 - Revisi Setelah Pengembalian',
+      );
+      await tester.pumpAndSettle();
+
+      // Scroll and tap "Ajukan Ulang"
       await tester.tap(find.byKey(const Key('btn_ajukan_ulang')));
       await tester.pumpAndSettle();
 

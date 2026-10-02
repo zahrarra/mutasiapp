@@ -165,7 +165,7 @@ void main() {
       }
     });
 
-    test('3. Login sebagai Kabag → hanya notification Kabag', () {
+    test('3. Login sebagai Kabag → hanya notification Kabag / Bagian Aset', () {
       final container = ProviderContainer(
         overrides: [
           authStateProvider.overrideWith((ref) => _FakeAuthNotifier(kabagUser)),
@@ -176,7 +176,35 @@ void main() {
       final notifs = container.read(roleNotificationsProvider);
       expect(notifs.isNotEmpty, isTrue);
       for (final n in notifs) {
-        expect(n.targetRole, equals(UserRole.kabagAset));
+        expect(
+          n.targetRole == UserRole.kabagAset || n.targetRole == UserRole.bagianAset,
+          isTrue,
+        );
+      }
+    });
+
+    test('3b. Login sebagai Bagian Aset → hanya notification Bagian Aset / Kabag', () {
+      const bagianAsetUser = User(
+        id: 'u_ast_01',
+        username: 'bagian_aset',
+        name: 'Staff Bagian Aset',
+        email: 'aset@mutasiku.id',
+        role: UserRole.bagianAset,
+      );
+      final container = ProviderContainer(
+        overrides: [
+          authStateProvider.overrideWith((ref) => _FakeAuthNotifier(bagianAsetUser)),
+        ],
+      );
+      addTearDown(container.dispose);
+
+      final notifs = container.read(roleNotificationsProvider);
+      expect(notifs.isNotEmpty, isTrue);
+      for (final n in notifs) {
+        expect(
+          n.targetRole == UserRole.bagianAset || n.targetRole == UserRole.kabagAset,
+          isTrue,
+        );
       }
     });
 

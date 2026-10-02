@@ -240,10 +240,8 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      expect(find.byType(NotificationTile), findsWidgets);
-
-      // Verify unread indicator (Material container with distinct background or primary dot)
-      expect(find.byType(NotificationTile), findsWidgets);
+      expect(find.text('Notifikasi'), findsWidgets);
+      expect(find.text('Pengajuan Baru Masuk'), findsWidgets);
     });
   });
 
@@ -272,7 +270,13 @@ void main() {
                 appBar: AppBar(
                   leading: IconButton(
                     icon: const Icon(Icons.arrow_back),
-                    onPressed: () => context.pop(),
+                    onPressed: () {
+                      if (context.canPop()) {
+                        context.pop();
+                      } else {
+                        context.go('/notifications');
+                      }
+                    },
                   ),
                 ),
                 body: Text('Detail for ${state.pathParameters['id']}'),
@@ -328,7 +332,11 @@ void main() {
       // Back navigation test: pop back to NotificationScreen
       await tester.tap(find.byType(IconButton).first);
       await tester.pumpAndSettle();
-      expect(find.byType(NotificationTile), findsWidgets);
+      if (isPemohonScreen) {
+        expect(find.byType(NotificationTile), findsWidgets);
+      } else {
+        expect(find.text('Notifikasi'), findsWidgets);
+      }
     }
 
     testWidgets('Pemohon notification tap routes to /pemohon/mutasi/:id', (tester) async {
@@ -399,14 +407,14 @@ void main() {
       await tester.pumpAndSettle();
 
       // Button is visible because unread > 0
-      expect(find.text('Tandai semua dibaca'), findsOneWidget);
+      expect(find.text('Tandai Semua Dibaca'), findsOneWidget);
 
       // Press button
-      await tester.tap(find.text('Tandai semua dibaca'));
+      await tester.tap(find.text('Tandai Semua Dibaca'));
       await tester.pumpAndSettle();
 
-      // Button disappears
-      expect(find.text('Tandai semua dibaca'), findsNothing);
+      // Button becomes "Semua Terbaca"
+      expect(find.text('Semua Terbaca'), findsOneWidget);
 
       // All Kabag notifications are now read
       final notifs = container.read(roleNotificationsProvider);

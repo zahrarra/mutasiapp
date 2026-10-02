@@ -9,8 +9,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../app/router/route_names.dart';
-import '../../../auth/domain/entities/user_role.dart';
 import '../../../../core/widgets/custom_floating_nav_bar.dart';
+import '../../../auth/domain/entities/user_role.dart';
+import '../../../auth/presentation/providers/auth_provider.dart';
 import '../../../mutation/domain/entities/mutation.dart';
 import '../providers/kabag_approval_provider.dart';
 
@@ -54,11 +55,12 @@ class _KabagApprovalsScreenState extends ConsumerState<KabagApprovalsScreen> {
     final asyncApprovals = ref.watch(filteredKabagApprovalsProvider);
     final sortOrder = ref.watch(kabagSortOrderProvider);
     final statusFilter = ref.watch(kabagStatusFilterProvider);
+    final role = ref.watch(authStateProvider).user?.role;
 
     final title = switch (statusFilter) {
-      KabagStatusFilter.waiting => 'Menunggu Approval',
-      KabagStatusFilter.approved => 'Disetujui',
-      KabagStatusFilter.rejected => 'Ditolak',
+      KabagStatusFilter.waiting => 'Menunggu Verifikasi',
+      KabagStatusFilter.approved => 'Lolos Verifikasi',
+      KabagStatusFilter.rejected => 'Dikembalikan',
       KabagStatusFilter.all => 'Semua Pengajuan',
     };
 
@@ -70,12 +72,12 @@ class _KabagApprovalsScreenState extends ConsumerState<KabagApprovalsScreen> {
           // ── Custom Top Bar ──────────────────────────────────────────
           _ApprovalsTopBar(
             title: title,
-            subtitle: 'Antrean Approval Kabag Aset',
+            subtitle: 'Antrean Verifikasi Data Aset',
             onBack: () {
               if (context.canPop()) {
                 context.pop();
               } else {
-                context.go(RouteNames.kabagDashboardPath);
+                context.go(RouteNames.bagianAsetDashboardPath);
               }
             },
           ),
@@ -123,7 +125,8 @@ class _KabagApprovalsScreenState extends ConsumerState<KabagApprovalsScreen> {
                                 color: _C.textPrimary),
                             items: KabagStatusFilter.values
                                 .map((s) => DropdownMenuItem(
-                                    value: s, child: Text(s.displayName)))
+                                    value: s,
+                                    child: Text(s.displayName)))
                                 .toList(),
                             onChanged: (val) {
                               if (val != null) {
@@ -187,8 +190,12 @@ class _KabagApprovalsScreenState extends ConsumerState<KabagApprovalsScreen> {
                     separatorBuilder: (_, _) => const SizedBox(height: 10),
                     itemBuilder: (context, i) => _KabagApprovalCard(
                       mutation: mutations[i],
-                      onTap: () =>
-                          context.push('/kabag/approvals/${mutations[i].id}'),
+                      onTap: () {
+                        context.push(
+                          RouteNames.bagianAsetVerificationDetailPath
+                              .replaceFirst(':id', mutations[i].id),
+                        );
+                      },
                     ),
                   ),
                 );
@@ -206,7 +213,9 @@ class _KabagApprovalsScreenState extends ConsumerState<KabagApprovalsScreen> {
         ],
       ),
       bottomNavigationBar: CustomFloatingNavBar.scaffoldBottomBar(
-        items: RoleNavConfig.getNavItemsForRole(UserRole.kabagAset),
+        items: RoleNavConfig.getNavItemsForRole(
+          role ?? UserRole.bagianAset,
+        ),
       ),
     );
   }

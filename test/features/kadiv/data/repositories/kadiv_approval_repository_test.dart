@@ -32,7 +32,7 @@ void main() {
 
       expect(result.isSuccess, true);
       final updated = result.dataOrNull!;
-      expect(updated.status, MutationStatus.approved);
+      expect(updated.status, MutationStatus.waitingConfirmation);
       expect(updated.kadivApprovedBy, 'Kadiv Test');
       expect(updated.kadivApprovedAt, isNotNull);
     });

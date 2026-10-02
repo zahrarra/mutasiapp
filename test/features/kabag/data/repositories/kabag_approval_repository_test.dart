@@ -18,10 +18,10 @@ void main() {
   });
 
   group('MutationRepositoryImpl Kabag Approval Tests', () {
-    test('approveMutationKabag updates status to approved', () async {
+    test('approveMutationKabag updates status to waitingDivisionHeadApproval', () async {
       final all = await repository.getAllMutations();
       final target = all.dataOrNull!.firstWhere(
-        (m) => m.status == MutationStatus.waitingKabagApproval,
+        (m) => m.status.isWaitingAssetVerification,
       );
 
       final result = await repository.approveMutationKabag(
@@ -32,15 +32,14 @@ void main() {
 
       expect(result.isSuccess, true);
       final updated = result.dataOrNull!;
-      expect(updated.status, MutationStatus.approved);
-      expect(updated.approvedBy, 'Kabag Test');
-      expect(updated.approvedAt, isNotNull);
+      expect(updated.status.isWaitingDivisionApproval, true);
+      expect(updated.assetVerifiedBy, 'Kabag Test');
     });
 
     test('approveMutationKabag with requiresKadivApproval sets waitingKadivApproval', () async {
       final all = await repository.getAllMutations();
       final target = all.dataOrNull!.firstWhere(
-        (m) => m.status == MutationStatus.waitingKabagApproval,
+        (m) => m.status.isWaitingAssetVerification,
       );
 
       final result = await repository.approveMutationKabag(
@@ -51,15 +50,15 @@ void main() {
 
       expect(result.isSuccess, true);
       final updated = result.dataOrNull!;
-      expect(updated.status, MutationStatus.waitingKadivApproval);
+      expect(updated.status.isWaitingDivisionApproval, true);
       expect(updated.requiresKadivApproval, true);
-      expect(updated.approvedBy, 'Kabag Test');
+      expect(updated.assetVerifiedBy, 'Kabag Test');
     });
 
-    test('rejectMutationKabag updates status to rejected with reason', () async {
+    test('rejectMutationKabag updates status to returned with reason', () async {
       final all = await repository.getAllMutations();
       final target = all.dataOrNull!.firstWhere(
-        (m) => m.status == MutationStatus.waitingKabagApproval,
+        (m) => m.status.isWaitingAssetVerification,
       );
 
       const rejectionReason = 'Aset tidak diizinkan pindah cabang.';
@@ -71,8 +70,8 @@ void main() {
 
       expect(result.isSuccess, true);
       final updated = result.dataOrNull!;
-      expect(updated.status, MutationStatus.rejected);
-      expect(updated.rejectionReason, rejectionReason);
+      expect(updated.status, MutationStatus.returned);
+      expect(updated.returnReason, rejectionReason);
       expect(updated.rejectedBy, 'Kabag Test');
       expect(updated.rejectedAt, isNotNull);
     });

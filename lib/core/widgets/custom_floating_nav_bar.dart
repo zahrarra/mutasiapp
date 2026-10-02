@@ -39,7 +39,7 @@ abstract final class RoleNavConfig {
           ),
           CustomNavItem(
             icon: Icons.swap_horiz_rounded,
-            label: 'Mutasi',
+            label: 'Mutasi Saya',
             route: RouteNames.pemohonMutasiPath,
           ),
           CustomNavItem(
@@ -58,7 +58,7 @@ abstract final class RoleNavConfig {
         return const [
           CustomNavItem(
             icon: Icons.home_outlined,
-            label: 'Beranda',
+            label: 'Home',
             route: RouteNames.operatorDashboardPath,
           ),
           CustomNavItem(
@@ -78,11 +78,35 @@ abstract final class RoleNavConfig {
           ),
         ];
 
-      case UserRole.kabagAset:
+      case UserRole.bagianAset:
         return const [
           CustomNavItem(
             icon: Icons.home_outlined,
             label: 'Beranda',
+            route: RouteNames.bagianAsetDashboardPath,
+          ),
+          CustomNavItem(
+            icon: Icons.assignment_ind_outlined,
+            label: 'Verifikasi',
+            route: RouteNames.bagianAsetVerificationsPath,
+          ),
+          CustomNavItem(
+            icon: Icons.notifications_none_rounded,
+            label: 'Notifikasi',
+            route: RouteNames.bagianAsetNotificationsPath,
+          ),
+          CustomNavItem(
+            icon: Icons.person_outline_rounded,
+            label: 'Profil',
+            route: RouteNames.profilePath,
+          ),
+        ];
+
+      case UserRole.kabagAset:
+        return const [
+          CustomNavItem(
+            icon: Icons.home_outlined,
+            label: 'Home',
             route: RouteNames.kabagDashboardPath,
           ),
           CustomNavItem(
@@ -106,7 +130,7 @@ abstract final class RoleNavConfig {
         return const [
           CustomNavItem(
             icon: Icons.home_outlined,
-            label: 'Beranda',
+            label: 'Home',
             route: RouteNames.kadivDashboardPath,
           ),
           CustomNavItem(
@@ -130,7 +154,7 @@ abstract final class RoleNavConfig {
         return const [
           CustomNavItem(
             icon: Icons.home_outlined,
-            label: 'Beranda',
+            label: 'Home',
             route: RouteNames.staffDashboardPath,
           ),
           CustomNavItem(
@@ -154,7 +178,7 @@ abstract final class RoleNavConfig {
         return const [
           CustomNavItem(
             icon: Icons.grid_view_rounded,
-            label: 'Beranda',
+            label: 'Home',
             route: RouteNames.adminDashboardPath,
           ),
           CustomNavItem(
@@ -331,7 +355,7 @@ class CustomFloatingNavBar extends ConsumerWidget {
                           fontSize: 10,
                           height: 1.0,
                           fontWeight: isActive
-                              ? FontWeight.w700
+                              ? FontWeight.w600
                               : FontWeight.w500,
                           color: color,
                         ),

@@ -145,8 +145,8 @@ class AdminDashboardScreen extends ConsumerWidget {
           const SizedBox(height: 10),
           _AdminMenuCard(
             key: const Key('card_admin_categories'),
-            title: 'Kategori Aset & Kriteria Approval',
-            subtitle: 'Atur threshold kriteria approval mutasi untuk Kadiv',
+            title: 'Kategori Aset',
+            subtitle: 'Kelola kelompok dan klasifikasi aset organisasi',
             icon: Icons.tune_outlined,
             iconColor: const Color(0xFFD97706),
             iconBg: const Color(0xFFFEF3C7),

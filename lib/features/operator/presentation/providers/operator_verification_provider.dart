@@ -71,15 +71,50 @@ enum MutationSortOrder {
 }
 
 enum OperatorStatusFilter {
+  all,
   submitted,
-  returned,
-  all;
+  allocated,
+  returned;
 
   String get displayName => switch (this) {
-    OperatorStatusFilter.submitted => 'Menunggu Verifikasi',
-    OperatorStatusFilter.returned => 'Dikembalikan',
     OperatorStatusFilter.all => 'Semua Status',
+    OperatorStatusFilter.submitted => 'Menunggu Verifikasi',
+    OperatorStatusFilter.allocated => 'Dialokasikan',
+    OperatorStatusFilter.returned => 'Dikembalikan',
   };
+}
+
+enum OperatorCategoryFilter {
+  all,
+  ti,
+  umum;
+
+  String get displayName => switch (this) {
+    OperatorCategoryFilter.all => 'Semua Kategori',
+    OperatorCategoryFilter.ti => 'Aset TI',
+    OperatorCategoryFilter.umum => 'Aset Umum',
+  };
+}
+
+/// Helper untuk mendeteksi apakah aset termasuk kategori TI / IT.
+bool isTiAsset(Mutation m) {
+  final cat = m.asset.category.name.toLowerCase();
+  final code = m.asset.category.code.toLowerCase();
+  final name = m.asset.name.toLowerCase();
+  final desc = (m.customAssetName ?? '').toLowerCase();
+  return cat.contains('ti') ||
+      cat.contains('it') ||
+      code.contains('ti') ||
+      code.contains('it') ||
+      code.contains('elk') ||
+      name.contains('laptop') ||
+      name.contains('pc') ||
+      name.contains('komputer') ||
+      name.contains('printer') ||
+      name.contains('server') ||
+      name.contains('macbook') ||
+      desc.contains('laptop') ||
+      desc.contains('pc');
 }
 
 final operatorSearchQueryProvider = StateProvider<String>((ref) => '');
@@ -90,6 +125,10 @@ final operatorSortOrderProvider = StateProvider<MutationSortOrder>(
 
 final operatorStatusFilterProvider = StateProvider<OperatorStatusFilter>(
   (ref) => OperatorStatusFilter.submitted,
+);
+
+final operatorCategoryFilterProvider = StateProvider<OperatorCategoryFilter>(
+  (ref) => OperatorCategoryFilter.all,
 );
 
 // ─── Mutations Data Providers ────────────────────────────────────────────────
@@ -114,11 +153,15 @@ class VerificationStats {
   final int pendingCount;
   final int returnedCount;
   final int waitingKabagCount;
+  final int tiCount;
+  final int umumCount;
 
   const VerificationStats({
     required this.pendingCount,
     required this.returnedCount,
     required this.waitingKabagCount,
+    this.tiCount = 0,
+    this.umumCount = 0,
   });
 }
 
@@ -136,22 +179,34 @@ final verificationStatsProvider = Provider<VerificationStats>((ref) {
       final waitingKabag = mutations
           .where((m) => m.status == MutationStatus.waitingKabagApproval)
           .length;
+      final ti = mutations
+          .where((m) => m.status == MutationStatus.submitted && isTiAsset(m))
+          .length;
+      final umum = mutations
+          .where((m) => m.status == MutationStatus.submitted && !isTiAsset(m))
+          .length;
 
       return VerificationStats(
         pendingCount: pending,
         returnedCount: returned,
         waitingKabagCount: waitingKabag,
+        tiCount: ti,
+        umumCount: umum,
       );
     },
     loading: () => const VerificationStats(
       pendingCount: 0,
       returnedCount: 0,
       waitingKabagCount: 0,
+      tiCount: 0,
+      umumCount: 0,
     ),
     error: (_, _) => const VerificationStats(
       pendingCount: 0,
       returnedCount: 0,
       waitingKabagCount: 0,
+      tiCount: 0,
+      umumCount: 0,
     ),
   );
 });
@@ -164,21 +219,39 @@ final filteredIncomingMutationsProvider = Provider<AsyncValue<List<Mutation>>>((
   final query = ref.watch(operatorSearchQueryProvider).toLowerCase().trim();
   final sortOrder = ref.watch(operatorSortOrderProvider);
   final statusFilter = ref.watch(operatorStatusFilterProvider);
+  final categoryFilter = ref.watch(operatorCategoryFilterProvider);
 
   return asyncAll.whenData((mutations) {
     // 1. Filter status
     var list = mutations.where((m) {
       return switch (statusFilter) {
         OperatorStatusFilter.submitted => m.status == MutationStatus.submitted,
+        OperatorStatusFilter.allocated =>
+          m.status == MutationStatus.waitingAssetVerification ||
+              m.status == MutationStatus.waitingKabagApproval ||
+              m.status == MutationStatus.verified ||
+              m.status == MutationStatus.waitingDivisionHeadApproval ||
+              m.status == MutationStatus.waitingKadivApproval ||
+              m.status == MutationStatus.waitingConfirmation ||
+              m.status == MutationStatus.approved ||
+              m.status == MutationStatus.pendingConfirmation ||
+              m.status == MutationStatus.completed,
         OperatorStatusFilter.returned => m.status == MutationStatus.returned,
-        OperatorStatusFilter.all =>
-          m.status == MutationStatus.submitted ||
-              m.status == MutationStatus.returned ||
-              m.status == MutationStatus.waitingKabagApproval,
+        OperatorStatusFilter.all => true,
       };
     }).toList();
 
-    // 2. Search query filter (No. Tiket, Nama Aset, Pemohon, Lokasi)
+    // 2. Filter kategori aset (TI vs Umum)
+    if (categoryFilter != OperatorCategoryFilter.all) {
+      list = list.where((m) {
+        final isTi = isTiAsset(m);
+        if (categoryFilter == OperatorCategoryFilter.ti) return isTi;
+        if (categoryFilter == OperatorCategoryFilter.umum) return !isTi;
+        return true;
+      }).toList();
+    }
+
+    // 3. Search query filter (No. Tiket, Nama Aset, Pemohon, Lokasi)
     if (query.isNotEmpty) {
       list = list.where((m) {
         final matchTicket = m.ticketNumber.toLowerCase().contains(query);
@@ -187,6 +260,7 @@ final filteredIncomingMutationsProvider = Provider<AsyncValue<List<Mutation>>>((
             m.displayAssetName.toLowerCase().contains(query) ||
             m.asset.assetCode.toLowerCase().contains(query) ||
             m.displayAssetCode.toLowerCase().contains(query) ||
+            m.displaySerialNumber.toLowerCase().contains(query) ||
             (m.customAssetName?.toLowerCase().contains(query) ?? false) ||
             (m.customSerialNumber?.toLowerCase().contains(query) ?? false);
         final matchApplicant = m.applicantName.toLowerCase().contains(query);
@@ -195,7 +269,7 @@ final filteredIncomingMutationsProvider = Provider<AsyncValue<List<Mutation>>>((
       }).toList();
     }
 
-    // 3. Sort order berdasarkan createdAt
+    // 4. Sort order berdasarkan createdAt
     list.sort((a, b) {
       if (sortOrder == MutationSortOrder.newest) {
         return b.createdAt.compareTo(a.createdAt);
@@ -277,13 +351,14 @@ class VerificationActionNotifier
     if (result is Success<Mutation>) {
       state = VerificationActionState(
         isLoading: false,
-        successMessage: 'Pengajuan mutasi berhasil diverifikasi dan diteruskan ke Kabag Aset.',
+        successMessage: 'Pengajuan mutasi berhasil diverifikasi dan diteruskan ke Bagian Aset.',
         result: result.data,
       );
       // Invalidate list agar ter-refresh
 
       ref.invalidate(mutationDetailProvider(mutationId));
       ref.invalidate(mutationListProvider);
+      ref.invalidate(operatorAllMutationsProvider);
       ref.invalidate(kabagAllMutationsProvider);
       ref.invalidate(kadivAllMutationsProvider);
       return true;
@@ -331,6 +406,7 @@ class VerificationActionNotifier
 
       ref.invalidate(mutationDetailProvider(mutationId));
       ref.invalidate(mutationListProvider);
+      ref.invalidate(operatorAllMutationsProvider);
       ref.invalidate(kabagAllMutationsProvider);
       return true;
     } else if (result is AppFailure<Mutation>) {
