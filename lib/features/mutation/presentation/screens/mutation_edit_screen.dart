@@ -138,7 +138,6 @@ class _MutationEditScreenState extends ConsumerState<MutationEditScreen> {
     final notifier = ref.read(mutationFormProvider.notifier);
 
     final locations = ref.watch(availableLocationsProvider);
-    final pics = ref.watch(availablePicsProvider);
 
     final updateState = ref.watch(updateMutationProvider);
 
@@ -262,44 +261,6 @@ class _MutationEditScreenState extends ConsumerState<MutationEditScreen> {
               ),
             ),
           ),
-
-          const SizedBox(height: AppSpacing.lg),
-
-          // PIC baru.
-          const Text(
-            'Penanggung Jawab (PIC) Baru *',
-            style: TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
-          ),
-          const SizedBox(height: AppSpacing.xs),
-
-          DropdownButtonFormField<String>(
-            initialValue: formState.targetPic.isEmpty
-                ? null
-                : formState.targetPic,
-            isExpanded: true,
-            items: pics
-                .map(
-                  (pic) => DropdownMenuItem<String>(
-                    value: pic,
-                    child: Text(pic, style: const TextStyle(fontSize: 13)),
-                  ),
-                )
-                .toList(),
-            onChanged: (value) {
-              notifier.setTargetPic(value ?? '');
-            },
-            decoration: InputDecoration(
-              errorText: formState.fieldErrors['targetPic'],
-              contentPadding: const EdgeInsets.symmetric(
-                horizontal: AppSpacing.md,
-                vertical: AppSpacing.sm,
-              ),
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
-              ),
-            ),
-          ),
-
           const SizedBox(height: AppSpacing.lg),
 
           // Alasan.

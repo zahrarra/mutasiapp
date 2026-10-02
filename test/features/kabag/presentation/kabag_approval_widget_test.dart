@@ -22,7 +22,6 @@ import 'package:mutasiku/features/mutation/data/repositories/mutation_repository
 import 'package:mutasiku/features/mutation/domain/entities/mutation_status.dart';
 import 'package:mutasiku/features/mutation/presentation/providers/mutation_provider.dart';
 import 'package:mutasiku/features/notification/presentation/screens/notification_screen.dart';
-import 'package:mutasiku/features/notification/presentation/widgets/notification_tile.dart';
 
 class FakeKabagAuthRepository implements AuthRepository {
   final User? user;
@@ -83,21 +82,66 @@ void main() {
     );
   }
 
-  testWidgets('KabagDashboardScreen displays greeting and overview stat cards',
+  testWidgets('KabagDashboardScreen displays header, hero banner and overview stat cards',
       (tester) async {
     await tester.pumpWidget(createTestWidget(const KabagDashboardScreen()));
     await tester.pumpAndSettle();
 
-    // Verifikasi teks greeting
-    expect(find.text('Halo, Bambang Kabag'), findsOneWidget);
+    // Verifikasi header Bagian Aset Stitch 1:1 (Hamburger & Halo, [Nama]! & Subtitle)
+    expect(find.byIcon(Icons.menu_rounded), findsOneWidget);
+    expect(find.text('Halo, Bambang Kabag!'), findsOneWidget);
+    expect(find.text('Staf Tata Kelola Aset • Verifikasi & Eksekusi Data Fisik'), findsOneWidget);
+    expect(find.text('VERIFIKASI & PEMBARUAN ASET'), findsOneWidget);
 
-    // Verifikasi stat cards
-    expect(find.text('Menunggu Approval'), findsOneWidget);
-    expect(find.text('Disetujui'), findsOneWidget);
-    expect(find.text('Ditolak'), findsOneWidget);
+    // Verifikasi 4 Quick Category cards
+    expect(find.text('Lolos Operator'), findsOneWidget);
+    expect(find.text('Penetapan PIC'), findsOneWidget);
+    expect(find.text('Aset TI'), findsOneWidget);
+    expect(find.text('Aset Umum'), findsOneWidget);
+  });
 
-    // Verifikasi tombol primary action
-    expect(find.byKey(const Key('btn_lihat_approval')), findsOneWidget);
+  testWidgets('KabagDashboardScreen filter Aset TI and Aset Umum work reactively against real data',
+      (tester) async {
+    tester.view.physicalSize = const Size(800, 1200);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(() {
+      tester.view.resetPhysicalSize();
+      tester.view.resetDevicePixelRatio();
+    });
+
+    // Verifikasi mutasi 1 oleh operator sehingga ada data Aset TI di antrean
+    await tester.runAsync(() async {
+      final assetRepo = AssetRepositoryImpl();
+      final mutRepo = MutationRepositoryImpl(assetRepository: assetRepo);
+      await mutRepo.verifyMutation(
+        mutationId: 'mut_001',
+        operatorName: 'Operator Aset',
+        requiresKadivApproval: false,
+      );
+    });
+
+    await tester.pumpWidget(createTestWidget(const KabagDashboardScreen()));
+    await tester.pumpAndSettle();
+
+    // Sebelum filter: tiket Aset TI (ELEKTRONIK-2026-00124) dan Aset Umum (FURNITUR-2026-00018) tampil
+    expect(find.text('FURNITUR-2026-00018'), findsOneWidget);
+    expect(find.text('ELEKTRONIK-2026-00124'), findsOneWidget);
+
+    // Tap filter "Aset TI"
+    await tester.tap(find.byKey(const Key('card_filter_ti')));
+    await tester.pumpAndSettle();
+
+    // Hanya Aset TI yang tampil
+    expect(find.text('ELEKTRONIK-2026-00124'), findsOneWidget);
+    expect(find.text('FURNITUR-2026-00018'), findsNothing);
+
+    // Tap filter "Aset Umum"
+    await tester.tap(find.byKey(const Key('card_filter_umum')));
+    await tester.pumpAndSettle();
+
+    // Hanya Aset Umum yang tampil
+    expect(find.text('FURNITUR-2026-00018'), findsOneWidget);
+    expect(find.text('ELEKTRONIK-2026-00124'), findsNothing);
   });
 
   testWidgets('KabagApprovalsScreen renders search bar, filters, and cards',
@@ -106,7 +150,7 @@ void main() {
     await tester.pumpAndSettle();
 
     // Verifikasi appbar & filter
-    expect(find.text('Menunggu Approval'), findsWidgets);
+    expect(find.text('Menunggu Verifikasi'), findsWidgets);
 
     // Verifikasi search input
     expect(find.byKey(const Key('input_search_approvals')), findsOneWidget);

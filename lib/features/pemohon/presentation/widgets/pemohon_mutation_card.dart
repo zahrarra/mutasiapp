@@ -269,7 +269,11 @@ class PemohonMutationCard extends StatelessWidget {
                 if (mutation.asset.assetCode.isNotEmpty) ...[
                   const SizedBox(height: 2),
                   Text(
-                    mutation.asset.assetCode,
+                    mutation.isUnregisteredAsset
+                        ? 'SN: ${mutation.displaySerialNumber}'
+                        : (mutation.displaySerialNumber != '-'
+                            ? '${mutation.displayAssetCode} • SN: ${mutation.displaySerialNumber}'
+                            : mutation.displayAssetCode),
                     style: const TextStyle(
                       fontSize: 11,
                       fontFamily: 'monospace',

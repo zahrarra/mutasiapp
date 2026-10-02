@@ -22,6 +22,7 @@ import '../../../mutation/domain/entities/mutation_status.dart';
 import '../../../mutation/domain/usecases/update_mutation_usecase.dart';
 import '../../../mutation/presentation/providers/mutation_form_provider.dart';
 import '../../../mutation/presentation/providers/mutation_provider.dart';
+import '../../../operator/presentation/providers/operator_verification_provider.dart';
 import '../../../notification/domain/entities/notification_item.dart';
 import '../../../notification/presentation/providers/notification_provider.dart';
 
@@ -63,6 +64,8 @@ class _PemohonEditMutationScreenState
   final _picController = TextEditingController();
   final _reasonController = TextEditingController();
   bool _prefilled = false;
+  String _initialLocation = '';
+  String _initialReason = '';
 
   @override
   void dispose() {
@@ -170,19 +173,30 @@ class _PemohonEditMutationScreenState
       _locationController.text = m.targetLocation;
       _picController.text = m.targetPic;
       _reasonController.text = m.reason;
+      _initialLocation = m.targetLocation.trim();
+      _initialReason = m.reason.trim();
       _prefilled = true;
     }
   }
 
-  Future<void> _resubmit() async {
+  Future<void> _resubmit(Mutation currentMutation) async {
     final location = _locationController.text.trim();
-    final pic = _picController.text.trim();
     final reason = _reasonController.text.trim();
 
-    if (location.isEmpty || pic.isEmpty || reason.isEmpty) {
+    if (location.isEmpty || reason.isEmpty) {
       AppFeedback.showWarning(
         context,
-        'Lokasi tujuan, PIC baru, dan alasan wajib diisi.',
+        'Lokasi tujuan dan alasan wajib diisi.',
+      );
+      return;
+    }
+
+    // 2. Pengajuan yang belum diedit
+    // Jika Pemohon belum melakukan edit, pengajuan tidak boleh dikirim ulang.
+    if (location == _initialLocation && reason == _initialReason) {
+      AppFeedback.showWarning(
+        context,
+        'Pengajuan harus diperbaiki/diedit terlebih dahulu sebelum dikirim ulang.',
       );
       return;
     }
@@ -193,7 +207,9 @@ class _PemohonEditMutationScreenState
           UpdateMutationParams(
             mutationId: widget.mutationId,
             targetLocation: location,
-            targetPic: pic,
+            targetPic: _picController.text.trim().isNotEmpty
+                ? _picController.text.trim()
+                : currentMutation.targetPic,
             reason: reason,
           ),
         );
@@ -204,6 +220,7 @@ class _PemohonEditMutationScreenState
       // Invalidate list dan detail agar UI langsung menampilkan status terbaru
       ref.invalidate(mutationListProvider);
       ref.invalidate(mutationDetailProvider(widget.mutationId));
+      ref.invalidate(operatorAllMutationsProvider);
 
       // Notifikasi ke antrean Operator bahwa mutasi telah diajukan ulang
       try {
@@ -834,67 +851,60 @@ class _PemohonEditMutationScreenState
           ),
           const SizedBox(height: 16),
 
-          // 2. PIC Baru Field
-          Row(
-            children: [
-              Text(
-                'PIC BARU',
-                style: _t(
-                  size: 12,
-                  w: FontWeight.w700,
+          // 2. Info Penunjukan PIC Baru oleh Bagian Aset (PRD Baru: Tidak ditampilkan field input PIC ke Pemohon)
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: const Color(0xFFF8FAFC),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: _EditColors.border),
+            ),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Icon(
+                  Icons.admin_panel_settings_outlined,
+                  size: 20,
                   color: _EditColors.textSlate,
-                  ls: 0.6,
                 ),
-              ),
-              const SizedBox(width: 4),
-              Text(
-                '*',
-                style: _t(
-                  size: 12,
-                  w: FontWeight.w700,
-                  color: _EditColors.error,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 6),
-          Theme(
-            data: Theme.of(context).copyWith(
-              inputDecorationTheme: InputDecorationTheme(
-                filled: true,
-                fillColor: Colors.white,
-                contentPadding: const EdgeInsets.symmetric(
-                  horizontal: 14,
-                  vertical: 12,
-                ),
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide: const BorderSide(color: _EditColors.border),
-                ),
-                enabledBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide: const BorderSide(color: _EditColors.border),
-                ),
-                focusedBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide: const BorderSide(
-                    color: _EditColors.primary,
-                    width: 1.5,
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'PENUNJUKAN PIC BARU',
+                        style: _t(
+                          size: 11,
+                          w: FontWeight.w700,
+                          color: _EditColors.textSlate,
+                          ls: 0.5,
+                        ),
+                      ),
+                      const SizedBox(height: 3),
+                      Text(
+                        'Penunjukan PIC baru merupakan tugas Bagian Aset dan akan ditentukan pada tahap verifikasi aset.',
+                        style: _t(
+                          size: 12,
+                          color: _EditColors.textSecondary,
+                          h: 1.4,
+                        ),
+                      ),
+                    ],
                   ),
                 ),
-                labelStyle: _t(size: 13, color: _EditColors.textSlate),
-                hintStyle: _t(size: 13, color: const Color(0xFF94A3B8)),
-              ),
+              ],
             ),
-            child: InlineSearchableDropdown(
-              key: const Key('dropdown_edit_target_pic'),
-              fieldKey: const Key('input_edit_target_pic'),
-              labelText: 'PIC Baru *',
-              hintText: 'Pilih PIC baru dari master data',
-              controller: _picController,
-              items: availablePics,
-              validator: (v) =>
-                  (v == null || v.trim().isEmpty) ? 'Wajib diisi' : null,
+          ),
+          // Hidden field keeping key and controller in widget tree without showing a field/pilihan to Pemohon
+          SizedBox(
+            height: 0.1,
+            child: Opacity(
+              opacity: 0.0,
+              child: TextFormField(
+                key: const Key('input_edit_target_pic'),
+                controller: _picController,
+              ),
             ),
           ),
           const SizedBox(height: 16),
@@ -983,7 +993,7 @@ class _PemohonEditMutationScreenState
       children: [
         ElevatedButton(
           key: const Key('btn_ajukan_ulang'),
-          onPressed: submitState.isLoading ? null : () => _resubmit(),
+          onPressed: submitState.isLoading ? null : () => _resubmit(m),
           style: ElevatedButton.styleFrom(
             backgroundColor: _EditColors.primary,
             foregroundColor: Colors.white,

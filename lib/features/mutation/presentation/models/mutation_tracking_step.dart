@@ -103,23 +103,32 @@ abstract final class MutationTrackingHelper {
     );
 
     // ── 2. Step: Pemeriksaan Kelengkapan (Operator) ──────────────────────
+    final isOperatorReturned =
+        isReturned && (assetReturnReason == null || assetReturnReason.isEmpty);
+    final isAssetReturned =
+        isReturned && (assetReturnReason != null && assetReturnReason.isNotEmpty);
+
     final step2State = () {
-      if (isReturned && (returnReason != null && returnReason.isNotEmpty)) {
+      if (isOperatorReturned) {
         return TrackingStepState.alert;
       }
       if (isWaitingOperator) return TrackingStepState.current;
       return TrackingStepState.completed;
     }();
     final step2Badge = () {
-      if (isReturned && (returnReason != null && returnReason.isNotEmpty)) {
+      if (isOperatorReturned) {
         return 'Perlu Perbaikan';
       }
       if (isWaitingOperator) return 'Sedang Diperiksa';
       return 'Lengkap';
     }();
+    final step2ShortLabel = isOperatorReturned ? 'Perlu Perbaikan' : 'Kelengkapan';
     final step2Subtitle = () {
-      if (isReturned && (returnReason != null && returnReason.isNotEmpty)) {
-        return 'Dikembalikan oleh Operator: $returnReason';
+      if (isOperatorReturned) {
+        final reason = (returnReason != null && returnReason.isNotEmpty)
+            ? ': $returnReason'
+            : ' untuk perbaikan berkas';
+        return 'Dikembalikan oleh Operator$reason';
       }
       if (isWaitingOperator) {
         return 'Pemeriksaan kelengkapan data & SK SDM oleh Operator';
@@ -130,8 +139,8 @@ abstract final class MutationTrackingHelper {
     steps.add(
       MutationTrackingStep(
         key: 'operatorCheck',
-        title: 'Pemeriksaan Kelengkapan',
-        shortLabel: 'Kelengkapan',
+        title: isOperatorReturned ? 'Perlu Perbaikan (Operator)' : 'Pemeriksaan Kelengkapan',
+        shortLabel: step2ShortLabel,
         subtitle: step2Subtitle,
         badgeText: step2Badge,
         state: step2State,
@@ -140,31 +149,31 @@ abstract final class MutationTrackingHelper {
 
     // ── 3. Step: Verifikasi Data Aset (Bagian Aset) ───────────────────────
     final step3State = () {
-      if (isReturned && (assetReturnReason != null && assetReturnReason.isNotEmpty)) {
+      if (isAssetReturned) {
         return TrackingStepState.alert;
       }
-      if (isWaitingOperator || (isReturned && !step2State.isAlert)) {
+      if (isWaitingOperator || isOperatorReturned) {
         return TrackingStepState.upcoming;
       }
       if (isWaitingAsset) return TrackingStepState.current;
       return TrackingStepState.completed;
     }();
     final step3Badge = () {
-      if (isReturned && (assetReturnReason != null && assetReturnReason.isNotEmpty)) {
+      if (isAssetReturned) {
         return 'Tidak Valid';
       }
       if (isWaitingAsset) return 'Sedang Diverifikasi';
-      if (isWaitingOperator) return 'Menunggu';
+      if (isWaitingOperator || isOperatorReturned) return 'Menunggu';
       return 'Valid';
     }();
     final step3Subtitle = () {
-      if (isReturned && (assetReturnReason != null && assetReturnReason.isNotEmpty)) {
+      if (isAssetReturned) {
         return 'Dikembalikan oleh Bagian Aset: $assetReturnReason';
       }
       if (isWaitingAsset) {
         return 'Verifikasi keabsahan aset, lokasi, SK SDM, dan penentuan PIC baru';
       }
-      if (isWaitingOperator) {
+      if (isWaitingOperator || isOperatorReturned) {
         return 'Menunggu pemeriksaan kelengkapan Operator selesai';
       }
       return 'Terverifikasi valid${assetVerifiedBy != null ? " oleh $assetVerifiedBy" : ""}';

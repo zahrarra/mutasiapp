@@ -82,7 +82,7 @@ abstract final class RoleNavConfig {
         return const [
           CustomNavItem(
             icon: Icons.home_outlined,
-            label: 'Home',
+            label: 'Beranda',
             route: RouteNames.bagianAsetDashboardPath,
           ),
           CustomNavItem(

@@ -333,6 +333,7 @@ class UpdateMutationNotifier extends StateNotifier<UpdateMutationState> {
       // Refresh list & detail Pemohon + Operator.
       ref.invalidate(mutationListProvider);
       ref.invalidate(mutationDetailProvider(params.mutationId));
+      ref.invalidate(operatorAllMutationsProvider);
 
       return result.data;
     }

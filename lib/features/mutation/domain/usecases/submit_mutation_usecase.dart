@@ -36,38 +36,17 @@ class SubmitMutationUseCase {
   const SubmitMutationUseCase({required this.mutationRepository});
 
   Future<Result<Mutation>> call(SubmitMutationParams params) async {
-    // Validasi Aset berdasarkan tipe pendaftaran.
-    if (params.isUnregisteredAsset) {
-      // Unregistered asset:
-      // 1. assetId harus null / tidak diisi.
-      if (params.assetId != null && params.assetId!.trim().isNotEmpty) {
-        return const Result.failure(
-          ValidationFailure(
-            message: 'Aset belum terdaftar tidak boleh memiliki ID aset.',
-          ),
-        );
-      }
-      // 2. customAssetName wajib ada (atau assetName untuk kompatibilitas).
-      final customName = (params.customAssetName?.trim().isNotEmpty == true)
-          ? params.customAssetName!.trim()
-          : params.assetName.trim();
-      if (customName.isEmpty) {
-        return const Result.failure(
-          ValidationFailure(
-            message: 'Nama aset tidak terdaftar wajib diisi.',
-          ),
-        );
-      }
-    } else {
-      // Registered asset:
-      // assetId wajib ada dan tidak boleh kosong.
-      if (params.assetId == null || params.assetId!.trim().isEmpty) {
-        return const Result.failure(
-          ValidationFailure(
-            message: 'ID Aset terdaftar wajib diisi.',
-          ),
-        );
-      }
+    // PRD V1.1 §8 Aturan 3: Aset yang dimutasi harus merupakan aset terdaftar.
+    // Input aset bebas/manual tidak didukung.
+    if (params.isUnregisteredAsset ||
+        params.assetId == null ||
+        params.assetId!.trim().isEmpty) {
+      return const Result.failure(
+        ValidationFailure(
+          message:
+              'Aset yang dimutasi harus merupakan aset terdaftar. Input aset bebas/manual tidak didukung.',
+        ),
+      );
     }
 
     // Validasi lokasi aset saat ini.

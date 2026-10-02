@@ -199,7 +199,7 @@ void main() {
       expect(result.failureOrNull, isA<ValidationFailure>());
     });
 
-    test('returns ValidationFailure when targetPic is empty', () async {
+    test('succeeds even when targetPic is empty (asset left behind per PRD V1.1 §6.2)', () async {
       final result = await useCase(
         const UpdateMutationParams(
           mutationId: 'mut_returned',
@@ -209,8 +209,7 @@ void main() {
         ),
       );
 
-      expect(result.isFailure, true);
-      expect(result.failureOrNull, isA<ValidationFailure>());
+      expect(result.isSuccess, true);
     });
 
     test('returns ValidationFailure when reason is empty', () async {

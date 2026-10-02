@@ -13,6 +13,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mutasiku/core/config/business_config.dart';
+import 'package:mutasiku/core/errors/failures.dart';
 import 'package:mutasiku/core/errors/result.dart';
 import 'package:mutasiku/features/asset/data/repositories/asset_repository_impl.dart';
 import 'package:mutasiku/features/asset/presentation/providers/asset_provider.dart';
@@ -28,7 +29,6 @@ import 'package:mutasiku/features/mutation/domain/repositories/mutation_reposito
 import 'package:mutasiku/features/mutation/presentation/providers/mutation_provider.dart';
 import 'package:mutasiku/features/operator/presentation/providers/operator_verification_provider.dart';
 import 'package:mutasiku/features/pemohon/presentation/providers/pemohon_confirmation_provider.dart';
-import 'package:mutasiku/features/staff/presentation/providers/staff_mutation_provider.dart';
 import '../operator/presentation/operator_verification_widget_test.dart';
 
 void main() {
@@ -71,14 +71,6 @@ void main() {
     name: 'Drs. Ahmad Dahlan',
     email: 'kadiv@mutasiku.id',
     role: UserRole.kadiv,
-  );
-
-  const staffUser = User(
-    id: 'usr_staff',
-    username: 'staff1',
-    name: 'Rizky Staff Aset',
-    email: 'staff@mutasiku.id',
-    role: UserRole.staffAset,
   );
 
   ProviderContainer createContainer({required User currentUser}) {
@@ -363,7 +355,7 @@ void main() {
     expect(rejectedMutation.kadivRejectionReason, equals('Perangkat jaringan core tidak boleh dipindahkan ke luar pusat data.'));
   });
 
-  test('Flow 6: Unregistered Asset fallback stores manual data and has assetId = null', () async {
+  test('Flow 6: Unregistered Asset is rejected per PRD V1.1 §8 Rule 3', () async {
     final submitResult = await mutationRepo.submitMutation(const SubmitMutationParams(
       applicantId: 'usr_pemohon',
       applicantName: 'Budi Santoso',
@@ -377,28 +369,12 @@ void main() {
       reason: 'Aset pengadaan lokal belum masuk database',
     ));
 
-    expect(submitResult, isA<Success<Mutation>>());
-    final mutation = (submitResult as Success<Mutation>).data;
-    expect(mutation.isUnregisteredAsset, isTrue);
-    expect(mutation.assetId, isNull);
-    expect(mutation.customAssetName, equals('Proyektor Epson EB-X500 Manual'));
-    expect(mutation.customSerialNumber, equals('EPS-MANUAL-999'));
-
-    // Verification & Approval flow
-    await mutationRepo.verifyMutation(mutationId: mutation.id, operatorName: 'Operator');
-    await mutationRepo.approveMutationKabag(mutationId: mutation.id, kabagName: 'Bagian Aset', requiresKadivApproval: true);
-    await mutationRepo.approveMutationKadiv(mutationId: mutation.id, kadivName: 'Kadiv');
-
-    final afterKadiv = (await mutationRepo.getMutationById(mutation.id) as Success<Mutation>).data;
-    expect(afterKadiv.status.isWaitingConfirmation, isTrue);
-
-    final confirmSuccess = await mutationRepo.confirmMutationResult(
-      mutationId: mutation.id,
-      confirmedBy: 'Budi Santoso',
-      isSesuai: true,
+    expect(submitResult.isFailure, isTrue);
+    expect(submitResult.failureOrNull, isA<ValidationFailure>());
+    expect(
+      submitResult.failureOrNull?.userMessage,
+      contains('Aset yang dimutasi harus merupakan aset terdaftar'),
     );
-    expect(confirmSuccess, isA<Success<Mutation>>());
-    expect((confirmSuccess as Success<Mutation>).data.status, equals(MutationStatus.completed));
   });
 
   test('Flow 7: Duplicate active mutation on same asset is blocked', () async {

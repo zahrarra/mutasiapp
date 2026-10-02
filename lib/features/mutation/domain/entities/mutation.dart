@@ -31,7 +31,7 @@ class Mutation {
     if (existing != null) return existing;
     return Asset(
       id: '',
-      assetCode: customSerialNumber ?? '-',
+      assetCode: '-',
       name: customAssetName ?? 'Aset Tidak Terdaftar',
       category: const AssetCategory(
         id: 'cat_unregistered',
@@ -56,13 +56,20 @@ class Mutation {
   /// Nomor seri aset manual (jika [isUnregisteredAsset] true)
   final String? customSerialNumber;
 
-  /// Getter helper untuk nama aset yang ditampilkan
-  String get displayAssetName =>
-      isUnregisteredAsset ? (customAssetName ?? 'Aset Tidak Terdaftar') : asset.name;
+  /// Getter helper untuk nama aset yang ditampilkan (selalu Nama Aset master)
+  String get displayAssetName => asset.name;
 
-  /// Getter helper untuk kode/nomor seri aset yang ditampilkan
-  String get displayAssetCode =>
-      isUnregisteredAsset ? (customSerialNumber ?? '-') : asset.assetCode;
+  /// Getter helper untuk kode aset yang ditampilkan (selalu Kode Aset master)
+  String get displayAssetCode => asset.assetCode;
+
+  /// Getter helper untuk serial number aset (selalu Serial Number dari master Asset)
+  String get displaySerialNumber {
+    final sn = asset.serialNumber?.trim();
+    if (sn != null && sn.isNotEmpty) {
+      return sn;
+    }
+    return '-';
+  }
 
   /// ID Pemohon (user login yang mengajukan)
   final String? applicantId;

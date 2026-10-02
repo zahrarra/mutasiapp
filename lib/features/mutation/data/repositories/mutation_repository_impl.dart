@@ -405,96 +405,90 @@ class MutationRepositoryImpl implements MutationRepository {
         : '-';
     Asset? assetEntity;
     String? finalAssetId;
-    String? customAssetName;
-    String? customSerialNumber;
+    String? customSerialNumber = params.customSerialNumber?.trim();
 
     if (params.isUnregisteredAsset) {
-      finalAssetId = null;
-      customAssetName = (params.customAssetName?.trim().isNotEmpty == true)
-          ? params.customAssetName!.trim()
-          : (params.assetName.trim().isNotEmpty ? params.assetName.trim() : null);
-      customSerialNumber = params.customSerialNumber?.trim();
-      categoryCode = 'TI';
-
-      if (sourceLocation.isEmpty) {
-        return const Result.failure(
-          ValidationFailure(message: 'Lokasi aset saat ini wajib diisi.'),
-        );
-      }
-    } else {
-      final rawAssetId = params.assetId?.trim() ?? '';
-      if (rawAssetId.isEmpty) {
-        return const Result.failure(
-          ValidationFailure(message: 'ID Aset terdaftar wajib diisi.'),
-        );
-      }
-
-      // Cegah duplicate active mutation untuk aset yang sama (PRD V1.1 §8 Rule 4).
-      final hasActiveMutation = _mutations.any((m) {
-        final matchesAsset = (m.assetId != null && m.assetId == rawAssetId) ||
-            (m.asset.id.isNotEmpty && m.asset.id == rawAssetId) ||
-            (m.asset.assetCode.isNotEmpty && m.asset.assetCode == rawAssetId);
-        return matchesAsset &&
-            m.status != MutationStatus.completed &&
-            m.status != MutationStatus.rejected;
-      });
-
-      if (hasActiveMutation) {
-        return const Result.failure(
-          ValidationFailure(
-            message:
-                'Aset sedang memiliki pengajuan mutasi aktif yang belum selesai.',
-          ),
-        );
-      }
-
-      // Ambil asset dari AssetRepository
-      final assetResult = await assetRepository.getAssetById(rawAssetId);
-      if (assetResult is Success<Asset>) {
-        assetEntity = assetResult.data;
-      } else {
-        final assetListResult = await assetRepository.getAssets(query: rawAssetId);
-        if (assetListResult is Success<List<Asset>> && assetListResult.data.isNotEmpty) {
-          assetEntity = assetListResult.data.firstWhere(
-            (a) => a.id == rawAssetId || a.assetCode == rawAssetId,
-            orElse: () => assetListResult.data.first,
-          );
-        } else {
-          assetEntity = Asset(
-            id: rawAssetId,
-            assetCode: rawAssetId,
-            name: params.assetName.trim().isNotEmpty ? params.assetName.trim() : 'Aset $rawAssetId',
-            category: manualCategory,
-            location: sourceLocation.isNotEmpty ? sourceLocation : 'Kantor Pusat',
-            pic: currentPic,
-            status: AssetStatus.inMutation,
-            condition: 'Baik',
-            acquisitionYear: DateTime.now().year,
-            hasActiveMutation: true,
-          );
-        }
-      }
-
-      finalAssetId = assetEntity.id;
-      categoryCode = assetEntity.category.code.isNotEmpty
-          ? assetEntity.category.code
-          : 'TI';
-
-      if (sourceLocation.isEmpty) {
-        sourceLocation = assetEntity.location;
-      }
-      if (currentPic == '-' && assetEntity.pic.isNotEmpty) {
-        currentPic = assetEntity.pic;
-      }
-
-      // Kunci aset saat mutasi dibuat (PRD V1.1 §8 Rule 5)
-      await assetRepository.updateAsset(
-        assetEntity.copyWith(
-          hasActiveMutation: true,
-          status: AssetStatus.inMutation,
+      return const Result.failure(
+        ValidationFailure(
+          message:
+              'Aset yang dimutasi harus merupakan aset terdaftar. Input aset bebas/manual tidak didukung.',
         ),
       );
     }
+
+    final rawAssetId = params.assetId?.trim() ?? '';
+    if (rawAssetId.isEmpty) {
+      return const Result.failure(
+        ValidationFailure(message: 'ID Aset terdaftar wajib diisi.'),
+      );
+    }
+
+    // Cegah duplicate active mutation untuk aset yang sama (PRD V1.1 §8 Rule 4).
+    final hasActiveMutation = _mutations.any((m) {
+      final matchesAsset = (m.assetId != null && m.assetId == rawAssetId) ||
+          (m.asset.id.isNotEmpty && m.asset.id == rawAssetId) ||
+          (m.asset.assetCode.isNotEmpty && m.asset.assetCode == rawAssetId);
+      return matchesAsset &&
+          m.status != MutationStatus.completed &&
+          m.status != MutationStatus.rejected;
+    });
+
+    if (hasActiveMutation) {
+      return const Result.failure(
+        ValidationFailure(
+          message:
+              'Aset sedang memiliki pengajuan mutasi aktif yang belum selesai.',
+        ),
+      );
+    }
+
+    // Ambil asset dari AssetRepository
+    final assetResult = await assetRepository.getAssetById(rawAssetId);
+    if (assetResult is Success<Asset>) {
+      assetEntity = assetResult.data;
+    } else {
+      final assetListResult = await assetRepository.getAssets(query: rawAssetId);
+      if (assetListResult is Success<List<Asset>> && assetListResult.data.isNotEmpty) {
+        assetEntity = assetListResult.data.firstWhere(
+          (a) => a.id == rawAssetId || a.assetCode == rawAssetId,
+          orElse: () => assetListResult.data.first,
+        );
+      } else {
+        assetEntity = Asset(
+          id: rawAssetId,
+          assetCode: rawAssetId,
+          name: params.assetName.trim().isNotEmpty ? params.assetName.trim() : 'Aset $rawAssetId',
+          category: manualCategory,
+          location: sourceLocation.isNotEmpty ? sourceLocation : 'Kantor Pusat',
+          pic: currentPic,
+          status: AssetStatus.inMutation,
+          condition: 'Baik',
+          acquisitionYear: DateTime.now().year,
+          hasActiveMutation: true,
+          serialNumber: customSerialNumber,
+        );
+      }
+    }
+
+    finalAssetId = assetEntity.id;
+    categoryCode = assetEntity.category.code.isNotEmpty
+        ? assetEntity.category.code
+        : 'TI';
+
+    if (sourceLocation.isEmpty) {
+      sourceLocation = assetEntity.location;
+    }
+    if (currentPic == '-' && assetEntity.pic.isNotEmpty) {
+      currentPic = assetEntity.pic;
+    }
+
+    // Kunci aset saat mutasi dibuat (PRD V1.1 §8 Rule 5)
+    await assetRepository.updateAsset(
+      assetEntity.copyWith(
+        hasActiveMutation: true,
+        status: AssetStatus.inMutation,
+      ),
+    );
 
     final year = DateTime.now().year;
     final ticketNumber = _generateUniqueTicketNumber(categoryCode, year);
@@ -505,9 +499,7 @@ class MutationRepositoryImpl implements MutationRepository {
       ticketNumber: ticketNumber,
       assetId: finalAssetId,
       asset: assetEntity,
-      isUnregisteredAsset: params.isUnregisteredAsset,
-      customAssetName: customAssetName,
-      customSerialNumber: customSerialNumber,
+      isUnregisteredAsset: false,
       applicantId: params.applicantId,
       applicantName: params.applicantName ?? 'Pemohon',
       currentLocation: sourceLocation,
@@ -561,7 +553,10 @@ class MutationRepositoryImpl implements MutationRepository {
       );
     }
 
-    if (targetPic.trim().isEmpty) {
+    final effectiveTargetPic =
+        targetPic.trim().isNotEmpty ? targetPic.trim() : current.targetPic;
+
+    if (effectiveTargetPic.trim().isEmpty) {
       return const Result.failure(
         ValidationFailure(message: 'Penanggung jawab baru wajib dipilih.'),
       );
@@ -583,7 +578,7 @@ class MutationRepositoryImpl implements MutationRepository {
     // tersimpan sebagai jejak riwayat pengembalian sebelumnya.
     final updated = current.copyWith(
       targetLocation: targetLocation,
-      targetPic: targetPic,
+      targetPic: effectiveTargetPic,
       reason: reason,
       documentName: documentName,
       status: MutationStatus.submitted,

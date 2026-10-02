@@ -19,7 +19,7 @@ class UpdateMutationParams {
   const UpdateMutationParams({
     required this.mutationId,
     required this.targetLocation,
-    required this.targetPic,
+    this.targetPic = '',
     required this.reason,
     this.documentName,
   });
@@ -37,11 +37,6 @@ class UpdateMutationUseCase {
     if (params.targetLocation.trim().isEmpty) {
       return const Result.failure(
         ValidationFailure(message: 'Lokasi tujuan wajib dipilih.'),
-      );
-    }
-    if (params.targetPic.trim().isEmpty) {
-      return const Result.failure(
-        ValidationFailure(message: 'Penanggung jawab baru wajib dipilih.'),
       );
     }
     if (params.reason.trim().isEmpty) {

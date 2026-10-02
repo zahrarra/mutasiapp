@@ -34,7 +34,12 @@ abstract final class _C {
 }
 
 class PemohonMutationListScreen extends ConsumerStatefulWidget {
-  const PemohonMutationListScreen({super.key});
+  final String? initialFilter;
+
+  const PemohonMutationListScreen({
+    super.key,
+    this.initialFilter,
+  });
 
   @override
   ConsumerState<PemohonMutationListScreen> createState() =>
@@ -50,10 +55,39 @@ class _PemohonMutationListScreenState
   @override
   void initState() {
     super.initState();
+    if (widget.initialFilter != null) {
+      _filter = _parseFilter(widget.initialFilter);
+    }
     _searchController.addListener(() {
       final q = _searchController.text.trim().toLowerCase();
       if (q != _query) setState(() => _query = q);
     });
+  }
+
+  @override
+  void didUpdateWidget(covariant PemohonMutationListScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.initialFilter != oldWidget.initialFilter &&
+        widget.initialFilter != null) {
+      setState(() {
+        _filter = _parseFilter(widget.initialFilter);
+      });
+    }
+  }
+
+  static _QuickFilter _parseFilter(String? value) {
+    if (value == null) return _QuickFilter.all;
+    final v = value.toLowerCase().trim();
+    if (v == 'progress' || v == 'dalam proses' || v == 'dalamproses') {
+      return _QuickFilter.progress;
+    }
+    if (v == 'action' || v == 'perlu tindakan' || v == 'perlutindakan') {
+      return _QuickFilter.action;
+    }
+    if (v == 'done' || v == 'selesai' || v == 'completed') {
+      return _QuickFilter.done;
+    }
+    return _QuickFilter.all;
   }
 
   @override
@@ -88,10 +122,13 @@ class _PemohonMutationListScreenState
             .where(
               (m) =>
                   m.status == MutationStatus.submitted ||
+                  m.status == MutationStatus.waitingAssetVerification ||
                   m.status == MutationStatus.verified ||
                   m.status == MutationStatus.waitingKabagApproval ||
+                  m.status == MutationStatus.waitingDivisionHeadApproval ||
                   m.status == MutationStatus.waitingKadivApproval ||
-                  m.status == MutationStatus.approved,
+                  m.status == MutationStatus.approved ||
+                  m.status == MutationStatus.waitingSync,
             )
             .toList();
         break;
@@ -104,6 +141,7 @@ class _PemohonMutationListScreenState
         result = result
             .where(
               (m) =>
+                  m.status == MutationStatus.waitingConfirmation ||
                   m.status == MutationStatus.pendingConfirmation ||
                   m.status == MutationStatus.returned,
             )
@@ -116,6 +154,7 @@ class _PemohonMutationListScreenState
           m.ticketNumber,
           m.displayAssetName,
           m.displayAssetCode,
+          m.displaySerialNumber,
           m.currentLocation,
           m.targetLocation,
           m.targetPic,
@@ -136,10 +175,13 @@ class _PemohonMutationListScreenState
             .where(
               (m) =>
                   m.status == MutationStatus.submitted ||
+                  m.status == MutationStatus.waitingAssetVerification ||
                   m.status == MutationStatus.verified ||
                   m.status == MutationStatus.waitingKabagApproval ||
+                  m.status == MutationStatus.waitingDivisionHeadApproval ||
                   m.status == MutationStatus.waitingKadivApproval ||
-                  m.status == MutationStatus.approved,
+                  m.status == MutationStatus.approved ||
+                  m.status == MutationStatus.waitingSync,
             )
             .length;
       case _QuickFilter.done:
@@ -148,6 +190,7 @@ class _PemohonMutationListScreenState
         return list
             .where(
               (m) =>
+                  m.status == MutationStatus.waitingConfirmation ||
                   m.status == MutationStatus.pendingConfirmation ||
                   m.status == MutationStatus.returned,
             )
@@ -452,93 +495,200 @@ class _PemohonMutationListScreenState
           ),
         ),
         const SizedBox(width: 8),
-        Container(
-          width: 44,
-          height: 44,
-          decoration: BoxDecoration(
-            color: _C.surface,
+        Material(
+          color: _C.surface,
+          borderRadius: BorderRadius.circular(12),
+          child: InkWell(
+            onTap: () => _showFilterSheet(context),
             borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: _C.border.withValues(alpha: 0.7)),
-          ),
-          child: Stack(
-            children: [
-              const Center(
-                child: Icon(
-                  Icons.tune_rounded,
-                  size: 20,
-                  color: _C.textSecondary,
-                ),
+            child: Container(
+              width: 44,
+              height: 44,
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: _C.border.withValues(alpha: 0.7)),
               ),
-              Positioned(
-                top: 8,
-                right: 8,
-                child: Container(
-                  width: 8,
-                  height: 8,
-                  decoration: const BoxDecoration(
-                    color: _C.primary,
-                    shape: BoxShape.circle,
+              child: Stack(
+                children: [
+                  const Center(
+                    child: Icon(
+                      Icons.tune_rounded,
+                      size: 20,
+                      color: _C.textSecondary,
+                    ),
                   ),
-                ),
+                  if (_filter != _QuickFilter.all)
+                    Positioned(
+                      top: 8,
+                      right: 8,
+                      child: Container(
+                        width: 8,
+                        height: 8,
+                        decoration: const BoxDecoration(
+                          color: _C.secondary,
+                          shape: BoxShape.circle,
+                        ),
+                      ),
+                    ),
+                ],
               ),
-            ],
+            ),
           ),
         ),
       ],
     );
   }
 
+  void _showFilterSheet(BuildContext context) {
+    showModalBottomSheet<void>(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (sheetContext) {
+        return Material(
+          color: Colors.white,
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+          clipBehavior: Clip.antiAlias,
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(20, 10, 20, 28),
+            child: SafeArea(
+              top: false,
+              child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Center(
+                  child: Container(
+                    width: 36,
+                    height: 4,
+                    margin: const EdgeInsets.only(bottom: 16),
+                    decoration: BoxDecoration(
+                      color: _C.border,
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                  ),
+                ),
+                Text(
+                  'Filter Mutasi Saya',
+                  style: _inter(
+                    size: 16,
+                    weight: FontWeight.w800,
+                    color: _C.textPrimary,
+                  ),
+                ),
+                const SizedBox(height: 14),
+                ListTile(
+                  contentPadding: EdgeInsets.zero,
+                  leading: const Icon(Icons.apps_rounded, color: _C.primaryContainer),
+                  title: Text('Semua Pengajuan', style: _inter(size: 14, weight: FontWeight.w600)),
+                  trailing: _filter == _QuickFilter.all
+                      ? const Icon(Icons.check_circle_rounded, color: _C.secondary)
+                      : null,
+                  onTap: () {
+                    setState(() => _filter = _QuickFilter.all);
+                    Navigator.pop(sheetContext);
+                  },
+                ),
+                ListTile(
+                  contentPadding: EdgeInsets.zero,
+                  leading: const Icon(Icons.sync_rounded, color: Color(0xFF175CD3)),
+                  title: Text('Dalam Proses', style: _inter(size: 14, weight: FontWeight.w600)),
+                  trailing: _filter == _QuickFilter.progress
+                      ? const Icon(Icons.check_circle_rounded, color: _C.secondary)
+                      : null,
+                  onTap: () {
+                    setState(() => _filter = _QuickFilter.progress);
+                    Navigator.pop(sheetContext);
+                  },
+                ),
+                ListTile(
+                  contentPadding: EdgeInsets.zero,
+                  leading: const Icon(Icons.assignment_turned_in_rounded, color: _C.warning),
+                  title: Text('Perlu Tindakan (Konfirmasi & Revisi)', style: _inter(size: 14, weight: FontWeight.w600)),
+                  trailing: _filter == _QuickFilter.action
+                      ? const Icon(Icons.check_circle_rounded, color: _C.secondary)
+                      : null,
+                  onTap: () {
+                    setState(() => _filter = _QuickFilter.action);
+                    Navigator.pop(sheetContext);
+                  },
+                ),
+                ListTile(
+                  contentPadding: EdgeInsets.zero,
+                  leading: const Icon(Icons.verified_rounded, color: _C.success),
+                  title: Text('Selesai', style: _inter(size: 14, weight: FontWeight.w600)),
+                  trailing: _filter == _QuickFilter.done
+                      ? const Icon(Icons.check_circle_rounded, color: _C.secondary)
+                      : null,
+                  onTap: () {
+                    setState(() => _filter = _QuickFilter.done);
+                    Navigator.pop(sheetContext);
+                  },
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+    },
+  );
+  }
+
   Widget _buildChips(List<Mutation> all) {
     Widget chip(String label, _QuickFilter f) {
       final active = _filter == f;
       final n = _count(all, f);
-      return GestureDetector(
-        onTap: () => setState(() => _filter = f),
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
-          decoration: BoxDecoration(
-            color: active ? _C.primary : _C.surface,
-            borderRadius: BorderRadius.circular(999),
-            border: active ? null : Border.all(color: _C.border),
-            boxShadow: active
-                ? [
-                    BoxShadow(
-                      color: Colors.black.withValues(alpha: 0.06),
-                      blurRadius: 4,
-                    ),
-                  ]
-                : null,
-          ),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(
-                label,
-                style: _inter(
-                  size: 12,
-                  weight: FontWeight.w600,
-                  color: active ? Colors.white : _C.textSecondary,
-                ),
-              ),
-              const SizedBox(width: 6),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
-                decoration: BoxDecoration(
-                  color: active
-                      ? Colors.white.withValues(alpha: 0.25)
-                      : _C.surfaceContainer,
-                  borderRadius: BorderRadius.circular(999),
-                ),
-                child: Text(
-                  '$n',
+      return Material(
+        color: active ? _C.primary : _C.surface,
+        borderRadius: BorderRadius.circular(999),
+        child: InkWell(
+          onTap: () => setState(() => _filter = f),
+          borderRadius: BorderRadius.circular(999),
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(999),
+              border: active ? null : Border.all(color: _C.border),
+              boxShadow: active
+                  ? [
+                      BoxShadow(
+                        color: Colors.black.withValues(alpha: 0.06),
+                        blurRadius: 4,
+                      ),
+                    ]
+                  : null,
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  label,
                   style: _inter(
-                    size: 10,
-                    weight: FontWeight.w700,
+                    size: 12,
+                    weight: FontWeight.w600,
                     color: active ? Colors.white : _C.textSecondary,
                   ),
                 ),
-              ),
-            ],
+                const SizedBox(width: 6),
+                Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
+                  decoration: BoxDecoration(
+                    color: active
+                        ? Colors.white.withValues(alpha: 0.25)
+                        : _C.surfaceContainer,
+                    borderRadius: BorderRadius.circular(999),
+                  ),
+                  child: Text(
+                    '$n',
+                    style: _inter(
+                      size: 10,
+                      weight: FontWeight.w700,
+                      color: active ? Colors.white : _C.textSecondary,
+                    ),
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
       );
@@ -552,9 +702,9 @@ class _PemohonMutationListScreenState
           const SizedBox(width: 8),
           chip('Dalam Proses', _QuickFilter.progress),
           const SizedBox(width: 8),
-          chip('Selesai', _QuickFilter.done),
+          chip('Perlu Tindakan', _QuickFilter.action),
           const SizedBox(width: 8),
-          chip('Perlu Perbaikan', _QuickFilter.action),
+          chip('Selesai', _QuickFilter.done),
         ],
       ),
     );
@@ -936,6 +1086,8 @@ class _MutationCard extends StatelessWidget {
     switch (s) {
       case MutationStatus.submitted:
         return 'Diajukan';
+      case MutationStatus.returned:
+        return 'Perlu Perbaikan';
       case MutationStatus.verified:
         return 'Verifikasi';
       case MutationStatus.waitingAssetVerification:

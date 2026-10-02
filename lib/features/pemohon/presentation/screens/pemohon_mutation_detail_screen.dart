@@ -549,17 +549,21 @@ class PemohonMutationDetailScreen extends ConsumerWidget {
                       color: const Color(0xFFFBBF24).withValues(alpha: 0.3),
                     ),
                   ),
-                  child: const Row(
+                  child: Row(
                     children: [
                       Icon(
-                        Icons.hourglass_top,
+                        mutation.status == MutationStatus.returned
+                            ? Icons.assignment_return_outlined
+                            : Icons.hourglass_top,
                         size: 12,
-                        color: Color(0xFFFDE047),
+                        color: const Color(0xFFFDE047),
                       ),
-                      SizedBox(width: 4),
+                      const SizedBox(width: 4),
                       Text(
-                        'Meninjau',
-                        style: TextStyle(
+                        mutation.status == MutationStatus.returned
+                            ? 'Perlu Perbaikan'
+                            : 'Meninjau',
+                        style: const TextStyle(
                           fontSize: 10,
                           fontWeight: FontWeight.bold,
                           color: Color(0xFFFDE047),
@@ -632,7 +636,9 @@ class PemohonMutationDetailScreen extends ConsumerWidget {
           ),
           const SizedBox(width: 5),
           Text(
-            status.displayName,
+            status == MutationStatus.returned
+                ? 'Perlu Perbaikan'
+                : status.displayName,
             style: TextStyle(
               fontSize: 11,
               fontWeight: FontWeight.bold,
@@ -1048,7 +1054,9 @@ class PemohonMutationDetailScreen extends ConsumerWidget {
                         ),
                       ),
                       Text(
-                        'Kode: ${mutation.displayAssetCode}',
+                        mutation.isUnregisteredAsset
+                            ? 'SN: ${mutation.displaySerialNumber}'
+                            : 'Kode: ${mutation.displayAssetCode}',
                         style: const TextStyle(
                           fontFamily: 'monospace',
                           fontSize: 11,
@@ -1087,7 +1095,7 @@ class PemohonMutationDetailScreen extends ConsumerWidget {
                       ),
                       const SizedBox(height: 3),
                       Text(
-                        mutation.displayAssetCode,
+                        mutation.displaySerialNumber,
                         style: const TextStyle(
                           fontFamily: 'monospace',
                           fontSize: 12,

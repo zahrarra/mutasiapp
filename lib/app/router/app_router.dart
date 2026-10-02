@@ -182,19 +182,35 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: RouteNames.pemohonMutasiPath,
         name: RouteNames.pemohonMutasiName,
-        builder: (context, state) => const PemohonMutationListScreen(),
+        builder: (context, state) {
+          final filter = state.uri.queryParameters['filter'] ??
+              (state.extra is String ? state.extra as String : null);
+          return PemohonMutationListScreen(initialFilter: filter);
+        },
       ),
       GoRoute(
         path: '/pemohon/mutations',
-        builder: (context, state) => const PemohonMutationListScreen(),
+        builder: (context, state) {
+          final filter = state.uri.queryParameters['filter'] ??
+              (state.extra is String ? state.extra as String : null);
+          return PemohonMutationListScreen(initialFilter: filter);
+        },
       ),
       GoRoute(
         path: '/pemohon/history',
-        builder: (context, state) => const PemohonMutationListScreen(),
+        builder: (context, state) {
+          final filter = state.uri.queryParameters['filter'] ??
+              (state.extra is String ? state.extra as String : null);
+          return PemohonMutationListScreen(initialFilter: filter);
+        },
       ),
       GoRoute(
         path: '/pemohon/mutation-history',
-        builder: (context, state) => const PemohonMutationListScreen(),
+        builder: (context, state) {
+          final filter = state.uri.queryParameters['filter'] ??
+              (state.extra is String ? state.extra as String : null);
+          return PemohonMutationListScreen(initialFilter: filter);
+        },
       ),
       // Path lebih spesifik dulu (confirm & edit), baru detail :id
       GoRoute(
@@ -248,7 +264,11 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: RouteNames.operatorMutationsPath,
         name: RouteNames.operatorMutationsName,
-        builder: (context, state) => const OperatorMutationsScreen(),
+        builder: (context, state) {
+          final filter = state.uri.queryParameters['filter'] ??
+              (state.extra is String ? state.extra as String : null);
+          return OperatorMutationsScreen(initialFilter: filter);
+        },
       ),
       GoRoute(
         path: RouteNames.operatorVerificationDetailPath,

@@ -9,9 +9,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../app/router/route_names.dart';
+import '../../../../core/widgets/custom_floating_nav_bar.dart';
 import '../../../auth/domain/entities/user_role.dart';
 import '../../../auth/presentation/providers/auth_provider.dart';
-import '../../../../core/widgets/custom_floating_nav_bar.dart';
 import '../../../mutation/domain/entities/mutation.dart';
 import '../providers/kabag_approval_provider.dart';
 
@@ -55,17 +55,12 @@ class _KabagApprovalsScreenState extends ConsumerState<KabagApprovalsScreen> {
     final asyncApprovals = ref.watch(filteredKabagApprovalsProvider);
     final sortOrder = ref.watch(kabagSortOrderProvider);
     final statusFilter = ref.watch(kabagStatusFilterProvider);
-
     final role = ref.watch(authStateProvider).user?.role;
-    final isBagianAset = role == UserRole.bagianAset;
 
     final title = switch (statusFilter) {
-      KabagStatusFilter.waiting =>
-        isBagianAset ? 'Menunggu Verifikasi' : 'Menunggu Approval',
-      KabagStatusFilter.approved =>
-        isBagianAset ? 'Lolos Verifikasi' : 'Disetujui',
-      KabagStatusFilter.rejected =>
-        isBagianAset ? 'Dikembalikan' : 'Ditolak',
+      KabagStatusFilter.waiting => 'Menunggu Verifikasi',
+      KabagStatusFilter.approved => 'Lolos Verifikasi',
+      KabagStatusFilter.rejected => 'Dikembalikan',
       KabagStatusFilter.all => 'Semua Pengajuan',
     };
 
@@ -77,18 +72,12 @@ class _KabagApprovalsScreenState extends ConsumerState<KabagApprovalsScreen> {
           // ── Custom Top Bar ──────────────────────────────────────────
           _ApprovalsTopBar(
             title: title,
-            subtitle: isBagianAset
-                ? 'Antrean Verifikasi Data Aset'
-                : 'Antrean Approval Kabag Aset',
+            subtitle: 'Antrean Verifikasi Data Aset',
             onBack: () {
               if (context.canPop()) {
                 context.pop();
               } else {
-                context.go(
-                  isBagianAset
-                      ? RouteNames.bagianAsetDashboardPath
-                      : RouteNames.kabagDashboardPath,
-                );
+                context.go(RouteNames.bagianAsetDashboardPath);
               }
             },
           ),
@@ -137,18 +126,7 @@ class _KabagApprovalsScreenState extends ConsumerState<KabagApprovalsScreen> {
                             items: KabagStatusFilter.values
                                 .map((s) => DropdownMenuItem(
                                     value: s,
-                                    child: Text(isBagianAset
-                                        ? switch (s) {
-                                            KabagStatusFilter.waiting =>
-                                              'Menunggu Verifikasi',
-                                            KabagStatusFilter.approved =>
-                                              'Lolos Verifikasi',
-                                            KabagStatusFilter.rejected =>
-                                              'Dikembalikan',
-                                            KabagStatusFilter.all =>
-                                              'Semua',
-                                          }
-                                        : s.displayName)))
+                                    child: Text(s.displayName)))
                                 .toList(),
                             onChanged: (val) {
                               if (val != null) {
@@ -213,11 +191,10 @@ class _KabagApprovalsScreenState extends ConsumerState<KabagApprovalsScreen> {
                     itemBuilder: (context, i) => _KabagApprovalCard(
                       mutation: mutations[i],
                       onTap: () {
-                        final path = isBagianAset
-                            ? RouteNames.bagianAsetVerificationDetailPath
-                                .replaceFirst(':id', mutations[i].id)
-                            : '/kabag/approvals/${mutations[i].id}';
-                        context.push(path);
+                        context.push(
+                          RouteNames.bagianAsetVerificationDetailPath
+                              .replaceFirst(':id', mutations[i].id),
+                        );
                       },
                     ),
                   ),

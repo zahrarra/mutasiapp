@@ -109,7 +109,7 @@ void main() {
     );
   }
 
-  testWidgets('KadivDashboardScreen displays greeting, stats, and action button',
+  testWidgets('KadivDashboardScreen displays greeting, action button, category grid, and recent list',
       (tester) async {
     await tester.pumpWidget(createTestWidget(const KadivDashboardScreen()));
     await tester.pumpAndSettle();
@@ -117,13 +117,16 @@ void main() {
     // Verifikasi teks greeting
     expect(find.text('Halo, Drs. Ahmad Dahlan (Kadiv)'), findsOneWidget);
 
-    // Verifikasi stat cards
-    expect(find.text('Menunggu Approval'), findsOneWidget);
-    expect(find.text('Disetujui'), findsOneWidget);
-    expect(find.text('Ditolak'), findsOneWidget);
-
     // Verifikasi tombol primary action
     expect(find.byKey(const Key('btn_lihat_approval_kadiv')), findsOneWidget);
+
+    // Verifikasi 3 stat card tidak ada di tampilan dashboard
+    expect(find.text('Menunggu Approval'), findsNothing);
+    expect(find.text('Disetujui'), findsNothing);
+    expect(find.text('Ditolak'), findsNothing);
+
+    // Verifikasi kategori aset
+    expect(find.text('Kategori Aset'), findsOneWidget);
 
     // Verifikasi section pengajuan terbaru
     expect(find.text('Pengajuan Terbaru'), findsOneWidget);

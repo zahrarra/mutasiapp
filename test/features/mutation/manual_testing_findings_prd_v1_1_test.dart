@@ -20,7 +20,6 @@ import 'package:mutasiku/core/errors/result.dart';
 import 'package:mutasiku/core/services/document_picker_service.dart';
 import 'package:mutasiku/core/services/mutation_draft_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:mutasiku/features/asset/data/repositories/asset_repository_impl.dart';
 import 'package:mutasiku/features/asset/domain/entities/asset.dart';
 import 'package:mutasiku/features/asset/domain/entities/asset_category.dart';
 import 'package:mutasiku/features/asset/domain/entities/asset_status.dart';
@@ -32,7 +31,6 @@ import 'package:mutasiku/features/auth/domain/usecases/logout_usecase.dart';
 import 'package:mutasiku/features/auth/presentation/providers/auth_provider.dart';
 import 'package:mutasiku/features/kabag/presentation/screens/kabag_approval_detail_screen.dart';
 import 'package:mutasiku/features/kadiv/presentation/screens/kadiv_approval_detail_screen.dart';
-import 'package:mutasiku/features/mutation/data/repositories/mutation_repository_impl.dart';
 import 'package:mutasiku/features/mutation/domain/entities/mutation.dart';
 import 'package:mutasiku/features/mutation/domain/entities/mutation_status.dart';
 import 'package:mutasiku/features/mutation/domain/repositories/mutation_repository.dart';
@@ -95,7 +93,6 @@ class _MockMutationRepository implements MutationRepository {
     return Result.success(_mutations.values.toList());
   }
 
-  @override
   Future<Result<Mutation>> operatorVerify({
     required String mutationId,
     required String operatorName,
@@ -376,6 +373,51 @@ void main() {
         expect(find.textContaining('Kadiv'), findsNothing);
         expect(find.textContaining('Approval Kadiv'), findsNothing);
         expect(find.textContaining('Kriteria Approval'), findsNothing);
+      },
+    );
+
+    testWidgets(
+      'Form Pemohon: Aset ikut saya bawa -> PIC Tujuan otomatis terisi nama Pemohon tanpa input manual; Aset ditinggalkan -> PIC Tujuan dikosongkan',
+      (tester) async {
+        await tester.pumpWidget(
+          ProviderScope(
+            overrides: [
+              authStateProvider.overrideWith(
+                (ref) => _TestAuthNotifier(testPemohon),
+              ),
+            ],
+            child: const MaterialApp(
+              home: PemohonCreateMutationScreen(),
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        // 1. Default "Ya, Aset Ikut Saya Pindah": PIC tujuan otomatis terisi nama Pemohon
+        expect(find.byKey(const Key('card_pic_tujuan_otomatis')), findsOneWidget);
+        expect(find.text('Budi Santoso'), findsWidgets);
+        expect(find.text('Otomatis Pemohon'), findsOneWidget);
+
+        // 2. Ubah ke "Tidak, Aset Ditinggalkan di Unit Asal"
+        final tinggalkanFinder = find.text('Tidak, Aset Ditinggalkan di Unit Asal');
+        await tester.ensureVisible(tinggalkanFinder);
+        await tester.tap(tinggalkanFinder);
+        await tester.pumpAndSettle();
+
+        // PIC Tujuan dikosongkan dan info bahwa Bagian Aset yang akan menentukan tampil
+        expect(find.byKey(const Key('card_pic_tujuan_ditinggalkan')), findsOneWidget);
+        expect(find.text('Akan ditentukan oleh Bagian Aset'), findsOneWidget);
+        expect(find.byKey(const Key('card_pic_tujuan_otomatis')), findsNothing);
+
+        // 3. Ubah kembali ke "Ya, Aset Ikut Saya Pindah"
+        final bawaFinder = find.text('Ya, Aset Ikut Saya Pindah');
+        await tester.ensureVisible(bawaFinder);
+        await tester.tap(bawaFinder);
+        await tester.pumpAndSettle();
+
+        // Otomatis terisi kembali dengan nama Pemohon
+        expect(find.byKey(const Key('card_pic_tujuan_otomatis')), findsOneWidget);
+        expect(find.text('Budi Santoso'), findsWidgets);
       },
     );
   });

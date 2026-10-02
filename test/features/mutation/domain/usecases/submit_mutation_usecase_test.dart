@@ -119,7 +119,7 @@ void main() {
       final result = await useCase(params);
 
       expect(result.isFailure, isTrue);
-      expect(result.failureOrNull?.userMessage, contains('ID Aset terdaftar wajib diisi'));
+      expect(result.failureOrNull?.userMessage, contains('Aset yang dimutasi harus merupakan aset terdaftar'));
     });
 
     test('fails when registered asset has empty assetId', () async {
@@ -136,12 +136,12 @@ void main() {
       final result = await useCase(params);
 
       expect(result.isFailure, isTrue);
-      expect(result.failureOrNull?.userMessage, contains('ID Aset terdaftar wajib diisi'));
+      expect(result.failureOrNull?.userMessage, contains('Aset yang dimutasi harus merupakan aset terdaftar'));
     });
   });
 
-  group('SubmitMutationUseCase - Unregistered Asset Validation', () {
-    test('succeeds when unregistered asset has isUnregisteredAsset: true, assetId: null, and customAssetName', () async {
+  group('SubmitMutationUseCase - Unregistered Asset Validation (PRD V1.1 §8 Rule 3)', () {
+    test('fails when isUnregisteredAsset is true (unregistered asset rejected)', () async {
       final params = const SubmitMutationParams(
         applicantId: 'usr_1',
         applicantName: 'Budi',
@@ -159,17 +159,11 @@ void main() {
 
       final result = await useCase(params);
 
-      expect(result.isSuccess, isTrue);
-      final created = result.dataOrNull!;
-      expect(created.isUnregisteredAsset, isTrue);
-      expect(created.assetId, isNull);
-      expect(created.customAssetName, equals('Printer Epson L3110 (Manual)'));
-      expect(created.customSerialNumber, equals('SN-MANUAL-999'));
-      expect(created.displayAssetName, equals('Printer Epson L3110 (Manual)'));
-      expect(created.displayAssetCode, equals('SN-MANUAL-999'));
+      expect(result.isFailure, isTrue);
+      expect(result.failureOrNull?.userMessage, contains('Aset yang dimutasi harus merupakan aset terdaftar'));
     });
 
-    test('fails when unregistered asset has non-null assetId (invalid state combination)', () async {
+    test('fails when unregistered asset has non-null assetId (unregistered asset rejected)', () async {
       final params = const SubmitMutationParams(
         assetId: 'AST-FAKE-001',
         isUnregisteredAsset: true,
@@ -183,25 +177,7 @@ void main() {
       final result = await useCase(params);
 
       expect(result.isFailure, isTrue);
-      expect(result.failureOrNull?.userMessage, contains('tidak boleh memiliki ID aset'));
-    });
-
-    test('fails when unregistered asset has empty customAssetName and empty assetName', () async {
-      final params = const SubmitMutationParams(
-        assetId: null,
-        isUnregisteredAsset: true,
-        customAssetName: '  ',
-        assetName: '  ',
-        sourceLocation: 'Gudang',
-        targetLocation: 'Cabang Cirebon',
-        targetPic: 'Staff',
-        reason: 'Rotasi',
-      );
-
-      final result = await useCase(params);
-
-      expect(result.isFailure, isTrue);
-      expect(result.failureOrNull?.userMessage, contains('Nama aset tidak terdaftar wajib diisi'));
+      expect(result.failureOrNull?.userMessage, contains('Aset yang dimutasi harus merupakan aset terdaftar'));
     });
   });
 }

@@ -100,7 +100,7 @@ class KadivApprovalStats {
 }
 
 bool isWaitingKadivApproval(Mutation m) {
-  return m.status == MutationStatus.waitingKadivApproval;
+  return m.status.isWaitingDivisionApproval;
 }
 
 final kadivStatsProvider = Provider<KadivApprovalStats>((ref) {

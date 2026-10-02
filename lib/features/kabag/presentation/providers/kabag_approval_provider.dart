@@ -56,9 +56,9 @@ enum KabagStatusFilter {
   all;
 
   String get displayName => switch (this) {
-        KabagStatusFilter.waiting => 'Menunggu Approval',
-        KabagStatusFilter.approved => 'Disetujui',
-        KabagStatusFilter.rejected => 'Ditolak',
+        KabagStatusFilter.waiting => 'Menunggu Verifikasi',
+        KabagStatusFilter.approved => 'Lolos Verifikasi',
+        KabagStatusFilter.rejected => 'Dikembalikan',
         KabagStatusFilter.all => 'Semua',
       };
 }

@@ -17,7 +17,6 @@ import 'package:go_router/go_router.dart';
 import 'package:mutasiku/features/mutation/data/repositories/mutation_repository_impl.dart';
 import 'package:mutasiku/features/mutation/presentation/providers/mutation_provider.dart';
 import 'package:mutasiku/features/notification/presentation/screens/notification_screen.dart';
-import 'package:mutasiku/features/notification/presentation/widgets/notification_tile.dart';
 import 'package:mutasiku/features/asset/domain/entities/asset.dart';
 import 'package:mutasiku/features/asset/domain/entities/asset_category.dart';
 import 'package:mutasiku/features/asset/domain/entities/asset_status.dart';
@@ -470,5 +469,89 @@ void main() {
 
     expect(find.text('Informasi Aset Terdaftar'), findsOneWidget);
     expect(find.byType(Form), findsOneWidget);
+  });
+
+  testWidgets('OperatorDashboardScreen does not show Lihat Detail or Filter Detail',
+      (tester) async {
+    await tester.pumpWidget(createTestWidget(const OperatorDashboardScreen()));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Lihat Detail'), findsNothing);
+    expect(find.text('Filter Detail'), findsNothing);
+  });
+
+  testWidgets('OperatorMutationsScreen initialFilter sets active filter and tab correctly',
+      (tester) async {
+    // 1. Initial filter TI
+    await tester.pumpWidget(createTestWidget(
+      const OperatorMutationsScreen(initialFilter: 'ti'),
+    ));
+    await tester.pumpAndSettle();
+    expect(find.textContaining('Aset TI'), findsWidgets);
+
+    // 2. Initial filter Umum
+    await tester.pumpWidget(createTestWidget(
+      const OperatorMutationsScreen(initialFilter: 'umum'),
+    ));
+    await tester.pumpAndSettle();
+    expect(find.textContaining('Aset Umum'), findsWidgets);
+
+    // 3. Initial filter Returned
+    await tester.pumpWidget(createTestWidget(
+      const OperatorMutationsScreen(initialFilter: 'returned'),
+    ));
+    await tester.pumpAndSettle();
+    expect(find.textContaining('Dikembalikan'), findsWidgets);
+
+    // 4. Initial filter Submitted
+    await tester.pumpWidget(createTestWidget(
+      const OperatorMutationsScreen(initialFilter: 'submitted'),
+    ));
+    await tester.pumpAndSettle();
+    expect(find.textContaining('Menunggu'), findsWidgets);
+
+    // 5. Initial filter Allocated (Dialokasikan)
+    await tester.pumpWidget(createTestWidget(
+      const OperatorMutationsScreen(initialFilter: 'allocated'),
+    ));
+    await tester.pumpAndSettle();
+    expect(find.textContaining('Dialokasikan'), findsWidgets);
+  });
+
+  testWidgets('OperatorMutationsScreen filter status properly isolates returned and allocated items',
+      (tester) async {
+    // 1. Open screen with 'submitted' filter: returned and allocated items should not appear
+    await tester.pumpWidget(createTestWidget(
+      const OperatorMutationsScreen(initialFilter: 'submitted'),
+    ));
+    await tester.pumpAndSettle();
+
+    // Rina (submitted) should be visible
+    expect(find.text('Rina'), findsWidgets);
+    // Andi Wijaya (returned), Meja Kerja Eksekutif (allocated), Server Rack (allocated) should NOT appear
+    expect(find.text('Andi Wijaya'), findsNothing);
+    expect(find.text('Meja Kerja Eksekutif'), findsNothing);
+    expect(find.text('Server Rack Enterprise Dell PowerEdge'), findsNothing);
+
+    // 2. Open screen with 'returned' filter (Dikembalikan)
+    await tester.pumpWidget(createTestWidget(
+      const OperatorMutationsScreen(initialFilter: 'returned'),
+    ));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Andi Wijaya'), findsOneWidget);
+    expect(find.text('Rina'), findsNothing);
+    expect(find.text('Server Rack Enterprise Dell PowerEdge'), findsNothing);
+
+    // 3. Open screen with 'allocated' filter (Dialokasikan)
+    await tester.pumpWidget(createTestWidget(
+      const OperatorMutationsScreen(initialFilter: 'allocated'),
+    ));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Meja Kerja Eksekutif'), findsWidgets);
+    expect(find.text('Server Rack Enterprise Dell PowerEdge'), findsOneWidget);
+    expect(find.text('Rina'), findsNothing);
+    expect(find.text('Andi Wijaya'), findsNothing);
   });
 }

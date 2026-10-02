@@ -1,54 +1,50 @@
 // lib/features/pemohon/presentation/screens/pemohon_dashboard_screen.dart
 //
-// Dashboard Pemohon — visual Stitch.
-// Font: Montserrat. Navigasi: context.go (URL ikut berubah).
-// Logic/provider sesuai PRD.
+// Dashboard Pemohon — Baseline UI Stitch (Screen: 304565ac29f447dd985bde4075809822).
+// Menggunakan Curved Deep Navy Header, Search Bar transparan 1:1 Stitch,
+// Metric Row (Dalam Proses, Perlu Tindakan, Selesai), Action Banner,
+// Stepper Timeline 6 Langkah, dan List Pengajuan Terbaru.
+// Tetap mempertahankan 100% business logic, provider, navigation, dan flow MutasiKu.
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:mutasiku/core/widgets/custom_floating_nav_bar.dart';
-import 'package:mutasiku/features/auth/domain/entities/user_role.dart';
 
 import '../../../../app/router/route_names.dart';
+import '../../../../core/widgets/custom_floating_nav_bar.dart';
+import '../../../auth/domain/entities/user_role.dart';
 import '../../../auth/presentation/providers/auth_provider.dart';
 import '../../../mutation/domain/entities/mutation.dart';
 import '../../../mutation/domain/entities/mutation_status.dart';
 import '../../../mutation/presentation/providers/mutation_provider.dart';
+import '../../../notification/presentation/providers/notification_provider.dart';
 
-abstract final class _S {
-  static const navy = Color(0xFF0F2E42);
-  static const navyCard = Color(0xFF0F3D56);
-  static const surface = Color(0xFFF6F8FA);
-  static const white = Color(0xFFFFFFFF);
-  static const text900 = Color(0xFF0F172A);
-  static const text800 = Color(0xFF1E293B);
-  static const text700 = Color(0xFF334155);
-  static const text600 = Color(0xFF475569);
-  static const text500 = Color(0xFF64748B);
-  static const text400 = Color(0xFF94A3B8);
-  static const border = Color(0xFFE2E8F0);
-  static const border100 = Color(0xFFF1F5F9);
-  static const link = Color(0xFF18538A);
-  static const emerald50 = Color(0xFFECFDF5);
-  static const emerald200 = Color(0xFFA7F3D0);
-  static const emerald600 = Color(0xFF059669);
-  static const emerald700 = Color(0xFF047857);
-  static const emerald500 = Color(0xFF10B981);
-  static const sky100 = Color(0xFFE0F2FE);
-  static const sky800 = Color(0xFF075985);
-  static const confirmBg = Color(0xFFFFF4E5);
-  static const confirmBorder = Color(0xFFFDE3B6);
-  static const confirmIconBg = Color(0xFFE88625);
-  static const confirmTitle = Color(0xFF8C4600);
-  static const confirmBody = Color(0xFFA66115);
-  static const confirmBtn = Color(0xFF8B4513);
-  static const approvedBg = Color(0xFFEBF3FF);
-  static const approvedText = Color(0xFF2B66CC);
-  static const pendingBg = Color(0xFFFFF3E0);
-  static const pendingText = Color(0xFFB76E00);
-  static const slate100 = Color(0xFFF1F5F9);
+/// Design tokens sesuai DESIGN.md dan Stitch baseline UI
+abstract final class _C {
+  static const navy = Color(0xFF0F3D56);
+  static const darkNavy = Color(0xFF072435);
+  static const teal = Color(0xFF0F766E);
+  static const tealAccent = Color(0xFF006A63);
+  static const bg = Color(0xFFF6F8FA);
+  static const surface = Color(0xFFFFFFFF);
+  static const textPrimary = Color(0xFF172B4D);
+  static const textSecondary = Color(0xFF52606D);
+  static const borderLight = Color(0xFFE2E8F0);
+
+  // Status colors
+  static const success = Color(0xFF15803D);
+  static const successBg = Color(0xFFECFDF5);
+
+  static const info = Color(0xFF175CD3);
+  static const infoBg = Color(0xFFEFF6FF);
+
+  static const warning = Color(0xFFB45309);
+  static const warningBg = Color(0xFFFFFBEB);
+  static const warningBorder = Color(0xFFFDE68A);
+
+  static const error = Color(0xFFB42318);
+  static const errorBg = Color(0xFFFEF2F2);
 }
 
 class PemohonDashboardScreen extends ConsumerStatefulWidget {
@@ -63,7 +59,6 @@ class _PemohonDashboardScreenState
     extends ConsumerState<PemohonDashboardScreen> {
   final TextEditingController _searchController = TextEditingController();
   String _searchQuery = '';
-  MutationStatus? _selectedStatus;
 
   @override
   void initState() {
@@ -80,15 +75,19 @@ class _PemohonDashboardScreenState
   }
 
   void _onSearchChanged() {
-    final v = _searchController.text.trim().toLowerCase();
-    if (v == _searchQuery) return;
-    setState(() => _searchQuery = v);
+    final val = _searchController.text.trim().toLowerCase();
+    if (val != _searchQuery) {
+      setState(() => _searchQuery = val);
+    }
   }
 
-  TextStyle _montserrat({
+  String _detailPath(String id) =>
+      RouteNames.pemohonMutasiDetailPath.replaceFirst(':id', id);
+
+  TextStyle _font({
     double size = 14,
     FontWeight weight = FontWeight.w400,
-    Color color = _S.text800,
+    Color color = _C.textPrimary,
     double? height,
     double? letterSpacing,
   }) {
@@ -101,53 +100,56 @@ class _PemohonDashboardScreenState
     );
   }
 
-  String _detailPath(String id) =>
-      RouteNames.pemohonMutasiDetailPath.replaceFirst(':id', id);
-
-  String _confirmPath(String id) =>
-      RouteNames.pemohonConfirmationPath.replaceFirst(':id', id);
-
   @override
   Widget build(BuildContext context) {
     final user = ref.watch(authStateProvider).user;
     final mutationsAsync = ref.watch(mutationListProvider);
+    final unreadCount = ref.watch(unreadNotificationCountProvider);
+
     return Scaffold(
-      backgroundColor: _S.surface,
-      body: SafeArea(
-        bottom: false,
-        child: RefreshIndicator(
-          color: _S.navyCard,
-          onRefresh: () async {
-            ref.invalidate(mutationListProvider);
-            await ref.read(mutationListProvider.future);
-          },
-          child: CustomScrollView(
-            physics: const AlwaysScrollableScrollPhysics(
-              parent: BouncingScrollPhysics(),
-            ),
-            slivers: [
-              SliverPadding(
-                padding: const EdgeInsets.fromLTRB(16, 12, 16, 120),
-                sliver: SliverList(
-                  delegate: SliverChildListDelegate([
-                    _buildHeader(user?.name ?? 'Pemohon'),
-                    const SizedBox(height: 12),
-                    _buildGreeting(user?.name ?? 'Pemohon'),
-                    const SizedBox(height: 12),
-                    _buildSummaryCard(mutationsAsync),
-                    const SizedBox(height: 12),
-                    _buildSearchFilter(),
-                    const SizedBox(height: 12),
-                    _buildConfirmationBanner(mutationsAsync),
-                    const SizedBox(height: 16),
-                    _buildActiveSection(mutationsAsync),
-                    const SizedBox(height: 20),
-                    _buildRecentSection(mutationsAsync),
-                  ]),
-                ),
-              ),
-            ],
+      backgroundColor: _C.bg,
+      body: RefreshIndicator(
+        color: _C.navy,
+        onRefresh: () async {
+          ref.invalidate(mutationListProvider);
+          await ref.read(mutationListProvider.future);
+        },
+        child: CustomScrollView(
+          physics: const AlwaysScrollableScrollPhysics(
+            parent: BouncingScrollPhysics(),
           ),
+          slivers: [
+            // ── 1. Curved Deep Navy Header Container ─────────────────────────
+            SliverToBoxAdapter(
+              child: _buildCurvedHeader(
+                user: user,
+                unreadCount: unreadCount,
+              ),
+            ),
+
+            // ── 2. Body Content ──────────────────────────────────────────────
+            SliverPadding(
+              padding: const EdgeInsets.fromLTRB(16, 16, 16, 120),
+              sliver: SliverList(
+                delegate: SliverChildListDelegate([
+                  // Quick Action Banner: "Butuh Mutasi / Relokasi Aset?"
+                  _buildQuickActionBanner(),
+                  const SizedBox(height: 14),
+
+                  // 3 Metric Cards: Dalam Proses, Perlu Tindakan, Selesai
+                  _buildMetricGrid(mutationsAsync),
+                  const SizedBox(height: 16),
+
+                  // Section: Mutasi Dalam Proses
+                  _buildActiveSection(mutationsAsync),
+                  const SizedBox(height: 20),
+
+                  // Section: Pengajuan Terbaru
+                  _buildRecentSection(mutationsAsync),
+                ]),
+              ),
+            ),
+          ],
         ),
       ),
       bottomNavigationBar: CustomFloatingNavBar.scaffoldBottomBar(
@@ -156,382 +158,364 @@ class _PemohonDashboardScreenState
     );
   }
 
-  Widget _buildHeader(String userName) {
-    return Row(
-      children: [
-        _squareIconBtn(Icons.menu_rounded, () => _showMenu(context)),
-        const Spacer(),
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-          decoration: BoxDecoration(
-            color: _S.emerald50,
-            borderRadius: BorderRadius.circular(999),
-            border: Border.all(color: _S.emerald200),
-          ),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Container(
-                width: 6,
-                height: 6,
-                decoration: const BoxDecoration(
-                  color: _S.emerald600,
-                  shape: BoxShape.circle,
-                ),
-              ),
-              const SizedBox(width: 6),
-              Text(
-                'MUTASIKU',
-                style: _montserrat(
-                  size: 11,
-                  weight: FontWeight.w600,
-                  color: _S.emerald700,
-                  letterSpacing: 0.3,
-                ),
-              ),
-            ],
-          ),
-        ),
-        const Spacer(),
-        GestureDetector(
-          onTap: () => context.go(RouteNames.pemohonProfilePath),
-          child: Stack(
-            clipBehavior: Clip.none,
-            children: [
-              Container(
-                width: 36,
-                height: 36,
-                alignment: Alignment.center,
-                decoration: BoxDecoration(
-                  color: _S.navy,
-                  shape: BoxShape.circle,
-                  border: Border.all(color: Colors.white, width: 2),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withValues(alpha: 0.06),
-                      blurRadius: 4,
-                    ),
-                  ],
-                ),
-                child: Text(
-                  _initials(userName),
-                  style: _montserrat(
-                    size: 12,
-                    weight: FontWeight.w700,
-                    color: Colors.white,
-                  ),
-                ),
-              ),
-              Positioned(
-                right: 0,
-                bottom: 0,
-                child: Container(
-                  width: 10,
-                  height: 10,
-                  decoration: BoxDecoration(
-                    color: _S.emerald500,
-                    shape: BoxShape.circle,
-                    border: Border.all(color: Colors.white, width: 2),
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildGreeting(String userName) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          children: [
-            Expanded(
-              child: Text(
-                'Divisi Operasional & Umum',
-                style: _montserrat(
-                  size: 12,
-                  weight: FontWeight.w500,
-                  color: _S.text500,
-                ),
-              ),
-            ),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 2),
-              decoration: BoxDecoration(
-                color: _S.emerald50,
-                borderRadius: BorderRadius.circular(999),
-                border: Border.all(color: _S.emerald200),
-              ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Container(
-                    width: 6,
-                    height: 6,
-                    decoration: const BoxDecoration(
-                      color: _S.emerald600,
-                      shape: BoxShape.circle,
-                    ),
-                  ),
-                  const SizedBox(width: 6),
-                  Text(
-                    'Online',
-                    style: _montserrat(
-                      size: 11,
-                      weight: FontWeight.w500,
-                      color: _S.emerald700,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 4),
-        Text(
-          'Halo, ${_displayFirstName(userName)}!',
-          style: _montserrat(
-            size: 24,
-            weight: FontWeight.w800,
-            color: _S.text900,
-            height: 1.15,
-            letterSpacing: -0.3,
-          ),
-        ),
-        const SizedBox(height: 2),
-        Text(
-          'Kelola & Pantau Pengajuan Mutasi Aset',
-          style: _montserrat(size: 12, color: _S.text500),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildSummaryCard(AsyncValue<List<Mutation>> mutationsAsync) {
-    final list = mutationsAsync.valueOrNull ?? const <Mutation>[];
-    final active = list.where(_isActive).length;
+  // ──────────────────────────────────────────────────────────────────────────
+  // HEADER SECTION (Curved Deep Navy #0F3D56, Search Bar Transparan 1:1 Stitch)
+  // ──────────────────────────────────────────────────────────────────────────
+  Widget _buildCurvedHeader({
+    required dynamic user,
+    required int unreadCount,
+  }) {
+    final userName = user?.name ?? 'Pemohon';
+    final topPadding = MediaQuery.of(context).padding.top;
 
     return Container(
-      padding: const EdgeInsets.all(16),
+      width: double.infinity,
       decoration: BoxDecoration(
-        color: _S.navyCard,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
+        color: _C.navy,
+        borderRadius: const BorderRadius.vertical(
+          bottom: Radius.circular(36),
+        ),
         boxShadow: [
           BoxShadow(
-            color: _S.navyCard.withValues(alpha: 0.25),
-            blurRadius: 12,
-            offset: const Offset(0, 4),
+            color: Colors.black.withValues(alpha: 0.15),
+            blurRadius: 20,
+            offset: const Offset(0, 10),
           ),
         ],
       ),
       child: Stack(
         children: [
+          // Background decorative glow (Stitch 1:1)
           Positioned(
-            top: 0,
-            right: 0,
+            right: -24,
+            top: -24,
             child: Container(
-              width: 40,
-              height: 40,
+              width: 192,
+              height: 192,
               decoration: BoxDecoration(
-                color: Colors.white.withValues(alpha: 0.1),
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: Colors.white.withValues(alpha: 0.2)),
-              ),
-              child: Icon(
-                Icons.inventory_2_outlined,
-                size: 20,
-                color: Colors.white.withValues(alpha: 0.9),
+                shape: BoxShape.circle,
+                color: _C.teal.withValues(alpha: 0.20),
               ),
             ),
           ),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                'TOTAL ASET TANGGUNG JAWAB',
-                style: _montserrat(
-                  size: 11,
-                  weight: FontWeight.w600,
-                  color: const Color(0xFFCBD5E1),
-                  letterSpacing: 0.8,
-                ),
+          Positioned(
+            left: -16,
+            bottom: -16,
+            child: Container(
+              width: 160,
+              height: 160,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: _C.tealAccent.withValues(alpha: 0.15),
               ),
-              const SizedBox(height: 4),
-              Row(
-                crossAxisAlignment: CrossAxisAlignment.baseline,
-                textBaseline: TextBaseline.alphabetic,
-                children: [
-                  Text(
-                    '$active',
-                    style: _montserrat(
-                      size: 30,
-                      weight: FontWeight.w800,
-                      color: Colors.white,
-                      height: 1,
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  Text(
-                    'Aset Aktif (PIC)',
-                    style: _montserrat(
-                      size: 14,
-                      weight: FontWeight.w500,
-                      color: const Color(0xFFCBD5E1),
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 16),
-              Row(
-                children: [
-                  Expanded(
-                    child: Material(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(12),
+            ),
+          ),
+
+          Padding(
+            padding: EdgeInsets.fromLTRB(16, topPadding + 8, 16, 28),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Top Row: Menu Button (Kiri) & Notifikasi + Avatar (Kanan) — Stitch 1:1
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    // Menu Hamburger Button (Stitch: w-10 h-10 rounded-full bg-white/10 border-white/10)
+                    Material(
+                      color: Colors.transparent,
                       child: InkWell(
-                        onTap: () =>
-                            context.go(RouteNames.pemohonMutasiCreatePath),
-                        borderRadius: BorderRadius.circular(12),
-                        child: Padding(
-                          padding: const EdgeInsets.symmetric(vertical: 10),
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              const Icon(
-                                Icons.add_rounded,
-                                size: 18,
-                                color: _S.navyCard,
-                              ),
-                              const SizedBox(width: 6),
-                              Text(
-                                'Ajukan Mutasi',
-                                style: _montserrat(
-                                  size: 12,
-                                  weight: FontWeight.w600,
-                                  color: _S.navyCard,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: Material(
-                      color: Colors.white.withValues(alpha: 0.1),
-                      borderRadius: BorderRadius.circular(12),
-                      child: InkWell(
-                        onTap: () => context.go(RouteNames.pemohonMutasiPath),
-                        borderRadius: BorderRadius.circular(12),
+                        onTap: () => _showMenu(context, user),
+                        borderRadius: BorderRadius.circular(999),
                         child: Container(
-                          padding: const EdgeInsets.symmetric(vertical: 10),
+                          width: 40,
+                          height: 40,
                           decoration: BoxDecoration(
-                            borderRadius: BorderRadius.circular(12),
+                            color: Colors.white.withValues(alpha: 0.10),
+                            shape: BoxShape.circle,
                             border: Border.all(
-                              color: Colors.white.withValues(alpha: 0.2),
+                              color: Colors.white.withValues(alpha: 0.10),
+                              width: 1.0,
                             ),
                           ),
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Icon(
-                                Icons.confirmation_number_outlined,
-                                size: 18,
-                                color: Colors.white.withValues(alpha: 0.9),
-                              ),
-                              const SizedBox(width: 6),
-                              Text(
-                                'Cek Tiket',
-                                style: _montserrat(
-                                  size: 12,
-                                  weight: FontWeight.w500,
-                                  color: Colors.white,
-                                ),
-                              ),
-                            ],
+                          child: const Icon(
+                            Icons.menu_rounded,
+                            size: 20,
+                            color: Colors.white,
                           ),
                         ),
                       ),
                     ),
+
+                    // Right: Notifications Button & Avatar Profile Circle
+                    Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        // Notifikasi Button (Stitch: w-10 h-10 rounded-full bg-white/10 border-white/15)
+                        Material(
+                          color: Colors.transparent,
+                          child: InkWell(
+                            onTap: () => context.go(RouteNames.pemohonNotificationsPath),
+                            borderRadius: BorderRadius.circular(999),
+                            child: Container(
+                              width: 40,
+                              height: 40,
+                              decoration: BoxDecoration(
+                                color: Colors.white.withValues(alpha: 0.10),
+                                shape: BoxShape.circle,
+                                border: Border.all(
+                                  color: Colors.white.withValues(alpha: 0.15),
+                                  width: 1.0,
+                                ),
+                              ),
+                              child: Stack(
+                                alignment: Alignment.center,
+                                children: [
+                                  const Icon(
+                                    Icons.notifications_none_rounded,
+                                    size: 20,
+                                    color: Colors.white,
+                                  ),
+                                  if (unreadCount > 0)
+                                    Positioned(
+                                      top: 8,
+                                      right: 8,
+                                      child: Container(
+                                        width: 8,
+                                        height: 8,
+                                        decoration: BoxDecoration(
+                                          color: const Color(0xFFEF4444),
+                                          shape: BoxShape.circle,
+                                          border: Border.all(
+                                            color: _C.navy,
+                                            width: 1.5,
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 10),
+
+                        // Avatar Profile Circle (Stitch: w-9 h-9 bg-[#006a63] border-2 border-white/30)
+                        Material(
+                          color: Colors.transparent,
+                          child: InkWell(
+                            onTap: () => context.go(RouteNames.pemohonProfilePath),
+                            borderRadius: BorderRadius.circular(999),
+                            child: Container(
+                              width: 36,
+                              height: 36,
+                              decoration: BoxDecoration(
+                                color: const Color(0xFF006A63),
+                                shape: BoxShape.circle,
+                                border: Border.all(
+                                  color: Colors.white.withValues(alpha: 0.30),
+                                  width: 2.0,
+                                ),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: Colors.black.withValues(alpha: 0.10),
+                                    blurRadius: 4,
+                                    offset: const Offset(0, 1),
+                                  ),
+                                ],
+                              ),
+                              child: Stack(
+                                alignment: Alignment.center,
+                                children: [
+                                  Text(
+                                    _initials(userName),
+                                    style: _font(
+                                      size: 12,
+                                      weight: FontWeight.w700,
+                                      color: Colors.white,
+                                      letterSpacing: -0.2,
+                                    ),
+                                  ),
+                                  Positioned(
+                                    right: -1,
+                                    bottom: -1,
+                                    child: Container(
+                                      width: 10,
+                                      height: 10,
+                                      decoration: BoxDecoration(
+                                        color: const Color(0xFF34D399),
+                                        shape: BoxShape.circle,
+                                        border: Border.all(
+                                          color: _C.navy,
+                                          width: 2.0,
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 16),
+
+                // Greeting & Subtext — Stitch 1:1
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 4),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Halo, $userName!',
+                        style: _font(
+                          size: 22,
+                          weight: FontWeight.w700,
+                          color: Colors.white,
+                          letterSpacing: -0.3,
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        'Pengajuan & Pelacakan Mutasi Aset Kantor',
+                        style: _font(
+                          size: 12,
+                          weight: FontWeight.w500,
+                          color: Colors.white.withValues(alpha: 0.70),
+                        ),
+                      ),
+                    ],
                   ),
-                ],
-              ),
-            ],
+                ),
+                const SizedBox(height: 14),
+
+                // Search Bar Kapsul Transparan Persis Stitch Terbaru (1:1 Reference)
+                Container(
+                  width: double.infinity,
+                  height: 44,
+                  decoration: BoxDecoration(
+                    color: Colors.white.withValues(alpha: 0.10),
+                    borderRadius: BorderRadius.circular(999),
+                    border: Border.all(
+                      color: Colors.white.withValues(alpha: 0.20),
+                      width: 1.0,
+                    ),
+                  ),
+                  child: Theme(
+                    data: Theme.of(context).copyWith(
+                      inputDecorationTheme: const InputDecorationTheme(
+                        filled: false,
+                        fillColor: Colors.transparent,
+                        border: InputBorder.none,
+                        enabledBorder: InputBorder.none,
+                        focusedBorder: InputBorder.none,
+                        errorBorder: InputBorder.none,
+                        disabledBorder: InputBorder.none,
+                      ),
+                    ),
+                    child: TextField(
+                      controller: _searchController,
+                      cursorColor: Colors.white,
+                      style: _font(
+                        size: 13,
+                        weight: FontWeight.w500,
+                        color: Colors.white,
+                      ),
+                      decoration: InputDecoration(
+                        isDense: true,
+                        filled: false,
+                        fillColor: Colors.transparent,
+                        focusColor: Colors.transparent,
+                        hoverColor: Colors.transparent,
+                        contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 12,
+                        ),
+                        border: InputBorder.none,
+                        enabledBorder: InputBorder.none,
+                        focusedBorder: InputBorder.none,
+                        errorBorder: InputBorder.none,
+                        disabledBorder: InputBorder.none,
+                        prefixIconConstraints: const BoxConstraints(
+                          minWidth: 44,
+                          minHeight: 44,
+                        ),
+                        prefixIcon: Padding(
+                          padding: const EdgeInsets.only(left: 16, right: 12),
+                          child: Icon(
+                            Icons.search_rounded,
+                            size: 20,
+                            color: Colors.white.withValues(alpha: 0.70),
+                          ),
+                        ),
+                        suffixIcon: _searchQuery.isNotEmpty
+                            ? IconButton(
+                                icon: Icon(
+                                  Icons.close_rounded,
+                                  size: 18,
+                                  color: Colors.white.withValues(alpha: 0.70),
+                                ),
+                                onPressed: () {
+                                  _searchController.clear();
+                                },
+                              )
+                            : null,
+                        hintText: 'Cari nomor tiket, kode aset, status...',
+                        hintStyle: _font(
+                          size: 13,
+                          weight: FontWeight.w500,
+                          color: Colors.white.withValues(alpha: 0.60),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
           ),
         ],
       ),
     );
   }
 
-  Widget _buildSearchFilter() {
-    return Row(
-      children: [
-        Expanded(
-          child: Container(
-            height: 40,
-            decoration: BoxDecoration(
-              color: _S.white,
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: _S.border),
-            ),
-            child: TextField(
-              controller: _searchController,
-              style: _montserrat(size: 12, color: _S.text700),
-              decoration: InputDecoration(
-                hintText: 'Cari nomor tiket atau nama aset...',
-                hintStyle: _montserrat(size: 12, color: _S.text400),
-                prefixIcon: const Icon(
-                  Icons.search_rounded,
-                  size: 18,
-                  color: _S.text400,
-                ),
-                border: InputBorder.none,
-                contentPadding: const EdgeInsets.symmetric(vertical: 10),
-              ),
-            ),
-          ),
-        ),
-        const SizedBox(width: 8),
-        _squareIconBtn(Icons.tune_rounded, () => _showFilter(context)),
-      ],
-    );
-  }
-
-  Widget _buildConfirmationBanner(AsyncValue<List<Mutation>> mutationsAsync) {
-    final list = mutationsAsync.valueOrNull ?? const <Mutation>[];
-    final pending = list
-        .where((m) => m.status == MutationStatus.pendingConfirmation)
-        .toList();
-    if (pending.isEmpty) return const SizedBox.shrink();
-
-    final first = pending.first;
+  // ──────────────────────────────────────────────────────────────────────────
+  // QUICK ACTION BANNER ("Butuh Mutasi / Relokasi Aset?")
+  // ──────────────────────────────────────────────────────────────────────────
+  Widget _buildQuickActionBanner() {
     return Container(
-      margin: const EdgeInsets.only(bottom: 4),
-      padding: const EdgeInsets.all(12),
+      width: double.infinity,
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: _S.confirmBg,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: _S.confirmBorder),
+        gradient: const LinearGradient(
+          colors: [_C.navy, _C.darkNavy],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: _C.teal.withValues(alpha: 0.45)),
+        boxShadow: [
+          BoxShadow(
+            color: _C.navy.withValues(alpha: 0.18),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
       ),
       child: Row(
         children: [
           Container(
-            width: 40,
-            height: 40,
+            width: 44,
+            height: 44,
             decoration: BoxDecoration(
-              color: _S.confirmIconBg,
+              color: _C.tealAccent,
               borderRadius: BorderRadius.circular(12),
             ),
             child: const Icon(
-              Icons.fact_check_outlined,
+              Icons.add_to_photos_rounded,
               color: Colors.white,
-              size: 20,
+              size: 22,
             ),
           ),
           const SizedBox(width: 12),
@@ -540,46 +524,58 @@ class _PemohonDashboardScreenState
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  '${pending.length} Mutasi Menunggu Konfirmasi',
-                  style: _montserrat(
-                    size: 12,
+                  'Butuh Mutasi / Relokasi Aset?',
+                  style: _font(
+                    size: 13,
                     weight: FontWeight.w700,
-                    color: _S.confirmTitle,
+                    color: Colors.white,
                   ),
                 ),
                 const SizedBox(height: 2),
                 Text(
-                  'Staff Aset telah selesai update data fisik. Silakan periksa & konfirmasi penerimaan.',
+                  'Ajukan perpindahan barang inventaris dinas dengan cepat & terlacak.',
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
-                  style: _montserrat(
+                  style: _font(
                     size: 11,
-                    color: _S.confirmBody,
-                    height: 1.3,
+                    weight: FontWeight.w400,
+                    color: Colors.white.withValues(alpha: 0.75),
+                    height: 1.25,
                   ),
                 ),
               ],
             ),
           ),
-          const SizedBox(width: 8),
+          const SizedBox(width: 10),
           Material(
-            color: _S.confirmBtn,
-            borderRadius: BorderRadius.circular(999),
+            color: _C.tealAccent,
+            borderRadius: BorderRadius.circular(12),
             child: InkWell(
-              onTap: () => context.go(_confirmPath(first.id)),
-              borderRadius: BorderRadius.circular(999),
+              onTap: () => context.go(RouteNames.pemohonMutasiCreatePath),
+              borderRadius: BorderRadius.circular(12),
               child: Padding(
                 padding: const EdgeInsets.symmetric(
                   horizontal: 12,
-                  vertical: 6,
+                  vertical: 9,
                 ),
-                child: Text(
-                  'Periksa',
-                  style: _montserrat(
-                    size: 11,
-                    weight: FontWeight.w600,
-                    color: Colors.white,
-                  ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Icon(
+                      Icons.add_rounded,
+                      size: 16,
+                      color: Colors.white,
+                    ),
+                    const SizedBox(width: 4),
+                    Text(
+                      'Ajukan Mutasi',
+                      style: _font(
+                        size: 11,
+                        weight: FontWeight.w700,
+                        color: Colors.white,
+                      ),
+                    ),
+                  ],
                 ),
               ),
             ),
@@ -589,13 +585,149 @@ class _PemohonDashboardScreenState
     );
   }
 
+  // ──────────────────────────────────────────────────────────────────────────
+  // 3 METRIC CARDS ROW (Dalam Proses, Perlu Tindakan, Selesai)
+  // ──────────────────────────────────────────────────────────────────────────
+  Widget _buildMetricGrid(AsyncValue<List<Mutation>> mutationsAsync) {
+    final list = mutationsAsync.valueOrNull ?? const <Mutation>[];
+
+    // 1. Dalam Proses: Mutasi Saya yang sedang dalam proses berjalan
+    final inProcessCount = list.where(_isInProcess).length;
+
+    // 2. Perlu Tindakan: Hanya mutasi yang butuh tindakan Pemohon (konfirmasi / revisi)
+    final actionCount = list.where(_needsAction).length;
+
+    // 3. Selesai: Mutasi yang sudah benar-benar Selesai dari data Mutasi Saya
+    final completedCount =
+        list.where((m) => m.status == MutationStatus.completed).length;
+
+    return Row(
+      children: [
+        Expanded(
+          child: _buildMetricCard(
+            icon: Icons.sync_rounded,
+            iconColor: _C.info,
+            iconBg: _C.infoBg,
+            title: 'Dalam Proses',
+            value: '$inProcessCount Tiket',
+            onTap: () => context.go(
+              '${RouteNames.pemohonMutasiPath}?filter=progress',
+              extra: 'progress',
+            ),
+          ),
+        ),
+        const SizedBox(width: 8),
+        Expanded(
+          child: _buildMetricCard(
+            icon: Icons.assignment_turned_in_rounded,
+            iconColor: _C.warning,
+            iconBg: _C.warningBg,
+            borderColor: actionCount > 0 ? _C.warningBorder : null,
+            title: 'Perlu Tindakan',
+            value: '$actionCount Tiket',
+            onTap: () => context.go(
+              '${RouteNames.pemohonMutasiPath}?filter=action',
+              extra: 'action',
+            ),
+          ),
+        ),
+        const SizedBox(width: 8),
+        Expanded(
+          child: _buildMetricCard(
+            icon: Icons.verified_rounded,
+            iconColor: _C.success,
+            iconBg: _C.successBg,
+            title: 'Selesai',
+            value: '$completedCount Tiket',
+            onTap: () => context.go(
+              '${RouteNames.pemohonMutasiPath}?filter=done',
+              extra: 'done',
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildMetricCard({
+    required IconData icon,
+    required Color iconColor,
+    required Color iconBg,
+    required String title,
+    required String value,
+    Color? borderColor,
+    required VoidCallback onTap,
+  }) {
+    return Material(
+      color: _C.surface,
+      borderRadius: BorderRadius.circular(16),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(16),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 12),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: borderColor ?? _C.borderLight),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.02),
+                blurRadius: 6,
+                offset: const Offset(0, 2),
+              ),
+            ],
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 34,
+                height: 34,
+                decoration: BoxDecoration(
+                  color: iconBg,
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Icon(icon, color: iconColor, size: 18),
+              ),
+              const SizedBox(height: 10),
+              Text(
+                value,
+                style: _font(
+                  size: 13,
+                  weight: FontWeight.w800,
+                  color: iconColor,
+                ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+              const SizedBox(height: 2),
+              Text(
+                title,
+                style: _font(
+                  size: 11,
+                  weight: FontWeight.w600,
+                  color: _C.textSecondary,
+                ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  // ──────────────────────────────────────────────────────────────────────────
+  // SECTION: MUTASI DALAM PROSES (WITH 6-STEP STEPPER, TANPA "LIHAT SEMUA")
+  // ──────────────────────────────────────────────────────────────────────────
   Widget _buildActiveSection(AsyncValue<List<Mutation>> mutationsAsync) {
     final list = mutationsAsync.valueOrNull ?? const <Mutation>[];
     final active =
         list
             .where(_isActive)
             .where(_matchesSearch)
-            .where(_matchesStatus)
             .toList()
           ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
 
@@ -604,91 +736,80 @@ class _PemohonDashboardScreenState
       children: [
         Row(
           children: [
+            Container(
+              width: 8,
+              height: 8,
+              decoration: const BoxDecoration(
+                color: _C.info,
+                shape: BoxShape.circle,
+              ),
+            ),
+            const SizedBox(width: 6),
             Text(
               'Mutasi Dalam Proses',
-              style: _montserrat(
+              style: _font(
                 size: 14,
                 weight: FontWeight.w700,
-                color: _S.text900,
+                color: _C.textPrimary,
               ),
             ),
             const SizedBox(width: 8),
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
               decoration: BoxDecoration(
-                color: _S.sky100,
+                color: _C.infoBg,
                 borderRadius: BorderRadius.circular(999),
               ),
               child: Text(
                 '${active.length} Berjalan',
-                style: _montserrat(
-                  size: 11,
-                  weight: FontWeight.w600,
-                  color: _S.sky800,
+                style: _font(
+                  size: 10,
+                  weight: FontWeight.w700,
+                  color: _C.info,
                 ),
-              ),
-            ),
-            const Spacer(),
-            GestureDetector(
-              onTap: () => context.go(RouteNames.pemohonMutasiPath),
-              child: Row(
-                children: [
-                  Text(
-                    'Lihat Semua',
-                    style: _montserrat(
-                      size: 12,
-                      weight: FontWeight.w600,
-                      color: _S.link,
-                    ),
-                  ),
-                  const Icon(
-                    Icons.chevron_right_rounded,
-                    size: 16,
-                    color: _S.link,
-                  ),
-                ],
               ),
             ),
           ],
         ),
-        const SizedBox(height: 12),
+        const SizedBox(height: 10),
         if (active.isEmpty)
-          _emptyActiveCard()
+          _buildEmptyActiveCard()
         else
-          _mutationProcessCard(active.first),
+          _buildMutationProcessCard(active.first),
       ],
     );
   }
 
-  Widget _emptyActiveCard() {
+  Widget _buildEmptyActiveCard() {
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: _S.white,
+        color: _C.surface,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: _S.border100),
+        border: Border.all(color: _C.borderLight),
       ),
       child: Column(
         children: [
           Text(
             'Belum ada mutasi aktif',
-            style: _montserrat(size: 13, weight: FontWeight.w700),
+            style: _font(size: 13, weight: FontWeight.w700),
           ),
-          const SizedBox(height: 6),
+          const SizedBox(height: 4),
           Text(
             'Pengajuan yang sedang berjalan akan tampil di sini.',
             textAlign: TextAlign.center,
-            style: _montserrat(size: 11, color: _S.text500),
+            style: _font(size: 11, color: _C.textSecondary),
           ),
+          const SizedBox(height: 8),
           TextButton(
             onPressed: () => context.go(RouteNames.pemohonMutasiCreatePath),
             child: Text(
               'Ajukan Mutasi',
-              style: _montserrat(
+              style: _font(
                 size: 12,
-                weight: FontWeight.w600,
-                color: _S.navyCard,
+                weight: FontWeight.w700,
+                color: _C.navy,
               ),
             ),
           ),
@@ -697,7 +818,7 @@ class _PemohonDashboardScreenState
     );
   }
 
-  Widget _mutationProcessCard(Mutation m) {
+  Widget _buildMutationProcessCard(Mutation m) {
     final step = _stitchStepIndex(m);
     const labels = [
       'Diajukan',
@@ -709,7 +830,7 @@ class _PemohonDashboardScreenState
     ];
 
     return Material(
-      color: _S.white,
+      color: _C.surface,
       borderRadius: BorderRadius.circular(16),
       child: InkWell(
         onTap: () => context.go(_detailPath(m.id)),
@@ -718,10 +839,10 @@ class _PemohonDashboardScreenState
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: _S.border100),
+            border: Border.all(color: _C.borderLight),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withValues(alpha: 0.04),
+                color: Colors.black.withValues(alpha: 0.03),
                 blurRadius: 8,
                 offset: const Offset(0, 2),
               ),
@@ -730,23 +851,18 @@ class _PemohonDashboardScreenState
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              // Header: Ticket number & status pill
               Row(
                 children: [
-                  const Icon(
-                    Icons.devices_rounded,
-                    size: 18,
-                    color: _S.text500,
-                  ),
-                  const SizedBox(width: 6),
                   Expanded(
                     child: Text(
-                      m.displayAssetCode.isNotEmpty
-                          ? m.displayAssetCode
-                          : m.ticketNumber,
-                      style: _montserrat(
+                      m.ticketNumber.isNotEmpty
+                          ? m.ticketNumber
+                          : m.displayAssetCode,
+                      style: _font(
                         size: 12,
                         weight: FontWeight.w700,
-                        color: _S.text900,
+                        color: _C.navy,
                       ),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
@@ -756,33 +872,40 @@ class _PemohonDashboardScreenState
                 ],
               ),
               const SizedBox(height: 8),
+
+              // Asset info
               Text(
                 m.displayAssetName,
-                style: _montserrat(
-                  size: 16,
+                style: _font(
+                  size: 14,
                   weight: FontWeight.w700,
-                  color: _S.text800,
-                  height: 1.25,
+                  color: _C.textPrimary,
                 ),
               ),
               const SizedBox(height: 2),
               Text(
-                'SN: ${m.displayAssetCode}',
-                style: _montserrat(size: 12, color: _S.text500),
+                'SN: ${m.displaySerialNumber}',
+                style: _font(size: 11, color: _C.textSecondary),
               ),
-              const SizedBox(height: 12),
+              const SizedBox(height: 10),
+
+              // Route box
               Container(
-                padding: const EdgeInsets.all(10),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 8,
+                ),
                 decoration: BoxDecoration(
-                  color: _S.slate100,
+                  color: _C.bg,
                   borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: _C.borderLight),
                 ),
                 child: Row(
                   children: [
                     const Icon(
                       Icons.apartment_rounded,
-                      size: 16,
-                      color: _S.text400,
+                      size: 15,
+                      color: _C.textSecondary,
                     ),
                     const SizedBox(width: 6),
                     Expanded(
@@ -790,10 +913,10 @@ class _PemohonDashboardScreenState
                         m.currentLocation,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
-                        style: _montserrat(
-                          size: 12,
+                        style: _font(
+                          size: 11,
                           weight: FontWeight.w500,
-                          color: _S.text700,
+                          color: _C.textPrimary,
                         ),
                       ),
                     ),
@@ -801,8 +924,8 @@ class _PemohonDashboardScreenState
                       padding: EdgeInsets.symmetric(horizontal: 6),
                       child: Icon(
                         Icons.arrow_forward_rounded,
-                        size: 16,
-                        color: _S.text400,
+                        size: 15,
+                        color: _C.teal,
                       ),
                     ),
                     Expanded(
@@ -811,69 +934,81 @@ class _PemohonDashboardScreenState
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         textAlign: TextAlign.right,
-                        style: _montserrat(
-                          size: 12,
-                          weight: FontWeight.w500,
-                          color: _S.text700,
+                        style: _font(
+                          size: 11,
+                          weight: FontWeight.w700,
+                          color: _C.navy,
                         ),
                       ),
                     ),
                     const SizedBox(width: 4),
                     const Icon(
-                      Icons.apartment_rounded,
-                      size: 16,
-                      color: _S.text400,
+                      Icons.domain_rounded,
+                      size: 15,
+                      color: _C.navy,
                     ),
                   ],
                 ),
               ),
               const SizedBox(height: 14),
+
+              // 6-Step Stepper Timeline
               SizedBox(
                 height: 52,
                 child: LayoutBuilder(
-                  builder: (context, c) {
-                    final w = c.maxWidth / labels.length;
+                  builder: (context, constraints) {
+                    final stepWidth = constraints.maxWidth / labels.length;
                     final progress =
                         (step.clamp(0, labels.length - 1)) /
                         (labels.length - 1);
+
                     return Stack(
                       children: [
+                        // Background line
                         Positioned(
                           top: 10,
-                          left: w / 2,
-                          right: w / 2,
-                          child: Container(height: 2, color: _S.border),
+                          left: stepWidth / 2,
+                          right: stepWidth / 2,
+                          child: Container(
+                            height: 2,
+                            color: _C.borderLight,
+                          ),
                         ),
+                        // Active progress line
                         Positioned(
                           top: 10,
-                          left: w / 2,
-                          width: (c.maxWidth - w) * progress,
-                          child: Container(height: 2, color: _S.emerald500),
+                          left: stepWidth / 2,
+                          width: (constraints.maxWidth - stepWidth) * progress,
+                          child: Container(
+                            height: 2,
+                            color: _C.success,
+                          ),
                         ),
+                        // Dots & Labels
                         Row(
                           children: [
                             for (var i = 0; i < labels.length; i++)
                               SizedBox(
-                                width: w,
+                                width: stepWidth,
                                 child: Column(
                                   children: [
-                                    _stepDot(i, step),
+                                    _buildStepDot(i, step),
                                     const SizedBox(height: 4),
                                     Text(
                                       labels[i],
                                       maxLines: 1,
                                       textAlign: TextAlign.center,
                                       overflow: TextOverflow.ellipsis,
-                                      style: _montserrat(
-                                        size: 10,
+                                      style: _font(
+                                        size: 9,
                                         weight: i == step
                                             ? FontWeight.w700
                                             : FontWeight.w500,
                                         color: i < step
-                                            ? _S.emerald700
+                                            ? _C.success
                                             : i == step
-                                            ? _S.text900
-                                            : _S.text400,
+                                                ? _C.info
+                                                : _C.textSecondary,
                                       ),
                                     ),
                                   ],
@@ -886,25 +1021,26 @@ class _PemohonDashboardScreenState
                   },
                 ),
               ),
-              const SizedBox(height: 8),
-              const Divider(height: 1, color: _S.border100),
-              const SizedBox(height: 12),
+              const SizedBox(height: 6),
+              const Divider(height: 1, color: _C.borderLight),
+              const SizedBox(height: 10),
+
+              // Bottom CTA
               Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Expanded(
-                    child: Text(
-                      'Lihat Detail Pelacakan',
-                      style: _montserrat(
-                        size: 14,
-                        weight: FontWeight.w600,
-                        color: _S.text800,
-                      ),
+                  Text(
+                    'Lihat Detail Pelacakan',
+                    style: _font(
+                      size: 12,
+                      weight: FontWeight.w700,
+                      color: _C.navy,
                     ),
                   ),
                   const Icon(
                     Icons.arrow_forward_rounded,
-                    size: 18,
-                    color: _S.text400,
+                    size: 16,
+                    color: _C.navy,
                   ),
                 ],
               ),
@@ -915,16 +1051,20 @@ class _PemohonDashboardScreenState
     );
   }
 
-  Widget _stepDot(int i, int active) {
+  Widget _buildStepDot(int i, int active) {
     if (i < active) {
       return Container(
         width: 20,
         height: 20,
         decoration: const BoxDecoration(
-          color: _S.emerald500,
+          color: _C.success,
           shape: BoxShape.circle,
         ),
-        child: const Icon(Icons.check_rounded, size: 12, color: Colors.white),
+        child: const Icon(
+          Icons.check_rounded,
+          size: 12,
+          color: Colors.white,
+        ),
       );
     }
     if (i == active) {
@@ -932,13 +1072,13 @@ class _PemohonDashboardScreenState
         width: 20,
         height: 20,
         decoration: BoxDecoration(
-          color: _S.navyCard,
+          color: _C.info,
           shape: BoxShape.circle,
           boxShadow: [
             BoxShadow(
-              color: const Color(0xFF3B82F6).withValues(alpha: 0.25),
+              color: _C.info.withValues(alpha: 0.25),
               blurRadius: 0,
-              spreadRadius: 4,
+              spreadRadius: 3,
             ),
           ],
         ),
@@ -958,7 +1098,7 @@ class _PemohonDashboardScreenState
       width: 20,
       height: 20,
       decoration: BoxDecoration(
-        color: _S.white,
+        color: _C.surface,
         shape: BoxShape.circle,
         border: Border.all(color: const Color(0xFFCBD5E1), width: 2),
       ),
@@ -990,9 +1130,12 @@ class _PemohonDashboardScreenState
     }
   }
 
+  // ──────────────────────────────────────────────────────────────────────────
+  // SECTION: PENGAJUAN TERBARU
+  // ──────────────────────────────────────────────────────────────────────────
   Widget _buildRecentSection(AsyncValue<List<Mutation>> mutationsAsync) {
     final list = mutationsAsync.valueOrNull ?? const <Mutation>[];
-    final recent = list.where(_matchesSearch).where(_matchesStatus).toList()
+    final recent = list.where(_matchesSearch).toList()
       ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
     final items = recent.take(4).toList();
 
@@ -1003,10 +1146,10 @@ class _PemohonDashboardScreenState
           children: [
             Text(
               'Pengajuan Terbaru',
-              style: _montserrat(
+              style: _font(
                 size: 14,
                 weight: FontWeight.w700,
-                color: _S.text900,
+                color: _C.textPrimary,
               ),
             ),
             const Spacer(),
@@ -1016,97 +1159,120 @@ class _PemohonDashboardScreenState
                 children: [
                   Text(
                     'Lihat Semua',
-                    style: _montserrat(
-                      size: 12,
+                    style: _font(
+                      size: 11,
                       weight: FontWeight.w600,
-                      color: _S.link,
+                      color: _C.navy,
                     ),
                   ),
+                  const SizedBox(width: 2),
                   const Icon(
                     Icons.chevron_right_rounded,
-                    size: 14,
-                    color: _S.link,
+                    size: 15,
+                    color: _C.navy,
                   ),
                 ],
               ),
             ),
           ],
         ),
-        const SizedBox(height: 12),
+        const SizedBox(height: 10),
         if (items.isEmpty)
-          Text(
-            'Belum ada pengajuan mutasi.',
-            style: _montserrat(size: 12, color: _S.text500),
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: _C.surface,
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: _C.borderLight),
+            ),
+            child: Text(
+              'Belum ada pengajuan mutasi.',
+              textAlign: TextAlign.center,
+              style: _font(size: 12, color: _C.textSecondary),
+            ),
           )
         else
-          ...items.map(
-            (m) => Padding(
-              padding: const EdgeInsets.only(bottom: 10),
-              child: _recentCard(m),
+          Container(
+            decoration: BoxDecoration(
+              color: _C.surface,
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: _C.borderLight),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.02),
+                  blurRadius: 6,
+                  offset: const Offset(0, 2),
+                ),
+              ],
+            ),
+            child: Column(
+              children: [
+                for (var i = 0; i < items.length; i++) ...[
+                  if (i > 0)
+                    const Divider(
+                      height: 1,
+                      indent: 14,
+                      endIndent: 14,
+                      color: _C.borderLight,
+                    ),
+                  _buildRecentItem(items[i]),
+                ],
+              ],
             ),
           ),
       ],
     );
   }
 
-  Widget _recentCard(Mutation m) {
+  Widget _buildRecentItem(Mutation m) {
     return Material(
-      color: _S.white,
-      borderRadius: BorderRadius.circular(16),
+      color: Colors.transparent,
       child: InkWell(
         onTap: () => context.go(_detailPath(m.id)),
         borderRadius: BorderRadius.circular(16),
-        child: Container(
-          padding: const EdgeInsets.all(14),
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: _S.border100),
-          ),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
           child: Row(
             children: [
               Container(
-                width: 40,
-                height: 40,
+                width: 38,
+                height: 38,
                 decoration: BoxDecoration(
-                  color: _S.slate100,
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(
-                    color: const Color(0xFFCBD5E1).withValues(alpha: 0.6),
-                  ),
+                  color: _C.bg,
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(color: _C.borderLight),
                 ),
-                child: Icon(_statusIcon(m.status), size: 20, color: _S.text700),
+                child: Icon(
+                  _categoryIcon(m.displayAssetName, m.displayAssetCode),
+                  size: 20,
+                  color: _C.navy,
+                ),
               ),
               const SizedBox(width: 12),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Row(
-                      children: [
-                        Expanded(
-                          child: Text(
-                            m.ticketNumber,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: _montserrat(
-                              size: 12,
-                              weight: FontWeight.w700,
-                              color: _S.text900,
-                            ),
-                          ),
-                        ),
-                        _statusPill(m.status),
-                      ],
+                    Text(
+                      m.ticketNumber,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: _font(
+                        size: 11,
+                        weight: FontWeight.w700,
+                        color: _C.textSecondary,
+                      ),
                     ),
-                    const SizedBox(height: 4),
+                    const SizedBox(height: 2),
                     Text(
                       m.displayAssetName,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: _montserrat(
-                        size: 11,
-                        weight: FontWeight.w500,
-                        color: _S.text600,
+                      style: _font(
+                        size: 13,
+                        weight: FontWeight.w700,
+                        color: _C.textPrimary,
                       ),
                     ),
                     const SizedBox(height: 2),
@@ -1114,11 +1280,13 @@ class _PemohonDashboardScreenState
                       '${m.targetLocation}  •  ${_fmtDate(m.createdAt)}',
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: _montserrat(size: 10, color: _S.text400),
+                      style: _font(size: 10, color: _C.textSecondary),
                     ),
                   ],
                 ),
               ),
+              const SizedBox(width: 8),
+              _statusPill(m.status),
             ],
           ),
         ),
@@ -1126,11 +1294,14 @@ class _PemohonDashboardScreenState
     );
   }
 
+  // ──────────────────────────────────────────────────────────────────────────
+  // STATUS PILL & HELPERS
+  // ──────────────────────────────────────────────────────────────────────────
   Widget _statusPill(MutationStatus status) {
     final bg = _pillBg(status);
     final fg = _pillFg(status);
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
       decoration: BoxDecoration(
         color: bg,
         borderRadius: BorderRadius.circular(999),
@@ -1138,105 +1309,151 @@ class _PemohonDashboardScreenState
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          if (status == MutationStatus.approved ||
-              status == MutationStatus.submitted ||
-              status == MutationStatus.verified)
-            Container(
-              width: 6,
-              height: 6,
-              margin: const EdgeInsets.only(right: 4),
-              decoration: BoxDecoration(color: fg, shape: BoxShape.circle),
-            ),
+          Container(
+            width: 5,
+            height: 5,
+            margin: const EdgeInsets.only(right: 4),
+            decoration: BoxDecoration(color: fg, shape: BoxShape.circle),
+          ),
           Text(
             _shortStatus(status),
-            style: _montserrat(size: 10, weight: FontWeight.w600, color: fg),
+            style: _font(size: 10, weight: FontWeight.w600, color: fg),
           ),
         ],
       ),
     );
   }
 
-  Future<void> _showFilter(BuildContext context) async {
-    final selected = await showModalBottomSheet<MutationStatus?>(
-      context: context,
-      backgroundColor: Colors.transparent,
-      builder: (_) => _FilterSheet(selectedStatus: _selectedStatus),
-    );
-    if (!mounted) return;
-    setState(() => _selectedStatus = selected);
+  IconData _categoryIcon(String name, String code) {
+    final lower = '$name $code'.toLowerCase();
+    if (lower.contains('laptop') ||
+        lower.contains('macbook') ||
+        lower.contains('thinkpad') ||
+        lower.contains('dell') ||
+        lower.contains('pc') ||
+        lower.contains('server') ||
+        lower.contains('switch')) {
+      return Icons.laptop_mac_rounded;
+    }
+    if (lower.contains('kursi') ||
+        lower.contains('meja') ||
+        lower.contains('lemari') ||
+        lower.contains('furnitur')) {
+      return Icons.chair_rounded;
+    }
+    return Icons.devices_other_rounded;
   }
 
-  void _showMenu(BuildContext context) {
+  void _showMenu(BuildContext context, [dynamic user]) {
+    final userName = user?.name ?? 'Pemohon';
+    final roleName = user?.role?.displayName ?? 'Pemohon';
     showModalBottomSheet<void>(
       context: context,
       backgroundColor: Colors.transparent,
       builder: (sheetContext) {
-        return Container(
-          padding: const EdgeInsets.fromLTRB(20, 10, 20, 24),
-          decoration: const BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Container(
-                width: 36,
-                height: 4,
-                margin: const EdgeInsets.only(bottom: 16),
-                decoration: BoxDecoration(
-                  color: _S.border,
-                  borderRadius: BorderRadius.circular(8),
+        return Material(
+          color: Colors.white,
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+          clipBehavior: Clip.antiAlias,
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  width: 36,
+                  height: 4,
+                  margin: const EdgeInsets.only(bottom: 16),
+                  decoration: BoxDecoration(
+                    color: _C.borderLight,
+                    borderRadius: BorderRadius.circular(8),
+                  ),
                 ),
-              ),
-              ListTile(
-                leading: const Icon(Icons.sync_alt_rounded),
-                title: Text('Mutasi Saya', style: _montserrat(size: 14)),
-                onTap: () {
-                  Navigator.pop(sheetContext);
-                  context.go(RouteNames.pemohonMutasiPath);
-                },
-              ),
-              ListTile(
-                leading: const Icon(Icons.notifications_none_rounded),
-                title: Text('Notifikasi', style: _montserrat(size: 14)),
-                onTap: () {
-                  Navigator.pop(sheetContext);
-                  context.go(RouteNames.pemohonNotificationsPath);
-                },
-              ),
-              ListTile(
-                leading: const Icon(Icons.person_outline_rounded),
-                title: Text('Profil', style: _montserrat(size: 14)),
-                onTap: () {
-                  Navigator.pop(sheetContext);
-                  context.go(RouteNames.pemohonProfilePath);
-                },
-              ),
-            ],
+                Row(
+                  children: [
+                    CircleAvatar(
+                      radius: 20,
+                      backgroundColor: const Color(0xFF006A63),
+                      child: Text(
+                        _initials(userName),
+                        style: _font(
+                          size: 13,
+                          weight: FontWeight.w700,
+                          color: Colors.white,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            userName,
+                            style: _font(
+                              size: 15,
+                              weight: FontWeight.w700,
+                              color: _C.textPrimary,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                          const SizedBox(height: 2),
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 8,
+                              vertical: 2,
+                            ),
+                            decoration: BoxDecoration(
+                              color: _C.teal.withValues(alpha: 0.10),
+                              borderRadius: BorderRadius.circular(6),
+                            ),
+                            child: Text(
+                              roleName,
+                              style: _font(
+                                size: 11,
+                                weight: FontWeight.w700,
+                                color: _C.teal,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                const Divider(height: 1),
+                const SizedBox(height: 8),
+                ListTile(
+                  leading: const Icon(Icons.sync_alt_rounded),
+                  title: Text('Mutasi Saya', style: _font(size: 14)),
+                  onTap: () {
+                    Navigator.pop(sheetContext);
+                    context.go(RouteNames.pemohonMutasiPath);
+                  },
+                ),
+                ListTile(
+                  leading: const Icon(Icons.notifications_none_rounded),
+                  title: Text('Notifikasi', style: _font(size: 14)),
+                  onTap: () {
+                    Navigator.pop(sheetContext);
+                    context.go(RouteNames.pemohonNotificationsPath);
+                  },
+                ),
+                ListTile(
+                  leading: const Icon(Icons.person_outline_rounded),
+                  title: Text('Profil Pengguna', style: _font(size: 14)),
+                  onTap: () {
+                    Navigator.pop(sheetContext);
+                    context.go(RouteNames.pemohonProfilePath);
+                  },
+                ),
+              ],
+            ),
           ),
         );
       },
-    );
-  }
-
-  Widget _squareIconBtn(IconData icon, VoidCallback onTap) {
-    return Material(
-      color: _S.white,
-      borderRadius: BorderRadius.circular(12),
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(12),
-        child: Container(
-          width: 36,
-          height: 36,
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: _S.border),
-          ),
-          child: Icon(icon, size: 20, color: _S.text700),
-        ),
-      ),
     );
   }
 
@@ -1244,8 +1461,22 @@ class _PemohonDashboardScreenState
       m.status != MutationStatus.completed &&
       m.status != MutationStatus.rejected;
 
-  bool _matchesStatus(Mutation m) =>
-      _selectedStatus == null || m.status == _selectedStatus;
+  bool _isInProcess(Mutation m) {
+    return m.status == MutationStatus.submitted ||
+        m.status == MutationStatus.waitingAssetVerification ||
+        m.status == MutationStatus.verified ||
+        m.status == MutationStatus.waitingKabagApproval ||
+        m.status == MutationStatus.waitingKadivApproval ||
+        m.status == MutationStatus.waitingDivisionHeadApproval ||
+        m.status == MutationStatus.approved ||
+        m.status == MutationStatus.waitingSync;
+  }
+
+  bool _needsAction(Mutation m) {
+    return m.status == MutationStatus.waitingConfirmation ||
+        m.status == MutationStatus.pendingConfirmation ||
+        m.status == MutationStatus.returned;
+  }
 
   bool _matchesSearch(Mutation m) {
     if (_searchQuery.isEmpty) return true;
@@ -1253,6 +1484,7 @@ class _PemohonDashboardScreenState
       m.ticketNumber,
       m.displayAssetName,
       m.displayAssetCode,
+      m.displaySerialNumber,
       m.currentLocation,
       m.targetLocation,
     ];
@@ -1260,31 +1492,22 @@ class _PemohonDashboardScreenState
   }
 
   String _initials(String name) {
-    final p = name
+    final parts = name
         .trim()
         .split(RegExp(r'\s+'))
         .where((e) => e.isNotEmpty)
         .toList();
-    if (p.isEmpty) return 'P';
-    if (p.length == 1) {
-      return p.first.length >= 2
-          ? p.first.substring(0, 2).toUpperCase()
-          : p.first.toUpperCase();
+    if (parts.isEmpty) return 'P';
+    if (parts.length == 1) {
+      return parts.first.length >= 2
+          ? parts.first.substring(0, 2).toUpperCase()
+          : parts.first.toUpperCase();
     }
-    return '${p.first[0]}${p.last[0]}'.toUpperCase();
-  }
-
-  String _displayFirstName(String name) {
-    final p = name
-        .trim()
-        .split(RegExp(r'\s+'))
-        .where((e) => e.isNotEmpty)
-        .toList();
-    return p.isEmpty ? 'Pemohon' : p.first;
+    return '${parts.first[0]}${parts.last[0]}'.toUpperCase();
   }
 
   String _fmtDate(DateTime d) {
-    const m = [
+    const months = [
       'Jan',
       'Feb',
       'Mar',
@@ -1298,14 +1521,14 @@ class _PemohonDashboardScreenState
       'Nov',
       'Des',
     ];
-    return '${d.day} ${m[d.month - 1]} ${d.year}';
+    return '${d.day} ${months[d.month - 1]} ${d.year}';
   }
 
   Color _pillBg(MutationStatus s) {
     switch (s) {
       case MutationStatus.waitingConfirmation:
       case MutationStatus.pendingConfirmation:
-        return _S.pendingBg;
+        return _C.warningBg;
       case MutationStatus.returned:
       case MutationStatus.waitingSync:
         return const Color(0xFFEDF2F7);
@@ -1313,14 +1536,14 @@ class _PemohonDashboardScreenState
       case MutationStatus.completed:
       case MutationStatus.submitted:
       case MutationStatus.verified:
-        return _S.approvedBg;
+        return _C.infoBg;
       case MutationStatus.waitingAssetVerification:
       case MutationStatus.waitingDivisionHeadApproval:
       case MutationStatus.waitingKabagApproval:
       case MutationStatus.waitingKadivApproval:
-        return _S.pendingBg;
+        return _C.warningBg;
       case MutationStatus.rejected:
-        return const Color(0xFFFEE2E2);
+        return _C.errorBg;
     }
   }
 
@@ -1328,7 +1551,7 @@ class _PemohonDashboardScreenState
     switch (s) {
       case MutationStatus.waitingConfirmation:
       case MutationStatus.pendingConfirmation:
-        return _S.pendingText;
+        return _C.warning;
       case MutationStatus.returned:
       case MutationStatus.waitingSync:
         return const Color(0xFF4A5568);
@@ -1336,14 +1559,14 @@ class _PemohonDashboardScreenState
       case MutationStatus.completed:
       case MutationStatus.submitted:
       case MutationStatus.verified:
-        return _S.approvedText;
+        return _C.info;
       case MutationStatus.waitingAssetVerification:
       case MutationStatus.waitingDivisionHeadApproval:
       case MutationStatus.waitingKabagApproval:
       case MutationStatus.waitingKadivApproval:
-        return _S.pendingText;
+        return _C.warning;
       case MutationStatus.rejected:
-        return const Color(0xFFB42318);
+        return _C.error;
     }
   }
 
@@ -1352,7 +1575,7 @@ class _PemohonDashboardScreenState
       case MutationStatus.submitted:
         return 'Diajukan';
       case MutationStatus.returned:
-        return 'Dikembalikan';
+        return 'Perlu Perbaikan';
       case MutationStatus.waitingAssetVerification:
         return 'Verifikasi Aset';
       case MutationStatus.waitingKabagApproval:
@@ -1364,131 +1587,6 @@ class _PemohonDashboardScreenState
         return 'Terverifikasi';
       case MutationStatus.approved:
         return 'Disetujui';
-      case MutationStatus.waitingConfirmation:
-      case MutationStatus.pendingConfirmation:
-        return 'Menunggu Konfirmasi';
-      case MutationStatus.completed:
-        return 'Selesai';
-      case MutationStatus.waitingSync:
-        return 'Offline';
-      case MutationStatus.rejected:
-        return 'Ditolak';
-    }
-  }
-
-  IconData _statusIcon(MutationStatus s) {
-    switch (s) {
-      case MutationStatus.submitted:
-        return Icons.send_outlined;
-      case MutationStatus.returned:
-        return Icons.reply_rounded;
-      case MutationStatus.pendingConfirmation:
-        return Icons.fact_check_outlined;
-      case MutationStatus.approved:
-      case MutationStatus.completed:
-        return Icons.check_circle_outline;
-      default:
-        return Icons.devices_rounded;
-    }
-  }
-}
-
-class _FilterSheet extends StatelessWidget {
-  final MutationStatus? selectedStatus;
-
-  const _FilterSheet({required this.selectedStatus});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.fromLTRB(20, 10, 20, 28),
-      decoration: const BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-      ),
-      child: SafeArea(
-        top: false,
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Center(
-              child: Container(
-                width: 36,
-                height: 4,
-                margin: const EdgeInsets.only(bottom: 16),
-                decoration: BoxDecoration(
-                  color: _S.border,
-                  borderRadius: BorderRadius.circular(8),
-                ),
-              ),
-            ),
-            Text(
-              'Filter Pengajuan',
-              style: GoogleFonts.montserrat(
-                fontSize: 16,
-                fontWeight: FontWeight.w800,
-                color: _S.text900,
-              ),
-            ),
-            const SizedBox(height: 12),
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: [
-                _chip(context, 'Semua', null),
-                for (final s in MutationStatus.values)
-                  _chip(context, _label(s), s),
-              ],
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _chip(BuildContext context, String label, MutationStatus? value) {
-    final selected = selectedStatus == value;
-    return GestureDetector(
-      onTap: () => Navigator.pop(context, value),
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-        decoration: BoxDecoration(
-          color: selected ? _S.navyCard : _S.surface,
-          borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: selected ? _S.navyCard : _S.border),
-        ),
-        child: Text(
-          label,
-          style: GoogleFonts.montserrat(
-            fontSize: 11,
-            fontWeight: FontWeight.w600,
-            color: selected ? Colors.white : _S.text500,
-          ),
-        ),
-      ),
-    );
-  }
-
-  static String _label(MutationStatus s) {
-    switch (s) {
-      case MutationStatus.submitted:
-        return 'Diajukan';
-      case MutationStatus.returned:
-        return 'Dikembalikan';
-      case MutationStatus.waitingAssetVerification:
-        return 'Verifikasi Aset';
-      case MutationStatus.waitingKabagApproval:
-        return 'Menunggu Kabag';
-      case MutationStatus.waitingDivisionHeadApproval:
-      case MutationStatus.waitingKadivApproval:
-        return 'Menunggu Kadiv';
-      case MutationStatus.verified:
-        return 'Terverifikasi';
-      case MutationStatus.approved:
-        return 'Disetujui';
-      case MutationStatus.rejected:
-        return 'Ditolak';
       case MutationStatus.waitingConfirmation:
       case MutationStatus.pendingConfirmation:
         return 'Konfirmasi';
@@ -1496,6 +1594,8 @@ class _FilterSheet extends StatelessWidget {
         return 'Selesai';
       case MutationStatus.waitingSync:
         return 'Offline';
+      case MutationStatus.rejected:
+        return 'Ditolak';
     }
   }
 }

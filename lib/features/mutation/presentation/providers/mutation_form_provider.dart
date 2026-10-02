@@ -53,7 +53,6 @@ class MutationFormState {
       assetId.trim().isNotEmpty &&
       sourceLocation.trim().isNotEmpty &&
       targetLocation.trim().isNotEmpty &&
-      targetPic.trim().isNotEmpty &&
       reason.trim().isNotEmpty &&
       (documentName != null && documentName!.trim().isNotEmpty);
 
@@ -162,10 +161,6 @@ class MutationFormNotifier extends StateNotifier<MutationFormState> {
 
     if (state.targetLocation.trim().isEmpty) {
       errors['targetLocation'] = 'Lokasi tujuan wajib diisi.';
-    }
-
-    if (state.targetPic.trim().isEmpty) {
-      errors['targetPic'] = 'Penanggung jawab baru wajib diisi.';
     }
 
     if (state.reason.trim().isEmpty) {

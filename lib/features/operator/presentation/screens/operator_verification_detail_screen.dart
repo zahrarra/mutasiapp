@@ -475,7 +475,7 @@ class OperatorVerificationDetailScreen extends ConsumerWidget {
                       'Aset (Manual)',
                       mutation.customAssetName ?? mutation.asset.name,
                       subtext:
-                          'Nomor Seri / Kode Manual: ${mutation.customSerialNumber ?? mutation.asset.assetCode}',
+                          'Serial Number: ${mutation.customSerialNumber ?? mutation.displaySerialNumber}',
                     ),
                     const Divider(height: AppSpacing.md, color: _C.border),
                     _buildDetailRow('Lokasi Asal', mutation.currentLocation),
@@ -1058,12 +1058,7 @@ class OperatorVerificationDetailScreen extends ConsumerWidget {
     final assetName = mutation.isUnregisteredAsset
         ? (mutation.customAssetName ?? mutation.asset.name)
         : mutation.asset.name;
-    final assetCode = mutation.isUnregisteredAsset
-        ? (mutation.customSerialNumber ?? mutation.asset.assetCode)
-        : (mutation.asset.serialNumber != null &&
-                mutation.asset.serialNumber!.isNotEmpty
-            ? mutation.asset.serialNumber!
-            : mutation.asset.assetCode);
+    final serialNumber = mutation.displaySerialNumber;
 
     return _buildSectionCard([
       Row(
@@ -1157,7 +1152,7 @@ class OperatorVerificationDetailScreen extends ConsumerWidget {
                 ),
                 const SizedBox(height: 2),
                 Text(
-                  'SN / Kode: $assetCode',
+                  'SN: $serialNumber',
                   style: const TextStyle(
                     fontSize: 11,
                     fontFamily: 'monospace',

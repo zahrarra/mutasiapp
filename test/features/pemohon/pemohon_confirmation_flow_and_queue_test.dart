@@ -330,7 +330,7 @@ void main() {
       expect(completedMutation.ticketNumber, ticketNumber);
     });
 
-    test('5. Unregistered Asset: preserves manual data without touching master asset', () async {
+    test('5. Unregistered Asset: rejected per PRD V1.1 §8 Rule 3', () async {
       // Submit unregistered asset
       final submitRes = await mutationRepository.submitMutation(
         SubmitMutationParams(
@@ -346,45 +346,8 @@ void main() {
           reason: 'Peralihan printer non-terdaftar',
         ),
       );
-      expect(submitRes.isSuccess, isTrue);
-      final mutation = submitRes.dataOrNull!;
-      expect(mutation.isUnregisteredAsset, isTrue);
-      expect(mutation.assetId, isNull);
-
-      final mutationId = mutation.id;
-
-      await mutationRepository.verifyMutation(mutationId: mutationId, operatorName: 'Operator');
-      await mutationRepository.approveMutationKabag(
-        mutationId: mutationId,
-        kabagName: 'Kabag Aset',
-        requiresKadivApproval: false,
-      );
-
-      // Staff asset update
-      final staffRes = await mutationRepository.processStaffAssetUpdate(
-        mutationId: mutationId,
-        newLocation: 'Lantai 1 — Resepsionis',
-        newPic: 'Mbak Resepsionis',
-        staffName: 'Staff Hendra',
-      );
-      expect(staffRes.isSuccess, isTrue);
-      expect(staffRes.dataOrNull!.status, MutationStatus.pendingConfirmation);
-
-      // Pemohon confirms
-      final confirmRes = await confirmMutationUseCase(
-        ConfirmMutationParams(
-          mutationId: mutationId,
-          confirmedBy: pemohonUser.name,
-          userId: pemohonUser.id,
-        ),
-      );
-      expect(confirmRes.isSuccess, isTrue);
-      final completed = confirmRes.dataOrNull!;
-      expect(completed.status, MutationStatus.completed);
-      expect(completed.isUnregisteredAsset, isTrue);
-      expect(completed.displayAssetName, 'Printer Epson L3110 Bekas');
-      expect(completed.displayAssetCode, 'EPS-2026-MANUAL');
-      expect(completed.assetId, isNull);
+      expect(submitRes.isFailure, isTrue);
+      expect(submitRes.failureOrNull, isA<ValidationFailure>());
     });
 
     test('6. Tracking: shows completed as final step when mutation is completed', () {

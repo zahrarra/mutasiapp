@@ -358,6 +358,23 @@ void main() {
 
       await tester.pumpAndSettle();
 
+      // Check Stitch header hierarchy and dynamic logged-in user name
+      expect(find.text('Halo, Pemohon User!'), findsOneWidget);
+      expect(find.text('Pengajuan & Pelacakan Mutasi Aset Kantor'), findsOneWidget);
+      expect(find.text('Cari nomor tiket, kode aset, status...'), findsOneWidget);
+      expect(find.byIcon(Icons.menu_rounded), findsOneWidget);
+      expect(find.text('Rina'), findsNothing);
+      expect(find.text('Zahra Safitri'), findsNothing);
+
+      // Open menu via hamburger button and check dynamic user & role
+      await tester.tap(find.byIcon(Icons.menu_rounded));
+      await tester.pumpAndSettle();
+      expect(find.text('Mutasi Saya'), findsWidgets);
+      expect(find.text('Pemohon'), findsWidgets);
+      // Close menu
+      await tester.tapAt(const Offset(20, 20));
+      await tester.pumpAndSettle();
+
       // Check items exist
       expect(find.text('MacBook Pro 16'), findsWidgets);
       expect(find.text('ThinkPad X1'), findsWidgets);
@@ -376,6 +393,115 @@ void main() {
       // Both should reappear
       expect(find.text('MacBook Pro 16'), findsWidgets);
       expect(find.text('ThinkPad X1'), findsWidgets);
+    });
+
+    testWidgets('Dashboard metric cards navigate to Mutasi Saya with active filters and back navigation works', (tester) async {
+      tester.view.physicalSize = const Size(1080, 2400);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(() => tester.view.resetPhysicalSize());
+
+      final repo = _FakeFullMutationRepository([
+        createTestMutation(
+          id: 'mut_prog',
+          ticketNumber: 'ELK-2026-00001',
+          status: MutationStatus.submitted,
+          assetName: 'Laptop Dell InProgress',
+        ),
+        createTestMutation(
+          id: 'mut_act',
+          ticketNumber: 'ELK-2026-00002',
+          status: MutationStatus.returned,
+          assetName: 'Monitor LG ActionNeeded',
+        ),
+        createTestMutation(
+          id: 'mut_done',
+          ticketNumber: 'ELK-2026-00003',
+          status: MutationStatus.completed,
+          assetName: 'Printer Epson Completed',
+        ),
+      ]);
+
+      final router = GoRouter(
+        initialLocation: RouteNames.pemohonDashboardPath,
+        routes: [
+          GoRoute(
+            path: RouteNames.pemohonDashboardPath,
+            builder: (context, state) => const PemohonDashboardScreen(),
+          ),
+          GoRoute(
+            path: RouteNames.pemohonMutasiPath,
+            builder: (context, state) {
+              final filter = state.uri.queryParameters['filter'] ??
+                  (state.extra is String ? state.extra as String : null);
+              return PemohonMutationListScreen(initialFilter: filter);
+            },
+          ),
+        ],
+      );
+
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            mutationRepositoryProvider.overrideWithValue(repo),
+            authStateProvider.overrideWith(
+              (ref) => FakePemohonAuthNotifier(testUser),
+            ),
+          ],
+          child: MaterialApp.router(routerConfig: router),
+        ),
+      );
+
+      await tester.pumpAndSettle();
+
+      // Verify search bar has transparent fill
+      final textField = tester.widget<TextField>(find.byType(TextField));
+      expect(textField.decoration?.fillColor, Colors.transparent);
+      expect(textField.decoration?.filled, false);
+
+      // Tap 'Dalam Proses' metric card
+      await tester.tap(find.widgetWithText(InkWell, 'Dalam Proses').first);
+      await tester.pumpAndSettle();
+
+      // Mutasi Saya should be visible with only InProgress item
+      expect(find.text('Mutasi Saya'), findsWidgets);
+      expect(find.text('Laptop Dell InProgress'), findsOneWidget);
+      expect(find.text('Monitor LG ActionNeeded'), findsNothing);
+      expect(find.text('Printer Epson Completed'), findsNothing);
+
+      // Back to Dashboard
+      await tester.tap(find.byIcon(Icons.arrow_back));
+      await tester.pumpAndSettle();
+      expect(find.text('Halo, Pemohon User!'), findsOneWidget);
+
+      // Tap 'Perlu Tindakan' metric card
+      await tester.tap(find.widgetWithText(InkWell, 'Perlu Tindakan').first);
+      await tester.pumpAndSettle();
+
+      expect(find.text('Mutasi Saya'), findsWidgets);
+      expect(find.text('Monitor LG ActionNeeded'), findsOneWidget);
+      expect(find.text('Laptop Dell InProgress'), findsNothing);
+      expect(find.text('Printer Epson Completed'), findsNothing);
+
+      // Back to Dashboard
+      await tester.tap(find.byIcon(Icons.arrow_back));
+      await tester.pumpAndSettle();
+
+      // Tap 'Selesai' metric card
+      await tester.tap(find.widgetWithText(InkWell, 'Selesai').first);
+      await tester.pumpAndSettle();
+
+      expect(find.text('Mutasi Saya'), findsWidgets);
+      expect(find.text('Printer Epson Completed'), findsOneWidget);
+      expect(find.text('Laptop Dell InProgress'), findsNothing);
+      expect(find.text('Monitor LG ActionNeeded'), findsNothing);
+
+      // Manual switch filter to 'Semua'
+      await tester.tap(find.widgetWithText(InkWell, 'Semua').first);
+      await tester.pumpAndSettle();
+
+      expect(find.text('Laptop Dell InProgress'), findsOneWidget);
+      expect(find.text('Monitor LG ActionNeeded'), findsOneWidget);
+      expect(find.text('Printer Epson Completed'), findsOneWidget);
     });
 
     testWidgets('Ajukan Mutasi: form inputs validate, submits with applicantId, and appears in Mutasi Saya', (tester) async {
@@ -452,8 +578,7 @@ void main() {
 
       final remainingFields = find.byType(TextFormField);
       await tester.enterText(remainingFields.at(4), 'Lantai 2');
-      await tester.enterText(remainingFields.at(5), 'Ahmad Fauzi');
-      await tester.enterText(remainingFields.at(6), 'Kebutuhan cetak operasional cabang');
+      await tester.enterText(remainingFields.at(5), 'Kebutuhan cetak operasional cabang');
       await tester.pumpAndSettle();
 
       // Pick document
@@ -475,8 +600,59 @@ void main() {
       expect(list.length, 1);
       expect(list.first.applicantId, 'usr_pemohon');
       expect(list.first.currentPic, 'Pak Joko (Staff IT)');
+      expect(list.first.targetPic, 'Pemohon User');
       expect(list.first.asset.name, 'Printer Epson L3210');
       expect(list.first.status, MutationStatus.submitted);
+    });
+
+    testWidgets('Form Pemohon: Aset ikut bawa mengisi PIC Tujuan otomatis; Aset ditinggalkan mengosongkan PIC Tujuan', (tester) async {
+      tester.view.physicalSize = const Size(1080, 2400);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(() => tester.view.resetPhysicalSize());
+
+      final repo = _FakeFullMutationRepository([]);
+
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            mutationRepositoryProvider.overrideWithValue(repo),
+            authStateProvider.overrideWith(
+              (ref) => FakePemohonAuthNotifier(testUser),
+            ),
+          ],
+          child: const MaterialApp(
+            home: PemohonCreateMutationScreen(),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      // Default: Aset ikut saya bawa (true)
+      // PIC Tujuan otomatis terisi dengan nama Pemohon tanpa input manual
+      expect(find.byKey(const Key('card_pic_tujuan_otomatis')), findsOneWidget);
+      expect(find.text('Pemohon User'), findsWidgets);
+      expect(find.text('Otomatis Pemohon'), findsOneWidget);
+
+      // Ubah pilihan ke "Tidak, Aset Ditinggalkan di Unit Asal"
+      final tinggalkanOption = find.text('Tidak, Aset Ditinggalkan di Unit Asal');
+      await tester.ensureVisible(tinggalkanOption);
+      await tester.tap(tinggalkanOption);
+      await tester.pumpAndSettle();
+
+      // PIC Tujuan dikosongkan dan info bahwa Bagian Aset yang akan menentukan tampil
+      expect(find.byKey(const Key('card_pic_tujuan_ditinggalkan')), findsOneWidget);
+      expect(find.text('Akan ditentukan oleh Bagian Aset'), findsOneWidget);
+      expect(find.byKey(const Key('card_pic_tujuan_otomatis')), findsNothing);
+
+      // Ubah kembali ke "Ya, Aset Ikut Saya Pindah"
+      final bawaOption = find.text('Ya, Aset Ikut Saya Pindah');
+      await tester.ensureVisible(bawaOption);
+      await tester.tap(bawaOption);
+      await tester.pumpAndSettle();
+
+      // PIC Tujuan kembali terisi otomatis dengan nama Pemohon
+      expect(find.byKey(const Key('card_pic_tujuan_otomatis')), findsOneWidget);
+      expect(find.text('Pemohon User'), findsWidgets);
     });
 
     testWidgets('Mutasi Saya: filters by applicantId == userId and search query works', (tester) async {

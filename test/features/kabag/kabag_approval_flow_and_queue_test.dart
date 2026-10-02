@@ -22,11 +22,11 @@ import 'package:mutasiku/features/auth/domain/usecases/logout_usecase.dart';
 import 'package:mutasiku/features/auth/presentation/providers/auth_provider.dart';
 import 'package:mutasiku/features/kadiv/presentation/providers/kadiv_approval_provider.dart';
 import 'package:mutasiku/features/kabag/presentation/providers/kabag_approval_provider.dart';
+import 'package:mutasiku/app/router/route_names.dart';
 import 'package:mutasiku/features/kabag/presentation/screens/kabag_dashboard_screen.dart';
 import 'package:mutasiku/features/mutation/data/repositories/mutation_repository_impl.dart';
 import 'package:mutasiku/features/mutation/domain/entities/mutation_status.dart';
 import 'package:mutasiku/features/mutation/presentation/providers/mutation_provider.dart';
-import 'package:mutasiku/features/staff/presentation/providers/staff_mutation_provider.dart';
 
 class _FakeAuthRepository implements AuthRepository {
   final User? user;
@@ -54,10 +54,10 @@ class _FakeAuthNotifier extends AuthNotifier {
 
 const kabagTestUser = User(
   id: 'usr_kabag_test',
-  username: 'kabag_test',
-  name: 'H. M. Yusuf (Kabag Aset)',
-  email: 'kabag@mutasiku.id',
-  role: UserRole.kabagAset,
+  username: 'bagian_aset_test',
+  name: 'H. M. Yusuf (Bagian Aset)',
+  email: 'bagian.aset@mutasiku.id',
+  role: UserRole.bagianAset,
 );
 
 const operatorTestUser = User(
@@ -126,7 +126,7 @@ void main() {
       // 4. Verify post-approve state
       final detailAfter = await element.read(mutationDetailProvider('mut_001').future);
       expect(detailAfter.status.isWaitingDivisionApproval, true);
-      expect(detailAfter.approvedBy, 'H. M. Yusuf (Kabag Aset)');
+      expect(detailAfter.approvedBy, 'H. M. Yusuf (Bagian Aset)');
 
       // Verify removed from "Menunggu Approval" queue
       await element.read(kabagAllMutationsProvider.future);
@@ -174,7 +174,7 @@ void main() {
       // 4. Verify post-approve state -> waitingKadivApproval
       final detailAfter = await element.read(mutationDetailProvider('mut_002').future);
       expect(detailAfter.status.isWaitingDivisionApproval, true);
-      expect(detailAfter.approvedBy, 'H. M. Yusuf (Kabag Aset)');
+      expect(detailAfter.approvedBy, 'H. M. Yusuf (Bagian Aset)');
 
       // Verify removed from Kabag "Menunggu Approval" queue
       await element.read(kabagAllMutationsProvider.future);
@@ -205,7 +205,7 @@ void main() {
       final detailAfter = await element.read(mutationDetailProvider('mut_004').future);
       expect(detailAfter.status, MutationStatus.returned);
       expect(detailAfter.returnReason, 'Alokasi anggaran belum tersedia untuk relokasi aset ini.');
-      expect(detailAfter.rejectedBy, 'H. M. Yusuf (Kabag Aset)');
+      expect(detailAfter.rejectedBy, 'H. M. Yusuf (Bagian Aset)');
 
       // Removed from "Menunggu Approval"
       await element.read(kabagAllMutationsProvider.future);
@@ -246,6 +246,10 @@ void main() {
             path: '/kabag/approvals',
             builder: (context, state) => const Scaffold(body: Text('Approvals List')),
           ),
+          GoRoute(
+            path: RouteNames.bagianAsetVerificationsPath,
+            builder: (context, state) => const Scaffold(body: Text('Approvals List')),
+          ),
         ],
       );
 
@@ -259,8 +263,11 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      // Tap "Menunggu Approval" card
-      await tester.tap(find.text('Menunggu Approval'));
+      // Tap "Perlu Tindakan" / "Menunggu Verifikasi" card pada Hero Banner
+      final heroFinder = find.text('Perlu Tindakan').evaluate().isNotEmpty
+          ? find.text('Perlu Tindakan')
+          : find.text('Menunggu Verifikasi');
+      await tester.tap(heroFinder);
       await tester.pumpAndSettle();
 
       expect(container.read(kabagStatusFilterProvider), KabagStatusFilter.waiting);
@@ -269,31 +276,16 @@ void main() {
       router.go('/kabag/dashboard');
       await tester.pumpAndSettle();
 
-      // Tap "Disetujui" card
-      await tester.tap(find.text('Disetujui'));
+      // Tap "Lihat Semua" pada antrean
+      await tester.scrollUntilVisible(
+        find.byKey(const Key('btn_dashboard_lihat_semua')),
+        100,
+        scrollable: find.byType(Scrollable).first,
+      );
+      await tester.tap(find.byKey(const Key('btn_dashboard_lihat_semua')));
       await tester.pumpAndSettle();
 
-      expect(container.read(kabagStatusFilterProvider), KabagStatusFilter.approved);
-
-      // Go back to dashboard
-      router.go('/kabag/dashboard');
-      await tester.pumpAndSettle();
-
-      // Tap "Ditolak" card
-      await tester.tap(find.text('Ditolak'));
-      await tester.pumpAndSettle();
-
-      expect(container.read(kabagStatusFilterProvider), KabagStatusFilter.rejected);
-
-      // Go back to dashboard
-      router.go('/kabag/dashboard');
-      await tester.pumpAndSettle();
-
-      // Tap "Lihat Semua"
-      await tester.tap(find.text('Lihat Semua'));
-      await tester.pumpAndSettle();
-
-      expect(container.read(kabagStatusFilterProvider), KabagStatusFilter.all);
+      expect(container.read(kabagStatusFilterProvider), KabagStatusFilter.waiting);
     });
 
     test('No fake success on failure in approve and reject', () async {

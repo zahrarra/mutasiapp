@@ -144,7 +144,7 @@ class _InlineSearchableDropdownState extends State<InlineSearchableDropdown> {
                   child: TextField(
                     controller: _searchController,
                     decoration: InputDecoration(
-                      hintText: 'Cari lokasi...',
+                      hintText: 'Cari...',
                       hintStyle: const TextStyle(fontSize: 13),
                       prefixIcon: const Icon(Icons.search, size: 18),
                       suffixIcon: _searchQuery.isNotEmpty
@@ -176,14 +176,14 @@ class _InlineSearchableDropdownState extends State<InlineSearchableDropdown> {
                 ),
                 const Divider(height: 1, color: AppColors.border),
 
-                // Daftar Lokasi (Maksimal tinggi 180 agar nyaman)
+                // Daftar Item (Maksimal tinggi 180 agar nyaman)
                 ConstrainedBox(
                   constraints: const BoxConstraints(maxHeight: 180),
                   child: filtered.isEmpty
                       ? const Padding(
                           padding: EdgeInsets.all(AppSpacing.md),
                           child: Text(
-                            'Lokasi tidak ditemukan',
+                            'Data tidak ditemukan',
                             style: TextStyle(
                               fontSize: 12,
                               color: AppColors.textSecondary,
@@ -192,6 +192,7 @@ class _InlineSearchableDropdownState extends State<InlineSearchableDropdown> {
                         )
                       : ListView.separated(
                           shrinkWrap: true,
+                          physics: const ClampingScrollPhysics(),
                           padding: EdgeInsets.zero,
                           itemCount: filtered.length,
                           separatorBuilder: (_, _) => const Divider(
