@@ -53,14 +53,17 @@ class AuthRepositoryImpl implements AuthRepository {
       final lower = username.toLowerCase();
       if (lower.contains('admin')) {
         role = UserRole.admin;
+      } else if (lower.contains('kadiv') ||
+          lower.contains('pemimpin') ||
+          lower.contains('kepala divisi') ||
+          lower.contains('kepala_divisi')) {
+        role = UserRole.kadiv;
       } else if (lower.contains('operator')) {
         role = UserRole.operator;
-      } else if (lower.contains('aset') || lower.contains('bagian')) {
-        role = UserRole.bagianAset;
       } else if (lower.contains('kabag')) {
         role = UserRole.kabagAset;
-      } else if (lower.contains('kadiv') || lower.contains('pemimpin')) {
-        role = UserRole.kadiv;
+      } else if (lower.contains('aset') || lower.contains('bagian')) {
+        role = UserRole.bagianAset;
       } else if (lower.contains('staff')) {
         role = UserRole.staffAset;
       }

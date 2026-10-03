@@ -148,9 +148,18 @@ enum UserRole {
       'admin' => UserRole.admin,
       'pemohon' => UserRole.pemohon,
       'operator' => UserRole.operator,
+      'kadiv' ||
+      'pemimpin_divisi' ||
+      'pemimpin divisi' ||
+      'kadiv_aset' ||
+      'kadiv aset' ||
+      'pemimpin_divisi_aset' ||
+      'pemimpin divisi aset' ||
+      'kepala_divisi' ||
+      'kepala divisi' =>
+        UserRole.kadiv,
       'bagian_aset' || 'bagianaset' || 'bagian aset' || 'aset' => UserRole.bagianAset,
       'kabag_aset' || 'kabagaset' || 'kabag aset' => UserRole.kabagAset,
-      'kadiv' || 'pemimpin_divisi' || 'pemimpin divisi' => UserRole.kadiv,
       'staff_aset' || 'staffaset' || 'staff aset' => UserRole.staffAset,
       _ => null,
     };
