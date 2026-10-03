@@ -169,9 +169,9 @@ void main() {
     expect(find.text('ELEKTRONIK-2026-00088'), findsOneWidget);
     expect(find.text('Menunggu Approval Pemimpin Divisi'), findsWidgets);
 
-    // Verifikasi HASIL APPROVAL KABAG ditampilkan (Scope PRD & Task)
-    expect(find.text('Hasil Approval Kabag Aset'), findsOneWidget);
-    expect(find.text('Disetujui Oleh: '), findsOneWidget);
+    // Verifikasi HASIL VERIFIKASI BAGIAN ASET ditampilkan (Scope PRD & Task)
+    expect(find.text('Hasil Verifikasi Bagian Aset'), findsOneWidget);
+    expect(find.text('Diverifikasi Oleh: '), findsOneWidget);
     expect(find.text('H. M. Yusuf (Kabag Aset)'), findsOneWidget);
 
     // Verifikasi Aset & Alasan
@@ -180,7 +180,7 @@ void main() {
 
     // Verifikasi Timeline Workflow
     expect(find.text('Timeline Workflow'), findsOneWidget);
-    expect(find.text('Approval Kabag Aset'), findsOneWidget);
+    expect(find.text('Verifikasi Bagian Aset'), findsOneWidget);
     expect(find.text('Approval Kadiv'), findsOneWidget);
 
     // Verifikasi Action Buttons [ Tolak ] dan [ Setujui ]
