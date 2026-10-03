@@ -177,8 +177,8 @@ abstract final class RoleNavConfig {
       case UserRole.admin:
         return const [
           CustomNavItem(
-            icon: Icons.grid_view_rounded,
-            label: 'Home',
+            icon: Icons.home_outlined,
+            label: 'Beranda',
             route: RouteNames.adminDashboardPath,
           ),
           CustomNavItem(
