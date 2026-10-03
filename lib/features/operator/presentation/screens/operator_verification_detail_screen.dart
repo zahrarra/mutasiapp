@@ -23,6 +23,7 @@ import '../../../mutation/domain/entities/mutation_status.dart';
 import '../../../mutation/presentation/providers/mutation_provider.dart';
 import '../../../notification/domain/entities/notification_item.dart';
 import '../../../notification/presentation/providers/notification_provider.dart';
+import '../../../mutation/presentation/models/mutation_tracking_step.dart';
 import '../providers/operator_verification_provider.dart';
 
 // ── Stitch Design Tokens ─────────────────────────────────────────────────────
@@ -1617,6 +1618,12 @@ class OperatorVerificationDetailScreen extends ConsumerWidget {
 
   // ── 6. PROGRES ALUR PENGAJUAN (TIMELINE) ──────────────────────────────────
   Widget _buildTimelineSection(Mutation mutation) {
+    final steps = MutationTrackingHelper.getStepsForMutation(
+      mutation.status,
+      mutation: mutation,
+    );
+    final activeStage = MutationTrackingHelper.getActiveStageNumber(steps);
+
     return _buildSectionCard([
       Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -1642,9 +1649,9 @@ class OperatorVerificationDetailScreen extends ConsumerWidget {
               color: _C.warningLight,
               borderRadius: BorderRadius.circular(999),
             ),
-            child: const Text(
-              'Langkah 2 dari 5',
-              style: TextStyle(
+            child: Text(
+              'Langkah $activeStage dari ${steps.length}',
+              style: const TextStyle(
                 fontSize: 10,
                 fontWeight: FontWeight.w600,
                 color: _C.warning,
@@ -1655,52 +1662,31 @@ class OperatorVerificationDetailScreen extends ConsumerWidget {
       ),
       const SizedBox(height: 16),
 
-      // Timeline Steps
-      // Step 1: Diajukan oleh Pemohon (Done)
-      _buildTimelineStep(
-        isFirst: true,
-        isCompleted: true,
-        title: 'Diajukan oleh Pemohon',
-        subtitle:
-            '${_formatDateTime(mutation.createdAt)} • ${mutation.applicantName}',
-        badgeText: 'Selesai',
-        badgeColor: _C.success,
-      ),
+      // Timeline Steps dinamis sesuai PRD V1.1
+      for (int i = 0; i < steps.length; i++) ...[
+        () {
+          final step = steps[i];
+          final badgeColor = step.isCompleted
+              ? _C.secondary
+              : step.isAlert
+                  ? _C.error
+                  : step.isCurrent
+                      ? _C.warning
+                      : _C.textSecondary;
 
-      // Step 2: Verifikasi Operator (Active)
-      _buildTimelineStep(
-        isCompleted: false,
-        isActive: true,
-        title: 'Verifikasi Operator Aset',
-        subtitle: 'Pengecekan fisik aset & validasi kelengkapan berkas',
-        badgeText: 'Sedang Proses',
-        badgeColor: _C.warning,
-      ),
-
-      // Step 3: Approval Kabag Aset
-      _buildTimelineStep(
-        isCompleted: false,
-        isActive: false,
-        title: 'Approval Kabag Aset',
-        subtitle: 'Menunggu verifikasi operator',
-      ),
-
-      // Step 4: Otorisasi Kadiv / Update Data Aset
-      _buildTimelineStep(
-        isCompleted: false,
-        isActive: false,
-        title: 'Update Data Aset di SIMAK BMN',
-        subtitle: 'Otomatisasi pemindahan record inventaris',
-      ),
-
-      // Step 5: Konfirmasi Penerimaan oleh PIC
-      _buildTimelineStep(
-        isLast: true,
-        isCompleted: false,
-        isActive: false,
-        title: 'Konfirmasi Penerimaan oleh PIC',
-        subtitle: 'Serah terima fisik di lokasi tujuan',
-      ),
+          return _buildTimelineStep(
+            isFirst: i == 0,
+            isLast: i == steps.length - 1,
+            isCompleted: step.isCompleted,
+            isActive: step.isCurrent,
+            isAlert: step.isAlert,
+            title: step.title,
+            subtitle: step.subtitle,
+            badgeText: step.badgeText,
+            badgeColor: badgeColor,
+          );
+        }(),
+      ],
     ]);
   }
 
@@ -1709,6 +1695,7 @@ class OperatorVerificationDetailScreen extends ConsumerWidget {
     bool isLast = false,
     required bool isCompleted,
     bool isActive = false,
+    bool isAlert = false,
     required String title,
     required String subtitle,
     String? badgeText,
@@ -1728,38 +1715,45 @@ class OperatorVerificationDetailScreen extends ConsumerWidget {
                   shape: BoxShape.circle,
                   color: isCompleted
                       ? _C.secondary
-                      : isActive
-                          ? _C.surface
-                          : _C.surfaceContainerLow,
+                      : isAlert
+                          ? _C.errorLight
+                          : isActive
+                              ? _C.surface
+                              : _C.surfaceContainerLow,
                   border: Border.all(
                     color: isCompleted
                         ? _C.secondary
-                        : isActive
-                            ? _C.primaryContainer
-                            : _C.surfaceContainerHighest,
-                    width: isActive ? 2 : 1,
+                        : isAlert
+                            ? _C.error
+                            : isActive
+                                ? _C.primaryContainer
+                                : _C.surfaceContainerHighest,
+                    width: (isActive || isAlert) ? 2 : 1,
                   ),
                 ),
                 child: Center(
                   child: isCompleted
                       ? const Icon(Icons.check, size: 14, color: Colors.white)
-                      : isActive
-                          ? Container(
-                              width: 8,
-                              height: 8,
-                              decoration: const BoxDecoration(
-                                color: _C.primaryContainer,
-                                shape: BoxShape.circle,
-                              ),
-                            )
-                          : Container(
-                              width: 6,
-                              height: 6,
-                              decoration: const BoxDecoration(
-                                color: _C.surfaceContainerHighest,
-                                shape: BoxShape.circle,
-                              ),
-                            ),
+                      : isAlert
+                          ? const Icon(Icons.priority_high,
+                              size: 14, color: _C.error)
+                          : isActive
+                              ? Container(
+                                  width: 8,
+                                  height: 8,
+                                  decoration: const BoxDecoration(
+                                    color: _C.primaryContainer,
+                                    shape: BoxShape.circle,
+                                  ),
+                                )
+                              : Container(
+                                  width: 6,
+                                  height: 6,
+                                  decoration: const BoxDecoration(
+                                    color: _C.surfaceContainerHighest,
+                                    shape: BoxShape.circle,
+                                  ),
+                                ),
                 ),
               ),
               if (!isLast)
@@ -1790,7 +1784,7 @@ class OperatorVerificationDetailScreen extends ConsumerWidget {
                           style: TextStyle(
                             fontSize: 13,
                             fontWeight: FontWeight.w700,
-                            color: isCompleted || isActive
+                            color: isCompleted || isActive || isAlert
                                 ? _C.textPrimary
                                 : _C.textSecondary,
                           ),
