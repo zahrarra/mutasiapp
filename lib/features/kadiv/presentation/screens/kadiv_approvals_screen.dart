@@ -337,8 +337,9 @@ class _KadivApprovalCard extends StatelessWidget {
                 ),
               ],
             ),
-            // Kabag approval badge
-            if (mutation.approvedBy != null) ...[
+            // Bagian Aset verification badge
+            if (mutation.assetVerifiedBy != null ||
+                mutation.approvedBy != null) ...[
               const SizedBox(height: 8),
               Container(
                 padding:
@@ -356,7 +357,7 @@ class _KadivApprovalCard extends StatelessWidget {
                         size: 12, color: _C.success),
                     const SizedBox(width: 4),
                     Text(
-                      'Approval Kabag: ${mutation.approvedBy}',
+                      'Verifikasi Bagian Aset: ${mutation.assetVerifiedBy ?? mutation.approvedBy}',
                       style: const TextStyle(
                         fontSize: 11,
                         fontWeight: FontWeight.w600,

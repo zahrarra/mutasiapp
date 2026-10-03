@@ -265,10 +265,12 @@ class KadivApprovalDetailScreen extends ConsumerWidget {
                   ),
                   _buildTimelineLine(),
                   _buildTimelineItem(
-                    title: 'Approval Kabag Aset',
-                    subtitle: mutation.approvedBy != null
-                        ? 'Disetujui oleh ${mutation.approvedBy}'
-                        : 'Telah disetujui Kabag Aset',
+                    title: 'Verifikasi Bagian Aset',
+                    subtitle: mutation.assetVerifiedBy != null
+                        ? 'Diverifikasi oleh ${mutation.assetVerifiedBy}'
+                        : (mutation.approvedBy != null
+                            ? 'Diverifikasi oleh ${mutation.approvedBy}'
+                            : 'Telah diverifikasi valid oleh Bagian Aset'),
                     isCompleted: true,
                     isCurrent: false,
                   ),
@@ -376,7 +378,7 @@ class KadivApprovalDetailScreen extends ConsumerWidget {
     );
   }
 
-  /// Card Khusus Menampilkan Hasil Approval Kabag Aset
+  /// Card Khusus Menampilkan Hasil Verifikasi Bagian Aset
   Widget _buildKabagApprovalResultCard(Mutation mutation) {
     return Container(
       width: double.infinity,
@@ -399,7 +401,7 @@ class KadivApprovalDetailScreen extends ConsumerWidget {
                     SizedBox(width: AppSpacing.xs),
                     Expanded(
                       child: Text(
-                        'Hasil Approval Kabag Aset',
+                        'Hasil Verifikasi Bagian Aset',
                         style: TextStyle(
                           fontSize: 13,
                           fontWeight: FontWeight.bold,
@@ -419,7 +421,7 @@ class KadivApprovalDetailScreen extends ConsumerWidget {
                   borderRadius: BorderRadius.circular(AppRadius.pill),
                 ),
                 child: const Text(
-                  'Disetujui',
+                  'Lolos Verifikasi',
                   style: TextStyle(
                     fontSize: 11,
                     fontWeight: FontWeight.bold,
@@ -438,11 +440,11 @@ class KadivApprovalDetailScreen extends ConsumerWidget {
                   size: 16, color: AppColors.textSecondary),
               const SizedBox(width: 6),
               const Text(
-                'Disetujui Oleh: ',
+                'Diverifikasi Oleh: ',
                 style: TextStyle(fontSize: 12, color: AppColors.textSecondary),
               ),
               Text(
-                mutation.approvedBy ?? 'Kabag Aset',
+                mutation.assetVerifiedBy ?? mutation.approvedBy ?? 'Bagian Aset',
                 style: const TextStyle(
                   fontSize: 12,
                   fontWeight: FontWeight.bold,
@@ -458,13 +460,15 @@ class KadivApprovalDetailScreen extends ConsumerWidget {
                   size: 16, color: AppColors.textSecondary),
               const SizedBox(width: 6),
               const Text(
-                'Tanggal Approval: ',
+                'Tanggal Verifikasi: ',
                 style: TextStyle(fontSize: 12, color: AppColors.textSecondary),
               ),
               Text(
-                mutation.approvedAt != null
-                    ? _formatDate(mutation.approvedAt!)
-                    : 'Telah disetujui',
+                mutation.assetVerifiedAt != null
+                    ? _formatDate(mutation.assetVerifiedAt!)
+                    : (mutation.approvedAt != null
+                        ? _formatDate(mutation.approvedAt!)
+                        : 'Telah diverifikasi'),
                 style: const TextStyle(
                   fontSize: 12,
                   fontWeight: FontWeight.w500,
@@ -475,7 +479,7 @@ class KadivApprovalDetailScreen extends ConsumerWidget {
           ),
           const SizedBox(height: 6),
           const Text(
-            'Catatan: Pengajuan telah lolos kriteria review operasional Kabag Aset dan diteruskan ke Kepala Divisi untuk penetapan akhir kriteria khusus.',
+            'Catatan: Pengajuan telah lolos verifikasi data aset dan keabsahan dokumen oleh Bagian Aset, serta diteruskan ke Pemimpin Divisi untuk persetujuan final.',
             style: TextStyle(
               fontSize: 11,
               fontStyle: FontStyle.italic,

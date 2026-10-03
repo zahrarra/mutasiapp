@@ -361,6 +361,10 @@ final appRouterProvider = Provider<GoRouter>((ref) {
 
       // ─── Kadiv ────────────────────────────────────────────────────────────
       GoRoute(
+        path: '/kadiv',
+        redirect: (context, state) => RouteNames.kadivDashboardPath,
+      ),
+      GoRoute(
         path: RouteNames.kadivDashboardPath,
         name: RouteNames.kadivDashboardName,
         builder: (context, state) => const KadivDashboardScreen(),

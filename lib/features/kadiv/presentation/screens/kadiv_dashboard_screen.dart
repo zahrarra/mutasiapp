@@ -1009,7 +1009,7 @@ class _KadivDashboardScreenState extends ConsumerState<KadivDashboardScreen> {
         GestureDetector(
           onTap: () {
             ref.read(kadivStatusFilterProvider.notifier).state =
-                KadivStatusFilter.all;
+                KadivStatusFilter.waiting;
             context.push(RouteNames.kadivApprovalsPath);
           },
           child: Row(
