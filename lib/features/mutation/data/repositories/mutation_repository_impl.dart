@@ -553,10 +553,15 @@ class MutationRepositoryImpl implements MutationRepository {
       );
     }
 
-    final effectiveTargetPic =
-        targetPic.trim().isNotEmpty ? targetPic.trim() : current.targetPic;
+    final effectiveTargetPic = current.isAssetMovingWithApplicant
+        ? (targetPic.trim().isNotEmpty
+            ? targetPic.trim()
+            : (current.targetPic.trim().isNotEmpty
+                ? current.targetPic.trim()
+                : current.applicantName))
+        : (targetPic.trim().isNotEmpty ? targetPic.trim() : current.targetPic);
 
-    if (effectiveTargetPic.trim().isEmpty) {
+    if (current.isAssetMovingWithApplicant && effectiveTargetPic.trim().isEmpty) {
       return const Result.failure(
         ValidationFailure(message: 'Penanggung jawab baru wajib dipilih.'),
       );

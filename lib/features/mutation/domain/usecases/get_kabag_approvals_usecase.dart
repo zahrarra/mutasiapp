@@ -5,7 +5,6 @@
 
 import '../../../../core/errors/result.dart';
 import '../entities/mutation.dart';
-import '../entities/mutation_status.dart';
 import '../repositories/mutation_repository.dart';
 
 class GetKabagApprovalsUseCase {
@@ -20,7 +19,7 @@ class GetKabagApprovalsUseCase {
     if (result is Success<List<Mutation>>) {
       if (onlyWaitingApproval) {
         final filtered = result.data
-            .where((m) => m.status == MutationStatus.waitingKabagApproval)
+            .where((m) => m.status.isWaitingAssetVerification)
             .toList();
         return Result.success(filtered);
       }
