@@ -35,7 +35,9 @@ final pendingConfirmationsProvider = FutureProvider<List<Mutation>>((
   final asyncMutations = await ref.watch(mutationListProvider.future);
 
   return asyncMutations
-      .where((m) => m.status == MutationStatus.pendingConfirmation)
+      .where((m) =>
+          m.status == MutationStatus.waitingConfirmation ||
+          m.status == MutationStatus.pendingConfirmation)
       .toList();
 });
 

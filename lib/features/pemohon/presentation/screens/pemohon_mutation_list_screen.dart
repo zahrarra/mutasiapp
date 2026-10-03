@@ -886,7 +886,8 @@ class _MutationCard extends StatelessWidget {
                       style: style(size: 11, color: _C.textSecondary),
                     ),
                   ),
-                  if (status == MutationStatus.pendingConfirmation)
+                  if (status == MutationStatus.waitingConfirmation ||
+                      status == MutationStatus.pendingConfirmation)
                     _actionBtn(
                       context,
                       'Konfirmasi Diterima',
@@ -914,9 +915,9 @@ class _MutationCard extends StatelessWidget {
                       m.staffUpdatedAt != null)
                     // Pemohon sudah melaporkan ketidaksesuaian; tidak ada
                     // tindakan lain yang perlu ia lakukan — tinggal menunggu
-                    // Staff Aset memperbaiki data.
+                    // Bagian Aset memperbaiki data.
                     Text(
-                      'Menunggu perbaikan Staff Aset',
+                      'Menunggu perbaikan Bagian Aset',
                       style: style(
                         size: 11,
                         weight: FontWeight.w500,
@@ -1076,6 +1077,7 @@ class _MutationCard extends StatelessWidget {
   String _footerLeft(Mutation m) {
     if (m.status == MutationStatus.completed) return '';
     if (m.status == MutationStatus.returned ||
+        m.status == MutationStatus.waitingConfirmation ||
         m.status == MutationStatus.pendingConfirmation) {
       return m.displayAssetCode;
     }

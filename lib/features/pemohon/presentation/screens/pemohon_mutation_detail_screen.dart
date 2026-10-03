@@ -218,7 +218,8 @@ class PemohonMutationDetailScreen extends ConsumerWidget {
                     ),
                     const SizedBox(height: 24),
                   ],
-                  if (m.status == MutationStatus.pendingConfirmation) ...[
+                  if (m.status == MutationStatus.waitingConfirmation ||
+                      m.status == MutationStatus.pendingConfirmation) ...[
                     ElevatedButton.icon(
                       onPressed: () {
                         context.push(
@@ -1836,7 +1837,7 @@ class PemohonMutationDetailScreen extends ConsumerWidget {
       MutationStatus.waitingDivisionHeadApproval ||
       MutationStatus.waitingKadivApproval =>
         'Pemimpin Divisi',
-      MutationStatus.approved => 'Staff Aset (Fisik & Inventaris)',
+      MutationStatus.approved => 'Bagian Aset',
       MutationStatus.waitingConfirmation ||
       MutationStatus.pendingConfirmation =>
         'Pemohon (Konfirmasi Akhir)',

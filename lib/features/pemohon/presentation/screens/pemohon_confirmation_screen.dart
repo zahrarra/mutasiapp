@@ -342,7 +342,7 @@ class _PemohonConfirmationScreenState
               const SizedBox(height: 12),
             ] else if (isDisputedByApplicant) ...[
               _banner(
-                'Laporan ketidaksesuaian Anda sudah diteruskan ke Staff Aset. '
+                'Laporan ketidaksesuaian Anda sudah diteruskan ke Bagian Aset. '
                 'Tidak ada tindakan lain yang perlu Anda lakukan saat ini — '
                 'konfirmasi akan tersedia kembali setelah data diperbaiki.',
                 _C.info,
@@ -444,14 +444,15 @@ class _PemohonConfirmationScreenState
   }
 
   Widget _ticketCard(Mutation m, {required bool isDisputedByApplicant}) {
-    final pending = m.status == MutationStatus.pendingConfirmation;
+    final pending = m.status == MutationStatus.waitingConfirmation ||
+        m.status == MutationStatus.pendingConfirmation;
     final done = m.status == MutationStatus.completed;
 
     // Untuk kasus laporan ketidaksesuaian oleh pemohon, tampilkan badge
-    // netral ("Menunggu Staff Aset") — bukan "Dikembalikan ke Pemohon" yang
+    // netral ("Menunggu Bagian Aset") — bukan "Dikembalikan ke Pemohon" yang
     // secara semantik menyalahkan pemohon padahal justru pemohon yang lapor.
     final badgeLabel = isDisputedByApplicant
-        ? 'Menunggu Staff Aset'
+        ? 'Menunggu Bagian Aset'
         : m.status.displayName;
     final badgeIcon = isDisputedByApplicant
         ? Icons.hourglass_top
@@ -540,7 +541,7 @@ class _PemohonConfirmationScreenState
                 const SizedBox(width: 8),
                 Expanded(
                   child: Text(
-                    'Staff Aset telah menyelesaikan pembaruan master data aset pada sistem inventaris korporat. Harap lakukan verifikasi fisik sebelum melakukan konfirmasi final.',
+                    'Bagian Aset telah memverifikasi data aset pada sistem inventaris korporat. Harap lakukan verifikasi fisik sebelum melakukan konfirmasi final.',
                     style: _t(size: 12, color: const Color(0xFF42474D), h: 1.4),
                   ),
                 ),
@@ -589,7 +590,7 @@ class _PemohonConfirmationScreenState
                     const Icon(Icons.badge, size: 13, color: _C.textSecondary),
                     const SizedBox(width: 4),
                     Text(
-                      'Oleh: ${m.staffUpdatedBy ?? 'Staff Aset'}',
+                      'Oleh: ${m.staffUpdatedBy ?? m.assetVerifiedBy ?? m.approvedBy ?? 'Bagian Aset'}',
                       style: _t(size: 11, color: _C.textSecondary),
                     ),
                   ],
@@ -1162,8 +1163,8 @@ class _PemohonConfirmationScreenState
             children: [
               Text(
                 'Silakan berikan alasan atau catatan ketidaksesuaian aset/lokasi '
-                'yang diterima. Laporan ini akan dikirim ke Staff Aset agar '
-                'data aset dapat diperbaiki — bukan data pengajuan Anda.',
+                'yang diterima. Laporan ini akan dikirim ke Bagian Aset agar '
+                'data mutasi dapat ditindaklanjuti — bukan data pengajuan Anda.',
                 style: _t(size: 12, color: _C.textSecondary, h: 1.4),
               ),
               const SizedBox(height: 12),

@@ -368,7 +368,8 @@ class PemohonMutationCard extends StatelessWidget {
                   const Divider(height: 1, color: Color(0xFFEAECF0)),
                   const SizedBox(height: 8),
 
-                  if (status == MutationStatus.pendingConfirmation)
+                  if (status == MutationStatus.waitingConfirmation ||
+                      status == MutationStatus.pendingConfirmation)
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
