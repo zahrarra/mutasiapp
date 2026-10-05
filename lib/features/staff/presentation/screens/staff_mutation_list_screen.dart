@@ -13,6 +13,7 @@ import '../../../auth/domain/entities/user_role.dart';
 import '../../../../core/widgets/custom_floating_nav_bar.dart';
 import '../../../mutation/domain/entities/mutation.dart';
 import '../providers/staff_mutation_provider.dart';
+import '../../../../core/widgets/mutasiku_page_header.dart';
 
 class _C {
   static const navy = Color(0xFF0F3D56);
@@ -59,60 +60,13 @@ class _StaffMutationListScreenState
       extendBody: true,
       body: Column(
         children: [
-          // ── Custom Top Bar ──────────────────────────────────────────
-          Container(
-            color: _C.surface,
-            child: SafeArea(
-              bottom: false,
-              child: Container(
-                height: 60,
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                decoration: const BoxDecoration(
-                  color: _C.surface,
-                  border: Border(
-                      bottom: BorderSide(color: _C.border, width: 1)),
-                ),
-                child: Row(
-                  children: [
-                    GestureDetector(
-                      onTap: () => _safePop(context),
-                      child: Container(
-                        width: 38,
-                        height: 38,
-                        decoration: BoxDecoration(
-                          color: _C.background,
-                          borderRadius: BorderRadius.circular(10),
-                          border: Border.all(color: _C.border),
-                        ),
-                        child: const Icon(Icons.arrow_back_rounded,
-                            size: 18, color: _C.textSecondary),
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    const Expanded(
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            'Antrian Pembaruan Aset',
-                            style: TextStyle(
-                              fontSize: 15,
-                              fontWeight: FontWeight.w700,
-                              color: _C.textPrimary,
-                            ),
-                          ),
-                          Text(
-                            'Mutasi disetujui, siap diperbarui',
-                            style: TextStyle(
-                                fontSize: 11, color: _C.textSecondary),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-              ),
+          // ── Top Header ──────────────────────────────────────────────
+          SafeArea(
+            bottom: false,
+            child: MutasiKuPageHeader(
+              title: 'Antrian Pembaruan Aset',
+              subtitle: 'Mutasi disetujui, siap diperbarui',
+              onBack: () => _safePop(context),
             ),
           ),
 

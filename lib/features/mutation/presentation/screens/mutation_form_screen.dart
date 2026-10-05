@@ -12,6 +12,7 @@ import '../../../../app/theme/app_colors.dart';
 import '../../../../app/theme/app_spacing.dart';
 import '../../../../core/widgets/custom_button.dart';
 import '../providers/mutation_form_provider.dart';
+import '../../../../core/widgets/mutasiku_page_header.dart';
 
 class MutationFormScreen extends ConsumerWidget {
   const MutationFormScreen({super.key});
@@ -24,10 +25,21 @@ class MutationFormScreen extends ConsumerWidget {
     final pics = ref.watch(availablePicsProvider);
 
     return Scaffold(
-      backgroundColor: AppColors.background,
-      appBar: AppBar(title: const Text('Form Pengajuan Mutasi')),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(AppSpacing.md),
+      backgroundColor: const Color(0xFFF6F8FA),
+      body: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SafeArea(
+            bottom: false,
+            child: MutasiKuPageHeader(
+              title: 'Form Pengajuan Mutasi',
+              subtitle: 'Input data aset dan lokasi tujuan mutasi',
+              onBack: () => Navigator.of(context).pop(),
+            ),
+          ),
+          Expanded(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.all(AppSpacing.md),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -220,6 +232,9 @@ class MutationFormScreen extends ConsumerWidget {
             const SizedBox(height: AppSpacing.lg),
           ],
         ),
+      ),
+          ),
+        ],
       ),
     );
   }

@@ -14,6 +14,7 @@ import '../../../../core/widgets/loading_indicator.dart';
 import '../../domain/entities/asset_status.dart';
 import '../providers/asset_provider.dart';
 import '../widgets/asset_card.dart';
+import '../../../../core/widgets/mutasiku_page_header.dart';
 
 /// Screen daftar aset perusahaan dengan fitur pencarian & filter.
 class AssetListScreen extends ConsumerWidget {
@@ -27,11 +28,18 @@ class AssetListScreen extends ConsumerWidget {
     final selectedStatus = ref.watch(assetStatusFilterProvider);
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Daftar Aset MutasiKu'),
-      ),
+      backgroundColor: const Color(0xFFF6F8FA),
       body: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          SafeArea(
+            bottom: false,
+            child: MutasiKuPageHeader(
+              title: 'Daftar Aset MutasiKu',
+              subtitle: 'Pencarian & inventaris mutasi aset terpadu',
+              onBack: () => Navigator.of(context).pop(),
+            ),
+          ),
           // Search & Filter Header Section
           Container(
             padding: const EdgeInsets.all(AppSpacing.md),

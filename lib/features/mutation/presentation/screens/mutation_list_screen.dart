@@ -18,6 +18,7 @@ import '../../../../core/widgets/loading_indicator.dart';
 import '../../domain/entities/mutation.dart';
 import '../../domain/entities/mutation_status.dart';
 import '../providers/mutation_provider.dart';
+import '../../../../core/widgets/mutasiku_page_header.dart';
 
 /// Screen daftar mutasi milik Pemohon (REQ-002: "Mutasi Saya").
 class MutationListScreen extends ConsumerWidget {
@@ -28,37 +29,58 @@ class MutationListScreen extends ConsumerWidget {
     final mutationsAsync = ref.watch(mutationListProvider);
 
     return Scaffold(
-      backgroundColor: AppColors.background,
-      appBar: AppBar(
-        title: const Text('Mutasi Saya'),
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
-          tooltip: 'Kembali',
-          onPressed: () {
-            if (context.canPop()) {
-              context.pop();
-            } else {
-              context.go(RouteNames.pemohonDashboardPath);
-            }
-          },
-        ),
-      ),
+      backgroundColor: const Color(0xFFF6F8FA),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () => context.push(RouteNames.pemohonMutasiCreatePath),
         backgroundColor: AppColors.primary,
-        icon: const Icon(Icons.add),
-        label: const Text('Ajukan Mutasi'),
-      ),
-      body: RefreshIndicator(
-        onRefresh: () async => ref.invalidate(mutationListProvider),
-        child: mutationsAsync.when(
-          data: (mutations) => _buildList(context, mutations),
-          loading: () => const LoadingIndicator(message: 'Memuat data mutasi...'),
-          error: (err, _) => ErrorView(
-            message: 'Gagal memuat data mutasi.\n${err.toString()}',
-            onRetry: () => ref.invalidate(mutationListProvider),
+        foregroundColor: Colors.white,
+        elevation: 6,
+        highlightElevation: 8,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(999),
+        ),
+        icon: const Icon(Icons.add_rounded, size: 20, color: Colors.white),
+        label: const Text(
+          'Ajukan Mutasi',
+          style: TextStyle(
+            fontSize: 14,
+            fontWeight: FontWeight.w700,
+            color: Colors.white,
           ),
         ),
+      ),
+      body: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SafeArea(
+            bottom: false,
+            child: MutasiKuPageHeader(
+              title: 'Mutasi Saya',
+              subtitle: 'Daftar riwayat dan status pengajuan mutasi aset',
+              onBack: () {
+                if (context.canPop()) {
+                  context.pop();
+                } else {
+                  context.go(RouteNames.pemohonDashboardPath);
+                }
+              },
+            ),
+          ),
+          Expanded(
+            child: RefreshIndicator(
+              onRefresh: () async => ref.invalidate(mutationListProvider),
+              child: mutationsAsync.when(
+                data: (mutations) => _buildList(context, mutations),
+                loading: () =>
+                    const LoadingIndicator(message: 'Memuat data mutasi...'),
+                error: (err, _) => ErrorView(
+                  message: 'Gagal memuat data mutasi.\n${err.toString()}',
+                  onRetry: () => ref.invalidate(mutationListProvider),
+                ),
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }

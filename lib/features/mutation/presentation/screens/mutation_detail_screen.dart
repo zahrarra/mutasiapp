@@ -14,6 +14,7 @@ import '../../../../app/theme/app_colors.dart';
 import '../../../../core/widgets/document_preview_dialog.dart';
 import '../../../../core/widgets/error_view.dart';
 import '../../../../core/widgets/loading_indicator.dart';
+import '../../../../core/widgets/mutasiku_page_header.dart';
 import '../../../auth/domain/entities/user_role.dart';
 import '../../../auth/presentation/providers/auth_provider.dart';
 import '../../domain/entities/mutation.dart';
@@ -32,44 +33,42 @@ class MutationDetailScreen extends ConsumerWidget {
     final asyncMutation = ref.watch(mutationDetailProvider(mutationId));
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF7F9FF),
-      appBar: AppBar(
-        title: const Text(
-          'Detail Mutasi',
-          style: TextStyle(
-            fontSize: 16,
-            fontWeight: FontWeight.bold,
-            color: Color(0xFF0F1D28),
+      backgroundColor: const Color(0xFFF6F8FA),
+      body: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SafeArea(
+            bottom: false,
+            child: MutasiKuPageHeader(
+              title: 'Detail Mutasi',
+              subtitle: 'Detail mutasi & tracking alur pengajuan',
+              onBack: () {
+                if (Navigator.of(context).canPop()) {
+                  Navigator.of(context).pop();
+                } else {
+                  try {
+                    context.go(RouteNames.pemohonMutasiPath);
+                  } catch (_) {}
+                }
+              },
+            ),
           ),
-        ),
-        backgroundColor: Colors.white,
-        elevation: 0.5,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Color(0xFF0F1D28)),
-          tooltip: 'Kembali',
-          onPressed: () {
-            if (Navigator.of(context).canPop()) {
-              Navigator.of(context).pop();
-            } else {
-              try {
-                context.go(RouteNames.pemohonMutasiPath);
-              } catch (_) {}
-            }
-          },
-        ),
-      ),
-      body: asyncMutation.when(
-        data: (mutation) => RefreshIndicator(
-          onRefresh: () async {
-            ref.invalidate(mutationDetailProvider(mutationId));
-          },
-          child: _buildEnhancedBody(context, ref, mutation),
-        ),
-        loading: () => const LoadingIndicator(),
-        error: (err, _) => ErrorView(
-          message: 'Gagal memuat detail pengajuan.\n$err',
-          onRetry: () => ref.invalidate(mutationDetailProvider(mutationId)),
-        ),
+          Expanded(
+            child: asyncMutation.when(
+              data: (mutation) => RefreshIndicator(
+                onRefresh: () async {
+                  ref.invalidate(mutationDetailProvider(mutationId));
+                },
+                child: _buildEnhancedBody(context, ref, mutation),
+              ),
+              loading: () => const LoadingIndicator(),
+              error: (err, _) => ErrorView(
+                message: 'Gagal memuat detail pengajuan.\n$err',
+                onRetry: () => ref.invalidate(mutationDetailProvider(mutationId)),
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }

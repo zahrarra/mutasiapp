@@ -22,6 +22,7 @@ import '../../domain/entities/mutation_status.dart';
 import '../../domain/usecases/update_mutation_usecase.dart';
 import '../providers/mutation_form_provider.dart';
 import '../providers/mutation_provider.dart';
+import '../../../../core/widgets/mutasiku_page_header.dart';
 
 /// Screen edit pengajuan mutasi yang dikembalikan Operator (REQ-008).
 class MutationEditScreen extends ConsumerStatefulWidget {
@@ -84,51 +85,65 @@ class _MutationEditScreenState extends ConsumerState<MutationEditScreen> {
     final asyncMutation = ref.watch(mutationDetailProvider(widget.mutationId));
 
     return Scaffold(
-      backgroundColor: AppColors.background,
-      appBar: AppBar(title: const Text('Edit Pengajuan')),
-      body: asyncMutation.when(
-        data: (mutation) {
-          if (mutation.status != MutationStatus.returned) {
-            return Center(
-              child: Padding(
-                padding: const EdgeInsets.all(AppSpacing.lg),
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    const Icon(
-                      Icons.lock_outline,
-                      size: 48,
-                      color: AppColors.textDisabled,
+      backgroundColor: const Color(0xFFF6F8FA),
+      body: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SafeArea(
+            bottom: false,
+            child: MutasiKuPageHeader(
+              title: 'Edit Pengajuan Mutasi',
+              subtitle: 'Perbarui data & dokumen mutasi yang dikembalikan',
+              onBack: () => context.pop(),
+            ),
+          ),
+          Expanded(
+            child: asyncMutation.when(
+              data: (mutation) {
+                if (mutation.status != MutationStatus.returned) {
+                  return Center(
+                    child: Padding(
+                      padding: const EdgeInsets.all(AppSpacing.lg),
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          const Icon(
+                            Icons.lock_outline,
+                            size: 48,
+                            color: AppColors.textDisabled,
+                          ),
+                          const SizedBox(height: AppSpacing.md),
+                          const Text(
+                            'Pengajuan ini tidak dapat diedit karena statusnya\n'
+                            'bukan "Dikembalikan ke Pemohon".',
+                            textAlign: TextAlign.center,
+                            style: TextStyle(color: AppColors.textSecondary),
+                          ),
+                          const SizedBox(height: AppSpacing.md),
+                          CustomButton(
+                            label: 'Kembali',
+                            onPressed: () => context.pop(),
+                          ),
+                        ],
+                      ),
                     ),
-                    const SizedBox(height: AppSpacing.md),
-                    const Text(
-                      'Pengajuan ini tidak dapat diedit karena statusnya\n'
-                      'bukan "Dikembalikan ke Pemohon".',
-                      textAlign: TextAlign.center,
-                      style: TextStyle(color: AppColors.textSecondary),
-                    ),
-                    const SizedBox(height: AppSpacing.md),
-                    CustomButton(
-                      label: 'Kembali',
-                      onPressed: () => context.pop(),
-                    ),
-                  ],
-                ),
+                  );
+                }
+
+                _prefillOnce(mutation);
+
+                return _buildForm(context, mutation);
+              },
+              loading: () => const LoadingIndicator(),
+              error: (err, _) => ErrorView(
+                message: 'Gagal memuat data pengajuan.\n${err.toString()}',
+                onRetry: () {
+                  ref.invalidate(mutationDetailProvider(widget.mutationId));
+                },
               ),
-            );
-          }
-
-          _prefillOnce(mutation);
-
-          return _buildForm(context, mutation);
-        },
-        loading: () => const LoadingIndicator(),
-        error: (err, _) => ErrorView(
-          message: 'Gagal memuat data pengajuan.\n${err.toString()}',
-          onRetry: () {
-            ref.invalidate(mutationDetailProvider(widget.mutationId));
-          },
-        ),
+            ),
+          ),
+        ],
       ),
     );
   }

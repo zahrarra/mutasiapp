@@ -12,6 +12,7 @@ import '../../../../core/widgets/error_view.dart';
 import '../../../../core/widgets/loading_indicator.dart';
 import '../providers/asset_provider.dart';
 import '../widgets/asset_status_badge.dart';
+import '../../../../core/widgets/mutasiku_page_header.dart';
 
 /// Screen detail aset dengan informasi spesifikasi & riwayat mutasi.
 class AssetDetailScreen extends ConsumerWidget {
@@ -27,10 +28,20 @@ class AssetDetailScreen extends ConsumerWidget {
     final assetAsync = ref.watch(assetDetailProvider(assetId));
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Detail Aset'),
-      ),
-      body: assetAsync.when(
+      backgroundColor: const Color(0xFFF6F8FA),
+      body: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SafeArea(
+            bottom: false,
+            child: MutasiKuPageHeader(
+              title: 'Detail Aset',
+              subtitle: 'Informasi spesifikasi dan riwayat mutasi aset',
+              onBack: () => Navigator.of(context).pop(),
+            ),
+          ),
+          Expanded(
+            child: assetAsync.when(
         data: (asset) {
           return SingleChildScrollView(
             padding: const EdgeInsets.all(AppSpacing.md),
@@ -255,8 +266,11 @@ class AssetDetailScreen extends ConsumerWidget {
           onRetry: () => ref.refresh(assetDetailProvider(assetId)),
         ),
       ),
-    );
-  }
+    ),
+  ],
+),
+);
+}
 }
 
 class _SpecTile extends StatelessWidget {

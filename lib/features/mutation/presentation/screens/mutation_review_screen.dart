@@ -19,6 +19,7 @@ import '../../../../core/widgets/custom_button.dart';
 import '../../domain/repositories/mutation_repository.dart';
 import '../providers/mutation_form_provider.dart';
 import '../providers/mutation_provider.dart';
+import '../../../../core/widgets/mutasiku_page_header.dart';
 
 class MutationReviewScreen extends ConsumerWidget {
   const MutationReviewScreen({super.key});
@@ -29,10 +30,21 @@ class MutationReviewScreen extends ConsumerWidget {
     final submitState = ref.watch(submitMutationProvider);
 
     return Scaffold(
-      backgroundColor: AppColors.background,
-      appBar: AppBar(title: const Text('Review Pengajuan')),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(AppSpacing.md),
+      backgroundColor: const Color(0xFFF6F8FA),
+      body: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SafeArea(
+            bottom: false,
+            child: MutasiKuPageHeader(
+              title: 'Review Pengajuan',
+              subtitle: 'Periksa kembali kelengkapan data pengajuan mutasi',
+              onBack: () => context.pop(),
+            ),
+          ),
+          Expanded(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.all(AppSpacing.md),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -126,6 +138,9 @@ class MutationReviewScreen extends ConsumerWidget {
             const SizedBox(height: AppSpacing.lg),
           ],
         ),
+      ),
+          ),
+        ],
       ),
     );
   }

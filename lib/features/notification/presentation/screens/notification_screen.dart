@@ -9,6 +9,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:mutasiku/core/widgets/custom_floating_nav_bar.dart';
+import '../../../../core/widgets/mutasiku_page_header.dart';
 
 import '../../../../app/router/route_names.dart';
 import '../../../auth/domain/entities/user_role.dart';
@@ -187,41 +188,7 @@ class _NotificationScreenState extends ConsumerState<NotificationScreen> {
     return '${_fmtDate(d)}, $h:$min WIB';
   }
 
-  String _badge(UserRole? role) {
-    switch (role) {
-      case UserRole.pemohon:
-        return 'MUTASIKU';
-      case UserRole.operator:
-        return 'MUTASIKU OPS';
-      case UserRole.bagianAset:
-        return 'MUTASIKU ASET';
-      case UserRole.kabagAset:
-        return 'MUTASIKU KABAG';
-      case UserRole.kadiv:
-        return 'MUTASIKU KADIV';
-      case UserRole.staffAset:
-        return 'MUTASIKU STAFF';
-      case UserRole.admin:
-        return 'MUTASIKU ADMIN';
-      case null:
-        return 'MUTASIKU';
-    }
-  }
 
-  String _initials(String? name) {
-    final p = (name ?? 'U')
-        .trim()
-        .split(RegExp(r'\s+'))
-        .where((e) => e.isNotEmpty)
-        .toList();
-    if (p.isEmpty) return 'U';
-    if (p.length == 1) {
-      return p.first.length >= 2
-          ? p.first.substring(0, 2).toUpperCase()
-          : p.first.toUpperCase();
-    }
-    return '${p.first[0]}${p.last[0]}'.toUpperCase();
-  }
 
   (IconData, Color, Color) _iconStyle(NotificationItem n) {
     final t = '${n.type} ${n.title}'.toLowerCase();
@@ -277,7 +244,7 @@ class _NotificationScreenState extends ConsumerState<NotificationScreen> {
       extendBody: true,
       body: Column(
         children: [
-          _buildHeader(role, _initials(user?.name)),
+          _buildHeader(),
           Expanded(
             child: sorted.isEmpty
                 ? Center(
@@ -290,24 +257,29 @@ class _NotificationScreenState extends ConsumerState<NotificationScreen> {
                     padding: const EdgeInsets.fromLTRB(16, 4, 16, 100),
                     children: [
                       Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
                           Expanded(
-                            child: Text(
-                              'Notifikasi',
-                              style: _t(
-                                size: 22,
-                                w: FontWeight.w700,
-                                color: _S.navy,
-                                h: 1.27,
+                            child: SingleChildScrollView(
+                              scrollDirection: Axis.horizontal,
+                              child: Row(
+                                children: [
+                                  _chip('Semua', sorted.length, _Filter.all),
+                                  const SizedBox(width: 8),
+                                  _chip('Tugas Verifikasi', tugasN, _Filter.tugas),
+                                  const SizedBox(width: 8),
+                                  _chip('Pembaruan', pembN, _Filter.pembaruan),
+                                ],
                               ),
                             ),
                           ),
+                          const SizedBox(width: 8),
                           GestureDetector(
                             onTap: unread == 0 ? null : _markAllRead,
                             child: Container(
                               padding: const EdgeInsets.symmetric(
-                                horizontal: 8,
-                                vertical: 4,
+                                horizontal: 10,
+                                vertical: 6,
                               ),
                               decoration: BoxDecoration(
                                 color: _S.surfaceLow.withValues(alpha: 0.7),
@@ -318,7 +290,7 @@ class _NotificationScreenState extends ConsumerState<NotificationScreen> {
                                     ? 'Semua Terbaca'
                                     : 'Tandai Semua Dibaca',
                                 style: _t(
-                                  size: 12,
+                                  size: 11,
                                   w: FontWeight.w600,
                                   color: unread == 0
                                       ? _S.slate400
@@ -328,24 +300,6 @@ class _NotificationScreenState extends ConsumerState<NotificationScreen> {
                             ),
                           ),
                         ],
-                      ),
-                      const SizedBox(height: 2),
-                      Text(
-                        'Pemberitahuan tugas & pembaruan pengajuan mutasi',
-                        style: _t(size: 12, color: _S.textSecondary, h: 1.4),
-                      ),
-                      const SizedBox(height: 12),
-                      SingleChildScrollView(
-                        scrollDirection: Axis.horizontal,
-                        child: Row(
-                          children: [
-                            _chip('Semua', sorted.length, _Filter.all),
-                            const SizedBox(width: 8),
-                            _chip('Tugas Verifikasi', tugasN, _Filter.tugas),
-                            const SizedBox(width: 8),
-                            _chip('Pembaruan', pembN, _Filter.pembaruan),
-                          ],
-                        ),
                       ),
                       const SizedBox(height: 16),
                       if (list.isEmpty)
@@ -430,113 +384,20 @@ class _NotificationScreenState extends ConsumerState<NotificationScreen> {
     );
   }
 
-  Widget _buildHeader(UserRole? role, String initials) {
-    return Material(
-      color: _S.bg.withValues(alpha: 0.9),
-      child: SafeArea(
-        bottom: false,
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(20, 8, 20, 10),
-          child: SizedBox(
-            height: 40,
-            child: Row(
-              children: [
-                Material(
-                  color: _S.white,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(999),
-                    side: const BorderSide(color: Color(0xFFE5E7EB)),
-                  ),
-                  child: InkWell(
-                    onTap: () {
-                      if (context.canPop()) {
-                        context.pop();
-                      } else {
-                        final r = ref.read(authStateProvider).user?.role;
-                        context.go(r?.defaultRoute ?? RouteNames.dashboardPath);
-                      }
-                    },
-                    borderRadius: BorderRadius.circular(999),
-                    child: const SizedBox(
-                      width: 36,
-                      height: 36,
-                      child: Icon(
-                        Icons.arrow_back,
-                        size: 20,
-                        color: _S.textPrimary,
-                      ),
-                    ),
-                  ),
-                ),
-                const Spacer(),
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 12,
-                    vertical: 4,
-                  ),
-                  decoration: BoxDecoration(
-                    color: _S.white,
-                    borderRadius: BorderRadius.circular(999),
-                    border: Border.all(color: const Color(0xFFE2E8F0)),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withValues(alpha: 0.04),
-                        blurRadius: 4,
-                      ),
-                    ],
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Container(
-                        width: 8,
-                        height: 8,
-                        decoration: const BoxDecoration(
-                          color: Color(0xFF10B981),
-                          shape: BoxShape.circle,
-                        ),
-                      ),
-                      const SizedBox(width: 6),
-                      Text(
-                        _badge(role),
-                        style: _t(
-                          size: 12,
-                          w: FontWeight.w700,
-                          color: _S.navy,
-                          ls: 0.6,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                const Spacer(),
-                Container(
-                  width: 36,
-                  height: 36,
-                  alignment: Alignment.center,
-                  decoration: BoxDecoration(
-                    color: _S.navy,
-                    shape: BoxShape.circle,
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withValues(alpha: 0.06),
-                        blurRadius: 4,
-                      ),
-                    ],
-                  ),
-                  child: Text(
-                    initials,
-                    style: _t(
-                      size: 12,
-                      w: FontWeight.w700,
-                      color: Colors.white,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
+  Widget _buildHeader() {
+    return SafeArea(
+      bottom: false,
+      child: MutasiKuPageHeader(
+        title: 'Notifikasi',
+        subtitle: 'Pusat informasi dan status pembaruan mutasi aset',
+        onBack: () {
+          if (context.canPop()) {
+            context.pop();
+          } else {
+            final r = ref.read(authStateProvider).user?.role;
+            context.go(r?.defaultRoute ?? RouteNames.dashboardPath);
+          }
+        },
       ),
     );
   }

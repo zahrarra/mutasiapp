@@ -22,6 +22,7 @@ import '../../../../core/widgets/app_feedback.dart';
 import '../../../../core/widgets/document_preview_dialog.dart';
 import '../../../auth/presentation/providers/auth_provider.dart';
 import '../providers/staff_mutation_provider.dart';
+import '../../../../core/widgets/mutasiku_page_header.dart';
 
 class StaffMutationDetailScreen extends ConsumerStatefulWidget {
   final String mutationId;
@@ -166,39 +167,48 @@ class _StaffMutationDetailScreenState
     final actionState = ref.watch(staffAssetUpdateActionProvider);
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Detail Pembaruan Aset'),
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
-          onPressed: () => _safePop(context),
-        ),
-      ),
-      body: asyncMutation.when(
-        data: (mutation) {
-          _initControllers(mutation);
-          return _buildContent(context, mutation, actionState);
-        },
-        loading: () => const Center(child: CircularProgressIndicator()),
-        error: (err, _) => Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              const Icon(Icons.error_outline, size: 48, color: AppColors.error),
-              const SizedBox(height: AppSpacing.sm),
-              Text(
-                'Gagal memuat detail mutasi: $err',
-                textAlign: TextAlign.center,
-                style: const TextStyle(color: AppColors.error),
-              ),
-              const SizedBox(height: AppSpacing.md),
-              ElevatedButton(
-                onPressed: () =>
-                    ref.invalidate(mutationDetailProvider(widget.mutationId)),
-                child: const Text('Coba Lagi'),
-              ),
-            ],
+      backgroundColor: const Color(0xFFF6F8FA),
+      body: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SafeArea(
+            bottom: false,
+            child: MutasiKuPageHeader(
+              title: 'Detail Pembaruan Aset',
+              subtitle: 'Pembaruan lokasi fisik & PIC aset mutasi',
+              onBack: () => _safePop(context),
+            ),
           ),
-        ),
+          Expanded(
+            child: asyncMutation.when(
+              data: (mutation) {
+                _initControllers(mutation);
+                return _buildContent(context, mutation, actionState);
+              },
+              loading: () => const Center(child: CircularProgressIndicator()),
+              error: (err, _) => Center(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const Icon(Icons.error_outline, size: 48, color: AppColors.error),
+                    const SizedBox(height: AppSpacing.sm),
+                    Text(
+                      'Gagal memuat detail mutasi: $err',
+                      textAlign: TextAlign.center,
+                      style: const TextStyle(color: AppColors.error),
+                    ),
+                    const SizedBox(height: AppSpacing.md),
+                    ElevatedButton(
+                      onPressed: () =>
+                          ref.invalidate(mutationDetailProvider(widget.mutationId)),
+                      child: const Text('Coba Lagi'),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
