@@ -6,15 +6,13 @@ import 'package:mutasiku/features/auth/domain/entities/user_role.dart';
 void main() {
   group('UserRole enum tests', () {
     test('All roles have valid labels and apiValues', () {
-      expect(UserRole.values.length, 7);
+      expect(UserRole.values.length, 5);
 
       expect(UserRole.admin.label, 'Admin');
       expect(UserRole.pemohon.label, 'Pemohon');
       expect(UserRole.operator.label, 'Operator');
       expect(UserRole.bagianAset.label, 'Bagian Aset');
-      expect(UserRole.kabagAset.label, 'Kabag Aset');
       expect(UserRole.kadiv.label, 'Pemimpin Divisi');
-      expect(UserRole.staffAset.label, 'Staff Aset');
     });
 
     test('fromApiValue parses strings correctly', () {
@@ -22,9 +20,9 @@ void main() {
       expect(UserRole.fromApiValue('pemohon'), UserRole.pemohon);
       expect(UserRole.fromApiValue('operator'), UserRole.operator);
       expect(UserRole.fromApiValue('bagian_aset'), UserRole.bagianAset);
-      expect(UserRole.fromApiValue('kabag_aset'), UserRole.kabagAset);
+      expect(UserRole.fromApiValue('kabag_aset'), UserRole.bagianAset);
       expect(UserRole.fromApiValue('kadiv'), UserRole.kadiv);
-      expect(UserRole.fromApiValue('staff_aset'), UserRole.staffAset);
+      expect(UserRole.fromApiValue('staff_aset'), UserRole.bagianAset);
     });
 
     test('fromApiValue returns null for unknown string', () {

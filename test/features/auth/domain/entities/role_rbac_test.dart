@@ -8,14 +8,13 @@ import 'package:mutasiku/features/auth/domain/entities/user_permission.dart';
 import 'package:mutasiku/features/auth/domain/entities/user_role.dart';
 
 void main() {
-  group('Authentication + RBAC tests for 6 roles', () {
-    test('All 6 roles have unique default routes and prefixes', () {
+  group('Authentication + RBAC tests for 5 roles', () {
+    test('All 5 roles have unique default routes and prefixes', () {
       expect(UserRole.admin.defaultRoute, RouteNames.adminDashboardPath);
       expect(UserRole.pemohon.defaultRoute, RouteNames.pemohonDashboardPath);
       expect(UserRole.operator.defaultRoute, RouteNames.operatorDashboardPath);
-      expect(UserRole.kabagAset.defaultRoute, RouteNames.kabagDashboardPath);
+      expect(UserRole.bagianAset.defaultRoute, RouteNames.bagianAsetDashboardPath);
       expect(UserRole.kadiv.defaultRoute, RouteNames.kadivDashboardPath);
-      expect(UserRole.staffAset.defaultRoute, RouteNames.staffDashboardPath);
     });
 
     test('Role permissions check', () {
@@ -40,14 +39,34 @@ void main() {
         role: UserRole.operator,
       );
 
+      const bagianAsetUser = User(
+        id: 'u4',
+        username: 'bagian_aset',
+        name: 'Bagian Aset User',
+        role: UserRole.bagianAset,
+      );
+
+      const kadivUser = User(
+        id: 'u5',
+        username: 'kadiv',
+        name: 'Kadiv User',
+        role: UserRole.kadiv,
+      );
+
       expect(adminUser.hasPermission(UserPermission.manageMasterData), true);
-      expect(adminUser.hasPermission(UserPermission.approveKabag), false);
+      expect(adminUser.hasPermission(UserPermission.verifyAssetData), false);
 
       expect(pemohonUser.hasPermission(UserPermission.submitMutation), true);
       expect(pemohonUser.hasPermission(UserPermission.manageMasterData), false);
 
       expect(operatorUser.hasPermission(UserPermission.verifyMutation), true);
       expect(operatorUser.hasPermission(UserPermission.approveKadiv), false);
+
+      expect(bagianAsetUser.hasPermission(UserPermission.verifyAssetData), true);
+      expect(bagianAsetUser.hasPermission(UserPermission.manageMasterData), false);
+
+      expect(kadivUser.hasPermission(UserPermission.approveKadiv), true);
+      expect(kadivUser.hasPermission(UserPermission.verifyAssetData), false);
     });
 
     test('RouteGuards prevents cross-role access', () {
@@ -63,15 +82,15 @@ void main() {
         true,
       );
 
-      // Operator attempting to access /kabag/dashboard -> denied
+      // Operator attempting to access /bagian-aset/dashboard -> denied
       expect(
-        RouteGuards.canAccessRoute(UserRole.operator, RouteNames.kabagDashboardPath),
+        RouteGuards.canAccessRoute(UserRole.operator, RouteNames.bagianAsetDashboardPath),
         false,
       );
 
-      // Staff Aset accessing /staff-aset/dashboard -> allowed
+      // Bagian Aset accessing /bagian-aset/dashboard -> allowed
       expect(
-        RouteGuards.canAccessRoute(UserRole.staffAset, RouteNames.staffDashboardPath),
+        RouteGuards.canAccessRoute(UserRole.bagianAset, RouteNames.bagianAsetDashboardPath),
         true,
       );
     });

@@ -62,9 +62,8 @@ class MutasiKuPageHeader extends ConsumerWidget {
       UserRole.admin => 'MUTASIKU ADMIN',
       UserRole.pemohon => 'MUTASIKU',
       UserRole.operator => 'MUTASIKU OPERATOR',
-      UserRole.bagianAset || UserRole.kabagAset => 'MUTASIKU BAGIAN ASET',
+      UserRole.bagianAset => 'MUTASIKU BAGIAN ASET',
       UserRole.kadiv => 'MUTASIKU PEMIMPIN DIVISI',
-      UserRole.staffAset => 'MUTASIKU STAFF ASET',
     };
   }
 

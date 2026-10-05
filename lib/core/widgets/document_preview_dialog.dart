@@ -1,7 +1,7 @@
 // lib/core/widgets/document_preview_dialog.dart
 //
 // Dialog / Bottom Sheet Pratinjau Dokumen MutasiKu untuk Seluruh Role:
-// - Pemohon, Operator, Kabag Aset, Kadiv, Staff Aset.
+// - Pemohon, Operator, Bagian Aset, Pemimpin Divisi, Admin.
 // - Menampilkan konten dokumen nyata:
 //   * Format PDF: Pratinjau halaman PDF interaktif (PdfPreview).
 //   * Format Gambar (PNG, JPG, JPEG, WEBP): Tampilan gambar interaktif (InteractiveViewer).
@@ -108,8 +108,6 @@ class DocumentPreviewDialog extends StatelessWidget {
 
       case UserRole.operator:
       case UserRole.bagianAset:
-      case UserRole.kabagAset:
-      case UserRole.staffAset:
       case UserRole.kadiv:
       case UserRole.admin:
         // Role operasional, manajerial, dan peninjau memiliki akses ke dokumen pengajuan

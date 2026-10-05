@@ -60,12 +60,11 @@ class AuthRepositoryImpl implements AuthRepository {
         role = UserRole.kadiv;
       } else if (lower.contains('operator')) {
         role = UserRole.operator;
-      } else if (lower.contains('kabag')) {
-        role = UserRole.kabagAset;
-      } else if (lower.contains('aset') || lower.contains('bagian')) {
+      } else if (lower.contains('kabag') ||
+          lower.contains('aset') ||
+          lower.contains('bagian') ||
+          lower.contains('staff')) {
         role = UserRole.bagianAset;
-      } else if (lower.contains('staff')) {
-        role = UserRole.staffAset;
       }
 
       final userId = role == UserRole.pemohon

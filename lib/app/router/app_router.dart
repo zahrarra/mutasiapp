@@ -18,10 +18,10 @@ import '../../features/auth/presentation/providers/auth_provider.dart';
 import '../../features/auth/presentation/screens/login_screen.dart';
 import '../../features/auth/presentation/screens/unauthorized_screen.dart';
 import '../../features/dashboard/presentation/screens/dashboard_screen.dart';
-import '../../features/kabag/presentation/screens/kabag_approval_detail_screen.dart';
-import '../../features/kabag/presentation/screens/kabag_approvals_screen.dart';
-import '../../features/kabag/presentation/screens/kabag_dashboard_screen.dart';
-import '../../features/kabag/presentation/screens/kabag_reject_form_screen.dart';
+import '../../features/bagian_aset/presentation/screens/bagian_aset_dashboard_screen.dart';
+import '../../features/bagian_aset/presentation/screens/bagian_aset_return_form_screen.dart';
+import '../../features/bagian_aset/presentation/screens/bagian_aset_verification_detail_screen.dart';
+import '../../features/bagian_aset/presentation/screens/bagian_aset_verifications_screen.dart';
 import '../../features/kadiv/presentation/screens/kadiv_approval_detail_screen.dart';
 import '../../features/kadiv/presentation/screens/kadiv_approvals_screen.dart';
 import '../../features/kadiv/presentation/screens/kadiv_dashboard_screen.dart';
@@ -38,9 +38,6 @@ import '../../features/pemohon/presentation/screens/pemohon_edit_mutation_screen
 import '../../features/pemohon/presentation/screens/pemohon_mutation_detail_screen.dart';
 import '../../features/pemohon/presentation/screens/pemohon_mutation_list_screen.dart';
 import '../../features/profile/presentation/screens/profile_screen.dart';
-import '../../features/staff/presentation/screens/staff_dashboard_screen.dart';
-import '../../features/staff/presentation/screens/staff_mutation_detail_screen.dart';
-import '../../features/staff/presentation/screens/staff_mutation_list_screen.dart';
 import 'route_guards.dart';
 import 'route_names.dart';
 
@@ -291,19 +288,19 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: RouteNames.bagianAsetDashboardPath,
         name: RouteNames.bagianAsetDashboardName,
-        builder: (context, state) => const KabagDashboardScreen(),
+        builder: (context, state) => const BagianAsetDashboardScreen(),
       ),
       GoRoute(
         path: RouteNames.bagianAsetVerificationsPath,
         name: RouteNames.bagianAsetVerificationsName,
-        builder: (context, state) => const KabagApprovalsScreen(),
+        builder: (context, state) => const BagianAsetVerificationsScreen(),
       ),
       GoRoute(
         path: RouteNames.bagianAsetVerificationDetailPath,
         name: RouteNames.bagianAsetVerificationDetailName,
         builder: (context, state) {
           final id = state.pathParameters['id'] ?? '';
-          return KabagApprovalDetailScreen(mutationId: id);
+          return BagianAsetVerificationDetailScreen(mutationId: id);
         },
       ),
       GoRoute(
@@ -311,7 +308,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         name: RouteNames.bagianAsetReturnFormName,
         builder: (context, state) {
           final id = state.pathParameters['id'] ?? '';
-          return KabagRejectFormScreen(mutationId: id);
+          return BagianAsetReturnFormScreen(mutationId: id);
         },
       ),
       GoRoute(
@@ -319,41 +316,6 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         name: RouteNames.bagianAsetNotificationsName,
         builder: (context, state) => const NotificationScreen(),
       ),
-
-      // ─── Kabag (Legacy Alias -> Redirect ke Bagian Aset PRD V1.1) ──────────
-      GoRoute(
-        path: RouteNames.kabagDashboardPath,
-        name: RouteNames.kabagDashboardName,
-        redirect: (context, state) => RouteNames.bagianAsetDashboardPath,
-      ),
-      GoRoute(
-        path: RouteNames.kabagApprovalsPath,
-        name: RouteNames.kabagApprovalsName,
-        redirect: (context, state) => RouteNames.bagianAsetVerificationsPath,
-      ),
-      GoRoute(
-        path: RouteNames.kabagApprovalDetailPath,
-        name: RouteNames.kabagApprovalDetailName,
-        redirect: (context, state) {
-          final id = state.pathParameters['id'] ?? '';
-          return RouteNames.bagianAsetVerificationDetailPath
-              .replaceFirst(':id', id);
-        },
-      ),
-      GoRoute(
-        path: RouteNames.kabagRejectFormPath,
-        name: RouteNames.kabagRejectFormName,
-        redirect: (context, state) {
-          final id = state.pathParameters['id'] ?? '';
-          return RouteNames.bagianAsetReturnFormPath.replaceFirst(':id', id);
-        },
-      ),
-      GoRoute(
-        path: RouteNames.kabagNotificationsPath,
-        name: RouteNames.kabagNotificationsName,
-        redirect: (context, state) => RouteNames.bagianAsetNotificationsPath,
-      ),
-
       // ─── Kadiv ────────────────────────────────────────────────────────────
       GoRoute(
         path: '/kadiv',
@@ -396,33 +358,9 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         builder: (context, state) => const NotificationScreen(),
       ),
 
-      // ─── Staff ────────────────────────────────────────────────────────────
-      GoRoute(
-        path: RouteNames.staffDashboardPath,
-        name: RouteNames.staffDashboardName,
-        builder: (context, state) => const StaffAsetDashboardScreen(),
-      ),
-      GoRoute(
-        path: RouteNames.staffMutationsPath,
-        name: RouteNames.staffMutationsName,
-        builder: (context, state) => const StaffMutationListScreen(),
-      ),
-      GoRoute(
-        path: RouteNames.staffMutationDetailPath,
-        name: RouteNames.staffMutationDetailName,
-        builder: (context, state) {
-          final id = state.pathParameters['id'] ?? '';
-          return StaffMutationDetailScreen(mutationId: id);
-        },
-      ),
-      GoRoute(
-        path: RouteNames.staffNotificationsPath,
-        name: RouteNames.staffNotificationsName,
-        builder: (context, state) => const NotificationScreen(),
-      ),
 
       // ─── Common Routes ────────────────────────────────────────────────────
-      // Dipakai Operator/Kabag/Kadiv/Staff/Admin. Pemohon punya profil sendiri
+      // Dipakai Operator/Bagian Aset/Pemimpin Divisi/Admin. Pemohon punya profil sendiri
       // (pemohonProfilePath) yang menampilkan info lebih kaya.
       GoRoute(
         path: RouteNames.profilePath,

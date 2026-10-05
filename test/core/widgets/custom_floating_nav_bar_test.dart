@@ -51,21 +51,21 @@ void main() {
       expect(items[3].route, RouteNames.profilePath);
     });
 
-    test('Kabag configuration matches exact specification', () {
-      final items = RoleNavConfig.getNavItemsForRole(UserRole.kabagAset);
+    test('Bagian Aset configuration matches exact specification', () {
+      final items = RoleNavConfig.getNavItemsForRole(UserRole.bagianAset);
       expect(items.length, 4);
 
-      expect(items[0].label, 'Home');
+      expect(items[0].label, 'Beranda');
       expect(items[0].icon, Icons.home_outlined);
-      expect(items[0].route, RouteNames.kabagDashboardPath);
+      expect(items[0].route, RouteNames.bagianAsetDashboardPath);
 
-      expect(items[1].label, 'Approval');
+      expect(items[1].label, 'Verifikasi');
       expect(items[1].icon, Icons.assignment_ind_outlined);
-      expect(items[1].route, RouteNames.kabagApprovalsPath);
+      expect(items[1].route, RouteNames.bagianAsetVerificationsPath);
 
       expect(items[2].label, 'Notifikasi');
       expect(items[2].icon, Icons.notifications_none_rounded);
-      expect(items[2].route, RouteNames.kabagNotificationsPath);
+      expect(items[2].route, RouteNames.bagianAsetNotificationsPath);
 
       expect(items[3].label, 'Profil');
       expect(items[3].icon, Icons.person_outline_rounded);
@@ -91,37 +91,6 @@ void main() {
       expect(items[3].label, 'Profil');
       expect(items[3].icon, Icons.person_outline_rounded);
       expect(items[3].route, RouteNames.profilePath);
-    });
-
-    test('Staf Aset configuration matches exact specification with /staff-aset/ prefix', () {
-      final items = RoleNavConfig.getNavItemsForRole(UserRole.staffAset);
-      expect(items.length, 4);
-
-      expect(items[0].label, 'Home');
-      expect(items[0].icon, Icons.home_outlined);
-      expect(items[0].route, RouteNames.staffDashboardPath);
-      expect(items[0].route.startsWith('/staff-aset/'), isTrue);
-
-      expect(items[1].label, 'Update Aset');
-      expect(items[1].icon, Icons.edit_location_alt_outlined);
-      expect(items[1].route, RouteNames.staffMutationsPath);
-      expect(items[1].route.startsWith('/staff-aset/'), isTrue);
-
-      expect(items[2].label, 'Notifikasi');
-      expect(items[2].icon, Icons.notifications_none_rounded);
-      expect(items[2].route, RouteNames.staffNotificationsPath);
-
-      expect(items[3].label, 'Profil');
-      expect(items[3].icon, Icons.person_outline_rounded);
-      expect(items[3].route, RouteNames.profilePath);
-
-      // Verify no /staff/ prefix
-      for (final item in items) {
-        if (item.route.contains('staff')) {
-          expect(item.route.contains('/staff/'), isFalse);
-          expect(item.route.contains('/staff-aset/'), isTrue);
-        }
-      }
     });
 
     test('Admin configuration matches exact specification without notification', () {
