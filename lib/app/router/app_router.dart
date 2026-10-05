@@ -34,7 +34,6 @@ import '../../features/operator/presentation/screens/operator_verification_detai
 import '../../features/pemohon/presentation/screens/pemohon_confirmation_screen.dart';
 import '../../features/pemohon/presentation/screens/pemohon_create_mutation_screen.dart';
 import '../../features/pemohon/presentation/screens/pemohon_dashboard_screen.dart';
-import '../../features/mutation/presentation/screens/mutation_submit_success_screen.dart';
 import '../../features/pemohon/presentation/screens/pemohon_edit_mutation_screen.dart';
 import '../../features/pemohon/presentation/screens/pemohon_mutation_detail_screen.dart';
 import '../../features/pemohon/presentation/screens/pemohon_mutation_list_screen.dart';
@@ -173,11 +172,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: RouteNames.pemohonSubmitSuccessPath,
         name: RouteNames.pemohonSubmitSuccessName,
-        builder: (context, state) {
-          final ticketNumber = state.uri.queryParameters['ticket'];
-
-          return MutationSubmitSuccessScreen(ticketNumber: ticketNumber);
-        },
+        redirect: (context, state) => RouteNames.pemohonMutasiPath,
       ),
       GoRoute(
         path: RouteNames.pemohonMutasiPath,

@@ -476,9 +476,6 @@ void main() {
         await tester.tap(find.byKey(const Key('btn_verifikasi_valid')));
         await tester.pumpAndSettle();
 
-        // Konfirmasi verifikasi
-        await tester.tap(find.byKey(const Key('btn_confirm_verifikasi')));
-        await tester.pumpAndSettle();
 
         // Temuan 6: Verifikasi teks feedback hijau muncul
         expect(
