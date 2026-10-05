@@ -12,6 +12,7 @@ import 'package:google_fonts/google_fonts.dart';
 import '../../../../app/router/route_names.dart';
 import '../../../../core/widgets/app_feedback.dart';
 import '../../../../core/widgets/error_view.dart';
+import '../../../../core/widgets/mutasiku_page_header.dart';
 import '../../../auth/domain/entities/user.dart';
 import '../../../auth/domain/entities/user_role.dart';
 import '../../../auth/presentation/providers/auth_provider.dart';
@@ -121,20 +122,6 @@ class _PemohonConfirmationScreenState
     return '$day ${months[dt.month - 1]} ${dt.year}, $hour:$min WIB';
   }
 
-  String _initials(String? name) {
-    final p = (name ?? 'P')
-        .trim()
-        .split(RegExp(r'\s+'))
-        .where((e) => e.isNotEmpty)
-        .toList();
-    if (p.isEmpty) return 'P';
-    if (p.length == 1) {
-      return p.first.length >= 2
-          ? p.first.substring(0, 2).toUpperCase()
-          : p.first.toUpperCase();
-    }
-    return '${p.first[0]}${p.last[0]}'.toUpperCase();
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -146,7 +133,7 @@ class _PemohonConfirmationScreenState
       backgroundColor: _C.bg,
       body: Column(
         children: [
-          _buildHeader(user),
+          _buildHeader(),
           Expanded(
             child: asyncMutation.when(
               data: (mutation) {
@@ -170,88 +157,13 @@ class _PemohonConfirmationScreenState
     );
   }
 
-  Widget _buildHeader(User? user) {
-    return Material(
-      color: _C.white.withValues(alpha: 0.95),
-      elevation: 0,
-      child: SafeArea(
-        bottom: false,
-        child: Container(
-          height: 56,
-          padding: const EdgeInsets.symmetric(horizontal: 16),
-          decoration: BoxDecoration(
-            border: Border(
-              bottom: BorderSide(color: _C.border.withValues(alpha: 0.4)),
-            ),
-          ),
-          child: Row(
-            children: [
-              Material(
-                color: _C.white,
-                shape: CircleBorder(
-                  side: BorderSide(color: _C.border.withValues(alpha: 0.5)),
-                ),
-                child: InkWell(
-                  customBorder: const CircleBorder(),
-                  onTap: () => _safePop(context),
-                  child: const SizedBox(
-                    width: 40,
-                    height: 40,
-                    child: Icon(
-                      Icons.arrow_back,
-                      size: 20,
-                      color: _C.textPrimary,
-                    ),
-                  ),
-                ),
-              ),
-              const Spacer(),
-              Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 12,
-                  vertical: 4,
-                ),
-                decoration: BoxDecoration(
-                  color: _C.surfaceLow,
-                  borderRadius: BorderRadius.circular(999),
-                  border: Border.all(color: _C.border.withValues(alpha: 0.5)),
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Container(
-                      width: 8,
-                      height: 8,
-                      decoration: const BoxDecoration(
-                        color: _C.success,
-                        shape: BoxShape.circle,
-                      ),
-                    ),
-                    const SizedBox(width: 6),
-                    Text(
-                      'MUTASIKU',
-                      style: _t(size: 11, w: FontWeight.w600, ls: 0.5),
-                    ),
-                  ],
-                ),
-              ),
-              const Spacer(),
-              Container(
-                width: 40,
-                height: 40,
-                alignment: Alignment.center,
-                decoration: const BoxDecoration(
-                  color: _C.primary,
-                  shape: BoxShape.circle,
-                ),
-                child: Text(
-                  _initials(user?.name),
-                  style: _t(size: 12, w: FontWeight.w700, color: Colors.white),
-                ),
-              ),
-            ],
-          ),
-        ),
+  Widget _buildHeader() {
+    return SafeArea(
+      bottom: false,
+      child: MutasiKuPageHeader(
+        title: 'Konfirmasi Mutasi',
+        subtitle: 'Verifikasi fisik & serah terima mutasi aset',
+        onBack: () => _safePop(context),
       ),
     );
   }
@@ -298,18 +210,8 @@ class _PemohonConfirmationScreenState
     return Stack(
       children: [
         ListView(
-          padding: const EdgeInsets.fromLTRB(16, 12, 16, 32),
+          padding: const EdgeInsets.fromLTRB(16, 4, 16, 32),
           children: [
-            Text(
-              'Konfirmasi Mutasi',
-              style: _t(size: 20, w: FontWeight.w700, h: 1.3),
-            ),
-            const SizedBox(height: 2),
-            Text(
-              'Verifikasi fisik & serah terima mutasi aset',
-              style: _t(size: 12, color: _C.textSecondary),
-            ),
-            const SizedBox(height: 12),
 
             if (actionState.successMessage != null) ...[
               _banner(

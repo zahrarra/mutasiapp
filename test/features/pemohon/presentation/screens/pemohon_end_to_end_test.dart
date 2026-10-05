@@ -510,7 +510,6 @@ void main() {
       addTearDown(() => tester.view.resetPhysicalSize());
 
       final repo = _FakeFullMutationRepository([]);
-      String? navigatedRoute;
 
       final router = GoRouter(
         initialLocation: '/create',
@@ -522,8 +521,20 @@ void main() {
           GoRoute(
             path: RouteNames.pemohonSubmitSuccessPath,
             builder: (context, state) {
-              navigatedRoute = RouteNames.pemohonSubmitSuccessPath;
               return const Scaffold(body: Text('Success Screen'));
+            },
+          ),
+          GoRoute(
+            path: RouteNames.pemohonMutasiPath,
+            builder: (context, state) {
+              return const Scaffold(body: Text('Mutasi Saya Screen'));
+            },
+          ),
+          GoRoute(
+            path: RouteNames.pemohonMutasiDetailPath,
+            builder: (context, state) {
+              final id = state.pathParameters['id'] ?? '';
+              return Scaffold(body: Text('Detail Mutasi Screen $id'));
             },
           ),
         ],
@@ -594,16 +605,32 @@ void main() {
       await tester.tap(submitBtn);
       await tester.pumpAndSettle();
 
-      // Modal konfirmasi (Stitch 01)
-      if (find.byType(Checkbox).evaluate().isNotEmpty) {
-        await tester.tap(find.byType(Checkbox));
-        await tester.pumpAndSettle();
-        await tester.tap(find.text('Kirim Pengajuan'));
-        await tester.pumpAndSettle();
-      }
+      // Modal konfirmasi (Stitch Screen #2 Minimalist)
+      expect(find.text('Kirim Pengajuan?'), findsOneWidget);
+      expect(
+        find.text(
+          'Pastikan seluruh data mutasi aset dan dokumen SK SDM sudah sesuai sebelum diteruskan ke pemeriksaan Operator.',
+        ),
+        findsOneWidget,
+      );
+      expect(find.widgetWithText(ElevatedButton, 'Batal'), findsOneWidget);
 
-      // Verify route changed to success
-      expect(navigatedRoute, RouteNames.pemohonSubmitSuccessPath);
+      // Tap Kirim Pengajuan inside confirmation dialog
+      await tester.tap(find.widgetWithText(ElevatedButton, 'Kirim Pengajuan'));
+      await tester.pumpAndSettle();
+
+      // Modal sukses (Stitch HTML terbaru) di atas Form
+      expect(find.text('Pengajuan Berhasil Dikirim'), findsOneWidget);
+      expect(find.text('NOMOR TIKET'), findsOneWidget);
+      expect(find.widgetWithText(ElevatedButton, 'Lihat Status Tracking'), findsOneWidget);
+
+      // Tap Lihat Status Tracking -> modal harus ditutup dan membuka Detail Mutasi
+      await tester.tap(find.widgetWithText(ElevatedButton, 'Lihat Status Tracking'));
+      await tester.pumpAndSettle();
+
+      // Modal tertutup, halaman Detail Mutasi tampil
+      expect(find.text('Pengajuan Berhasil Dikirim'), findsNothing);
+      expect(find.textContaining('Detail Mutasi Screen mut_'), findsOneWidget);
 
       // Verify mutation in repo has applicantId == 'usr_pemohon' and currentPic == 'Pak Joko (Staff IT)'
       final userMutationsResult = await repo.getMutationsByUser('usr_pemohon');

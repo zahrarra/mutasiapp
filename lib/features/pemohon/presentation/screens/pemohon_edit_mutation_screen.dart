@@ -14,6 +14,7 @@ import '../../../../core/widgets/app_feedback.dart';
 import '../../../../core/widgets/error_view.dart';
 import '../../../../core/widgets/inline_searchable_dropdown.dart';
 import '../../../../core/widgets/loading_indicator.dart';
+import '../../../../core/widgets/mutasiku_page_header.dart';
 import '../../../auth/domain/entities/user.dart';
 import '../../../auth/domain/entities/user_role.dart';
 import '../../../auth/presentation/providers/auth_provider.dart';
@@ -36,7 +37,6 @@ abstract final class _EditColors {
   static const textSlate = Color(0xFF334155);
   static const border = Color(0xFFD0D5DD);
   static const surfaceLow = Color(0xFFECF4FF);
-  static const secondary = Color(0xFF0F766E);
   static const success = Color(0xFF15803D);
   static const error = Color(0xFFB42318);
   static const info = Color(0xFF1E40AF);
@@ -91,21 +91,6 @@ class _PemohonEditMutationScreenState
       letterSpacing: ls,
       fontStyle: style,
     );
-  }
-
-  String _initials(String? name) {
-    final p = (name ?? 'Pemohon')
-        .trim()
-        .split(RegExp(r'\s+'))
-        .where((e) => e.isNotEmpty)
-        .toList();
-    if (p.isEmpty) return 'P';
-    if (p.length == 1) {
-      return p.first.length >= 2
-          ? p.first.substring(0, 2).toUpperCase()
-          : p.first.toUpperCase();
-    }
-    return '${p.first[0]}${p.last[0]}'.toUpperCase();
   }
 
   IconData _getAssetIcon(String? categoryName) {
@@ -285,7 +270,7 @@ class _PemohonEditMutationScreenState
       backgroundColor: _EditColors.bg,
       body: Column(
         children: [
-          _buildHeader(context, currentUser),
+          _buildHeader(context),
           Expanded(
             child: asyncDetail.when(
               loading: () => const LoadingIndicator(),
@@ -312,35 +297,6 @@ class _PemohonEditMutationScreenState
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
-                      // ── Page Title & Subtitle ─────────────────────────
-                      Padding(
-                        padding: const EdgeInsets.only(top: 4, bottom: 14),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              'Edit Pengajuan',
-                              style: _t(
-                                size: 22,
-                                w: FontWeight.w700,
-                                color: _EditColors.textPrimary,
-                                ls: -0.3,
-                                h: 1.2,
-                              ),
-                            ),
-                            const SizedBox(height: 4),
-                            Text(
-                              'Perbaiki data pengajuan mutasi aset',
-                              style: _t(
-                                size: 13,
-                                color: _EditColors.textSecondary,
-                                h: 1.4,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-
                       // ── 1. Alur Perbaikan Card ────────────────────────
                       _buildWorkflowCard(),
                       const SizedBox(height: 14),
@@ -373,121 +329,13 @@ class _PemohonEditMutationScreenState
     );
   }
 
-  Widget _buildHeader(BuildContext context, User? user) {
-    return Material(
-      color: _EditColors.white.withValues(alpha: 0.95),
-      elevation: 0,
-      child: SafeArea(
-        bottom: false,
-        child: Container(
-          height: 56,
-          padding: const EdgeInsets.symmetric(horizontal: 16),
-          decoration: BoxDecoration(
-            border: Border(
-              bottom: BorderSide(
-                color: _EditColors.border.withValues(alpha: 0.4),
-              ),
-            ),
-          ),
-          child: Row(
-            children: [
-              Material(
-                color: _EditColors.white,
-                shape: CircleBorder(
-                  side: BorderSide(
-                    color: _EditColors.border.withValues(alpha: 0.5),
-                  ),
-                ),
-                child: InkWell(
-                  customBorder: const CircleBorder(),
-                  onTap: () => _safePop(context, widget.mutationId),
-                  child: const SizedBox(
-                    width: 40,
-                    height: 40,
-                    child: Icon(
-                      Icons.arrow_back,
-                      size: 20,
-                      color: _EditColors.textPrimary,
-                    ),
-                  ),
-                ),
-              ),
-              const Spacer(),
-              Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 12,
-                  vertical: 4,
-                ),
-                decoration: BoxDecoration(
-                  color: const Color(0xFFE8F5F1),
-                  borderRadius: BorderRadius.circular(999),
-                  border: Border.all(
-                    color: _EditColors.secondary.withValues(alpha: 0.2),
-                  ),
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Container(
-                      width: 8,
-                      height: 8,
-                      decoration: const BoxDecoration(
-                        color: _EditColors.secondary,
-                        shape: BoxShape.circle,
-                      ),
-                    ),
-                    const SizedBox(width: 6),
-                    Text(
-                      'MUTASIKU',
-                      style: _t(
-                        size: 11,
-                        w: FontWeight.w700,
-                        color: _EditColors.secondary,
-                        ls: 0.5,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              const Spacer(),
-              Stack(
-                clipBehavior: Clip.none,
-                children: [
-                  Container(
-                    width: 38,
-                    height: 38,
-                    alignment: Alignment.center,
-                    decoration: const BoxDecoration(
-                      color: _EditColors.primary,
-                      shape: BoxShape.circle,
-                    ),
-                    child: Text(
-                      _initials(user?.name),
-                      style: _t(
-                        size: 12,
-                        w: FontWeight.w700,
-                        color: Colors.white,
-                      ),
-                    ),
-                  ),
-                  Positioned(
-                    bottom: 0,
-                    right: 0,
-                    child: Container(
-                      width: 10,
-                      height: 10,
-                      decoration: BoxDecoration(
-                        color: _EditColors.success,
-                        shape: BoxShape.circle,
-                        border: Border.all(color: Colors.white, width: 2),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ],
-          ),
-        ),
+  Widget _buildHeader(BuildContext context) {
+    return SafeArea(
+      bottom: false,
+      child: MutasiKuPageHeader(
+        title: 'Edit Pengajuan',
+        subtitle: 'Perbaiki data pengajuan mutasi aset',
+        onBack: () => _safePop(context, widget.mutationId),
       ),
     );
   }

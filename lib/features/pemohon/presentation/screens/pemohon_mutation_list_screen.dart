@@ -8,10 +8,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:mutasiku/core/widgets/custom_floating_nav_bar.dart';
+import 'package:mutasiku/core/widgets/mutasiku_page_header.dart';
 import 'package:mutasiku/features/auth/domain/entities/user_role.dart';
 
 import '../../../../app/router/route_names.dart';
-import '../../../auth/presentation/providers/auth_provider.dart';
 import '../../../mutation/domain/entities/mutation.dart';
 import '../../../mutation/domain/entities/mutation_status.dart';
 import '../../../mutation/presentation/providers/mutation_provider.dart';
@@ -24,7 +24,6 @@ abstract final class _C {
   static const primary = Color(0xFF00273A);
   static const primaryContainer = Color(0xFF0F3D56);
   static const secondary = Color(0xFF006A63);
-  static const secondaryContainer = Color(0xFF99EFE5);
   static const textPrimary = Color(0xFF172B4D);
   static const textSecondary = Color(0xFF52606D);
   static const border = Color(0xFFD0D5DD);
@@ -201,7 +200,6 @@ class _PemohonMutationListScreenState
   @override
   Widget build(BuildContext context) {
     final asyncList = ref.watch(mutationListProvider);
-    final user = ref.watch(authStateProvider).user;
     final all = asyncList.valueOrNull ?? const <Mutation>[];
     final filtered = _filterList(all);
 
@@ -209,7 +207,7 @@ class _PemohonMutationListScreenState
       backgroundColor: _C.background,
       body: Column(
         children: [
-          _buildHeader(user?.name ?? 'P'),
+          _buildHeader(),
           Expanded(
             child: RefreshIndicator(
               color: _C.primaryContainer,
@@ -262,25 +260,24 @@ class _PemohonMutationListScreenState
           ),
         ],
       ),
-      floatingActionButton: Padding(
-        padding: const EdgeInsets.only(bottom: 72),
-        child: FloatingActionButton.extended(
-          onPressed: () =>
-              context.pushNamed(RouteNames.pemohonMutasiCreateName),
-          backgroundColor: _C.primary,
-          foregroundColor: Colors.white,
-          elevation: 8,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(999),
-          ),
-          icon: const Icon(Icons.add_rounded, size: 20),
-          label: Text(
-            'Ajukan Mutasi',
-            style: _inter(
-              size: 14,
-              weight: FontWeight.w700,
-              color: Colors.white,
-            ),
+      floatingActionButtonLocation: const _SnugEndFloatFabLocation(gap: 10.0),
+      floatingActionButton: FloatingActionButton.extended(
+        onPressed: () =>
+            context.pushNamed(RouteNames.pemohonMutasiCreateName),
+        backgroundColor: _C.primary,
+        foregroundColor: Colors.white,
+        elevation: 6,
+        highlightElevation: 8,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(999),
+        ),
+        icon: const Icon(Icons.add_rounded, size: 20, color: Colors.white),
+        label: Text(
+          'Ajukan Mutasi',
+          style: _inter(
+            size: 14,
+            weight: FontWeight.w700,
+            color: Colors.white,
           ),
         ),
       ),
@@ -290,164 +287,26 @@ class _PemohonMutationListScreenState
     );
   }
 
-  Widget _buildHeader(String name) {
-    final initials = _initials(name);
-    return Material(
-      color: _C.surface.withValues(alpha: 0.95),
-      elevation: 0.5,
-      child: SafeArea(
-        bottom: false,
-        child: SizedBox(
-          height: 56,
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            child: Row(
-              children: [
-                _circleBtn(Icons.arrow_back, () {
-                  if (context.canPop()) {
-                    context.pop();
-                  } else {
-                    context.go(RouteNames.pemohonDashboardPath);
-                  }
-                }),
-                const Spacer(),
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 12,
-                    vertical: 4,
-                  ),
-                  decoration: BoxDecoration(
-                    color: _C.secondaryContainer.withValues(alpha: 0.4),
-                    borderRadius: BorderRadius.circular(999),
-                    border: Border.all(
-                      color: _C.secondary.withValues(alpha: 0.2),
-                    ),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Container(
-                        width: 8,
-                        height: 8,
-                        decoration: const BoxDecoration(
-                          color: _C.secondary,
-                          shape: BoxShape.circle,
-                        ),
-                      ),
-                      const SizedBox(width: 6),
-                      Text(
-                        'MUTASIKU',
-                        style: _inter(
-                          size: 11,
-                          weight: FontWeight.w700,
-                          color: _C.secondary,
-                          letterSpacing: 0.6,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                const Spacer(),
-                GestureDetector(
-                  onTap: () => context.pushNamed(RouteNames.pemohonProfileName),
-                  child: Stack(
-                    clipBehavior: Clip.none,
-                    children: [
-                      Container(
-                        width: 40,
-                        height: 40,
-                        alignment: Alignment.center,
-                        decoration: const BoxDecoration(
-                          color: _C.primaryContainer,
-                          shape: BoxShape.circle,
-                        ),
-                        child: Text(
-                          initials,
-                          style: _inter(
-                            size: 13,
-                            weight: FontWeight.w700,
-                            color: Colors.white,
-                          ),
-                        ),
-                      ),
-                      Positioned(
-                        right: 0,
-                        bottom: 0,
-                        child: Container(
-                          width: 10,
-                          height: 10,
-                          decoration: BoxDecoration(
-                            color: _C.success,
-                            shape: BoxShape.circle,
-                            border: Border.all(color: Colors.white, width: 2),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
+  Widget _buildHeader() {
+    return SafeArea(
+      bottom: false,
+      child: MutasiKuPageHeader(
+        title: 'Mutasi Saya',
+        subtitle: 'Daftar pengajuan mutasi aset internal',
+        roleLabel: 'PEMOHON',
+        onBack: () {
+          if (context.canPop()) {
+            context.pop();
+          } else {
+            context.go(RouteNames.pemohonDashboardPath);
+          }
+        },
       ),
     );
   }
 
   Widget _buildTitle(int total) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          children: [
-            Text(
-              'Mutasi Saya',
-              style: _inter(
-                size: 22,
-                weight: FontWeight.w700,
-                color: _C.primary,
-              ),
-            ),
-            const Spacer(),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-              decoration: BoxDecoration(
-                color: _C.warning.withValues(alpha: 0.1),
-                borderRadius: BorderRadius.circular(999),
-                border: Border.all(color: _C.warning.withValues(alpha: 0.3)),
-              ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Container(
-                    width: 6,
-                    height: 6,
-                    decoration: const BoxDecoration(
-                      color: _C.warning,
-                      shape: BoxShape.circle,
-                    ),
-                  ),
-                  const SizedBox(width: 6),
-                  Text(
-                    '$total Tiket',
-                    style: _inter(
-                      size: 11,
-                      weight: FontWeight.w600,
-                      color: _C.warning,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 4),
-        Text(
-          'Daftar pengajuan mutasi aset internal',
-          style: _inter(size: 12, color: _C.textSecondary),
-        ),
-      ],
-    );
+    return const SizedBox.shrink();
   }
 
   Widget _buildSearch() {
@@ -710,43 +569,6 @@ class _PemohonMutationListScreenState
     );
   }
 
-  Widget _circleBtn(IconData icon, VoidCallback onTap) {
-    return Material(
-      color: _C.surface,
-      shape: const CircleBorder(),
-      elevation: 1,
-      shadowColor: Colors.black.withValues(alpha: 0.15),
-      child: InkWell(
-        onTap: onTap,
-        customBorder: const CircleBorder(),
-        child: Container(
-          width: 35,
-          height: 35,
-          alignment: Alignment.center,
-          decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            border: Border.all(color: _C.border.withValues(alpha: 0.6)),
-          ),
-          child: Icon(icon, size: 20, color: _C.textPrimary),
-        ),
-      ),
-    );
-  }
-
-  String _initials(String name) {
-    final p = name
-        .trim()
-        .split(RegExp(r'\s+'))
-        .where((e) => e.isNotEmpty)
-        .toList();
-    if (p.isEmpty) return 'P';
-    if (p.length == 1) {
-      return p.first.length >= 2
-          ? p.first.substring(0, 2).toUpperCase()
-          : p.first.toUpperCase();
-    }
-    return '${p.first[0]}${p.last[0]}'.toUpperCase();
-  }
 }
 
 class _MutationCard extends StatelessWidget {
@@ -1121,5 +943,24 @@ class _MutationCard extends StatelessWidget {
       'Des',
     ];
     return '${d.day} ${m[d.month - 1]} ${d.year}';
+  }
+}
+
+/// Floating action button location that positions the FAB snugly above the
+/// bottom navigation bar with a custom gap (default 10dp) anchored to the end.
+class _SnugEndFloatFabLocation extends StandardFabLocation
+    with FabEndOffsetX, FabFloatOffsetY {
+  final double gap;
+  const _SnugEndFloatFabLocation({this.gap = 10.0});
+
+  @override
+  double getOffsetY(
+    ScaffoldPrelayoutGeometry scaffoldGeometry,
+    double adjustment,
+  ) {
+    // In FabFloatOffsetY, safeMargin is max(16.0, ...).
+    // Adding (16.0 - gap) moves the FAB down so the gap between the FAB bottom
+    // and contentBottom (top edge of bottomNavigationBar) is precisely `gap` dp (e.g., 10 dp).
+    return super.getOffsetY(scaffoldGeometry, 16.0 - gap + adjustment);
   }
 }

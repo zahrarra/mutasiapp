@@ -17,6 +17,7 @@ import '../../../notification/domain/entities/notification_item.dart';
 import '../../../notification/presentation/providers/notification_provider.dart';
 import '../../../notification/presentation/widgets/notification_tile.dart';
 import '../../../../core/widgets/custom_floating_nav_bar.dart';
+import '../../../../core/widgets/mutasiku_page_header.dart';
 
 class PemohonNotificationsScreen extends ConsumerWidget {
   const PemohonNotificationsScreen({super.key});
@@ -50,89 +51,99 @@ class PemohonNotificationsScreen extends ConsumerWidget {
         : ref.watch(pemohonFallbackNotificationsProvider);
 
     return Scaffold(
-      backgroundColor: AppColors.background,
-      appBar: AppBar(
-        title: const Text('Notifikasi'),
-        backgroundColor: AppColors.surface,
-        foregroundColor: AppColors.textPrimary,
-        elevation: 0,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
-          tooltip: 'Kembali',
-          onPressed: () {
-            if (context.canPop()) {
-              context.pop();
-            } else {
-              context.go(RouteNames.pemohonDashboardPath);
-            }
-          },
-        ),
-        actions: [
-          if (notifications.any((n) => !n.isRead))
-            TextButton(
-              onPressed: () {
-                final user = currentUser ??
-                    const User(
-                      id: 'usr_pemohon',
-                      username: 'pemohon',
-                      name: 'Pemohon',
-                      email: 'pemohon@mutasiku.id',
-                      role: UserRole.pemohon,
-                    );
-                ref.read(notificationProvider.notifier).markAllAsRead(
-                      role: user.role,
-                      userId: user.id,
-                    );
+      backgroundColor: const Color(0xFFF6F8FA),
+      body: Column(
+        children: [
+          SafeArea(
+            bottom: false,
+            child: MutasiKuPageHeader(
+              title: 'Notifikasi',
+              subtitle: 'Pusat informasi dan pembaruan mutasi aset Anda',
+              roleLabel: 'PEMOHON',
+              onBack: () {
+                if (context.canPop()) {
+                  context.pop();
+                } else {
+                  context.go(RouteNames.pemohonDashboardPath);
+                }
               },
-              child: const Text(
-                'Tandai semua dibaca',
-                style: TextStyle(
-                  color: AppColors.primary,
-                  fontWeight: FontWeight.w600,
+            ),
+          ),
+          if (notifications.any((n) => !n.isRead))
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+              child: Align(
+                alignment: Alignment.centerRight,
+                child: TextButton.icon(
+                  onPressed: () {
+                    final user = currentUser ??
+                        const User(
+                          id: 'usr_pemohon',
+                          username: 'pemohon',
+                          name: 'Pemohon',
+                          email: 'pemohon@mutasiku.id',
+                          role: UserRole.pemohon,
+                        );
+                    ref.read(notificationProvider.notifier).markAllAsRead(
+                          role: user.role,
+                          userId: user.id,
+                        );
+                  },
+                  icon: const Icon(Icons.done_all_rounded, size: 16, color: AppColors.primary),
+                  label: const Text(
+                    'Tandai semua dibaca',
+                    style: TextStyle(
+                      color: AppColors.primary,
+                      fontWeight: FontWeight.w600,
+                      fontSize: 13,
+                    ),
+                  ),
                 ),
               ),
             ),
+          Expanded(
+            child: notifications.isEmpty
+                ? const Center(
+                    child: Padding(
+                      padding: EdgeInsets.all(AppSpacing.xl),
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(
+                            Icons.notifications_off_outlined,
+                            size: 48,
+                            color: AppColors.textDisabled,
+                          ),
+                          SizedBox(height: AppSpacing.sm),
+                          Text(
+                            'Belum ada notifikasi.',
+                            style: TextStyle(color: AppColors.textSecondary),
+                          ),
+                        ],
+                      ),
+                    ),
+                  )
+                : ListView.separated(
+                    padding: const EdgeInsets.fromLTRB(
+                      AppSpacing.md,
+                      AppSpacing.sm,
+                      AppSpacing.md,
+                      100,
+                    ),
+                    itemCount: notifications.length,
+                    separatorBuilder: (_, _) =>
+                        const SizedBox(height: AppSpacing.sm),
+                    itemBuilder: (context, index) {
+                      final item = notifications[index];
+                      return NotificationTile(
+                        item: item,
+                        onTap: () => _handleNotificationTap(context, ref, item),
+                      );
+                    },
+                  ),
+          ),
         ],
       ),
-      body: notifications.isEmpty
-          ? const Center(
-              child: Padding(
-                padding: EdgeInsets.all(AppSpacing.xl),
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(
-                      Icons.notifications_off_outlined,
-                      size: 48,
-                      color: AppColors.textDisabled,
-                    ),
-                    SizedBox(height: AppSpacing.sm),
-                    Text(
-                      'Belum ada notifikasi.',
-                      style: TextStyle(color: AppColors.textSecondary),
-                    ),
-                  ],
-                ),
-              ),
-            )
-          : ListView.separated(
-              padding: const EdgeInsets.fromLTRB(
-                AppSpacing.md,
-                AppSpacing.md,
-                AppSpacing.md,
-                100,
-              ),
-              itemCount: notifications.length,
-              separatorBuilder: (_, _) =>
-                  const SizedBox(height: AppSpacing.sm),
-              itemBuilder: (context, index) {
-                final item = notifications[index];
-                return NotificationTile(
-                  item: item,
-                  onTap: () => _handleNotificationTap(context, ref, item),
-                );
-              },
-            ),
       extendBody: true,
       bottomNavigationBar: CustomFloatingNavBar.scaffoldBottomBar(
         items: RoleNavConfig.getNavItemsForRole(UserRole.pemohon),

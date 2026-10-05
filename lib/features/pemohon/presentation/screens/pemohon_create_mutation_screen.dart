@@ -5,6 +5,7 @@
 // Functionality: submit, dokumen, validasi, provider.
 
 import 'dart:typed_data';
+import 'dart:ui';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -17,11 +18,13 @@ import '../../../../core/services/mutation_draft_service.dart';
 import '../../../../core/widgets/app_feedback.dart';
 import '../../../../core/widgets/document_preview_dialog.dart';
 import '../../../../core/widgets/inline_searchable_dropdown.dart';
+import '../../../../core/widgets/mutasiku_page_header.dart';
 import '../../../auth/domain/entities/user_role.dart';
 import '../../../auth/presentation/providers/auth_provider.dart';
 import '../../../mutation/domain/repositories/mutation_repository.dart';
 import '../../../mutation/presentation/providers/mutation_form_provider.dart';
 import '../../../mutation/presentation/providers/mutation_provider.dart';
+import '../../../mutation/presentation/widgets/mutation_submit_success_dialog.dart';
 import '../../../notification/domain/entities/notification_item.dart';
 import '../../../notification/presentation/providers/notification_provider.dart';
 
@@ -285,7 +288,200 @@ class _PemohonCreateMutationScreenState
     return '${(bytes / (1024 * 1024)).toStringAsFixed(1)} MB';
   }
 
+  // ---------------------------------------------------------------------------
+  // CONFIRM DIALOG (Stitch Modal Konfirmasi Pengajuan)
+  // ---------------------------------------------------------------------------
 
+  void _showConfirmSubmitDialog() {
+    FocusScope.of(context).unfocus();
+    if (!(_formKey.currentState?.validate() ?? false)) return;
+
+    final sourceLocation = _sourceLocationController.text.trim();
+    final targetLoc = _locationController.text.trim();
+    if (sourceLocation.isEmpty) {
+      AppFeedback.showError(context, 'Lokasi aset saat ini wajib diisi.');
+      return;
+    }
+    if (targetLoc.isEmpty) {
+      AppFeedback.showError(context, 'Lokasi tujuan wajib diisi.');
+      return;
+    }
+    if (_documentName == null || _documentName!.trim().isEmpty) {
+      AppFeedback.showError(
+        context,
+        'Surat Keputusan (SK) SDM wajib diunggah untuk pengajuan mutasi.',
+      );
+      return;
+    }
+
+    showGeneralDialog(
+      context: context,
+      barrierDismissible: false,
+      barrierColor: const Color(0xFF0F172A).withValues(alpha: 0.50),
+      barrierLabel: 'Modal Konfirmasi Pengajuan',
+      transitionDuration: const Duration(milliseconds: 200),
+      transitionBuilder: (context, anim1, anim2, child) {
+        return FadeTransition(
+          opacity: CurvedAnimation(parent: anim1, curve: Curves.easeOut),
+          child: ScaleTransition(
+            scale: Tween<double>(begin: 0.95, end: 1.0).animate(
+              CurvedAnimation(parent: anim1, curve: Curves.easeOutCubic),
+            ),
+            child: child,
+          ),
+        );
+      },
+      pageBuilder: (dialogCtx, anim1, anim2) {
+        return BackdropFilter(
+          filter: ImageFilter.blur(sigmaX: 8, sigmaY: 8),
+          child: Center(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
+              child: Material(
+                type: MaterialType.transparency,
+                child: Container(
+                  width: double.infinity,
+                  constraints: const BoxConstraints(maxWidth: 320),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(24),
+                    border: Border.all(
+                      color: const Color(0xFFF1F5F9),
+                    ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: const Color(0xFF0F172A).withValues(alpha: 0.12),
+                        blurRadius: 28,
+                        offset: const Offset(0, 14),
+                      ),
+                    ],
+                  ),
+                  padding: const EdgeInsets.fromLTRB(20, 24, 20, 20),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.center,
+                    children: [
+                      // ── Icon Circle (Stitch Screen #1) ──
+                      Container(
+                        width: 64,
+                        height: 64,
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFECF4FF),
+                          shape: BoxShape.circle,
+                          border: Border.all(
+                            color: const Color(0xFFD5E4F4),
+                          ),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withValues(alpha: 0.04),
+                              blurRadius: 4,
+                              offset: const Offset(0, 1),
+                            ),
+                          ],
+                        ),
+                        child: const Center(
+                          child: _MinimalistPaperAirplane(
+                            size: 30,
+                            color: Color(0xFF00273A),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+
+                      // ── Title ──
+                      Text(
+                        'Kirim Pengajuan?',
+                        textAlign: TextAlign.center,
+                        style: GoogleFonts.montserrat(
+                          fontSize: 19,
+                          fontWeight: FontWeight.w700,
+                          color: const Color(0xFF00273A),
+                          letterSpacing: -0.3,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+
+                      // ── Subtitle ──
+                      Text(
+                        'Pastikan seluruh data mutasi aset dan dokumen SK SDM sudah sesuai sebelum diteruskan ke pemeriksaan Operator.',
+                        textAlign: TextAlign.center,
+                        style: GoogleFonts.montserrat(
+                          fontSize: 12.5,
+                          fontWeight: FontWeight.w400,
+                          color: const Color(0xFF64748B),
+                          height: 1.45,
+                        ),
+                      ),
+                      const SizedBox(height: 20),
+
+                      // ── Action Buttons ──
+                      // Primary: Kirim Pengajuan
+                      SizedBox(
+                        width: double.infinity,
+                        height: 44,
+                        child: ElevatedButton(
+                          key: const Key('btn_confirm_submit'),
+                          onPressed: () {
+                            Navigator.of(dialogCtx).pop();
+                            _submit();
+                          },
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: const Color(0xFF00273A),
+                            foregroundColor: Colors.white,
+                            elevation: 0,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            padding: EdgeInsets.zero,
+                          ),
+                          child: Text(
+                            'Kirim Pengajuan',
+                            style: GoogleFonts.montserrat(
+                              fontSize: 13.5,
+                              fontWeight: FontWeight.w600,
+                              color: Colors.white,
+                            ),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 10),
+
+                      // Secondary: Batal
+                      SizedBox(
+                        width: double.infinity,
+                        height: 44,
+                        child: ElevatedButton(
+                          key: const Key('btn_cancel_submit'),
+                          onPressed: () => Navigator.of(dialogCtx).pop(),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: const Color(0xFFECF4FF),
+                            foregroundColor: const Color(0xFF00273A),
+                            elevation: 0,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            padding: EdgeInsets.zero,
+                          ),
+                          child: Text(
+                            'Batal',
+                            style: GoogleFonts.montserrat(
+                              fontSize: 13.5,
+                              fontWeight: FontWeight.w600,
+                              color: const Color(0xFF00273A),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
 
   // ---------------------------------------------------------------------------
   // SUBMIT
@@ -380,11 +576,14 @@ class _PemohonCreateMutationScreenState
 
       ref.invalidate(mutationListProvider);
 
-      context.go(
-        '${RouteNames.pemohonSubmitSuccessPath}'
-        '?ticket=${Uri.encodeComponent(mutation.ticketNumber)}'
-        '&id=${mutation.id}',
-      );
+      // Tampilkan Modal Dialog Sukses di atas Form Pengajuan Mutasi (background tetap dim + blur)
+      if (mounted) {
+        await showMutationSubmitSuccessDialog(
+          context,
+          mutationId: mutation.id,
+          ticketNumber: mutation.ticketNumber,
+        );
+      }
     } else {
       final err = ref.read(submitMutationProvider).error;
 
@@ -404,13 +603,12 @@ class _PemohonCreateMutationScreenState
     if (_bringAsset && user != null && _picController.text.trim().isEmpty) {
       _picController.text = user.name;
     }
-    final initials = _initials(user?.name ?? 'P');
 
     return Scaffold(
       backgroundColor: _C.bg,
       body: Column(
         children: [
-          _buildHeader(initials),
+          _buildHeader(),
 
           Expanded(
             child: Form(
@@ -420,20 +618,6 @@ class _PemohonCreateMutationScreenState
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    Text(
-                      'Form Pengajuan Mutasi',
-                      style: _m(size: 20, weight: FontWeight.w700),
-                    ),
-
-                    const SizedBox(height: 2),
-
-                    Text(
-                      'Pengalihan lokasi fisik dan penanggung jawab (PIC) aset dinas',
-                      style: _m(size: 13, color: _C.muted),
-                    ),
-
-                    const SizedBox(height: 20),
-
                     _sectionAsset(locations),
 
                     const SizedBox(height: 16),
@@ -458,113 +642,13 @@ class _PemohonCreateMutationScreenState
   // HEADER
   // ---------------------------------------------------------------------------
 
-  Widget _buildHeader(String initials) {
-    return Material(
-      color: _C.white.withValues(alpha: 0.95),
-      elevation: 0.5,
-      child: SafeArea(
-        bottom: false,
-        child: SizedBox(
-          height: 56,
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            child: Row(
-              children: [
-                Material(
-                  color: _C.white,
-                  shape: const CircleBorder(side: BorderSide(color: _C.border)),
-                  child: InkWell(
-                    customBorder: const CircleBorder(),
-                    onTap: _safePop,
-                    child: const SizedBox(
-                      width: 40,
-                      height: 40,
-                      child: Icon(Icons.arrow_back, size: 20, color: _C.text),
-                    ),
-                  ),
-                ),
-
-                const Spacer(),
-
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 12,
-                    vertical: 4,
-                  ),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFE0F2FE).withValues(alpha: 0.8),
-                    borderRadius: BorderRadius.circular(999),
-                    border: Border.all(
-                      color: const Color(0xFF99EFE5).withValues(alpha: 0.7),
-                    ),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Container(
-                        width: 8,
-                        height: 8,
-                        decoration: const BoxDecoration(
-                          color: _C.teal,
-                          shape: BoxShape.circle,
-                        ),
-                      ),
-                      const SizedBox(width: 6),
-                      Text(
-                        'MUTASIKU',
-                        style: _m(
-                          size: 11,
-                          weight: FontWeight.w700,
-                          color: _C.navy,
-                          letterSpacing: 0.6,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-
-                const Spacer(),
-
-                Stack(
-                  clipBehavior: Clip.none,
-                  children: [
-                    Container(
-                      width: 36,
-                      height: 36,
-                      alignment: Alignment.center,
-                      decoration: BoxDecoration(
-                        color: _C.navy,
-                        shape: BoxShape.circle,
-                        border: Border.all(color: _C.border),
-                      ),
-                      child: Text(
-                        initials,
-                        style: _m(
-                          size: 12,
-                          weight: FontWeight.w700,
-                          color: Colors.white,
-                        ),
-                      ),
-                    ),
-                    Positioned(
-                      right: 0,
-                      bottom: 0,
-                      child: Container(
-                        width: 10,
-                        height: 10,
-                        decoration: BoxDecoration(
-                          color: const Color(0xFF10B981),
-                          shape: BoxShape.circle,
-                          border: Border.all(color: Colors.white, width: 2),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          ),
-        ),
+  Widget _buildHeader() {
+    return SafeArea(
+      bottom: false,
+      child: MutasiKuPageHeader(
+        title: 'Form Pengajuan Mutasi',
+        subtitle: 'Pengalihan lokasi fisik dan penanggung jawab (PIC) aset dinas',
+        onBack: _safePop,
       ),
     );
   }
@@ -1414,7 +1498,7 @@ class _PemohonCreateMutationScreenState
 
                   Expanded(
                     child: ElevatedButton(
-                      onPressed: loading ? null : _submit,
+                      onPressed: loading ? null : _showConfirmSubmitDialog,
                       style: ElevatedButton.styleFrom(
                         backgroundColor: _C.navy,
                         foregroundColor: Colors.white,
@@ -1437,7 +1521,7 @@ class _PemohonCreateMutationScreenState
                               mainAxisAlignment: MainAxisAlignment.center,
                               children: [
                                 Text(
-                                  'Lanjut ke Konfirmasi',
+                                  'Kirim Pengajuan Mutasi',
                                   style: _m(
                                     size: 13,
                                     weight: FontWeight.w700,
@@ -1445,7 +1529,7 @@ class _PemohonCreateMutationScreenState
                                   ),
                                 ),
                                 const SizedBox(width: 6),
-                                const Icon(Icons.arrow_forward, size: 18),
+                                const Icon(Icons.send_rounded, size: 18),
                               ],
                             ),
                     ),
@@ -1562,21 +1646,60 @@ class _PemohonCreateMutationScreenState
     );
   }
 
-  String _initials(String name) {
-    final p = name
-        .trim()
-        .split(RegExp(r'\s+'))
-        .where((e) => e.isNotEmpty)
-        .toList();
+}
 
-    if (p.isEmpty) return 'P';
+class _MinimalistPaperAirplane extends StatelessWidget {
+  final double size;
+  final Color color;
+  const _MinimalistPaperAirplane({
+    this.size = 36,
+    this.color = const Color(0xFF00273A),
+  });
 
-    if (p.length == 1) {
-      return p.first.length >= 2
-          ? p.first.substring(0, 2).toUpperCase()
-          : p.first.toUpperCase();
-    }
-
-    return '${p.first[0]}${p.last[0]}'.toUpperCase();
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      width: size,
+      height: size,
+      child: CustomPaint(
+        painter: _MinimalistPaperAirplanePainter(color),
+      ),
+    );
   }
+}
+
+class _MinimalistPaperAirplanePainter extends CustomPainter {
+  final Color color;
+  const _MinimalistPaperAirplanePainter(this.color);
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = color
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 2.0
+      ..strokeCap = StrokeCap.round
+      ..strokeJoin = StrokeJoin.round;
+
+    final scaleX = size.width / 24.0;
+    final scaleY = size.height / 24.0;
+
+    // Stitch Screen #2 SVG: d="M6 12L3 21l18-9L3 3l3 9zm0 0h12"
+    final path = Path();
+    path.moveTo(6 * scaleX, 12 * scaleY);
+    path.lineTo(3 * scaleX, 21 * scaleY);
+    path.lineTo(21 * scaleX, 12 * scaleY);
+    path.lineTo(3 * scaleX, 3 * scaleY);
+    path.lineTo(6 * scaleX, 12 * scaleY);
+    path.close();
+
+    path.moveTo(6 * scaleX, 12 * scaleY);
+    path.lineTo(18 * scaleX, 12 * scaleY);
+
+    canvas.drawPath(path, paint);
+  }
+
+  @override
+  bool shouldRepaint(covariant _MinimalistPaperAirplanePainter oldDelegate) =>
+      color != oldDelegate.color;
 }
