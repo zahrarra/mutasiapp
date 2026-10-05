@@ -133,31 +133,36 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
     final usersList =
         usersAsync.asData?.value ?? usersAsync.valueOrNull ?? const <User>[];
     final totalUsers = usersList.isNotEmpty ? usersList.length : 142;
-    final pemohonCount =
-        usersList.where((u) => u.role == UserRole.pemohon).length;
+    final pemohonCount = usersList
+        .where((u) => u.role == UserRole.pemohon)
+        .length;
     final oprCount = usersList.where((u) => u.role == UserRole.operator).length;
     final asetCount = usersList
-        .where((u) =>
-            u.role == UserRole.bagianAset ||
-            u.role == UserRole.staffAset ||
-            u.role == UserRole.kabagAset)
+        .where(
+          (u) =>
+              u.role == UserRole.bagianAset ||
+              u.role == UserRole.staffAset ||
+              u.role == UserRole.kabagAset,
+        )
         .length;
     final kadivCount = usersList.where((u) => u.role == UserRole.kadiv).length;
     final usersBreakdown = usersList.isNotEmpty
         ? '$pemohonCount Pemohon • $oprCount Opr • $asetCount Aset • $kadivCount Kadiv'
         : '118 Pemohon • 8 Opr • 12 Aset • 4 Kadiv';
 
-    final locationsList = locationsAsync.asData?.value ??
+    final locationsList =
+        locationsAsync.asData?.value ??
         locationsAsync.valueOrNull ??
         const <LocationItem>[];
-    final totalLocations =
-        locationsList.isNotEmpty ? locationsList.length : 34;
+    final totalLocations = locationsList.isNotEmpty ? locationsList.length : 34;
 
-    final categoriesList = categoriesAsync.asData?.value ??
+    final categoriesList =
+        categoriesAsync.asData?.value ??
         categoriesAsync.valueOrNull ??
         const <AssetCategory>[];
-    final totalCategories =
-        categoriesList.isNotEmpty ? categoriesList.length : 2;
+    final totalCategories = categoriesList.isNotEmpty
+        ? categoriesList.length
+        : 2;
 
     return LayoutBuilder(
       builder: (context, constraints) {
@@ -338,16 +343,44 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-              // Top Bar: Hamburger Menu Button & Actions (Notifications + Profile Avatar)
+          // Top Bar: Hamburger Menu Button & Actions (Notifications + Profile Avatar)
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              // Hamburger Menu Button
+              Material(
+                color: Colors.transparent,
+                child: InkWell(
+                  borderRadius: BorderRadius.circular(999),
+                  onTap: () => _showNavigationDrawer(context),
+                  child: Container(
+                    width: 36,
+                    height: 36,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: Colors.white.withValues(alpha: 0.10),
+                      border: Border.all(
+                        color: Colors.white.withValues(alpha: 0.15),
+                      ),
+                    ),
+                    child: const Icon(
+                      Icons.menu,
+                      size: 20,
+                      color: Colors.white,
+                    ),
+                  ),
+                ),
+              ),
+
+              // Actions: Notifications & Avatar
               Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  // Hamburger Menu Button
+                  // Notification Button with red dot
                   Material(
                     color: Colors.transparent,
                     child: InkWell(
                       borderRadius: BorderRadius.circular(999),
-                      onTap: () => _showNavigationDrawer(context),
+                      onTap: () => _showNotificationSheet(context),
                       child: Container(
                         width: 36,
                         height: 36,
@@ -358,112 +391,26 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
                             color: Colors.white.withValues(alpha: 0.15),
                           ),
                         ),
-                        child: const Icon(
-                          Icons.menu,
-                          size: 20,
-                          color: Colors.white,
-                        ),
-                      ),
-                    ),
-                  ),
-
-                  // Actions: Notifications & Avatar
-                  Row(
-                    children: [
-                      // Notification Button with red dot
-                      Material(
-                        color: Colors.transparent,
-                        child: InkWell(
-                          borderRadius: BorderRadius.circular(999),
-                          onTap: () => _showNotificationSheet(context),
-                          child: Container(
-                            width: 36,
-                            height: 36,
-                            decoration: BoxDecoration(
-                              shape: BoxShape.circle,
-                              color: Colors.white.withValues(alpha: 0.10),
-                              border: Border.all(
-                                color: Colors.white.withValues(alpha: 0.15),
-                              ),
-                            ),
-                            child: Stack(
-                              alignment: Alignment.center,
-                              children: [
-                                const Icon(
-                                  Icons.notifications_none_rounded,
-                                  size: 19,
-                                  color: Colors.white,
-                                ),
-                                Positioned(
-                                  top: 7,
-                                  right: 7,
-                                  child: Container(
-                                    width: 8,
-                                    height: 8,
-                                    decoration: BoxDecoration(
-                                      color: _StitchColors.red500,
-                                      shape: BoxShape.circle,
-                                      border: Border.all(
-                                        color: _StitchColors.primaryNavy,
-                                        width: 1.5,
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 10),
-
-                      // Avatar with emerald online badge
-                      GestureDetector(
-                        onTap: () => context.push(RouteNames.profilePath),
                         child: Stack(
-                          clipBehavior: Clip.none,
+                          alignment: Alignment.center,
                           children: [
-                            Container(
-                              width: 36,
-                              height: 36,
-                              decoration: BoxDecoration(
-                                shape: BoxShape.circle,
-                                color: _StitchColors.forestTeal,
-                                border: Border.all(
-                                  color: Colors.white.withValues(alpha: 0.3),
-                                  width: 2,
-                                ),
-                                boxShadow: const [
-                                  BoxShadow(
-                                    color: Color(0x1A000000),
-                                    blurRadius: 4,
-                                    offset: Offset(0, 2),
-                                  ),
-                                ],
-                              ),
-                              alignment: Alignment.center,
-                              child: Text(
-                                userInitials,
-                                style: _t(
-                                  size: 12,
-                                  w: FontWeight.w700,
-                                  color: Colors.white,
-                                  ls: -0.2,
-                                ),
-                              ),
+                            const Icon(
+                              Icons.notifications_none_rounded,
+                              size: 19,
+                              color: Colors.white,
                             ),
                             Positioned(
-                              bottom: -1,
-                              right: -1,
+                              top: 7,
+                              right: 7,
                               child: Container(
-                                width: 10,
-                                height: 10,
+                                width: 8,
+                                height: 8,
                                 decoration: BoxDecoration(
-                                  color: _StitchColors.emerald400,
+                                  color: _StitchColors.red500,
                                   shape: BoxShape.circle,
                                   border: Border.all(
                                     color: _StitchColors.primaryNavy,
-                                    width: 2,
+                                    width: 1.5,
                                   ),
                                 ),
                               ),
@@ -471,110 +418,166 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
                           ],
                         ),
                       ),
-                    ],
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+
+                  // Avatar with emerald online badge
+                  GestureDetector(
+                    onTap: () => context.push(RouteNames.profilePath),
+                    child: Stack(
+                      clipBehavior: Clip.none,
+                      children: [
+                        Container(
+                          width: 36,
+                          height: 36,
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            color: _StitchColors.forestTeal,
+                            border: Border.all(
+                              color: Colors.white.withValues(alpha: 0.3),
+                              width: 2,
+                            ),
+                            boxShadow: const [
+                              BoxShadow(
+                                color: Color(0x1A000000),
+                                blurRadius: 4,
+                                offset: Offset(0, 2),
+                              ),
+                            ],
+                          ),
+                          alignment: Alignment.center,
+                          child: Text(
+                            userInitials,
+                            style: _t(
+                              size: 12,
+                              w: FontWeight.w700,
+                              color: Colors.white,
+                              ls: -0.2,
+                            ),
+                          ),
+                        ),
+                        Positioned(
+                          bottom: -1,
+                          right: -1,
+                          child: Container(
+                            width: 10,
+                            height: 10,
+                            decoration: BoxDecoration(
+                              color: _StitchColors.emerald400,
+                              shape: BoxShape.circle,
+                              border: Border.all(
+                                color: _StitchColors.primaryNavy,
+                                width: 2,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                 ],
               ),
-              const SizedBox(height: 18),
-
-              // Headline & Subtitle
-              Text(
-                'Halo, Administrator! 👋',
-                style: _t(
-                  size: 20,
-                  w: FontWeight.w700,
-                  color: Colors.white,
-                  ls: -0.3,
-                  h: 1.2,
-                ),
-              ),
-              const SizedBox(height: 4),
-              Text(
-                'Kelola master data, hak akses, dan tata kelola sistem aset.',
-                style: _t(
-                  size: 12,
-                  w: FontWeight.w500,
-                  color: _StitchColors.slate300,
-                  h: 1.3,
-                ),
-              ),
-              const SizedBox(height: 16),
-
-              // Search Bar: Capsule with translucent white fill
-              Container(
-                height: 46,
-                decoration: BoxDecoration(
-                  color: Colors.white.withValues(alpha: 0.10),
-                  borderRadius: BorderRadius.circular(999),
-                  border: Border.all(
-                    color: Colors.white.withValues(alpha: 0.20),
-                  ),
-                ),
-                child: Theme(
-                  data: Theme.of(context).copyWith(
-                    inputDecorationTheme: const InputDecorationTheme(
-                      filled: false,
-                      fillColor: Colors.transparent,
-                      focusColor: Colors.transparent,
-                      hoverColor: Colors.transparent,
-                      border: InputBorder.none,
-                      enabledBorder: InputBorder.none,
-                      focusedBorder: InputBorder.none,
-                      errorBorder: InputBorder.none,
-                      disabledBorder: InputBorder.none,
-                    ),
-                  ),
-                  child: TextField(
-                    controller: _searchController,
-                    style: _t(size: 13, color: Colors.white),
-                    cursorColor: _StitchColors.mintAccent,
-                    decoration: InputDecoration(
-                      isDense: true,
-                      filled: false,
-                      fillColor: Colors.transparent,
-                      focusColor: Colors.transparent,
-                      hoverColor: Colors.transparent,
-                      prefixIcon: Icon(
-                        Icons.search,
-                        size: 20,
-                        color: Colors.white.withValues(alpha: 0.70),
-                      ),
-                      suffixIcon: _searchQuery.isNotEmpty
-                          ? IconButton(
-                              icon: const Icon(
-                                Icons.close,
-                                size: 18,
-                                color: Colors.white70,
-                              ),
-                              onPressed: () {
-                                _searchController.clear();
-                                setState(() => _searchQuery = '');
-                              },
-                            )
-                          : null,
-                      hintText: 'Cari data user, unit cabang, role, modul...',
-                      hintStyle: _t(
-                        size: 13,
-                        w: FontWeight.w400,
-                        color: _StitchColors.slate300,
-                      ),
-                      border: InputBorder.none,
-                      enabledBorder: InputBorder.none,
-                      focusedBorder: InputBorder.none,
-                      contentPadding: const EdgeInsets.symmetric(
-                        horizontal: 16,
-                        vertical: 12,
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-              const SizedBox(height: 14),
-
-              // Quick System Status Hero Banner (Stitch 1:1)
-              _buildSystemStatusHeroBanner(context),
             ],
           ),
+          const SizedBox(height: 18),
+
+          // Headline & Subtitle
+          Text(
+            'Halo, Administrator! 👋',
+            style: _t(
+              size: 20,
+              w: FontWeight.w700,
+              color: Colors.white,
+              ls: -0.3,
+              h: 1.2,
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            'Kelola master data, hak akses, dan tata kelola sistem aset.',
+            style: _t(
+              size: 12,
+              w: FontWeight.w500,
+              color: _StitchColors.slate300,
+              h: 1.3,
+            ),
+          ),
+          const SizedBox(height: 16),
+
+          // Search Bar: Capsule with translucent white fill
+          Container(
+            height: 46,
+            decoration: BoxDecoration(
+              color: Colors.white.withValues(alpha: 0.10),
+              borderRadius: BorderRadius.circular(999),
+              border: Border.all(color: Colors.white.withValues(alpha: 0.20)),
+            ),
+            child: Theme(
+              data: Theme.of(context).copyWith(
+                inputDecorationTheme: const InputDecorationTheme(
+                  filled: false,
+                  fillColor: Colors.transparent,
+                  focusColor: Colors.transparent,
+                  hoverColor: Colors.transparent,
+                  border: InputBorder.none,
+                  enabledBorder: InputBorder.none,
+                  focusedBorder: InputBorder.none,
+                  errorBorder: InputBorder.none,
+                  disabledBorder: InputBorder.none,
+                ),
+              ),
+              child: TextField(
+                controller: _searchController,
+                style: _t(size: 13, color: Colors.white),
+                cursorColor: _StitchColors.mintAccent,
+                decoration: InputDecoration(
+                  isDense: true,
+                  filled: false,
+                  fillColor: Colors.transparent,
+                  focusColor: Colors.transparent,
+                  hoverColor: Colors.transparent,
+                  prefixIcon: Icon(
+                    Icons.search,
+                    size: 20,
+                    color: Colors.white.withValues(alpha: 0.70),
+                  ),
+                  suffixIcon: _searchQuery.isNotEmpty
+                      ? IconButton(
+                          icon: const Icon(
+                            Icons.close,
+                            size: 18,
+                            color: Colors.white70,
+                          ),
+                          onPressed: () {
+                            _searchController.clear();
+                            setState(() => _searchQuery = '');
+                          },
+                        )
+                      : null,
+                  hintText: 'Cari data user, unit cabang, role, modul...',
+                  hintStyle: _t(
+                    size: 13,
+                    w: FontWeight.w400,
+                    color: _StitchColors.slate300,
+                  ),
+                  border: InputBorder.none,
+                  enabledBorder: InputBorder.none,
+                  focusedBorder: InputBorder.none,
+                  contentPadding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 12,
+                  ),
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(height: 14),
+
+          // Quick System Status Hero Banner (Stitch 1:1)
+          _buildSystemStatusHeroBanner(context),
+        ],
+      ),
     );
   }
 
@@ -645,8 +648,9 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
                         color: _StitchColors.mintAccent.withValues(alpha: 0.20),
                         borderRadius: BorderRadius.circular(999),
                         border: Border.all(
-                          color:
-                              _StitchColors.mintAccent.withValues(alpha: 0.30),
+                          color: _StitchColors.mintAccent.withValues(
+                            alpha: 0.30,
+                          ),
                         ),
                       ),
                       child: Row(
@@ -677,10 +681,7 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
                 const SizedBox(height: 3),
                 Text(
                   'Sistem Berjalan Normal • Semua Sinkron',
-                  style: _t(
-                    size: 11,
-                    color: _StitchColors.slate300,
-                  ),
+                  style: _t(size: 11, color: _StitchColors.slate300),
                   overflow: TextOverflow.ellipsis,
                 ),
               ],
@@ -975,11 +976,7 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
               // Description Text
               Text(
                 subtitle,
-                style: _t(
-                  size: 10,
-                  color: _StitchColors.slate500,
-                  h: 1.2,
-                ),
+                style: _t(size: 10, color: _StitchColors.slate500, h: 1.2),
                 maxLines: 2,
                 overflow: TextOverflow.ellipsis,
               ),
@@ -1046,11 +1043,13 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
     final filtered = _searchQuery.isEmpty
         ? cards
         : cards
-            .where((c) =>
-                c.title.toLowerCase().contains(_searchQuery) ||
-                c.subtitle.toLowerCase().contains(_searchQuery) ||
-                c.tag.toLowerCase().contains(_searchQuery))
-            .toList();
+              .where(
+                (c) =>
+                    c.title.toLowerCase().contains(_searchQuery) ||
+                    c.subtitle.toLowerCase().contains(_searchQuery) ||
+                    c.tag.toLowerCase().contains(_searchQuery),
+              )
+              .toList();
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -1074,10 +1073,7 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
                   const SizedBox(height: 2),
                   Text(
                     'Pusat konfigurasi hak akses, hierarki unit kerja & parameter sistem',
-                    style: _t(
-                      size: 11,
-                      color: _StitchColors.slate500,
-                    ),
+                    style: _t(size: 11, color: _StitchColors.slate500),
                     overflow: TextOverflow.ellipsis,
                   ),
                 ],
@@ -1240,8 +1236,9 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
                             color: _StitchColors.slate100,
                             borderRadius: BorderRadius.circular(999),
                             border: Border.all(
-                              color:
-                                  _StitchColors.slate200.withValues(alpha: 0.6),
+                              color: _StitchColors.slate200.withValues(
+                                alpha: 0.6,
+                              ),
                             ),
                           ),
                           child: Text(
@@ -1258,10 +1255,7 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
                     const SizedBox(height: 2),
                     Text(
                       model.subtitle,
-                      style: _t(
-                        size: 11,
-                        color: _StitchColors.slate500,
-                      ),
+                      style: _t(size: 11, color: _StitchColors.slate500),
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
                     ),
@@ -1328,10 +1322,7 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
                   const SizedBox(height: 2),
                   Text(
                     'Histori pembaruan konfigurasi & rekam jejak tata kelola',
-                    style: _t(
-                      size: 11,
-                      color: _StitchColors.slate500,
-                    ),
+                    style: _t(size: 11, color: _StitchColors.slate500),
                     overflow: TextOverflow.ellipsis,
                   ),
                 ],
@@ -1374,7 +1365,8 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
               style: _t(size: 12, color: _StitchColors.slate600, h: 1.3),
               children: [
                 const TextSpan(
-                    text: 'Node transit aset logistik regional ditambahkan ke '),
+                  text: 'Node transit aset logistik regional ditambahkan ke ',
+                ),
                 TextSpan(
                   text: 'KCP Thamrin',
                   style: _t(
@@ -1431,7 +1423,8 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
                   ),
                 ),
                 const TextSpan(
-                    text: ' dialokasikan hak akses Petugas Aset TI.'),
+                  text: ' dialokasikan hak akses Petugas Aset TI.',
+                ),
               ],
             ),
           ),
@@ -1681,11 +1674,7 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
                     color: _StitchColors.slate200.withValues(alpha: 0.6),
                   ),
                 ),
-                child: Icon(
-                  icon,
-                  size: 20,
-                  color: _StitchColors.primaryNavy,
-                ),
+                child: Icon(icon, size: 20, color: _StitchColors.primaryNavy),
               ),
               const SizedBox(width: 10),
               Expanded(
@@ -1705,10 +1694,7 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
                     const SizedBox(height: 2),
                     Text(
                       subtitle,
-                      style: _t(
-                        size: 11,
-                        color: _StitchColors.slate500,
-                      ),
+                      style: _t(size: 11, color: _StitchColors.slate500),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                     ),
@@ -1750,11 +1736,7 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
             Flexible(
               child: Text(
                 'Tambah Master Data / Role Baru',
-                style: _t(
-                  size: 14,
-                  w: FontWeight.w700,
-                  color: Colors.white,
-                ),
+                style: _t(size: 14, w: FontWeight.w700, color: Colors.white),
                 overflow: TextOverflow.ellipsis,
               ),
             ),
@@ -2059,15 +2041,25 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
             ),
             const SizedBox(height: 12),
             _buildRbacRow(
-                '1. Pemohon', 'Pengajuan mutasi aset & konfirmasi penerimaan'),
+              '1. Pemohon',
+              'Pengajuan mutasi aset & konfirmasi penerimaan',
+            ),
             _buildRbacRow(
-                '2. Operator', 'Verifikasi dokumen & cek fisik pengajuan'),
-            _buildRbacRow('3. Bagian Aset',
-                'Verifikasi data aset, tentukan PIC baru, & proses'),
-            _buildRbacRow('4. Pemimpin Divisi',
-                'Otorisasi final approval sesuai kriteria'),
+              '2. Operator',
+              'Verifikasi dokumen & cek fisik pengajuan',
+            ),
             _buildRbacRow(
-                '5. Administrator', 'Pengelolaan master data & konfigurasi'),
+              '3. Bagian Aset',
+              'Verifikasi data aset, tentukan PIC baru, & proses',
+            ),
+            _buildRbacRow(
+              '4. Pemimpin Divisi',
+              'Otorisasi final approval sesuai kriteria',
+            ),
+            _buildRbacRow(
+              '5. Administrator',
+              'Pengelolaan master data & konfigurasi',
+            ),
           ],
         ),
         actions: [
@@ -2101,10 +2093,7 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
               color: _StitchColors.slate800,
             ),
           ),
-          Text(
-            desc,
-            style: _t(size: 11, color: _StitchColors.slate500),
-          ),
+          Text(desc, style: _t(size: 11, color: _StitchColors.slate500)),
         ],
       ),
     );
@@ -2134,12 +2123,18 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
               style: _t(size: 12, color: _StitchColors.slate600),
             ),
             const SizedBox(height: 12),
-            _buildRuleItem('1. Ambang Batas Nilai Aset',
-                'Aset dengan nilai tercatat di atas ambang batas parameter sistem.'),
-            _buildRuleItem('2. Mutasi Antar-Wilayah/Cabang',
-                'Perpindahan aset yang melintasi KC berbeda atau keluar dari Kantor Pusat.'),
-            _buildRuleItem('3. Kategori Khusus / Server TI',
-                'Perangkat server, data center, dan kendaraan dinas operasional.'),
+            _buildRuleItem(
+              '1. Ambang Batas Nilai Aset',
+              'Aset dengan nilai tercatat di atas ambang batas parameter sistem.',
+            ),
+            _buildRuleItem(
+              '2. Mutasi Antar-Wilayah/Cabang',
+              'Perpindahan aset yang melintasi KC berbeda atau keluar dari Kantor Pusat.',
+            ),
+            _buildRuleItem(
+              '3. Kategori Khusus / Server TI',
+              'Perangkat server, data center, dan kendaraan dinas operasional.',
+            ),
           ],
         ),
         actions: [
@@ -2184,10 +2179,7 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
               color: _StitchColors.slate800,
             ),
           ),
-          Text(
-            desc,
-            style: _t(size: 11, color: _StitchColors.slate500),
-          ),
+          Text(desc, style: _t(size: 11, color: _StitchColors.slate500)),
         ],
       ),
     );
@@ -2422,8 +2414,10 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
             ),
             const SizedBox(height: 12),
             ListTile(
-              leading: const Icon(Icons.manage_accounts,
-                  color: _StitchColors.primaryNavy),
+              leading: const Icon(
+                Icons.manage_accounts,
+                color: _StitchColors.primaryNavy,
+              ),
               title: const Text('Kelola Pengguna & Role'),
               onTap: () {
                 Navigator.pop(ctx);
@@ -2431,8 +2425,10 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
               },
             ),
             ListTile(
-              leading: const Icon(Icons.apartment,
-                  color: _StitchColors.primaryNavy),
+              leading: const Icon(
+                Icons.apartment,
+                color: _StitchColors.primaryNavy,
+              ),
               title: const Text('Master Unit Kerja & Lokasi Cabang'),
               onTap: () {
                 Navigator.pop(ctx);
@@ -2440,8 +2436,10 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
               },
             ),
             ListTile(
-              leading: const Icon(Icons.inventory_2,
-                  color: _StitchColors.primaryNavy),
+              leading: const Icon(
+                Icons.inventory_2,
+                color: _StitchColors.primaryNavy,
+              ),
               title: const Text('Kategori Master Aset'),
               onTap: () {
                 Navigator.pop(ctx);
@@ -2449,8 +2447,10 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
               },
             ),
             ListTile(
-              leading: const Icon(Icons.person,
-                  color: _StitchColors.primaryNavy),
+              leading: const Icon(
+                Icons.person,
+                color: _StitchColors.primaryNavy,
+              ),
               title: const Text('Profil Administrator'),
               onTap: () {
                 Navigator.pop(ctx);
@@ -2472,10 +2472,7 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
           children: [
             const Icon(Icons.tune, color: _StitchColors.primaryNavy),
             const SizedBox(width: 8),
-            Text(
-              'Konfigurasi Sistem',
-              style: _t(size: 16, w: FontWeight.w700),
-            ),
+            Text('Konfigurasi Sistem', style: _t(size: 16, w: FontWeight.w700)),
           ],
         ),
         content: Text(
@@ -2495,7 +2492,9 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
             onPressed: () {
               Navigator.pop(ctx);
               AppFeedback.showSuccess(
-                  context, 'Konfigurasi sistem telah diperbarui.');
+                context,
+                'Konfigurasi sistem telah diperbarui.',
+              );
             },
             child: const Text('Simpan'),
           ),

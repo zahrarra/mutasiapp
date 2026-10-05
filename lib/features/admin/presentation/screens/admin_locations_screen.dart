@@ -16,6 +16,7 @@ import '../../domain/entities/location_item.dart';
 import '../../../mutation/presentation/providers/mutation_form_provider.dart';
 import '../../../auth/domain/entities/user_role.dart';
 import '../../../../core/widgets/custom_floating_nav_bar.dart';
+import '../../../../core/widgets/mutasiku_page_header.dart';
 
 class AdminLocationsScreen extends ConsumerStatefulWidget {
   const AdminLocationsScreen({super.key});
@@ -304,40 +305,20 @@ class _AdminLocationsScreenState extends ConsumerState<AdminLocationsScreen> {
     final locationsAsync = ref.watch(masterLocationsProvider);
 
     return Scaffold(
-      backgroundColor: AppColors.background,
-      appBar: AppBar(
-        title: const Text('Lokasi & Unit'),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.add_location_alt_outlined),
-            tooltip: 'Tambah Lokasi Baru',
-            onPressed: () => _showAddLocationDialog(context),
+      backgroundColor: const Color(0xFFF6F8FA),
+      body: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SafeArea(
+            bottom: false,
+            child: MutasiKuPageHeader(
+              title: 'Lokasi & Unit',
+              subtitle: 'Master data unit & lokasi penempatan aset',
+              onBack: () => Navigator.of(context).pop(),
+            ),
           ),
-          IconButton(
-            icon: const Icon(Icons.info_outline),
-            tooltip: 'Informasi Unit',
-            onPressed: () {
-              showDialog(
-                context: context,
-                builder: (ctx) => AlertDialog(
-                  title: const Text('Informasi Lokasi & Unit'),
-                  content: const Text(
-                    'Daftar lokasi master ini disinkronisasi ke seluruh formulir pengajuan mutasi Pemohon, verifikasi Operator, dan pemindahan fisik Staff Aset.',
-                    style: TextStyle(fontSize: 13),
-                  ),
-                  actions: [
-                    TextButton(
-                      onPressed: () => Navigator.of(ctx).pop(),
-                      child: const Text('Tutup'),
-                    ),
-                  ],
-                ),
-              );
-            },
-          ),
-        ],
-      ),
-      body: locationsAsync.when(
+          Expanded(
+            child: locationsAsync.when(
         data: (allLocations) {
           final filtered = allLocations.where((loc) {
             final q = _searchQuery.toLowerCase();
@@ -622,6 +603,9 @@ class _AdminLocationsScreenState extends ConsumerState<AdminLocationsScreen> {
               ref.read(masterLocationsProvider.notifier).loadLocations(),
         ),
       ),
+    ),
+  ],
+),
       floatingActionButton: FloatingActionButton.extended(
         backgroundColor: AppColors.primary,
         foregroundColor: Colors.white,
