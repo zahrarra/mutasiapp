@@ -170,10 +170,10 @@ class PemohonConfirmationActionNotifier
   /// Melaporkan ketidaksesuaian hasil update aset saat proses konfirmasi.
   ///
   /// PENTING (koreksi semantik): method ini dipanggil oleh Pemohon ketika
-  /// hasil update data aset dari Staff Aset TIDAK sesuai dengan kondisi
+  /// hasil update data aset dari Bagian Aset TIDAK sesuai dengan kondisi
   /// fisik (mis. SN tidak cocok, lokasi/PIC salah). Pemohon di sini berperan
   /// sebagai PELAPOR, bukan pihak yang melakukan kesalahan — pihak yang
-  /// perlu memperbaiki data adalah Staff Aset.
+  /// perlu memperbaiki data adalah Bagian Aset.
   ///
   /// Catatan teknis: karena `MutationStatus` belum punya status khusus untuk
   /// membedakan "Operator mengembalikan ke Pemohon di tahap awal" vs

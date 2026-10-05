@@ -1,9 +1,9 @@
 // test/features/kadiv/kadiv_approval_flow_and_queue_test.dart
 //
 // Comprehensive tests for Kadiv Approval flow, queue, detail, and wiring:
-// - End-to-end flow: Operator verify -> waitingKabagApproval -> Kabag approve (requiresKadivApproval == true) -> waitingKadivApproval
+// - End-to-end flow: Operator verify -> waitingAssetVerification -> Bagian Aset forward -> waitingKadivApproval
 // - Kadiv pending count & queue filtering ("Menunggu Approval", "Semua", "Disetujui", "Ditolak")
-// - Kadiv Approve: waitingKadivApproval -> approvedWaitingAssetUpdate (MutationStatus.approved), provider invalidation, staff aset notification, removed from pending queue
+// - Kadiv Approve: waitingDivisionApproval -> waitingConfirmation, provider invalidation, Pemohon notification, removed from pending queue
 // - Kadiv Reject: waitingKadivApproval -> rejected, requires and preserves rejection reason, applicant notification, removed from pending queue
 // - Detail page: shows Operator verification info, actions visible ONLY for waitingKadivApproval
 // - No fake success if repository operation fails
@@ -69,12 +69,12 @@ const kadivTestUser = User(
   role: UserRole.kadiv,
 );
 
-const kabagTestUser = User(
-  id: 'usr_kabag_test',
-  username: 'kabag_test',
-  name: 'H. M. Yusuf (Kabag Aset)',
-  email: 'kabag@mutasiku.id',
-  role: UserRole.kabagAset,
+const bagianAsetTestUser = User(
+  id: 'usr_bagian_aset_test',
+  username: 'bagian_aset_test',
+  name: 'H. M. Yusuf (Bagian Aset)',
+  email: 'bagian_aset@mutasiku.id',
+  role: UserRole.bagianAset,
 );
 
 void main() {
@@ -84,7 +84,7 @@ void main() {
     MutationRepositoryImpl(assetRepository: assetRepo);
   });
 
-  group('Kadiv Flow & Queue: Operator verify -> Kabag approve (with Kadiv) -> waitingKadivApproval', () {
+  group('Kadiv Flow & Queue: Operator verify -> Bagian Aset forward -> waitingKadivApproval', () {
     test('Mutation correctly enters waitingKadivApproval and appears in Kadiv queues', () async {
       final container = ProviderContainer(
         overrides: [
@@ -102,17 +102,17 @@ void main() {
       );
       expect(verifyRes.isSuccess, true);
 
-      // Kabag approves requiring Kadiv
-      final kabagApproveRes = await repo.approveMutationKabag(
+      // Bagian Aset forwards to Kadiv
+      final forwardRes = await repo.assetSectionForward(
         mutationId: 'mut_002',
-        kabagName: 'H. M. Yusuf (Kabag Aset)',
-        requiresKadivApproval: true,
+        verifierName: 'H. M. Yusuf (Bagian Aset)',
+        newPic: 'Siti Rahma',
       );
-      expect(kabagApproveRes.isSuccess, true);
-      final mutation = kabagApproveRes.dataOrNull!;
+      expect(forwardRes.isSuccess, true);
+      final mutation = forwardRes.dataOrNull!;
       expect(mutation.status.isWaitingDivisionApproval, true);
       expect(mutation.requiresKadivApproval, true);
-      expect(mutation.assetVerifiedBy, 'H. M. Yusuf (Kabag Aset)');
+      expect(mutation.assetVerifiedBy, 'H. M. Yusuf (Bagian Aset)');
 
       // Invalidate Kadiv provider and test queues
       container.invalidate(kadivAllMutationsProvider);
@@ -134,7 +134,7 @@ void main() {
       expect(allList.any((m) => m.id == 'mut_002'), true);
     });
 
-    test('Kadiv Approve transitions waitingKadivApproval to approved, notifies Staff Aset, and updates queues', () async {
+    test('Kadiv Approve transitions waitingKadivApproval to waitingConfirmation, notifies Pemohon, and updates queues', () async {
       final container = ProviderContainer(
         overrides: [
           authStateProvider.overrideWith((ref) => _FakeAuthNotifier(kadivTestUser)),

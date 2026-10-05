@@ -3,18 +3,18 @@
 // Comprehensive Smoke Test for all 15 audit criteria:
 // 1. Pemohon submit mutation
 // 2. Operator menerima mutation yang benar
-// 3. Operator pilih perlu/tidak perlu Kadiv
-// 4. Kabag approve → pastikan dua jalur bekerja
-// 5. Jika perlu Kadiv → Kadiv menerima mutation yang benar
-// 6. Staff menerima hanya mutation yang sudah seluruh approval selesai
-// 7. Staff update lokasi + PIC
+// 3. Operator teruskan ke Bagian Aset
+// 4. Bagian Aset verifikasi & teruskan ke Pemimpin Divisi
+// 5. Pemimpin Divisi menyetujui mutasi
+// 6. Pemohon menerima status konfirmasi
+// 7. Pemohon konfirmasi (Sesuai / Tidak Sesuai)
 // 8. Pemohon menerima notification dan melakukan confirmation
 // 9. Status akhir menjadi completed
 // 10. Cek notification tiap role tidak tercampur
 // 11. Cek sorting/filter benar-benar mengubah data
 // 12. Cek dropdown lokasi muncul inline di bawah field
 // 13. Cek tidak ada tombol Refresh dan “Ke Dashboard”
-// 14. Cek Profile semua 6 role
+// 14. Cek Profile semua 5 role
 // 15. Cek Admin semua menu bisa dibuka
 
 import 'dart:io';
@@ -81,12 +81,12 @@ void main() {
     role: UserRole.operator,
   );
 
-  const kabagUser = User(
-    id: 'u_kbg_01',
-    username: 'kabag1',
-    name: 'Bambang Kabag',
-    email: 'kabag@mutasiku.id',
-    role: UserRole.kabagAset,
+  const bagianAsetUser = User(
+    id: 'u_ast_01',
+    username: 'bagian_aset1',
+    name: 'Bambang Bagian Aset',
+    email: 'bagian_aset@mutasiku.id',
+    role: UserRole.bagianAset,
   );
 
   const kadivUser = User(
@@ -95,14 +95,6 @@ void main() {
     name: 'Hendra Kadiv',
     email: 'kadiv@mutasiku.id',
     role: UserRole.kadiv,
-  );
-
-  const staffUser = User(
-    id: 'u_stf_01',
-    username: 'staff1',
-    name: 'Agus Staff',
-    email: 'staff@mutasiku.id',
-    role: UserRole.staffAset,
   );
 
   const adminUser = User(
@@ -183,7 +175,7 @@ void main() {
 
       final asetForwardRes = await mutationRepo.assetSectionForward(
         mutationId: mutId,
-        verifierName: 'Bambang Kabag',
+        verifierName: 'Bambang Bagian Aset',
         newPic: 'Ahmad Fauzi',
       );
       expect(asetForwardRes.isSuccess, isTrue);
@@ -238,7 +230,7 @@ void main() {
       await mutationRepo.operatorForward(mutationId: mutId, operatorName: 'Siti Operator');
 
       // 3. Bagian Aset forwards
-      await mutationRepo.assetSectionForward(mutationId: mutId, verifierName: 'Bambang Kabag');
+      await mutationRepo.assetSectionForward(mutationId: mutId, verifierName: 'Bambang Bagian Aset');
 
       // 4. Pemimpin Divisi approves
       await mutationRepo.divisionApprove(mutationId: mutId, divisionHeadName: 'Hendra Kadiv');
@@ -271,17 +263,17 @@ void main() {
         ),
         NotificationItem(
           id: 'n_2',
-          title: 'Persetujuan Kabag',
-          message: 'Mutasi mut_01 perlu persetujuan Kabag',
+          title: 'Verifikasi Bagian Aset',
+          message: 'Mutasi mut_01 perlu verifikasi Bagian Aset',
           type: NotificationType.action,
           createdAt: now,
-          targetRole: UserRole.kabagAset,
+          targetRole: UserRole.bagianAset,
           relatedMutationId: 'mut_01',
         ),
         NotificationItem(
           id: 'n_3',
-          title: 'Persetujuan Kadiv',
-          message: 'Mutasi mut_01 perlu persetujuan Kadiv',
+          title: 'Persetujuan Pemimpin Divisi',
+          message: 'Mutasi mut_01 perlu persetujuan Pemimpin Divisi',
           type: NotificationType.action,
           createdAt: now,
           targetRole: UserRole.kadiv,
@@ -289,17 +281,8 @@ void main() {
         ),
         NotificationItem(
           id: 'n_4',
-          title: 'Update Aset',
-          message: 'Mutasi mut_01 siap dieksekusi Staff',
-          type: NotificationType.info,
-          createdAt: now,
-          targetRole: UserRole.staffAset,
-          relatedMutationId: 'mut_01',
-        ),
-        NotificationItem(
-          id: 'n_5',
           title: 'Konfirmasi Mutasi',
-          message: 'Mutasi mut_01 selesai dieksekusi',
+          message: 'Mutasi mut_01 siap dikonfirmasi',
           type: NotificationType.action,
           createdAt: now,
           targetRole: UserRole.pemohon,
@@ -320,20 +303,15 @@ void main() {
       expect(oprNotifs.length, equals(1));
       expect(oprNotifs.first.targetRole, equals(UserRole.operator));
 
-      // Filter for Kabag
-      final kbgNotifs = notifs.where((n) => n.targetRole == kabagUser.role).toList();
-      expect(kbgNotifs.length, equals(1));
-      expect(kbgNotifs.first.targetRole, equals(UserRole.kabagAset));
+      // Filter for Bagian Aset
+      final bgNotifs = notifs.where((n) => n.targetRole == bagianAsetUser.role).toList();
+      expect(bgNotifs.length, equals(1));
+      expect(bgNotifs.first.targetRole, equals(UserRole.bagianAset));
 
       // Filter for Kadiv
       final kdvNotifs = notifs.where((n) => n.targetRole == kadivUser.role).toList();
       expect(kdvNotifs.length, equals(1));
       expect(kdvNotifs.first.targetRole, equals(UserRole.kadiv));
-
-      // Filter for Staff
-      final stfNotifs = notifs.where((n) => n.targetRole == staffUser.role).toList();
-      expect(stfNotifs.length, equals(1));
-      expect(stfNotifs.first.targetRole, equals(UserRole.staffAset));
     });
   });
 
@@ -431,13 +409,12 @@ void main() {
     });
   });
 
-  group('SMOKE TEST 14: Profile Screen for all 6 Roles', () {
+  group('SMOKE TEST 14: Profile Screen for all 5 Roles', () {
     final roles = [
       (pemohonUser, pemohonUser.role.label),
       (operatorUser, operatorUser.role.label),
-      (kabagUser, kabagUser.role.label),
+      (bagianAsetUser, bagianAsetUser.role.label),
       (kadivUser, kadivUser.role.label),
-      (staffUser, staffUser.role.label),
       (adminUser, adminUser.role.label),
     ];
 

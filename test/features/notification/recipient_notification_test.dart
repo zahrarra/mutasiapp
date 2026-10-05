@@ -3,10 +3,9 @@
 // Test suite wajib untuk sistem notifikasi berbasis penerima (Recipient Filtering):
 // 1. Login sebagai Pemohon → hanya notification Pemohon
 // 2. Login sebagai Operator → hanya notification Operator
-// 3. Login sebagai Kabag → hanya notification Kabag
+// 3. Login sebagai Bagian Aset → hanya notification Bagian Aset
 // 4. Login sebagai Kadiv → hanya notification Kadiv
-// 5. Login sebagai Staff Aset → hanya notification Staff Aset
-// 6. Login sebagai Admin → hanya notification Admin jika ada
+// 5. Login sebagai Admin → hanya notification Admin jika ada
 // 7. Notification user A tidak muncul pada user B dengan role yang sama
 // 8. Badge unread setiap user independen
 // 9. markAllAsRead tidak mengubah notification user lain
@@ -85,12 +84,12 @@ void main() {
     role: UserRole.operator,
   );
 
-  const kabagUser = User(
-    id: 'u_kbg_01',
-    username: 'kabag1',
-    name: 'Bambang Kabag',
-    email: 'kabag@mutasiku.id',
-    role: UserRole.kabagAset,
+  const bagianAsetUser = User(
+    id: 'u_ast_01',
+    username: 'bagian_aset',
+    name: 'Bambang Bagian Aset',
+    email: 'bagian_aset@mutasiku.id',
+    role: UserRole.bagianAset,
   );
 
   const kadivUser = User(
@@ -99,14 +98,6 @@ void main() {
     name: 'Hendra Kadiv',
     email: 'kadiv@mutasiku.id',
     role: UserRole.kadiv,
-  );
-
-  const staffUser = User(
-    id: 'u_stf_01',
-    username: 'staff1',
-    name: 'Agus Staff',
-    email: 'staff@mutasiku.id',
-    role: UserRole.staffAset,
   );
 
   const adminUser = User(
@@ -143,9 +134,8 @@ void main() {
           isTrue,
         );
         expect(n.targetRole != UserRole.operator, isTrue);
-        expect(n.targetRole != UserRole.kabagAset, isTrue);
+        expect(n.targetRole != UserRole.bagianAset, isTrue);
         expect(n.targetRole != UserRole.kadiv, isTrue);
-        expect(n.targetRole != UserRole.staffAset, isTrue);
         expect(n.targetRole != UserRole.admin, isTrue);
       }
     });
@@ -165,32 +155,7 @@ void main() {
       }
     });
 
-    test('3. Login sebagai Kabag → hanya notification Kabag / Bagian Aset', () {
-      final container = ProviderContainer(
-        overrides: [
-          authStateProvider.overrideWith((ref) => _FakeAuthNotifier(kabagUser)),
-        ],
-      );
-      addTearDown(container.dispose);
-
-      final notifs = container.read(roleNotificationsProvider);
-      expect(notifs.isNotEmpty, isTrue);
-      for (final n in notifs) {
-        expect(
-          n.targetRole == UserRole.kabagAset || n.targetRole == UserRole.bagianAset,
-          isTrue,
-        );
-      }
-    });
-
-    test('3b. Login sebagai Bagian Aset → hanya notification Bagian Aset / Kabag', () {
-      const bagianAsetUser = User(
-        id: 'u_ast_01',
-        username: 'bagian_aset',
-        name: 'Staff Bagian Aset',
-        email: 'aset@mutasiku.id',
-        role: UserRole.bagianAset,
-      );
+    test('3. Login sebagai Bagian Aset → hanya notification Bagian Aset', () {
       final container = ProviderContainer(
         overrides: [
           authStateProvider.overrideWith((ref) => _FakeAuthNotifier(bagianAsetUser)),
@@ -202,7 +167,7 @@ void main() {
       expect(notifs.isNotEmpty, isTrue);
       for (final n in notifs) {
         expect(
-          n.targetRole == UserRole.bagianAset || n.targetRole == UserRole.kabagAset,
+          n.targetRole == UserRole.bagianAset,
           isTrue,
         );
       }
@@ -223,22 +188,7 @@ void main() {
       }
     });
 
-    test('5. Login sebagai Staff Aset → hanya notification Staff Aset', () {
-      final container = ProviderContainer(
-        overrides: [
-          authStateProvider.overrideWith((ref) => _FakeAuthNotifier(staffUser)),
-        ],
-      );
-      addTearDown(container.dispose);
-
-      final notifs = container.read(roleNotificationsProvider);
-      expect(notifs.isNotEmpty, isTrue);
-      for (final n in notifs) {
-        expect(n.targetRole, equals(UserRole.staffAset));
-      }
-    });
-
-    test('6. Login sebagai Admin → hanya notification Admin jika ada', () {
+    test('5. Login sebagai Admin → hanya notification Admin jika ada', () {
       final container = ProviderContainer(
         overrides: [
           authStateProvider.overrideWith((ref) => _FakeAuthNotifier(adminUser)),

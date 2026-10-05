@@ -28,8 +28,8 @@ const List<FilterStatusItem> mutationFilterOptions = [
     label: 'Dikembalikan ke Pemohon',
   ),
   FilterStatusItem(
-    status: MutationStatus.waitingKabagApproval,
-    label: 'Menunggu Approval Kabag',
+    status: MutationStatus.waitingAssetVerification,
+    label: 'Menunggu Verifikasi Bagian Aset',
   ),
   FilterStatusItem(
     status: MutationStatus.approved,

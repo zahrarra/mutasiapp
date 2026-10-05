@@ -506,7 +506,6 @@ class MutationDetailScreen extends ConsumerWidget {
     switch (status) {
       case MutationStatus.submitted:
       case MutationStatus.waitingAssetVerification:
-      case MutationStatus.waitingKabagApproval:
       case MutationStatus.waitingKadivApproval:
       case MutationStatus.waitingDivisionHeadApproval:
         bg = const Color(0xFFF59E0B).withValues(alpha: 0.2);
@@ -1653,8 +1652,7 @@ class MutationDetailScreen extends ConsumerWidget {
       MutationStatus.returned =>
         mutation.verifiedBy ?? 'Siti Rahma',
       MutationStatus.waitingAssetVerification ||
-      MutationStatus.verified ||
-      MutationStatus.waitingKabagApproval =>
+      MutationStatus.verified =>
         mutation.approvedBy ?? 'Hendra Setiawan',
       MutationStatus.waitingKadivApproval ||
       MutationStatus.waitingDivisionHeadApproval =>
@@ -1676,13 +1674,12 @@ class MutationDetailScreen extends ConsumerWidget {
       MutationStatus.returned =>
         'Operator Aset & Logistik',
       MutationStatus.waitingAssetVerification ||
-      MutationStatus.verified ||
-      MutationStatus.waitingKabagApproval =>
+      MutationStatus.verified =>
         'Bagian Aset',
       MutationStatus.waitingKadivApproval ||
       MutationStatus.waitingDivisionHeadApproval =>
         'Pemimpin Divisi',
-      MutationStatus.approved => 'Staff Aset (Fisik & Inventaris)',
+      MutationStatus.approved => 'Bagian Aset',
       MutationStatus.pendingConfirmation ||
       MutationStatus.waitingConfirmation =>
         'Pemohon (Konfirmasi Akhir)',

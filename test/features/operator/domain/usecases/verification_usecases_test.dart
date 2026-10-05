@@ -94,7 +94,7 @@ class FakeMutationRepository implements MutationRepository {
       );
     }
     final updated = mutations[index].copyWith(
-      status: MutationStatus.waitingKabagApproval,
+      status: MutationStatus.waitingAssetVerification,
       verifiedBy: operatorName,
       verifiedAt: DateTime.now(),
       requiresKadivApproval: requiresKadivApproval,
@@ -125,23 +125,6 @@ class FakeMutationRepository implements MutationRepository {
     return Result.success(updated);
   }
 
-  @override
-  Future<Result<Mutation>> approveMutationKabag({
-    required String mutationId,
-    required String kabagName,
-    required bool requiresKadivApproval,
-  }) async {
-    throw UnimplementedError();
-  }
-
-  @override
-  Future<Result<Mutation>> rejectMutationKabag({
-    required String mutationId,
-    required String reason,
-    required String kabagName,
-  }) async {
-    throw UnimplementedError();
-  }
 
   @override
   Future<Result<Mutation>> approveMutationKadiv({
@@ -168,15 +151,6 @@ class FakeMutationRepository implements MutationRepository {
     throw UnimplementedError();
   }
 
-  @override
-  Future<Result<Mutation>> processStaffAssetUpdate({
-    required String mutationId,
-    required String newLocation,
-    required String newPic,
-    required String staffName,
-  }) async {
-    throw UnimplementedError();
-  }
 }
 
 void main() {
@@ -225,7 +199,7 @@ void main() {
 
       expect(result.isSuccess, true);
       final updated = result.dataOrNull!;
-      expect(updated.status, MutationStatus.waitingKabagApproval);
+      expect(updated.status, MutationStatus.waitingAssetVerification);
       expect(updated.verifiedBy, 'Operator Joko');
       expect(updated.verifiedAt, isNotNull);
     });
@@ -328,7 +302,7 @@ void main() {
       final fakeRepo = FakeMutationRepository([
         createDummyMutation(
           id: 'mut_1',
-          status: MutationStatus.waitingKabagApproval,
+          status: MutationStatus.waitingAssetVerification,
         ),
       ]);
       final useCase = ReturnMutationUseCase(repository: fakeRepo);
@@ -351,7 +325,7 @@ void main() {
         createDummyMutation(id: 'mut_2', status: MutationStatus.returned),
         createDummyMutation(
           id: 'mut_3',
-          status: MutationStatus.waitingKabagApproval,
+          status: MutationStatus.waitingAssetVerification,
         ),
         createDummyMutation(id: 'mut_4', status: MutationStatus.submitted),
       ]);

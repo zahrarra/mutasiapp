@@ -1135,7 +1135,7 @@ class _PemohonConfirmationScreenState
                 ref.invalidate(mutationDetailProvider(widget.mutationId));
                 // PENTING: pemohon TIDAK diarahkan ke halaman Edit Pengajuan.
                 // Yang perlu diperbaiki adalah hasil update data aset oleh
-                // Staff Aset (SN/kondisi/lokasi fisik), bukan data pengajuan
+                // Bagian Aset (SN/kondisi/lokasi fisik), bukan data pengajuan
                 // (lokasi tujuan/PIC/alasan mutasi) milik pemohon. Form Edit
                 // Pengajuan bukan tujuan yang tepat untuk kasus ini, jadi
                 // cukup tetap di halaman ini — statusnya sudah ter-refresh

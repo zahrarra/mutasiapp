@@ -14,7 +14,6 @@ import 'package:google_fonts/google_fonts.dart';
 
 import '../../../../app/router/route_names.dart';
 import '../../../../app/theme/app_colors.dart';
-import '../../../../app/theme/app_spacing.dart';
 import '../../../../core/errors/result.dart';
 import '../../../../core/widgets/app_feedback.dart';
 import '../../../../core/widgets/custom_floating_nav_bar.dart';
@@ -124,19 +123,10 @@ class _AdminUsersScreenState extends ConsumerState<AdminUsersScreen> {
           'Teruskan ke Pemimpin Divisi',
           'Tindak Lanjut Laporan Tidak Sesuai',
         ];
-      case UserRole.kabagAset:
-        return [
-          'Verifikasi Bagian Aset (Legacy)',
-          'Teruskan ke Pemimpin Divisi',
-        ];
       case UserRole.kadiv:
         return [
           'Approval Final Semua Pengajuan Aset',
           'Tolak Pengajuan dengan Alasan',
-        ];
-      case UserRole.staffAset:
-        return [
-          'Pembaruan Otomatis oleh Server (Legacy)',
         ];
       case UserRole.admin:
         return [
@@ -258,7 +248,7 @@ class _AdminUsersScreenState extends ConsumerState<AdminUsersScreen> {
         ),
         boxShadow: [
           BoxShadow(
-            color: const Color(0xFF00273A).withOpacity(0.18),
+            color: const Color(0xFF00273A).withValues(alpha: 0.18),
             blurRadius: 14,
             offset: const Offset(0, 4),
           ),
@@ -275,7 +265,7 @@ class _AdminUsersScreenState extends ConsumerState<AdminUsersScreen> {
               height: 86,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                color: const Color(0xFF5EEAD4).withOpacity(0.20),
+                color: const Color(0xFF5EEAD4).withValues(alpha: 0.20),
               ),
             ),
           ),
@@ -287,7 +277,7 @@ class _AdminUsersScreenState extends ConsumerState<AdminUsersScreen> {
               height: 96,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                color: const Color(0xFF22D3EE).withOpacity(0.20),
+                color: const Color(0xFF22D3EE).withValues(alpha: 0.20),
               ),
             ),
           ),
@@ -295,10 +285,10 @@ class _AdminUsersScreenState extends ConsumerState<AdminUsersScreen> {
             width: 52,
             height: 52,
             decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.12),
+              color: Colors.white.withValues(alpha: 0.12),
               shape: BoxShape.circle,
               border: Border.all(
-                color: Colors.white.withOpacity(0.25),
+                color: Colors.white.withValues(alpha: 0.25),
                 width: 1.2,
               ),
             ),
@@ -329,7 +319,7 @@ class _AdminUsersScreenState extends ConsumerState<AdminUsersScreen> {
         ),
         boxShadow: [
           BoxShadow(
-            color: const Color(0xFF00273A).withOpacity(0.15),
+            color: const Color(0xFF00273A).withValues(alpha: 0.15),
             blurRadius: 12,
             offset: const Offset(0, 4),
           ),
@@ -346,7 +336,7 @@ class _AdminUsersScreenState extends ConsumerState<AdminUsersScreen> {
                   center: Alignment.center,
                   radius: 0.85,
                   colors: [
-                    Colors.white.withOpacity(0.18),
+                    Colors.white.withValues(alpha: 0.18),
                     Colors.transparent,
                   ],
                 ),
@@ -357,10 +347,10 @@ class _AdminUsersScreenState extends ConsumerState<AdminUsersScreen> {
             width: 50,
             height: 50,
             decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.08),
+              color: Colors.white.withValues(alpha: 0.08),
               shape: BoxShape.circle,
               border: Border.all(
-                color: Colors.white.withOpacity(0.18),
+                color: Colors.white.withValues(alpha: 0.18),
                 width: 1.2,
               ),
             ),
@@ -389,7 +379,7 @@ class _AdminUsersScreenState extends ConsumerState<AdminUsersScreen> {
 
     showDialog(
       context: context,
-      barrierColor: Colors.black.withOpacity(0.48),
+      barrierColor: Colors.black.withValues(alpha: 0.48),
       builder: (dialogCtx) => StatefulBuilder(
         builder: (ctx, setDialogState) {
           final screenWidth = MediaQuery.of(dialogCtx).size.width;
@@ -410,7 +400,7 @@ class _AdminUsersScreenState extends ConsumerState<AdminUsersScreen> {
                   ),
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.black.withOpacity(0.12),
+                      color: Colors.black.withValues(alpha: 0.12),
                       blurRadius: 32,
                       offset: const Offset(0, 12),
                     ),
@@ -524,7 +514,7 @@ class _AdminUsersScreenState extends ConsumerState<AdminUsersScreen> {
                               children: [
                                 _buildStitchFieldLabel('Divisi / Unit Kerja'),
                                 DropdownButtonFormField<String>(
-                                  value: selectedDivision,
+                                  initialValue: selectedDivision,
                                   isExpanded: true,
                                   style: GoogleFonts.inter(
                                     fontSize: 13,
@@ -573,7 +563,7 @@ class _AdminUsersScreenState extends ConsumerState<AdminUsersScreen> {
                               children: [
                                 _buildStitchFieldLabel('Role Akun'),
                                 DropdownButtonFormField<UserRole>(
-                                  value: selectedRole,
+                                  initialValue: selectedRole,
                                   isExpanded: true,
                                   style: GoogleFonts.inter(
                                     fontSize: 13,
@@ -831,7 +821,7 @@ class _AdminUsersScreenState extends ConsumerState<AdminUsersScreen> {
 
     showDialog(
       context: context,
-      barrierColor: Colors.black.withOpacity(0.48),
+      barrierColor: Colors.black.withValues(alpha: 0.48),
       builder: (dialogCtx) => StatefulBuilder(
         builder: (ctx, setDialogState) {
           final screenWidth = MediaQuery.of(dialogCtx).size.width;
@@ -852,7 +842,7 @@ class _AdminUsersScreenState extends ConsumerState<AdminUsersScreen> {
                   ),
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.black.withOpacity(0.12),
+                      color: Colors.black.withValues(alpha: 0.12),
                       blurRadius: 32,
                       offset: const Offset(0, 12),
                     ),
@@ -954,7 +944,7 @@ class _AdminUsersScreenState extends ConsumerState<AdminUsersScreen> {
                               children: [
                                 _buildStitchFieldLabel('Role Akun'),
                                 DropdownButtonFormField<UserRole>(
-                                  value: selectedRole,
+                                  initialValue: selectedRole,
                                   isExpanded: true,
                                   style: GoogleFonts.inter(
                                     fontSize: 13,
@@ -1032,7 +1022,7 @@ class _AdminUsersScreenState extends ConsumerState<AdminUsersScreen> {
                               children: [
                                 _buildStitchFieldLabel('Status Akun'),
                                 DropdownButtonFormField<String>(
-                                  value: selectedStatus,
+                                  initialValue: selectedStatus,
                                   isExpanded: true,
                                   style: GoogleFonts.inter(
                                     fontSize: 13,
@@ -1923,14 +1913,6 @@ class _AdminUsersScreenState extends ConsumerState<AdminUsersScreen> {
                   avatarInitial: 'KD',
                   onTap: () =>
                       setState(() => _selectedRoleFilter = UserRole.kadiv),
-                ),
-                const SizedBox(width: 12),
-                _buildRoleCircleItem(
-                  label: 'Staff Aset',
-                  isSelected: _selectedRoleFilter == UserRole.staffAset,
-                  avatarInitial: 'ST',
-                  onTap: () =>
-                      setState(() => _selectedRoleFilter = UserRole.staffAset),
                 ),
                 const SizedBox(width: 12),
                 _buildRoleCircleItem(

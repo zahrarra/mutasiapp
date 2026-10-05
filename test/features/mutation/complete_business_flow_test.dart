@@ -1,10 +1,10 @@
 // test/features/mutation/complete_business_flow_test.dart
 //
 // Comprehensive Business Flow & Regression Test for MutasiKu:
-// 1. Tanpa Kadiv: Pemohon -> Operator -> Kabag -> Staff Aset -> Pemohon -> completed
-// 2. Dengan Kadiv: Pemohon -> Operator (threshold) -> Kabag -> Kadiv -> Staff Aset -> Pemohon -> completed
+// 1. Flow Standar: Pemohon -> Operator -> Bagian Aset -> Pemimpin Divisi -> Pemohon -> completed
+// 2. High Value Asset: Pemohon -> Operator (threshold) -> Bagian Aset -> Pemimpin Divisi -> Pemohon -> completed
 // 3. Returned by Operator
-// 4. Rejected by Kabag
+// 4. Returned by Bagian Aset
 // 5. Rejected by Kadiv
 // 6. Registered vs Unregistered Asset
 // 7. Duplicate active mutation prevention
@@ -20,7 +20,7 @@ import 'package:mutasiku/features/asset/presentation/providers/asset_provider.da
 import 'package:mutasiku/features/auth/domain/entities/user.dart';
 import 'package:mutasiku/features/auth/domain/entities/user_role.dart';
 import 'package:mutasiku/features/auth/presentation/providers/auth_provider.dart';
-import 'package:mutasiku/features/kabag/presentation/providers/kabag_approval_provider.dart';
+import 'package:mutasiku/features/bagian_aset/presentation/providers/bagian_aset_verification_provider.dart';
 import 'package:mutasiku/features/kadiv/presentation/providers/kadiv_approval_provider.dart';
 import 'package:mutasiku/features/mutation/data/repositories/mutation_repository_impl.dart';
 import 'package:mutasiku/features/mutation/domain/entities/mutation.dart';
@@ -57,12 +57,12 @@ void main() {
     role: UserRole.operator,
   );
 
-  const kabagUser = User(
-    id: 'usr_kabag',
-    username: 'kabag1',
-    name: 'Hendra Kabag',
-    email: 'kabag@mutasiku.id',
-    role: UserRole.kabagAset,
+  const bagianAsetUser = User(
+    id: 'usr_bagian_aset',
+    username: 'bagian_aset1',
+    name: 'Hendra Bagian Aset',
+    email: 'bagian_aset@mutasiku.id',
+    role: UserRole.bagianAset,
   );
 
   const kadivUser = User(
@@ -83,7 +83,7 @@ void main() {
     );
   }
 
-  test('Flow 1: End-to-End TANPA Kadiv (Pemohon -> Operator -> Kabag -> Staff -> Pemohon -> completed)', () async {
+  test('Flow 1: End-to-End (Pemohon -> Operator -> Bagian Aset -> Pemimpin Divisi -> Pemohon -> completed)', () async {
     // 1. Initial State: Check responsible assets of Pemohon
     final pemohonContainer = createContainer(currentUser: pemohonUser);
     addTearDown(pemohonContainer.dispose);
@@ -115,7 +115,7 @@ void main() {
     final postSubmitResponsible = await pemohonContainer.read(userResponsibleAssetsProvider.future);
     expect(postSubmitResponsible.length, equals(initialCount));
 
-    // 3. Operator views and verifies with requiresKadivApproval = false
+    // 3. Operator views and verifies with requiresKadivApproval = true
     final operatorContainer = createContainer(currentUser: operatorUser);
     addTearDown(operatorContainer.dispose);
 
@@ -132,17 +132,17 @@ void main() {
     expect(verifiedMutation.status.isWaitingAssetVerification, isTrue);
 
     // 4. Bagian Aset reviews & forwards to Pemimpin Divisi
-    final kabagContainer = createContainer(currentUser: kabagUser);
-    addTearDown(kabagContainer.dispose);
+    final bagianAsetContainer = createContainer(currentUser: bagianAsetUser);
+    addTearDown(bagianAsetContainer.dispose);
 
-    final kabagApprovals = await kabagContainer.read(kabagAllMutationsProvider.future);
-    expect(kabagApprovals.any((m) => m.id == mutation.id && m.status.isWaitingAssetVerification), isTrue);
+    final bagianAsetApprovals = await bagianAsetContainer.read(bagianAsetAllMutationsProvider.future);
+    expect(bagianAsetApprovals.any((m) => m.id == mutation.id && m.status.isWaitingAssetVerification), isTrue);
 
-    final kabagApproveSuccess = await kabagContainer.read(kabagApprovalActionProvider.notifier).approve(
+    final bagianAsetApproveSuccess = await bagianAsetContainer.read(bagianAsetVerificationActionProvider.notifier).approve(
       mutationId: mutation.id,
       requiresKadivApproval: true,
     );
-    expect(kabagApproveSuccess, isTrue);
+    expect(bagianAsetApproveSuccess, isTrue);
 
     final forwardedMutation = (await mutationRepo.getMutationById(mutation.id) as Success<Mutation>).data;
     expect(forwardedMutation.status.isWaitingDivisionApproval, isTrue);
@@ -176,7 +176,7 @@ void main() {
     expect(finalResponsible.length, equals(initialCount - 1));
   });
 
-  test('Flow 2: End-to-End DENGAN Kadiv (Pemohon -> Operator -> Kabag -> Kadiv -> Staff -> Pemohon -> completed)', () async {
+  test('Flow 2: End-to-End dengan Verifikasi Bagian Aset & Pemimpin Divisi', () async {
     // 1. Submit high-value asset: ast_5 (Rp 180jt >= threshold 50jt)
     final submitResult = await mutationRepo.submitMutation(const SubmitMutationParams(
       applicantId: 'usr_pemohon',
@@ -208,19 +208,19 @@ void main() {
     );
     expect(verifySuccess, isTrue);
 
-    // 3. Kabag approves with requiresKadivApproval = true -> status becomes waitingKadivApproval
-    final kabagContainer = createContainer(currentUser: kabagUser);
-    addTearDown(kabagContainer.dispose);
+    // 3. Bagian Aset forwards with requiresKadivApproval = true -> status becomes waitingDivisionApproval
+    final bagianAsetContainer = createContainer(currentUser: bagianAsetUser);
+    addTearDown(bagianAsetContainer.dispose);
 
-    final kabagApproveSuccess = await kabagContainer.read(kabagApprovalActionProvider.notifier).approve(
+    final bagianAsetApproveSuccess = await bagianAsetContainer.read(bagianAsetVerificationActionProvider.notifier).approve(
       mutationId: mutation.id,
       requiresKadivApproval: true,
     );
-    expect(kabagApproveSuccess, isTrue);
+    expect(bagianAsetApproveSuccess, isTrue);
 
-    final kabagApprovedMutation = (await mutationRepo.getMutationById(mutation.id) as Success<Mutation>).data;
-    expect(kabagApprovedMutation.status.isWaitingDivisionApproval, isTrue);
-    expect(kabagApprovedMutation.requiresKadivApproval, isTrue);
+    final bagianAsetApprovedMutation = (await mutationRepo.getMutationById(mutation.id) as Success<Mutation>).data;
+    expect(bagianAsetApprovedMutation.status.isWaitingDivisionApproval, isTrue);
+    expect(bagianAsetApprovedMutation.requiresKadivApproval, isTrue);
 
     // 4. Kadiv views in 'Menunggu Approval'
     final kadivContainer = createContainer(currentUser: kadivUser);
@@ -280,7 +280,7 @@ void main() {
     expect(returnedMutation.returnReason, equals('Dokumen BA serah terima belum dilampirkan.'));
   });
 
-  test('Flow 4: Kabag Rejects Mutation with Mandatory Reason', () async {
+  test('Flow 4: Bagian Aset Returns Mutation with Mandatory Reason', () async {
     final submitResult = await mutationRepo.submitMutation(const SubmitMutationParams(
       applicantId: 'usr_pemohon',
       applicantName: 'Budi Santoso',
@@ -300,10 +300,10 @@ void main() {
       requiresKadivApproval: false,
     );
 
-    final kabagContainer = createContainer(currentUser: kabagUser);
-    addTearDown(kabagContainer.dispose);
+    final bagianAsetContainer = createContainer(currentUser: bagianAsetUser);
+    addTearDown(bagianAsetContainer.dispose);
 
-    final rejectSuccess = await kabagContainer.read(kabagApprovalActionProvider.notifier).reject(
+    final rejectSuccess = await bagianAsetContainer.read(bagianAsetVerificationActionProvider.notifier).reject(
       mutationId: mutation.id,
       reason: 'Anggaran pemindahan belum disetujui.',
     );
@@ -334,9 +334,9 @@ void main() {
       requiresKadivApproval: true,
     );
 
-    final kabagContainer = createContainer(currentUser: kabagUser);
-    addTearDown(kabagContainer.dispose);
-    await kabagContainer.read(kabagApprovalActionProvider.notifier).approve(
+    final bagianAsetContainer = createContainer(currentUser: bagianAsetUser);
+    addTearDown(bagianAsetContainer.dispose);
+    await bagianAsetContainer.read(bagianAsetVerificationActionProvider.notifier).approve(
       mutationId: mutation.id,
       requiresKadivApproval: true,
     );

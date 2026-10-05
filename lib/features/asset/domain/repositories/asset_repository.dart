@@ -39,7 +39,7 @@ abstract class AssetRepository {
   /// Menghapus kategori aset jika tidak digunakan oleh aset terdaftar.
   Future<Result<void>> deleteCategory(String id);
 
-  /// Update lokasi dan PIC aset oleh Staff Aset serta catat riwayat perubahan.
+  /// Update lokasi dan PIC aset serta catat riwayat perubahan.
   Future<Result<Asset>> updateAssetLocationAndPic({
     required String assetId,
     required String newLocation,

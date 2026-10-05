@@ -153,7 +153,7 @@ void main() {
   });
 
   testWidgets(
-      'KadivApprovalDetailScreen displays Kabag approval result, timeline, and actions',
+      'KadivApprovalDetailScreen displays Bagian Aset verification result, timeline, and actions',
       (tester) async {
     await tester.pumpWidget(
       createTestWidget(
@@ -172,7 +172,7 @@ void main() {
     // Verifikasi HASIL VERIFIKASI BAGIAN ASET ditampilkan (Scope PRD & Task)
     expect(find.text('Hasil Verifikasi Bagian Aset'), findsOneWidget);
     expect(find.text('Diverifikasi Oleh: '), findsOneWidget);
-    expect(find.text('H. M. Yusuf (Kabag Aset)'), findsOneWidget);
+    expect(find.text('H. M. Yusuf (Bagian Aset)'), findsOneWidget);
 
     // Verifikasi Aset & Alasan
     expect(find.text('Server Rack Enterprise Dell PowerEdge'), findsOneWidget);

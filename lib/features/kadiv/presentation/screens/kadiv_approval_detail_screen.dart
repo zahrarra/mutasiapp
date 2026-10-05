@@ -16,6 +16,7 @@ import '../../../../core/widgets/app_feedback.dart';
 import '../../../../core/widgets/document_preview_dialog.dart';
 import '../../../auth/presentation/providers/auth_provider.dart';
 import '../providers/kadiv_approval_provider.dart';
+import '../../../../core/widgets/mutasiku_page_header.dart';
 
 class KadivApprovalDetailScreen extends ConsumerWidget {
   final String mutationId;
@@ -31,36 +32,45 @@ class KadivApprovalDetailScreen extends ConsumerWidget {
     final actionState = ref.watch(kadivApprovalActionProvider);
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Detail Approval Kadiv'),
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
-          onPressed: () => _safePop(context),
-        ),
-      ),
-      body: asyncMutation.when(
-        data: (mutation) => _buildBody(context, ref, mutation, actionState),
-        loading: () => const Center(child: CircularProgressIndicator()),
-        error: (err, _) => Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              const Icon(Icons.error_outline, size: 48, color: AppColors.error),
-              const SizedBox(height: AppSpacing.md),
-              Text(
-                'Gagal memuat detail approval: $err',
-                textAlign: TextAlign.center,
-                style: const TextStyle(color: AppColors.error),
-              ),
-              const SizedBox(height: AppSpacing.md),
-              ElevatedButton(
-                onPressed: () =>
-                    ref.invalidate(mutationDetailProvider(mutationId)),
-                child: const Text('Coba Lagi'),
-              ),
-            ],
+      backgroundColor: const Color(0xFFF6F8FA),
+      body: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SafeArea(
+            bottom: false,
+            child: MutasiKuPageHeader(
+              title: 'Detail Approval Kadiv',
+              subtitle: 'Persetujuan pengajuan mutasi oleh Kepala Divisi / Pemimpin Divisi',
+              onBack: () => _safePop(context),
+            ),
           ),
-        ),
+          Expanded(
+            child: asyncMutation.when(
+              data: (mutation) => _buildBody(context, ref, mutation, actionState),
+              loading: () => const Center(child: CircularProgressIndicator()),
+              error: (err, _) => Center(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const Icon(Icons.error_outline, size: 48, color: AppColors.error),
+                    const SizedBox(height: AppSpacing.md),
+                    Text(
+                      'Gagal memuat detail approval: $err',
+                      textAlign: TextAlign.center,
+                      style: const TextStyle(color: AppColors.error),
+                    ),
+                    const SizedBox(height: AppSpacing.md),
+                    ElevatedButton(
+                      onPressed: () =>
+                          ref.invalidate(mutationDetailProvider(mutationId)),
+                      child: const Text('Coba Lagi'),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -186,8 +196,8 @@ class KadivApprovalDetailScreen extends ConsumerWidget {
                   const SizedBox(height: AppSpacing.md),
                 ],
 
-                // ─── TAMPILAN HASIL APPROVAL KABAG (Mandatory Task Scope) ───
-                _buildKabagApprovalResultCard(mutation),
+                // ─── TAMPILAN HASIL VERIFIKASI BAGIAN ASET (Mandatory Task Scope) ───
+                _buildBagianAsetVerificationResultCard(mutation),
                 const SizedBox(height: AppSpacing.md),
 
                 // Detail Fields Card
@@ -280,12 +290,12 @@ class KadivApprovalDetailScreen extends ConsumerWidget {
                     subtitle: mutation.kadivApprovedBy != null ||
                             (mutation.status == MutationStatus.approved &&
                                 mutation.kadivApprovedAt != null)
-                        ? 'Disetujui oleh ${mutation.kadivApprovedBy ?? "Kepala Divisi"}'
+                        ? 'Disetujui oleh ${mutation.kadivApprovedBy ?? "Pemimpin Divisi"}'
                         : mutation.status == MutationStatus.rejected &&
                                 mutation.kadivRejectedBy != null
                             ? 'Ditolak oleh ${mutation.kadivRejectedBy}'
                             : isWaitingApproval
-                                ? 'Menunggu keputusan Kepala Divisi'
+                                ? 'Menunggu keputusan Pemimpin Divisi'
                                 : 'Selesai',
                     isCompleted: mutation.status == MutationStatus.approved ||
                         mutation.status == MutationStatus.rejected,
@@ -379,7 +389,7 @@ class KadivApprovalDetailScreen extends ConsumerWidget {
   }
 
   /// Card Khusus Menampilkan Hasil Verifikasi Bagian Aset
-  Widget _buildKabagApprovalResultCard(Mutation mutation) {
+  Widget _buildBagianAsetVerificationResultCard(Mutation mutation) {
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(AppSpacing.md),
@@ -744,7 +754,7 @@ class KadivApprovalDetailScreen extends ConsumerWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               const Text(
-                'Apakah Anda yakin ingin memberikan persetujuan final Kepala Divisi untuk pengajuan mutasi ini?',
+                'Apakah Anda yakin ingin memberikan persetujuan final Pemimpin Divisi untuk pengajuan mutasi ini?',
                 style: TextStyle(fontSize: 13),
               ),
               const SizedBox(height: AppSpacing.md),
@@ -810,7 +820,7 @@ class KadivApprovalDetailScreen extends ConsumerWidget {
                     ref.invalidate(mutationDetailProvider(mutation.id));
                     AppFeedback.showSuccess(
                       context,
-                      'Pengajuan mutasi berhasil disetujui oleh Kadiv.',
+                      'Pengajuan mutasi berhasil disetujui oleh Pemimpin Divisi.',
                     );
                     _safePop(context);
                   } else {
@@ -850,3 +860,7 @@ class KadivApprovalDetailScreen extends ConsumerWidget {
     return '${dt.day.toString().padLeft(2, '0')}/${dt.month.toString().padLeft(2, '0')}/${dt.year} ${dt.hour.toString().padLeft(2, '0')}:${dt.minute.toString().padLeft(2, '0')}';
   }
 }
+
+// ─── Pemimpin Divisi Detail Screen Alias ──────────────────────────────────────
+typedef PemimpinDivisiApprovalDetailScreen = KadivApprovalDetailScreen;
+

@@ -3,7 +3,7 @@
 // Comprehensive test suite for Pemohon Confirmation Flow:
 // 1. Pemohon Queue & Ownership
 // 2. Status Guard (only pendingConfirmation can be confirmed)
-// 3. NO Double Asset Update (location & PIC preserved from Staff Aset)
+// 3. Asset Update on Confirmation (location & PIC updated on Sesuai)
 // 4. Registered Asset vs Unregistered Asset handling
 // 5. Successful Confirmation & Provider Invalidation
 // 6. Failed Confirmation & Error Handling
@@ -86,34 +86,31 @@ void main() {
       expect(budiSubmitRes.isSuccess, isTrue);
       final budiMutationId = budiSubmitRes.dataOrNull!.id;
 
-      // Operator verify & Kabag approve both
-      await mutationRepository.verifyMutation(mutationId: andiMutationId, operatorName: 'Operator');
-      await mutationRepository.approveMutationKabag(
+      // Operator forward, Bagian Aset forward, Pemimpin Divisi approve Andi's mutation
+      await mutationRepository.operatorForward(mutationId: andiMutationId, operatorName: 'Operator');
+      await mutationRepository.assetSectionForward(
         mutationId: andiMutationId,
-        kabagName: 'Kabag Aset',
-        requiresKadivApproval: false,
-      );
-
-      await mutationRepository.verifyMutation(mutationId: budiMutationId, operatorName: 'Operator');
-      await mutationRepository.approveMutationKabag(
-        mutationId: budiMutationId,
-        kabagName: 'Kabag Aset',
-        requiresKadivApproval: false,
-      );
-
-      // Staff updates Andi's asset -> pendingConfirmation
-      await mutationRepository.processStaffAssetUpdate(
-        mutationId: andiMutationId,
-        newLocation: 'Lantai 5 — Keuangan',
+        verifierName: 'Bagian Aset',
         newPic: 'Andi Pemohon',
-        staffName: 'Staff Hendra',
+      );
+      await mutationRepository.divisionApprove(
+        mutationId: andiMutationId,
+        divisionHeadName: 'Pemimpin Divisi',
+      );
+
+      // Budi's mutation only reaches Bagian Aset
+      await mutationRepository.operatorForward(mutationId: budiMutationId, operatorName: 'Operator');
+      await mutationRepository.assetSectionForward(
+        mutationId: budiMutationId,
+        verifierName: 'Bagian Aset',
+        newPic: 'Budi Lain',
       );
 
       // Verify Andi's queue contains his pending confirmation
       final andiListRes = await mutationRepository.getMutationsByUser(pemohonUser.id);
       expect(andiListRes.isSuccess, isTrue);
       final andiPending = andiListRes.dataOrNull!
-          .where((m) => m.status == MutationStatus.pendingConfirmation)
+          .where((m) => m.status.isWaitingConfirmation)
           .toList();
       expect(andiPending.length, 1);
       expect(andiPending.first.id, andiMutationId);
@@ -123,7 +120,7 @@ void main() {
       final budiListRes = await mutationRepository.getMutationsByUser(otherPemohonUser.id);
       expect(budiListRes.isSuccess, isTrue);
       final budiPending = budiListRes.dataOrNull!
-          .where((m) => m.status == MutationStatus.pendingConfirmation)
+          .where((m) => m.status.isWaitingConfirmation)
           .toList();
       expect(budiPending, isEmpty);
     });
@@ -155,8 +152,8 @@ void main() {
       expect(confirmRes.isFailure, isTrue);
       expect(confirmRes.failureOrNull, isA<ValidationFailure>());
 
-      // Status: waitingKabagApproval -> Try confirm -> MUST fail
-      await mutationRepository.verifyMutation(mutationId: mutationId, operatorName: 'Operator');
+      // Status: waitingAssetVerification -> Try confirm -> MUST fail
+      await mutationRepository.operatorForward(mutationId: mutationId, operatorName: 'Operator');
       confirmRes = await confirmMutationUseCase(
         ConfirmMutationParams(
           mutationId: mutationId,
@@ -166,27 +163,25 @@ void main() {
       );
       expect(confirmRes.isFailure, isTrue);
 
-      // Status: approved (approvedWaitingAssetUpdate) -> Try confirm -> MUST fail
-      await mutationRepository.approveMutationKabag(
+      // Status: waitingDivisionHeadApproval -> Try confirm -> MUST fail
+      await mutationRepository.assetSectionForward(
         mutationId: mutationId,
-        kabagName: 'Kabag Aset',
-        requiresKadivApproval: false,
-      );
-      confirmRes = await confirmMutationUseCase(
-        ConfirmMutationParams(
-          mutationId: mutationId,
-          confirmedBy: pemohonUser.name,
-          userId: pemohonUser.id,
-        ),
-      );
-      expect(confirmRes.isFailure, isTrue);
-
-      // Staff asset update moves status to pendingConfirmation
-      await mutationRepository.processStaffAssetUpdate(
-        mutationId: mutationId,
-        newLocation: 'Lantai 5 — Keuangan',
+        verifierName: 'Bagian Aset',
         newPic: 'Andi Pemohon',
-        staffName: 'Staff Hendra',
+      );
+      confirmRes = await confirmMutationUseCase(
+        ConfirmMutationParams(
+          mutationId: mutationId,
+          confirmedBy: pemohonUser.name,
+          userId: pemohonUser.id,
+        ),
+      );
+      expect(confirmRes.isFailure, isTrue);
+
+      // Division approval moves status to pendingConfirmation
+      await mutationRepository.divisionApprove(
+        mutationId: mutationId,
+        divisionHeadName: 'Pemimpin Divisi',
       );
 
       // Now status is pendingConfirmation -> Confirmation succeeds!
@@ -228,17 +223,15 @@ void main() {
       );
       final mutationId = submitRes.dataOrNull!.id;
 
-      await mutationRepository.verifyMutation(mutationId: mutationId, operatorName: 'Operator');
-      await mutationRepository.approveMutationKabag(
+      await mutationRepository.operatorForward(mutationId: mutationId, operatorName: 'Operator');
+      await mutationRepository.assetSectionForward(
         mutationId: mutationId,
-        kabagName: 'Kabag Aset',
-        requiresKadivApproval: false,
-      );
-      await mutationRepository.processStaffAssetUpdate(
-        mutationId: mutationId,
-        newLocation: 'Lantai 5 — Keuangan',
+        verifierName: 'Bagian Aset',
         newPic: 'Andi Pemohon',
-        staffName: 'Staff Hendra',
+      );
+      await mutationRepository.divisionApprove(
+        mutationId: mutationId,
+        divisionHeadName: 'Pemimpin Divisi',
       );
 
       // Budi tries to confirm Andi's mutation -> ForbiddenFailure
@@ -252,12 +245,12 @@ void main() {
       expect(confirmRes.isFailure, isTrue);
       expect(confirmRes.failureOrNull, isA<ForbiddenFailure>());
 
-      // Mutation remains in pendingConfirmation
+      // Mutation remains in waitingConfirmation
       final checkRes = await mutationRepository.getMutationById(mutationId);
-      expect(checkRes.dataOrNull!.status, MutationStatus.pendingConfirmation);
+      expect(checkRes.dataOrNull!.status, MutationStatus.waitingConfirmation);
     });
 
-    test('4. NO Double Asset Update: Staff Aset updates master asset; Pemohon confirms without overwrite', () async {
+    test('4. Asset Update on Confirmation: Pemohon confirms "Sesuai" updates master asset and history', () async {
       // 1. Initial master asset state
       final initialAssetRes = await assetRepository.getAssetById('ast_1');
       expect(initialAssetRes.isSuccess, isTrue);
@@ -283,48 +276,36 @@ void main() {
       final mutationId = submitRes.dataOrNull!.id;
       final ticketNumber = submitRes.dataOrNull!.ticketNumber;
 
-      await mutationRepository.verifyMutation(mutationId: mutationId, operatorName: 'Operator');
-      await mutationRepository.approveMutationKabag(
+      await mutationRepository.operatorForward(mutationId: mutationId, operatorName: 'Operator');
+      await mutationRepository.assetSectionForward(
         mutationId: mutationId,
-        kabagName: 'Kabag Aset',
-        requiresKadivApproval: false,
-      );
-
-      // 3. Staff Aset updates master asset (location & PIC)
-      final staffUpdateRes = await mutationRepository.processStaffAssetUpdate(
-        mutationId: mutationId,
-        newLocation: 'Lantai 5 — Ruang Keuangan',
+        verifierName: 'Bagian Aset',
         newPic: 'Siti Rahma (Finance)',
-        staffName: 'Staff Hendra',
       );
-      expect(staffUpdateRes.isSuccess, isTrue);
+      await mutationRepository.divisionApprove(
+        mutationId: mutationId,
+        divisionHeadName: 'Pemimpin Divisi',
+      );
 
-      // Master asset was updated by Staff Aset
-      final afterStaffAssetRes = await assetRepository.getAssetById('ast_1');
-      final afterStaffAsset = afterStaffAssetRes.dataOrNull!;
-      expect(afterStaffAsset.location, 'Lantai 5 — Ruang Keuangan');
-      expect(afterStaffAsset.pic, 'Siti Rahma (Finance)');
-      expect(afterStaffAsset.history.length, initialHistoryCount + 1);
-
-      // 4. Pemohon confirms
+      // 3. Pemohon confirms 'Sesuai' -> auto-updates master asset
       final confirmRes = await confirmMutationUseCase(
         ConfirmMutationParams(
           mutationId: mutationId,
           confirmedBy: pemohonUser.name,
           userId: pemohonUser.id,
+          isSesuai: true,
         ),
       );
       expect(confirmRes.isSuccess, isTrue);
       final completedMutation = confirmRes.dataOrNull!;
       expect(completedMutation.status, MutationStatus.completed);
 
-      // Master asset must NOT have additional updates, history must NOT increase,
-      // location and PIC set by Staff Aset must be completely preserved.
+      // Master asset was updated to target location & PIC
       final afterConfirmAssetRes = await assetRepository.getAssetById('ast_1');
       final afterConfirmAsset = afterConfirmAssetRes.dataOrNull!;
       expect(afterConfirmAsset.location, 'Lantai 5 — Ruang Keuangan');
       expect(afterConfirmAsset.pic, 'Siti Rahma (Finance)');
-      expect(afterConfirmAsset.history.length >= initialHistoryCount + 1, isTrue);
+      expect(afterConfirmAsset.history.length, initialHistoryCount + 1);
 
       // Mutation ticket remains immutable
       expect(completedMutation.ticketNumber, ticketNumber);
@@ -355,7 +336,7 @@ void main() {
         status: MutationStatus.completed,
         requiresKadivApproval: false,
         applicantName: pemohonUser.name,
-        staffUpdatedBy: 'Staff Hendra',
+        staffUpdatedBy: 'Hendra Bagian Aset',
       );
 
       // Verify step 5 (Konfirmasi) is completed
@@ -374,7 +355,7 @@ void main() {
         status: MutationStatus.pendingConfirmation,
         requiresKadivApproval: false,
         applicantName: pemohonUser.name,
-        staffUpdatedBy: 'Staff Hendra',
+        staffUpdatedBy: 'Hendra Bagian Aset',
       );
 
       // Verify step 4 (Approval Pemimpin Divisi) is completed

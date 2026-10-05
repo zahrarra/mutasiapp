@@ -35,9 +35,6 @@ enum MutationStatus {
   waitingSync,
 
   // ─── Legacy Compatibility Aliases ──────────────────────────────────────────
-  /// Legacy alias: waitingKabagApproval -> waitingAssetVerification.
-  waitingKabagApproval,
-
   /// Legacy alias: waitingKadivApproval -> waitingDivisionHeadApproval.
   waitingKadivApproval,
 
@@ -64,7 +61,6 @@ enum MutationStatus {
         MutationStatus.waitingSync => 'Menunggu Sinkronisasi',
 
         // Legacy compatibility
-        MutationStatus.waitingKabagApproval => 'Menunggu Verifikasi Bagian Aset',
         MutationStatus.waitingKadivApproval =>
           'Menunggu Approval Pemimpin Divisi',
         MutationStatus.verified => 'Terverifikasi',
@@ -84,7 +80,6 @@ enum MutationStatus {
         MutationStatus.waitingSync => AppColors.textSecondary,
 
         // Legacy
-        MutationStatus.waitingKabagApproval => AppColors.warning,
         MutationStatus.waitingKadivApproval => AppColors.warning,
         MutationStatus.verified => AppColors.info,
         MutationStatus.approved => AppColors.success,
@@ -104,7 +99,6 @@ enum MutationStatus {
         MutationStatus.waitingSync => AppColors.surface,
 
         // Legacy
-        MutationStatus.waitingKabagApproval => AppColors.warningContainer,
         MutationStatus.waitingKadivApproval => AppColors.warningContainer,
         MutationStatus.verified => AppColors.infoContainer,
         MutationStatus.approved => AppColors.successContainer,
@@ -113,8 +107,7 @@ enum MutationStatus {
 
   /// Helper untuk mengecek status verifikasi bagian aset.
   bool get isWaitingAssetVerification =>
-      this == MutationStatus.waitingAssetVerification ||
-      this == MutationStatus.waitingKabagApproval;
+      this == MutationStatus.waitingAssetVerification;
 
   /// Helper untuk mengecek status approval pemimpin divisi.
   bool get isWaitingDivisionApproval =>

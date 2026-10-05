@@ -123,7 +123,6 @@ class _PemohonMutationListScreenState
                   m.status == MutationStatus.submitted ||
                   m.status == MutationStatus.waitingAssetVerification ||
                   m.status == MutationStatus.verified ||
-                  m.status == MutationStatus.waitingKabagApproval ||
                   m.status == MutationStatus.waitingDivisionHeadApproval ||
                   m.status == MutationStatus.waitingKadivApproval ||
                   m.status == MutationStatus.approved ||
@@ -176,7 +175,6 @@ class _PemohonMutationListScreenState
                   m.status == MutationStatus.submitted ||
                   m.status == MutationStatus.waitingAssetVerification ||
                   m.status == MutationStatus.verified ||
-                  m.status == MutationStatus.waitingKabagApproval ||
                   m.status == MutationStatus.waitingDivisionHeadApproval ||
                   m.status == MutationStatus.waitingKadivApproval ||
                   m.status == MutationStatus.approved ||
@@ -722,7 +720,7 @@ class _MutationCard extends StatelessWidget {
                   else if (status == MutationStatus.returned &&
                       m.staffUpdatedAt == null)
                     // Operator mengembalikan pengajuan di tahap awal
-                    // (sebelum Staff Aset update) → pemohon memang perlu
+                    // (sebelum verifikasi Bagian Aset) → pemohon memang perlu
                     // memperbaiki data pengajuannya.
                     _actionBtn(
                       context,
@@ -768,7 +766,7 @@ class _MutationCard extends StatelessWidget {
     final s = m.status;
     // Heuristik yang sama dengan pemohon_confirmation_screen.dart: jika
     // status returned TAPI staffUpdatedAt sudah terisi, ini adalah laporan
-    // ketidaksesuaian yang dikirim Pemohon setelah Staff Aset update data —
+    // ketidaksesuaian yang dikirim Pemohon setelah Bagian Aset update data —
     // bukan pengembalian pengajuan oleh Operator. Pemohon tidak perlu
     // "memperbaiki" apa pun di sini, sehingga label & warna dibedakan.
     final isDisputedByApplicant =
@@ -801,11 +799,6 @@ class _MutationCard extends StatelessWidget {
         _C.warning,
         'Verifikasi Aset',
       ),
-      MutationStatus.waitingKabagApproval => (
-        _C.warning.withValues(alpha: 0.1),
-        _C.warning,
-        'Approval Kabag',
-      ),
       MutationStatus.waitingDivisionHeadApproval ||
       MutationStatus.waitingKadivApproval => (
         _C.warning.withValues(alpha: 0.1),
@@ -815,7 +808,7 @@ class _MutationCard extends StatelessWidget {
       MutationStatus.approved => (
         _C.warning.withValues(alpha: 0.1),
         _C.warning,
-        'Update Aset',
+        'Disetujui',
       ),
       MutationStatus.submitted => (_C.surfaceContainer, _C.primary, 'Diajukan'),
       MutationStatus.verified => (
@@ -842,8 +835,7 @@ class _MutationCard extends StatelessWidget {
         borderRadius: BorderRadius.circular(999),
         border: isDisputedByApplicant
             ? Border.all(color: const Color(0xFF175CD3).withValues(alpha: 0.3))
-            : (s == MutationStatus.returned ||
-                  s == MutationStatus.waitingKabagApproval)
+            : (s == MutationStatus.returned)
             ? Border.all(color: _C.warning.withValues(alpha: 0.3))
             : null,
       ),
@@ -916,12 +908,10 @@ class _MutationCard extends StatelessWidget {
         return 'Verifikasi';
       case MutationStatus.waitingAssetVerification:
         return 'Verifikasi Aset';
-      case MutationStatus.waitingKabagApproval:
-        return 'Kabag Review';
       case MutationStatus.waitingKadivApproval:
         return 'Kadiv Review';
       case MutationStatus.approved:
-        return 'Update Aset';
+        return 'Disetujui';
       default:
         return s.displayName;
     }

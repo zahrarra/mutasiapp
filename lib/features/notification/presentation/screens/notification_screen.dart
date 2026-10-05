@@ -83,15 +83,7 @@ class _NotificationScreenState extends ConsumerState<NotificationScreen> {
           ':id',
           mutationId,
         ),
-      UserRole.kabagAset => RouteNames.kabagApprovalDetailPath.replaceFirst(
-        ':id',
-        mutationId,
-      ),
       UserRole.kadiv => RouteNames.kadivApprovalDetailPath.replaceFirst(
-        ':id',
-        mutationId,
-      ),
-      UserRole.staffAset => RouteNames.staffMutationDetailPath.replaceFirst(
         ':id',
         mutationId,
       ),

@@ -421,7 +421,6 @@ class _OperatorMutationsScreenState
     final totalAllocated = allList
         .where((m) =>
             m.status == MutationStatus.waitingAssetVerification ||
-            m.status == MutationStatus.waitingKabagApproval ||
             m.status == MutationStatus.verified ||
             m.status == MutationStatus.waitingDivisionHeadApproval ||
             m.status == MutationStatus.waitingKadivApproval ||
@@ -723,7 +722,6 @@ class _MutationCard extends StatelessWidget {
           label: 'Dikembalikan',
         ),
         MutationStatus.waitingAssetVerification ||
-        MutationStatus.waitingKabagApproval ||
         MutationStatus.verified ||
         MutationStatus.waitingDivisionHeadApproval ||
         MutationStatus.waitingKadivApproval ||

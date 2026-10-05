@@ -588,7 +588,6 @@ class PemohonMutationDetailScreen extends ConsumerWidget {
       case MutationStatus.submitted:
       case MutationStatus.waitingAssetVerification:
       case MutationStatus.waitingDivisionHeadApproval:
-      case MutationStatus.waitingKabagApproval:
       case MutationStatus.waitingKadivApproval:
         bg = const Color(0xFFF59E0B).withValues(alpha: 0.2);
         border = const Color(0xFFF59E0B).withValues(alpha: 0.35);
@@ -1806,8 +1805,7 @@ class PemohonMutationDetailScreen extends ConsumerWidget {
       MutationStatus.waitingSync =>
         mutation.verifiedBy ?? 'Siti Rahma',
       MutationStatus.waitingAssetVerification ||
-      MutationStatus.verified ||
-      MutationStatus.waitingKabagApproval =>
+      MutationStatus.verified =>
         mutation.approvedBy ?? 'Hendra Setiawan',
       MutationStatus.waitingDivisionHeadApproval ||
       MutationStatus.waitingKadivApproval =>
@@ -1829,8 +1827,7 @@ class PemohonMutationDetailScreen extends ConsumerWidget {
       MutationStatus.waitingSync =>
         'Operator Aset & Logistik',
       MutationStatus.waitingAssetVerification ||
-      MutationStatus.verified ||
-      MutationStatus.waitingKabagApproval =>
+      MutationStatus.verified =>
         'Bagian Aset',
       MutationStatus.waitingDivisionHeadApproval ||
       MutationStatus.waitingKadivApproval =>

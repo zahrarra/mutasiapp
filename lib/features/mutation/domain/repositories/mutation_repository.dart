@@ -155,20 +155,6 @@ abstract class MutationRepository {
     required String operatorName,
   });
 
-  /// Persetujuan mutasi oleh Kabag Aset (Legacy).
-  Future<Result<Mutation>> approveMutationKabag({
-    required String mutationId,
-    required String kabagName,
-    required bool requiresKadivApproval,
-  });
-
-  /// Penolakan mutasi oleh Kabag Aset (Legacy).
-  Future<Result<Mutation>> rejectMutationKabag({
-    required String mutationId,
-    required String reason,
-    required String kabagName,
-  });
-
   /// Persetujuan mutasi oleh Kadiv (Legacy).
   Future<Result<Mutation>> approveMutationKadiv({
     required String mutationId,
@@ -186,13 +172,5 @@ abstract class MutationRepository {
   Future<Result<Mutation>> confirmMutation({
     required String mutationId,
     required String confirmedBy,
-  });
-
-  /// Pembaruan lokasi dan PIC fisik aset oleh Staff Aset (Legacy).
-  Future<Result<Mutation>> processStaffAssetUpdate({
-    required String mutationId,
-    required String newLocation,
-    required String newPic,
-    required String staffName,
   });
 }
