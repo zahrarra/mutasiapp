@@ -100,7 +100,9 @@ class _NotificationScreenState extends ConsumerState<NotificationScreen> {
       ),
       _ => null,
     };
-    if (targetPath != null) context.go(targetPath);
+    if (targetPath != null) {
+      context.push(targetPath);
+    }
   }
 
   void _markAllRead() {

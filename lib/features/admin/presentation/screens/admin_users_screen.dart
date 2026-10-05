@@ -405,15 +405,27 @@ class _AdminUsersScreenState extends ConsumerState<AdminUsersScreen> {
 
           return Column(
             children: [
-              // Search Field
-              Container(
-                padding: const EdgeInsets.all(AppSpacing.md),
-                color: AppColors.surface,
+              // Search Field (Translucent & themed)
+              Padding(
+                padding: const EdgeInsets.fromLTRB(
+                  AppSpacing.md,
+                  AppSpacing.md,
+                  AppSpacing.md,
+                  AppSpacing.xs,
+                ),
                 child: TextField(
                   controller: _searchController,
                   decoration: InputDecoration(
                     hintText: 'Cari user, username, atau divisi...',
-                    prefixIcon: const Icon(Icons.search, size: 20),
+                    hintStyle: TextStyle(
+                      fontSize: 13,
+                      color: AppColors.textSecondary.withValues(alpha: 0.8),
+                    ),
+                    prefixIcon: const Icon(
+                      Icons.search,
+                      size: 20,
+                      color: Color(0xFF0F3D56),
+                    ),
                     suffixIcon: _searchQuery.isNotEmpty
                         ? IconButton(
                             icon: const Icon(Icons.clear, size: 18),
@@ -424,18 +436,29 @@ class _AdminUsersScreenState extends ConsumerState<AdminUsersScreen> {
                           )
                         : null,
                     filled: true,
-                    fillColor: Colors.white,
+                    fillColor: const Color(0xFF0F3D56).withValues(alpha: 0.05),
                     contentPadding: const EdgeInsets.symmetric(
                       horizontal: AppSpacing.md,
                       vertical: AppSpacing.sm,
                     ),
                     border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
-                      borderSide: const BorderSide(color: AppColors.border),
+                      borderRadius: BorderRadius.circular(999),
+                      borderSide: BorderSide(
+                        color: const Color(0xFF0F3D56).withValues(alpha: 0.15),
+                      ),
                     ),
                     enabledBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
-                      borderSide: const BorderSide(color: AppColors.border),
+                      borderRadius: BorderRadius.circular(999),
+                      borderSide: BorderSide(
+                        color: const Color(0xFF0F3D56).withValues(alpha: 0.15),
+                      ),
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(999),
+                      borderSide: const BorderSide(
+                        color: Color(0xFF0F3D56),
+                        width: 1.5,
+                      ),
                     ),
                   ),
                   onChanged: (val) {
@@ -443,7 +466,6 @@ class _AdminUsersScreenState extends ConsumerState<AdminUsersScreen> {
                   },
                 ),
               ),
-              const Divider(height: 1, color: AppColors.border),
 
               // Total Count
               Padding(

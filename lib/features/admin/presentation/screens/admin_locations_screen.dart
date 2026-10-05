@@ -14,6 +14,8 @@ import '../../../../core/widgets/error_view.dart';
 import '../../../../core/widgets/loading_indicator.dart';
 import '../../domain/entities/location_item.dart';
 import '../../../mutation/presentation/providers/mutation_form_provider.dart';
+import '../../../auth/domain/entities/user_role.dart';
+import '../../../../core/widgets/custom_floating_nav_bar.dart';
 
 class AdminLocationsScreen extends ConsumerStatefulWidget {
   const AdminLocationsScreen({super.key});
@@ -345,15 +347,27 @@ class _AdminLocationsScreenState extends ConsumerState<AdminLocationsScreen> {
 
           return Column(
             children: [
-              // Search Header
-              Container(
-                padding: const EdgeInsets.all(AppSpacing.md),
-                color: AppColors.surface,
+              // Search Header (Translucent & themed)
+              Padding(
+                padding: const EdgeInsets.fromLTRB(
+                  AppSpacing.md,
+                  AppSpacing.md,
+                  AppSpacing.md,
+                  AppSpacing.xs,
+                ),
                 child: TextField(
                   controller: _searchController,
                   decoration: InputDecoration(
                     hintText: 'Cari gedung, lantai, atau cabang...',
-                    prefixIcon: const Icon(Icons.search, size: 20),
+                    hintStyle: TextStyle(
+                      fontSize: 13,
+                      color: AppColors.textSecondary.withValues(alpha: 0.8),
+                    ),
+                    prefixIcon: const Icon(
+                      Icons.search,
+                      size: 20,
+                      color: Color(0xFF0F3D56),
+                    ),
                     suffixIcon: _searchQuery.isNotEmpty
                         ? IconButton(
                             icon: const Icon(Icons.clear, size: 18),
@@ -364,18 +378,29 @@ class _AdminLocationsScreenState extends ConsumerState<AdminLocationsScreen> {
                           )
                         : null,
                     filled: true,
-                    fillColor: Colors.white,
+                    fillColor: const Color(0xFF0F3D56).withValues(alpha: 0.05),
                     contentPadding: const EdgeInsets.symmetric(
                       horizontal: AppSpacing.md,
                       vertical: AppSpacing.sm,
                     ),
                     border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
-                      borderSide: const BorderSide(color: AppColors.border),
+                      borderRadius: BorderRadius.circular(999),
+                      borderSide: BorderSide(
+                        color: const Color(0xFF0F3D56).withValues(alpha: 0.15),
+                      ),
                     ),
                     enabledBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
-                      borderSide: const BorderSide(color: AppColors.border),
+                      borderRadius: BorderRadius.circular(999),
+                      borderSide: BorderSide(
+                        color: const Color(0xFF0F3D56).withValues(alpha: 0.15),
+                      ),
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(999),
+                      borderSide: const BorderSide(
+                        color: Color(0xFF0F3D56),
+                        width: 1.5,
+                      ),
                     ),
                   ),
                   onChanged: (val) {
@@ -383,7 +408,6 @@ class _AdminLocationsScreenState extends ConsumerState<AdminLocationsScreen> {
                   },
                 ),
               ),
-              const Divider(height: 1, color: AppColors.border),
 
               // Total Count Info
               Padding(
@@ -604,6 +628,9 @@ class _AdminLocationsScreenState extends ConsumerState<AdminLocationsScreen> {
         icon: const Icon(Icons.add_location_alt_outlined),
         label: const Text('Tambah Lokasi'),
         onPressed: () => _showAddLocationDialog(context),
+      ),
+      bottomNavigationBar: CustomFloatingNavBar.scaffoldBottomBar(
+        items: RoleNavConfig.getNavItemsForRole(UserRole.admin),
       ),
     );
   }

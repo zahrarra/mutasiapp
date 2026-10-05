@@ -98,7 +98,7 @@ abstract final class AppTheme {
           foregroundColor: AppColors.surface,
           disabledBackgroundColor: AppColors.disabledBackground,
           disabledForegroundColor: AppColors.disabled,
-          minimumSize: const Size.fromHeight(AppSpacing.buttonHeight),
+          minimumSize: const Size(64, AppSpacing.buttonHeight),
           padding: const EdgeInsets.symmetric(
             horizontal: AppSpacing.xxl,
             vertical: AppSpacing.md,
@@ -116,7 +116,7 @@ abstract final class AppTheme {
         style: OutlinedButton.styleFrom(
           foregroundColor: AppColors.primary,
           disabledForegroundColor: AppColors.disabled,
-          minimumSize: const Size.fromHeight(AppSpacing.buttonHeight),
+          minimumSize: const Size(64, AppSpacing.buttonHeight),
           padding: const EdgeInsets.symmetric(
             horizontal: AppSpacing.xxl,
             vertical: AppSpacing.md,

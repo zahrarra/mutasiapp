@@ -510,39 +510,61 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
                     color: Colors.white.withValues(alpha: 0.20),
                   ),
                 ),
-                child: TextField(
-                  controller: _searchController,
-                  style: _t(size: 13, color: Colors.white),
-                  cursorColor: _StitchColors.mintAccent,
-                  decoration: InputDecoration(
-                    prefixIcon: Icon(
-                      Icons.search,
-                      size: 20,
-                      color: Colors.white.withValues(alpha: 0.70),
+                child: Theme(
+                  data: Theme.of(context).copyWith(
+                    inputDecorationTheme: const InputDecorationTheme(
+                      filled: false,
+                      fillColor: Colors.transparent,
+                      focusColor: Colors.transparent,
+                      hoverColor: Colors.transparent,
+                      border: InputBorder.none,
+                      enabledBorder: InputBorder.none,
+                      focusedBorder: InputBorder.none,
+                      errorBorder: InputBorder.none,
+                      disabledBorder: InputBorder.none,
                     ),
-                    suffixIcon: _searchQuery.isNotEmpty
-                        ? IconButton(
-                            icon: const Icon(
-                              Icons.close,
-                              size: 18,
-                              color: Colors.white70,
-                            ),
-                            onPressed: () {
-                              _searchController.clear();
-                              setState(() => _searchQuery = '');
-                            },
-                          )
-                        : null,
-                    hintText: 'Cari data user, unit cabang, role, modul...',
-                    hintStyle: _t(
-                      size: 13,
-                      w: FontWeight.w400,
-                      color: _StitchColors.slate300,
-                    ),
-                    border: InputBorder.none,
-                    contentPadding: const EdgeInsets.symmetric(
-                      horizontal: 16,
-                      vertical: 12,
+                  ),
+                  child: TextField(
+                    controller: _searchController,
+                    style: _t(size: 13, color: Colors.white),
+                    cursorColor: _StitchColors.mintAccent,
+                    decoration: InputDecoration(
+                      isDense: true,
+                      filled: false,
+                      fillColor: Colors.transparent,
+                      focusColor: Colors.transparent,
+                      hoverColor: Colors.transparent,
+                      prefixIcon: Icon(
+                        Icons.search,
+                        size: 20,
+                        color: Colors.white.withValues(alpha: 0.70),
+                      ),
+                      suffixIcon: _searchQuery.isNotEmpty
+                          ? IconButton(
+                              icon: const Icon(
+                                Icons.close,
+                                size: 18,
+                                color: Colors.white70,
+                              ),
+                              onPressed: () {
+                                _searchController.clear();
+                                setState(() => _searchQuery = '');
+                              },
+                            )
+                          : null,
+                      hintText: 'Cari data user, unit cabang, role, modul...',
+                      hintStyle: _t(
+                        size: 13,
+                        w: FontWeight.w400,
+                        color: _StitchColors.slate300,
+                      ),
+                      border: InputBorder.none,
+                      enabledBorder: InputBorder.none,
+                      focusedBorder: InputBorder.none,
+                      contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 12,
+                      ),
                     ),
                   ),
                 ),
@@ -2171,13 +2193,13 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
     );
   }
 
-  void _showAllAuditLogsDialog(BuildContext context) {
-    showModalBottomSheet<void>(
+  Future<void> _showAllAuditLogsDialog(BuildContext context) async {
+    await showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       builder: (ctx) => Container(
-        height: MediaQuery.of(context).size.height * 0.75,
+        height: MediaQuery.of(context).size.height * 0.78,
         padding: const EdgeInsets.all(20),
         decoration: const BoxDecoration(
           color: Colors.white,
@@ -2200,16 +2222,27 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Text(
-                  'Semua Log Audit Sistem',
-                  style: _t(
-                    size: 16,
-                    w: FontWeight.w700,
-                    color: _StitchColors.slate800,
-                  ),
+                Row(
+                  children: [
+                    const Icon(
+                      Icons.history_rounded,
+                      color: _StitchColors.primaryNavy,
+                      size: 22,
+                    ),
+                    const SizedBox(width: 8),
+                    Text(
+                      'Semua Log Audit Sistem',
+                      style: _t(
+                        size: 16,
+                        w: FontWeight.w700,
+                        color: _StitchColors.slate800,
+                      ),
+                    ),
+                  ],
                 ),
                 IconButton(
                   icon: const Icon(Icons.close),
+                  tooltip: 'Kembali ke Beranda',
                   onPressed: () => Navigator.pop(ctx),
                 ),
               ],
@@ -2256,10 +2289,42 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
                 ],
               ),
             ),
+            const SizedBox(height: 12),
+            SizedBox(
+              width: double.infinity,
+              height: 44,
+              child: ElevatedButton.icon(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: _StitchColors.primaryNavy,
+                  foregroundColor: Colors.white,
+                  elevation: 0,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+                icon: const Icon(Icons.home_outlined, size: 18),
+                label: const Text(
+                  'Kembali ke Beranda',
+                  style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
+                ),
+                onPressed: () => Navigator.pop(ctx),
+              ),
+            ),
           ],
         ),
       ),
     );
+
+    if (mounted) {
+      setState(() => _selectedNavIndex = 0);
+      if (_scrollController.hasClients) {
+        _scrollController.animateTo(
+          0,
+          duration: const Duration(milliseconds: 300),
+          curve: Curves.easeOut,
+        );
+      }
+    }
   }
 
   void _showNotificationSheet(BuildContext context) {

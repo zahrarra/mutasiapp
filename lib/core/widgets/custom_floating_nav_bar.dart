@@ -177,8 +177,8 @@ abstract final class RoleNavConfig {
       case UserRole.admin:
         return const [
           CustomNavItem(
-            icon: Icons.home_outlined,
-            label: 'Beranda',
+            icon: Icons.grid_view_rounded,
+            label: 'Home',
             route: RouteNames.adminDashboardPath,
           ),
           CustomNavItem(
@@ -232,16 +232,37 @@ class CustomFloatingNavBar extends ConsumerWidget {
     String? currentRoute,
     ValueChanged<CustomNavItem>? onItemTap,
   }) {
-    return SafeArea(
-      top: false,
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
-        child: CustomFloatingNavBar(
-          items: items,
-          currentRoute: currentRoute,
-          onItemTap: onItemTap,
-        ),
-      ),
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final screenWidth = MediaQuery.of(context).size.width;
+        final double maxBarWidth;
+        if (screenWidth >= 1024) {
+          maxBarWidth = 640.0;
+        } else if (screenWidth >= 768) {
+          maxBarWidth = 520.0;
+        } else {
+          maxBarWidth = 440.0;
+        }
+
+        return SafeArea(
+          top: false,
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+            child: Align(
+              alignment: Alignment.bottomCenter,
+              heightFactor: 1.0,
+              child: ConstrainedBox(
+                constraints: BoxConstraints(maxWidth: maxBarWidth),
+                child: CustomFloatingNavBar(
+                  items: items,
+                  currentRoute: currentRoute,
+                  onItemTap: onItemTap,
+                ),
+              ),
+            ),
+          ),
+        );
+      },
     );
   }
 

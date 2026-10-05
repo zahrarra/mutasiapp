@@ -544,8 +544,11 @@ void main() {
       await tester.pumpAndSettle();
 
       // Tap submit with empty fields -> should fail validation
-      await tester.ensureVisible(find.text('Lanjut ke Konfirmasi'));
-      await tester.tap(find.text('Lanjut ke Konfirmasi'));
+      final submitBtn = find.text('Kirim Pengajuan Mutasi').evaluate().isNotEmpty
+          ? find.text('Kirim Pengajuan Mutasi')
+          : find.text('Lanjut ke Konfirmasi');
+      await tester.ensureVisible(submitBtn);
+      await tester.tap(submitBtn);
       await tester.pumpAndSettle();
       expect(find.text('Wajib diisi'), findsWidgets);
 
@@ -587,9 +590,17 @@ void main() {
       await tester.pumpAndSettle();
 
       // Submit
-      await tester.ensureVisible(find.text('Lanjut ke Konfirmasi'));
-      await tester.tap(find.text('Lanjut ke Konfirmasi'));
+      await tester.ensureVisible(submitBtn);
+      await tester.tap(submitBtn);
       await tester.pumpAndSettle();
+
+      // Modal konfirmasi (Stitch 01)
+      if (find.byType(Checkbox).evaluate().isNotEmpty) {
+        await tester.tap(find.byType(Checkbox));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('Kirim Pengajuan'));
+        await tester.pumpAndSettle();
+      }
 
       // Verify route changed to success
       expect(navigatedRoute, RouteNames.pemohonSubmitSuccessPath);

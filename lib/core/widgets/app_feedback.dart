@@ -115,6 +115,24 @@ abstract final class AppFeedback {
     );
   }
 
+  /// Menampilkan notifikasi pengembalian berwarna merah dengan icon assignment_return.
+  /// Contoh: "Pengajuan dikembalikan"
+  static void showReturned(
+    BuildContext context,
+    String message, {
+    String? details,
+    Duration duration = const Duration(seconds: 3),
+  }) {
+    _show(
+      context: context,
+      message: message,
+      details: details,
+      backgroundColor: AppColors.error,
+      icon: Icons.assignment_return_rounded,
+      duration: duration,
+    );
+  }
+
   /// Menampilkan pesan peringatan berwarna amber dengan icon warning_amber.
   static void showWarning(
     BuildContext context,

@@ -422,6 +422,7 @@ class _AssetCategoryScreenState extends ConsumerState<AssetCategoryScreen> {
                           ),
                           OutlinedButton.icon(
                             style: OutlinedButton.styleFrom(
+                              minimumSize: Size.zero,
                               visualDensity: VisualDensity.compact,
                               padding: const EdgeInsets.symmetric(
                                 horizontal: 10,

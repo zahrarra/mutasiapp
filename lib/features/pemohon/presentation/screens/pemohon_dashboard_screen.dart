@@ -254,7 +254,7 @@ class _PemohonDashboardScreenState
                         Material(
                           color: Colors.transparent,
                           child: InkWell(
-                            onTap: () => context.go(RouteNames.pemohonNotificationsPath),
+                            onTap: () => context.push(RouteNames.pemohonNotificationsPath),
                             borderRadius: BorderRadius.circular(999),
                             child: Container(
                               width: 40,
@@ -1438,7 +1438,7 @@ class _PemohonDashboardScreenState
                   title: Text('Notifikasi', style: _font(size: 14)),
                   onTap: () {
                     Navigator.pop(sheetContext);
-                    context.go(RouteNames.pemohonNotificationsPath);
+                    context.push(RouteNames.pemohonNotificationsPath);
                   },
                 ),
                 ListTile(
