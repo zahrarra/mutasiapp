@@ -205,16 +205,9 @@ void main() {
     await tester.tap(find.byKey(const Key('btn_verifikasi_valid')));
     await tester.pumpAndSettle();
 
-    // Dialog konfirmasi muncul
-    expect(find.text('Konfirmasi Verifikasi'), findsOneWidget);
-    expect(
-        find.textContaining(
-            'Apakah Anda yakin data dan dokumen pengajuan ELEKTRONIK-2026-00124 sudah valid dan lengkap?'),
-        findsOneWidget);
-
-    // Konfirmasi Ya
-    await tester.tap(find.byKey(const Key('btn_confirm_verifikasi')));
-    await tester.pumpAndSettle();
+    // Modal Verifikasi Berhasil (Stitch) muncul langsung di atas detail
+    expect(find.text('Verifikasi Berhasil'), findsOneWidget);
+    expect(find.byKey(const Key('btn_operator_next_ticket')), findsOneWidget);
 
     // Cek status mutasi telah terupdate ke waitingAssetVerification
     final detail =

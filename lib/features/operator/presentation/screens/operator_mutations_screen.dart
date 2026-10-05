@@ -14,6 +14,7 @@ import '../../../../core/widgets/custom_floating_nav_bar.dart';
 import '../../../mutation/domain/entities/mutation.dart';
 import '../../../mutation/domain/entities/mutation_status.dart';
 import '../providers/operator_verification_provider.dart';
+import '../../../../core/widgets/mutasiku_page_header.dart';
 
 // ─── Design tokens (Stitch baseline) ─────────────────────────────────────────
 class _C {
@@ -217,109 +218,18 @@ class _OperatorMutationsScreenState
 
   // ── Top bar ───────────────────────────────────────────────────────────────
   Widget _buildTopBar(BuildContext context, int count) {
-    return Container(
-      color: _C.surface,
-      child: SafeArea(
-        bottom: false,
-        child: Container(
-          padding: const EdgeInsets.fromLTRB(16, 14, 16, 14),
-          decoration: const BoxDecoration(
-            color: _C.surface,
-            border: Border(bottom: BorderSide(color: _C.border, width: 1)),
-          ),
-          child: Row(
-            children: [
-              // Back
-              GestureDetector(
-                onTap: () {
-                  if (context.canPop()) {
-                    context.pop();
-                  } else {
-                    context.go(RouteNames.operatorDashboardPath);
-                  }
-                },
-                child: Container(
-                  width: 38,
-                  height: 38,
-                  decoration: BoxDecoration(
-                    color: _C.bg,
-                    borderRadius: BorderRadius.circular(10),
-                    border: Border.all(color: _C.border),
-                  ),
-                  child: const Icon(
-                    Icons.arrow_back_rounded,
-                    size: 18,
-                    color: _C.textSecondary,
-                  ),
-                ),
-              ),
-              const SizedBox(width: 12),
-              // Title
-              const Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(
-                      'Pengajuan Masuk',
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w700,
-                        color: _C.textPrimary,
-                        letterSpacing: -0.2,
-                      ),
-                    ),
-                    Text(
-                      'Antrean berkas mutasi menunggu verifikasi',
-                      style: TextStyle(fontSize: 11, color: _C.textSecondary),
-                    ),
-                  ],
-                ),
-              ),
-              // Count badge (amber pulse)
-              if (count > 0)
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 10,
-                    vertical: 5,
-                  ),
-                  decoration: BoxDecoration(
-                    color: _C.surface,
-                    borderRadius: BorderRadius.circular(999),
-                    border: Border.all(color: _C.border.withValues(alpha: 0.8)),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withValues(alpha: 0.04),
-                        blurRadius: 4,
-                      ),
-                    ],
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Container(
-                        width: 7,
-                        height: 7,
-                        decoration: const BoxDecoration(
-                          color: Color(0xFFF59E0B),
-                          shape: BoxShape.circle,
-                        ),
-                      ),
-                      const SizedBox(width: 5),
-                      Text(
-                        '$count Tiket',
-                        style: const TextStyle(
-                          fontSize: 11,
-                          fontWeight: FontWeight.w700,
-                          color: _C.navy,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-            ],
-          ),
-        ),
+    return SafeArea(
+      bottom: false,
+      child: MutasiKuPageHeader(
+        title: 'Pengajuan Masuk',
+        subtitle: 'Antrean berkas mutasi menunggu verifikasi',
+        onBack: () {
+          if (context.canPop()) {
+            context.pop();
+          } else {
+            context.go(RouteNames.operatorDashboardPath);
+          }
+        },
       ),
     );
   }

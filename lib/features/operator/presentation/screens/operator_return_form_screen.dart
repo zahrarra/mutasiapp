@@ -15,6 +15,7 @@ import '../../../notification/domain/entities/notification_item.dart';
 import '../../../notification/presentation/providers/notification_provider.dart';
 import '../../../../core/widgets/app_feedback.dart';
 import '../providers/operator_verification_provider.dart';
+import '../../../../core/widgets/mutasiku_page_header.dart';
 
 class OperatorReturnFormScreen extends ConsumerStatefulWidget {
   final String mutationId;
@@ -46,20 +47,26 @@ class _OperatorReturnFormScreenState
     final actionState = ref.watch(verificationActionProvider);
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Kembalikan Pengajuan'),
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
-          onPressed: () {
-            if (context.canPop()) {
-              context.pop();
-            } else {
-              context.go(RouteNames.operatorMutationsPath);
-            }
-          },
-        ),
-      ),
-      body: asyncMutation.when(
+      backgroundColor: const Color(0xFFF6F8FA),
+      body: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SafeArea(
+            bottom: false,
+            child: MutasiKuPageHeader(
+              title: 'Kembalikan Pengajuan',
+              subtitle: 'Tuliskan catatan perbaikan berkas untuk pemohon',
+              onBack: () {
+                if (context.canPop()) {
+                  context.pop();
+                } else {
+                  context.go(RouteNames.operatorMutationsPath);
+                }
+              },
+            ),
+          ),
+          Expanded(
+            child: asyncMutation.when(
         data: (mutation) => Padding(
           padding: const EdgeInsets.all(AppSpacing.md),
           child: Form(
@@ -249,8 +256,11 @@ class _OperatorReturnFormScreenState
           child: Text('Gagal memuat pengajuan: $err'),
         ),
       ),
-    );
-  }
+    ),
+  ],
+),
+);
+}
 
   Future<void> _submitReturn(BuildContext context) async {
     if (!_formKey.currentState!.validate()) {

@@ -25,6 +25,9 @@ import '../../../notification/domain/entities/notification_item.dart';
 import '../../../notification/presentation/providers/notification_provider.dart';
 import '../../../mutation/presentation/models/mutation_tracking_step.dart';
 import '../providers/operator_verification_provider.dart';
+import '../widgets/operator_verification_success_dialog.dart';
+import '../../../mutation/presentation/widgets/mutation_return_dialog.dart';
+import '../../../../core/widgets/mutasiku_page_header.dart';
 
 // ── Stitch Design Tokens ─────────────────────────────────────────────────────
 class _C {
@@ -62,117 +65,23 @@ class OperatorVerificationDetailScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final asyncMutation = ref.watch(mutationDetailProvider(mutationId));
     final actionState = ref.watch(verificationActionProvider);
-    final currentUser = ref.watch(authStateProvider).user;
 
     return Scaffold(
       backgroundColor: _C.background,
       body: Column(
         children: [
-          // ── Header / Top Bar (Stitch Baseline) ─────────────────────
-          Container(
-            color: _C.surface,
-            child: SafeArea(
-              bottom: false,
-              child: Container(
-                height: 64,
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                decoration: const BoxDecoration(
-                  color: _C.surface,
-                  border: Border(
-                    bottom: BorderSide(color: _C.border, width: 1),
-                  ),
-                ),
-                child: Row(
-                  children: [
-                    // Back button
-                    InkWell(
-                      onTap: () {
-                        if (context.canPop()) {
-                          context.pop();
-                        } else {
-                          context.go(RouteNames.operatorMutationsPath);
-                        }
-                      },
-                      borderRadius: BorderRadius.circular(10),
-                      child: Container(
-                        width: 40,
-                        height: 40,
-                        decoration: BoxDecoration(
-                          color: _C.surface,
-                          borderRadius: BorderRadius.circular(10),
-                          border: Border.all(color: _C.border),
-                        ),
-                        child: const Icon(
-                          Icons.arrow_back_rounded,
-                          size: 20,
-                          color: _C.textPrimary,
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-
-                    // Title & ticket number breadcrumb
-                    Expanded(
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const Text(
-                            'Detail Pengajuan',
-                            style: TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.w700,
-                              color: _C.textPrimary,
-                              letterSpacing: -0.2,
-                            ),
-                          ),
-                          const Text(
-                            'Tinjauan Pengajuan Mutasi',
-                            style: TextStyle(
-                              fontSize: 11,
-                              color: _C.textSecondary,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-
-                    // Action buttons: info button & user avatar initials
-                    Container(
-                      width: 36,
-                      height: 36,
-                      decoration: BoxDecoration(
-                        color: _C.surfaceContainerLow,
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: const Icon(
-                        Icons.info_outline_rounded,
-                        size: 18,
-                        color: _C.textSecondary,
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    Container(
-                      width: 34,
-                      height: 34,
-                      decoration: const BoxDecoration(
-                        color: _C.primaryContainer,
-                        shape: BoxShape.circle,
-                      ),
-                      child: Center(
-                        child: Text(
-                          _getInitials(currentUser?.name ?? 'OP'),
-                          style: const TextStyle(
-                            fontSize: 12,
-                            fontWeight: FontWeight.w700,
-                            color: Colors.white,
-                          ),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
+          SafeArea(
+            bottom: false,
+            child: MutasiKuPageHeader(
+              title: 'Detail Pengajuan',
+              subtitle: 'Tinjauan Pengajuan Mutasi',
+              onBack: () {
+                if (context.canPop()) {
+                  context.pop();
+                } else {
+                  context.go(RouteNames.operatorMutationsPath);
+                }
+              },
             ),
           ),
 
@@ -305,12 +214,14 @@ class OperatorVerificationDetailScreen extends ConsumerWidget {
                             Icon(Icons.warning_amber_rounded,
                                 color: _C.warning, size: 18),
                             SizedBox(width: 6),
-                            Text(
-                              'Alasan Pengembalian (Operator)',
-                              style: TextStyle(
-                                fontSize: 13,
-                                fontWeight: FontWeight.w700,
-                                color: _C.textPrimary,
+                            Expanded(
+                              child: Text(
+                                'Alasan Pengembalian (Operator)',
+                                style: TextStyle(
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w700,
+                                  color: _C.textPrimary,
+                                ),
                               ),
                             ),
                           ],
@@ -634,7 +545,7 @@ class OperatorVerificationDetailScreen extends ConsumerWidget {
                       key: const Key('btn_verifikasi_valid'),
                       onPressed: actionState.isLoading
                           ? null
-                          : () => _showVerifyConfirmDialog(
+                          : () => _executeVerification(
                               context, ref, mutation),
                       icon: actionState.isLoading
                           ? const SizedBox(
@@ -2215,654 +2126,66 @@ class OperatorVerificationDetailScreen extends ConsumerWidget {
     return '${parts[0][0]}${parts[1][0]}'.toUpperCase();
   }
 
-  void _showVerifyConfirmDialog(
+  // ── EKSEKUSI VERIFIKASI (Langsung tampil modal sukses Stitch terbaru) ────────
+  Future<void> _executeVerification(
     BuildContext context,
     WidgetRef ref,
     Mutation mutation,
-  ) {
-    // ── Step 1: Konfirmasi sebelum verifikasi (Stitch: 02_pengajuan_berhasil ref)
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (dialogCtx) => Dialog(
-        backgroundColor: Colors.transparent,
-        insetPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
-        child: Container(
-          width: double.infinity,
-          constraints: const BoxConstraints(maxWidth: 440),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(20),
-            border: Border.all(color: const Color(0xFFE2E8F0)),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withValues(alpha: 0.12),
-                blurRadius: 24,
-                offset: const Offset(0, 8),
-              ),
-            ],
-          ),
-          child: Padding(
-            padding: const EdgeInsets.all(24),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                // Icon
-                Container(
-                  width: 64,
-                  height: 64,
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFECFDF5),
-                    shape: BoxShape.circle,
-                    boxShadow: [
-                      BoxShadow(
-                        color: const Color(0xFF059669).withValues(alpha: 0.15),
-                        blurRadius: 16,
-                        spreadRadius: 3,
-                      ),
-                    ],
-                  ),
-                  child: const Icon(
-                    Icons.check_circle_rounded,
-                    color: Color(0xFF059669),
-                    size: 34,
-                  ),
-                ),
-                const SizedBox(height: 16),
-                const Text(
-                  'Konfirmasi Verifikasi',
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.w700,
-                    color: Color(0xFF0F3D56),
-                  ),
-                  textAlign: TextAlign.center,
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  'Apakah Anda yakin data dan dokumen pengajuan ${mutation.ticketNumber} sudah valid dan lengkap?',
-                  style: const TextStyle(
-                    fontSize: 12,
-                    height: 1.5,
-                    color: Color(0xFF52606D),
-                  ),
-                  textAlign: TextAlign.center,
-                ),
-                const SizedBox(height: 20),
+  ) async {
+    final success = await ref
+        .read(verificationActionProvider.notifier)
+        .verify(mutationId: mutation.id);
 
-                // Ticket summary card
-                Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.all(14),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFF8FAFC),
-                    borderRadius: BorderRadius.circular(14),
-                    border: Border.all(color: const Color(0xFFE2E8F0)),
-                  ),
-                  child: Column(
-                    children: [
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const Text(
-                            'Nomor Tiket',
-                            style: TextStyle(fontSize: 11, color: Color(0xFF64748B)),
-                          ),
-                          const SizedBox(width: 8),
-                          Flexible(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.end,
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Text(
-                                  mutation.ticketNumber,
-                                  style: const TextStyle(
-                                    fontFamily: 'monospace',
-                                    fontSize: 11,
-                                    fontWeight: FontWeight.w600,
-                                    color: Color(0xFF172B4D),
-                                  ),
-                                ),
-                                const SizedBox(height: 2),
-                                Container(
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 6,
-                                    vertical: 2,
-                                  ),
-                                  decoration: BoxDecoration(
-                                    color: const Color(0xFFF1F5F9),
-                                    borderRadius: BorderRadius.circular(4),
-                                    border: Border.all(color: const Color(0xFFE2E8F0)),
-                                  ),
-                                  child: Text(
-                                    mutation.asset.name,
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
-                                    style: const TextStyle(
-                                      fontSize: 10,
-                                      fontWeight: FontWeight.w500,
-                                      color: Color(0xFF52606D),
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ],
-                      ),
-                      const Padding(
-                        padding: EdgeInsets.symmetric(vertical: 10),
-                        child: Divider(height: 1, color: Color(0xFFE2E8F0)),
-                      ),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          const Text(
-                            'Rute Mutasi',
-                            style: TextStyle(fontSize: 11, color: Color(0xFF64748B)),
-                          ),
-                          const SizedBox(width: 8),
-                          Flexible(
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Flexible(
-                                  child: Text(
-                                    mutation.currentLocation,
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
-                                    style: const TextStyle(
-                                      fontSize: 11,
-                                      fontWeight: FontWeight.w500,
-                                      color: Color(0xFF52606D),
-                                    ),
-                                  ),
-                                ),
-                                const Padding(
-                                  padding: EdgeInsets.symmetric(horizontal: 4),
-                                  child: Icon(
-                                    Icons.arrow_forward_rounded,
-                                    size: 13,
-                                    color: Color(0xFF94A3B8),
-                                  ),
-                                ),
-                                Flexible(
-                                  child: Text(
-                                    mutation.targetLocation,
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
-                                    style: const TextStyle(
-                                      fontSize: 11,
-                                      fontWeight: FontWeight.w600,
-                                      color: Color(0xFF172B4D),
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ],
-                      ),
-                      const Padding(
-                        padding: EdgeInsets.symmetric(vertical: 10),
-                        child: Divider(height: 1, color: Color(0xFFE2E8F0)),
-                      ),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          const Text(
-                            'Penanggung Jawab',
-                            style: TextStyle(fontSize: 11, color: Color(0xFF64748B)),
-                          ),
-                          const SizedBox(width: 8),
-                          Flexible(
-                            child: Text(
-                              mutation.targetPic.isNotEmpty
-                                  ? mutation.targetPic
-                                  : (mutation.currentPic.isNotEmpty ? mutation.currentPic : '-'),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: const TextStyle(
-                                fontSize: 11,
-                                fontWeight: FontWeight.w600,
-                                color: Color(0xFF172B4D),
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
-                ),
-
-                const SizedBox(height: 20),
-
-                // Action buttons
-                Row(
-                  children: [
-                    Expanded(
-                      child: OutlinedButton(
-                        onPressed: () => Navigator.of(dialogCtx).pop(),
-                        style: OutlinedButton.styleFrom(
-                          foregroundColor: const Color(0xFF52606D),
-                          side: const BorderSide(color: Color(0xFFD0D5DD)),
-                          minimumSize: const Size(0, 44),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                        ),
-                        child: const Text(
-                          'Batal',
-                          style: TextStyle(fontWeight: FontWeight.w500, fontSize: 13),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 10),
-                    Expanded(
-                      child: ElevatedButton.icon(
-                        key: const Key('btn_confirm_verifikasi'),
-                        onPressed: () async {
-                          Navigator.of(dialogCtx).pop();
-                          final success = await ref
-                              .read(verificationActionProvider.notifier)
-                              .verify(mutationId: mutation.id);
-
-                          if (context.mounted) {
-                            if (success) {
-                              ref.read(notificationProvider.notifier).notifyRole(
-                                    targetRole: UserRole.bagianAset,
-                                    title: 'Menunggu Verifikasi Data Aset',
-                                    message:
-                                        'Pengajuan mutasi ${mutation.ticketNumber} (${mutation.asset.name}) telah diperiksa kelengkapannya dan siap diverifikasi.',
-                                    type: NotificationType.action,
-                                    relatedMutationId: mutation.id,
-                                  );
-                              ref.invalidate(mutationDetailProvider(mutation.id));
-                              AppFeedback.showSuccess(
-                                context,
-                                'Pengajuan berhasil diteruskan ke Bagian Aset.',
-                              );
-                              // ── Step 2: Tampilkan dialog sukses (Stitch 03) ──
-                              if (context.mounted) {
-                                _showVerifySuccessDialog(context, ref, mutation);
-                              }
-                            } else {
-                              final err = ref.read(verificationActionProvider).error;
-                              AppFeedback.showError(
-                                context,
-                                err ?? 'Gagal memverifikasi pengajuan.',
-                              );
-                            }
-                          }
-                        },
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: const Color(0xFF0F3D56),
-                          foregroundColor: Colors.white,
-                          minimumSize: const Size(0, 44),
-                          elevation: 0,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                        ),
-                        icon: const Icon(Icons.send_rounded, size: 16),
-                        label: const Text(
-                          'Verifikasi & Teruskan',
-                          style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
+    if (context.mounted) {
+      if (success) {
+        ref.read(notificationProvider.notifier).notifyRole(
+              targetRole: UserRole.bagianAset,
+              title: 'Menunggu Verifikasi Data Aset',
+              message:
+                  'Pengajuan mutasi ${mutation.ticketNumber} (${mutation.asset.name}) telah diperiksa kelengkapannya dan siap diverifikasi.',
+              type: NotificationType.action,
+              relatedMutationId: mutation.id,
+            );
+        ref.invalidate(mutationDetailProvider(mutation.id));
+        AppFeedback.showSuccess(
+          context,
+          'Pengajuan berhasil diteruskan ke Bagian Aset.',
+        );
+        // ── Tampilkan Modal Sukses (Stitch: ID 2cc02f80cf3c404cb3bf174d61e73c50) ──
+        if (context.mounted) {
+          _showVerifySuccessDialog(context, ref, mutation);
+        }
+      } else {
+        final err = ref.read(verificationActionProvider).error;
+        AppFeedback.showError(
+          context,
+          err ?? 'Gagal memverifikasi pengajuan.',
+        );
+      }
+    }
   }
 
-  // ── VERIFIKASI BERHASIL DIALOG (Stitch 03) ───────────────────────────────────
+  // ── VERIFIKASI BERHASIL DIALOG (Stitch: ID 2cc02f80cf3c404cb3bf174d61e73c50) ──
   void _showVerifySuccessDialog(
     BuildContext context,
     WidgetRef ref,
     Mutation mutation,
   ) {
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (dialogCtx) => Dialog(
-        backgroundColor: Colors.transparent,
-        insetPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
-        child: Container(
-          width: double.infinity,
-          constraints: const BoxConstraints(maxWidth: 440),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(24),
-            border: Border.all(color: const Color(0xFFE2E8F0)),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withValues(alpha: 0.15),
-                blurRadius: 32,
-                offset: const Offset(0, 10),
-              ),
-            ],
-          ),
-          child: SingleChildScrollView(
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(24, 28, 24, 24),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                // Close button
-                Align(
-                  alignment: Alignment.topRight,
-                  child: GestureDetector(
-                    onTap: () {
-                      Navigator.of(dialogCtx).pop();
-                      // Kembali ke halaman antrean
-                      if (Navigator.of(context).canPop()) {
-                        Navigator.of(context).pop();
-                      } else {
-                        try { context.pop(); } catch (_) {}
-                      }
-                    },
-                    child: Container(
-                      width: 30,
-                      height: 30,
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFF1F5F9),
-                        shape: BoxShape.circle,
-                      ),
-                      child: const Icon(
-                        Icons.close_rounded,
-                        size: 18,
-                        color: Color(0xFF64748B),
-                      ),
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 8),
-
-                // Success icon
-                Container(
-                  width: 64,
-                  height: 64,
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFF0FDF4),
-                    shape: BoxShape.circle,
-                    boxShadow: [
-                      BoxShadow(
-                        color: const Color(0xFF15803D).withValues(alpha: 0.12),
-                        blurRadius: 16,
-                        spreadRadius: 3,
-                      ),
-                    ],
-                  ),
-                  child: const Icon(
-                    Icons.check_circle,
-                    color: Color(0xFF15803D),
-                    size: 36,
-                  ),
-                ),
-                const SizedBox(height: 14),
-
-                const Text(
-                  'Verifikasi Berhasil',
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.w700,
-                    color: Color(0xFF0F172A),
-                  ),
-                  textAlign: TextAlign.center,
-                ),
-                const SizedBox(height: 6),
-                const Text(
-                  'Pengajuan tiket telah berhasil diverifikasi dan diteruskan ke Bagian Aset.',
-                  style: TextStyle(
-                    fontSize: 12,
-                    height: 1.5,
-                    color: Color(0xFF52606D),
-                  ),
-                  textAlign: TextAlign.center,
-                ),
-                const SizedBox(height: 14),
-
-                // Status badge: Menunggu Verifikasi Bagian Aset
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFFFFBEB),
-                    borderRadius: BorderRadius.circular(20),
-                    border: Border.all(color: const Color(0xFFFDE68A)),
-                  ),
-                  child: Wrap(
-                    alignment: WrapAlignment.center,
-                    crossAxisAlignment: WrapCrossAlignment.center,
-                    children: [
-                      Text(
-                        mutation.ticketNumber,
-                        style: const TextStyle(
-                          fontFamily: 'monospace',
-                          fontSize: 11,
-                          fontWeight: FontWeight.w500,
-                          color: Color(0xFF52606D),
-                        ),
-                      ),
-                      const Padding(
-                        padding: EdgeInsets.symmetric(horizontal: 6),
-                        child: Text(
-                          '•',
-                          style: TextStyle(color: Color(0xFF92400E)),
-                        ),
-                      ),
-                      const Text(
-                        'Menunggu Verifikasi Bagian Aset',
-                        style: TextStyle(
-                          fontSize: 10,
-                          fontWeight: FontWeight.w600,
-                          color: Color(0xFF92400E),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 20),
-
-                // Asset & detail card
-                Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.all(14),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFF8FAFC),
-                    borderRadius: BorderRadius.circular(16),
-                    border: Border.all(color: const Color(0xFFE2E8F0)),
-                  ),
-                  child: Column(
-                    children: [
-                      // Asset name & code
-                      Row(
-                        children: [
-                          Container(
-                            width: 40,
-                            height: 40,
-                            decoration: BoxDecoration(
-                              color: const Color(0xFFDBEAF9),
-                              borderRadius: BorderRadius.circular(10),
-                            ),
-                            child: const Icon(
-                              Icons.laptop_rounded,
-                              size: 22,
-                              color: Color(0xFF0F3D56),
-                            ),
-                          ),
-                          const SizedBox(width: 10),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  mutation.asset.name,
-                                  style: const TextStyle(
-                                    fontSize: 13,
-                                    fontWeight: FontWeight.w600,
-                                    color: Color(0xFF172B4D),
-                                  ),
-                                  overflow: TextOverflow.ellipsis,
-                                ),
-                                if (mutation.asset.serialNumber?.isNotEmpty == true)
-                                  Text(
-                                    'SN: ${mutation.asset.serialNumber}',
-                                    style: const TextStyle(
-                                      fontFamily: 'monospace',
-                                      fontSize: 10,
-                                      color: Color(0xFF52606D),
-                                    ),
-                                  ),
-                              ],
-                            ),
-                          ),
-                        ],
-                      ),
-                      const Padding(
-                        padding: EdgeInsets.symmetric(vertical: 10),
-                        child: Divider(height: 1, color: Color(0xFFE2E8F0)),
-                      ),
-                      // Pemohon
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          const Text(
-                            'Pemohon',
-                            style: TextStyle(fontSize: 12, color: Color(0xFF52606D)),
-                          ),
-                          Text(
-                            mutation.applicantName,
-                            style: const TextStyle(
-                              fontSize: 12,
-                              fontWeight: FontWeight.w600,
-                              color: Color(0xFF172B4D),
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 8),
-                      // Rute perpindahan
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          const Text(
-                            'Rute Perpindahan',
-                            style: TextStyle(fontSize: 12, color: Color(0xFF52606D)),
-                          ),
-                          const SizedBox(width: 8),
-                          Flexible(
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Flexible(
-                                  child: Text(
-                                    mutation.currentLocation,
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
-                                    style: const TextStyle(
-                                      fontSize: 12,
-                                      color: Color(0xFF52606D),
-                                    ),
-                                  ),
-                                ),
-                                const Padding(
-                                  padding: EdgeInsets.symmetric(horizontal: 4),
-                                  child: Icon(
-                                    Icons.arrow_forward_rounded,
-                                    size: 13,
-                                    color: Color(0xFF94A3B8),
-                                  ),
-                                ),
-                                Flexible(
-                                  child: Text(
-                                    mutation.targetLocation,
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
-                                    style: const TextStyle(
-                                      fontSize: 12,
-                                      fontWeight: FontWeight.w600,
-                                      color: Color(0xFF0F3D56),
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
-                ),
-
-                const SizedBox(height: 20),
-
-                // Kembali ke Antrean
-                SizedBox(
-                  width: double.infinity,
-                  height: 48,
-                  child: ElevatedButton.icon(
-                    onPressed: () {
-                      Navigator.of(dialogCtx).pop();
-                      if (Navigator.of(context).canPop()) {
-                        Navigator.of(context).pop();
-                      } else {
-                        try { context.pop(); } catch (_) {}
-                      }
-                    },
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFF0F3D56),
-                      foregroundColor: Colors.white,
-                      elevation: 0,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                    ),
-                    icon: const Icon(Icons.assignment_turned_in_rounded, size: 18),
-                    label: const Text(
-                      'Kembali ke Antrean',
-                      style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 10),
-
-                // Lihat Riwayat
-                SizedBox(
-                  width: double.infinity,
-                  height: 44,
-                  child: OutlinedButton.icon(
-                    onPressed: () {
-                      Navigator.of(dialogCtx).pop();
-                      context.push(RouteNames.operatorMutationsPath);
-                    },
-                    style: OutlinedButton.styleFrom(
-                      foregroundColor: const Color(0xFF52606D),
-                      side: const BorderSide(color: Color(0xFFD0D5DD)),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                    ),
-                    icon: const Icon(Icons.history_rounded, size: 18),
-                    label: const Text(
-                      'Lihat Riwayat',
-                      style: TextStyle(fontSize: 13, fontWeight: FontWeight.w500),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
-    ),
-  );
+    showOperatorVerificationSuccessDialog(
+      context,
+      onNextTicket: () {
+        if (Navigator.of(context).canPop()) {
+          Navigator.of(context).pop();
+        } else {
+          try {
+            context.go(RouteNames.operatorMutationsPath);
+          } catch (_) {}
+        }
+      },
+      onOpenHistory: () {
+        context.push(RouteNames.operatorMutationsPath);
+      },
+    );
   }
 
   // ── KEMBALIKAN PENGAJUAN MODAL (Stitch 04) ────────────────────────────────────
@@ -2871,328 +2194,45 @@ class OperatorVerificationDetailScreen extends ConsumerWidget {
     WidgetRef ref,
     Mutation mutation,
   ) {
-    final reasonController = TextEditingController();
-    bool isLoading = false;
-    String? errorText;
-
-    showDialog(
+    showMutationReturnDialog(
       context: context,
-      barrierDismissible: false,
-      builder: (dialogCtx) => StatefulBuilder(
-        builder: (ctx, setModalState) {
-          return Dialog(
-            backgroundColor: Colors.transparent,
-            insetPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
-            child: Container(
-              width: double.infinity,
-              constraints: const BoxConstraints(maxWidth: 440),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(24),
-                border: Border.all(color: const Color(0xFFE2E8F0).withValues(alpha: 0.8)),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.12),
-                    blurRadius: 32,
-                    offset: const Offset(0, 10),
-                  ),
-                ],
-              ),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  // Header
-                  Padding(
-                    padding: const EdgeInsets.fromLTRB(20, 20, 16, 0),
-                    child: Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Container(
-                          width: 40,
-                          height: 40,
-                          decoration: BoxDecoration(
-                            color: const Color(0xFFFEE2E2),
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          child: const Icon(
-                            Icons.assignment_return_rounded,
-                            size: 20,
-                            color: Color(0xFFB42318),
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: const [
-                              Text(
-                                'Kembalikan Pengajuan',
-                                style: TextStyle(
-                                  fontSize: 17,
-                                  fontWeight: FontWeight.w700,
-                                  color: Color(0xFF0F172A),
-                                ),
-                              ),
-                              SizedBox(height: 2),
-                              Text(
-                                'Tuliskan catatan perbaikan berkas untuk pemohon.',
-                                style: TextStyle(
-                                  fontSize: 12,
-                                  color: Color(0xFF52606D),
-                                  height: 1.3,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                        // Close
-                        GestureDetector(
-                          onTap: () => Navigator.of(dialogCtx).pop(),
-                          child: Container(
-                            width: 32,
-                            height: 32,
-                            decoration: BoxDecoration(
-                              color: const Color(0xFFF1F5F9),
-                              shape: BoxShape.circle,
-                            ),
-                            child: const Icon(
-                              Icons.close_rounded,
-                              size: 18,
-                              color: Color(0xFF64748B),
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
+      mutation: mutation,
+      onConfirm: (reason) async {
+        final success = await ref
+            .read(verificationActionProvider.notifier)
+            .returnMutation(mutationId: mutation.id, reason: reason);
 
-                  // Body
-                  Padding(
-                    padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        // Ticket info card
-                        Container(
-                          width: double.infinity,
-                          padding: const EdgeInsets.all(12),
-                          decoration: BoxDecoration(
-                            color: const Color(0xFFECF4FF),
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  const Text(
-                                    'Nomor Tiket',
-                                    style: TextStyle(
-                                      fontSize: 10,
-                                      fontWeight: FontWeight.w500,
-                                      color: Color(0xFF52606D),
-                                    ),
-                                  ),
-                                  const SizedBox(height: 2),
-                                  Text(
-                                    mutation.ticketNumber,
-                                    style: const TextStyle(
-                                      fontFamily: 'monospace',
-                                      fontSize: 12,
-                                      fontWeight: FontWeight.w700,
-                                      color: Color(0xFF172B4D),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                              Column(
-                                crossAxisAlignment: CrossAxisAlignment.end,
-                                children: [
-                                  const Text(
-                                    'Aset & Pemohon',
-                                    style: TextStyle(
-                                      fontSize: 10,
-                                      fontWeight: FontWeight.w500,
-                                      color: Color(0xFF52606D),
-                                    ),
-                                  ),
-                                  const SizedBox(height: 2),
-                                  Text(
-                                    mutation.asset.name,
-                                    style: const TextStyle(
-                                      fontSize: 12,
-                                      fontWeight: FontWeight.w600,
-                                      color: Color(0xFF172B4D),
-                                    ),
-                                  ),
-                                  Text(
-                                    mutation.applicantName,
-                                    style: const TextStyle(
-                                      fontSize: 11,
-                                      color: Color(0xFF52606D),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ],
-                          ),
-                        ),
-                        const SizedBox(height: 14),
-
-                        // Alasan field
-                        Row(
-                          children: [
-                            const Text(
-                              'Alasan Pengembalian',
-                              style: TextStyle(
-                                fontSize: 13,
-                                fontWeight: FontWeight.w600,
-                                color: Color(0xFF172B4D),
-                              ),
-                            ),
-                            const Text(
-                              ' *',
-                              style: TextStyle(
-                                fontSize: 13,
-                                fontWeight: FontWeight.w600,
-                                color: Color(0xFFB42318),
-                              ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 6),
-                        TextField(
-                          controller: reasonController,
-                          maxLines: 4,
-                          onChanged: (_) {
-                            if (errorText != null) {
-                              setModalState(() => errorText = null);
-                            }
-                          },
-                          style: const TextStyle(
-                            fontSize: 13,
-                            color: Color(0xFF172B4D),
-                          ),
-                          decoration: InputDecoration(
-                            hintText: 'Tuliskan alasan pengembalian untuk pemohon...',
-                            hintStyle: const TextStyle(
-                              fontSize: 13,
-                              color: Color(0xFF98A2B3),
-                            ),
-                            errorText: errorText,
-                            contentPadding: const EdgeInsets.all(14),
-                            filled: true,
-                            fillColor: Colors.white,
-                            border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(12),
-                              borderSide: const BorderSide(color: Color(0xFFD0D5DD)),
-                            ),
-                            enabledBorder: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(12),
-                              borderSide: const BorderSide(color: Color(0xFFD0D5DD)),
-                            ),
-                            focusedBorder: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(12),
-                              borderSide: const BorderSide(
-                                color: Color(0xFF0F3D56),
-                                width: 1.5,
-                              ),
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-
-                  // Footer actions
-                  Padding(
-                    padding: const EdgeInsets.fromLTRB(20, 16, 20, 20),
-                    child: Row(
-                      children: [
-                        Expanded(
-                          child: OutlinedButton(
-                            onPressed: isLoading
-                                ? null
-                                : () => Navigator.of(dialogCtx).pop(),
-                            style: OutlinedButton.styleFrom(
-                              foregroundColor: const Color(0xFF172B4D),
-                              side: const BorderSide(color: Color(0xFFD0D5DD)),
-                              minimumSize: const Size(0, 44),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                            ),
-                            child: const Text(
-                              'Batal',
-                              style: TextStyle(
-                                fontSize: 13,
-                                fontWeight: FontWeight.w500,
-                              ),
-                            ),
-                          ),
-                        ),
-                        const SizedBox(width: 10),
-                        Expanded(
-                          child: ElevatedButton.icon(
-                            onPressed: isLoading
-                                ? null
-                                : () async {
-                                    final reason = reasonController.text.trim();
-                                    if (reason.isEmpty) {
-                                      setModalState(() {
-                                        errorText = 'Alasan pengembalian wajib diisi.';
-                                      });
-                                      return;
-                                    }
-                                    setModalState(() => isLoading = true);
-                                    Navigator.of(dialogCtx).pop();
-                                    // Navigate ke return form dengan alasan yang sudah diisi
-                                    context.push(
-                                      '/operator/mutations/${mutation.id}/return',
-                                      extra: reason,
-                                    );
-                                  },
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: const Color(0xFFB42318),
-                              foregroundColor: Colors.white,
-                              minimumSize: const Size(0, 44),
-                              elevation: 0,
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                            ),
-                            icon: isLoading
-                                ? const SizedBox(
-                                    width: 16,
-                                    height: 16,
-                                    child: CircularProgressIndicator(
-                                      strokeWidth: 2,
-                                      color: Colors.white,
-                                    ),
-                                  )
-                                : const Icon(
-                                    Icons.assignment_return_rounded,
-                                    size: 16,
-                                  ),
-                            label: Text(
-                              isLoading ? 'Memproses...' : 'Kembalikan',
-                              style: const TextStyle(
-                                fontSize: 13,
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          );
-        },
-      ),
+        if (context.mounted) {
+          if (success) {
+            final currentMutation = ref.read(verificationActionProvider).result;
+            ref.read(notificationProvider.notifier).notifyUser(
+                  targetUserId: currentMutation?.applicantId ??
+                      mutation.applicantId ??
+                      'usr_pemohon',
+                  targetRole: UserRole.pemohon,
+                  title: 'Pengajuan Dikembalikan Operator',
+                  message:
+                      'Pengajuan ${currentMutation?.ticketNumber ?? mutation.ticketNumber} dikembalikan oleh Operator: $reason',
+                  type: NotificationType.warning,
+                  relatedMutationId: mutation.id,
+                );
+            ref.invalidate(mutationDetailProvider(mutation.id));
+            AppFeedback.showReturned(
+              context,
+              'Pengajuan dikembalikan',
+            );
+            return true;
+          } else {
+            final err = ref.read(verificationActionProvider).error;
+            AppFeedback.showError(
+              context,
+              err ?? 'Gagal mengembalikan pengajuan.',
+            );
+            return false;
+          }
+        }
+        return false;
+      },
     );
   }
 }
