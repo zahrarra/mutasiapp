@@ -9,6 +9,8 @@ use App\Models\Mutation;
 use App\Models\Role;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Storage;
 use Tests\TestCase;
 
 class AutomaticMutationNotificationTest extends TestCase
@@ -89,21 +91,23 @@ class AutomaticMutationNotificationTest extends TestCase
 
     public function test_pemohon_submits_mutation_notifies_operator(): void
     {
+        Storage::fake('public');
         $operator = $this->createUser('operator');
         $pemohon = $this->createUser('pemohon');
         $asset = $this->createAsset($pemohon);
         $destLocation = $this->createLocation('Gedung C', 'GC_'.uniqid());
 
         $token = $pemohon->createToken('test')->plainTextToken;
+        $file = UploadedFile::fake()->create('SK-01.pdf', 100, 'application/pdf');
 
         $response = $this->withHeader('Authorization', 'Bearer '.$token)
-            ->postJson('/api/v1/mutations', [
+            ->post('/api/v1/mutations', [
                 'asset_id' => $asset->id,
                 'destination_location_id' => $destLocation->id,
                 'is_asset_moves_with_applicant' => true,
                 'reason' => 'Pindah tugas ke divisi baru',
-                'sk_document' => 'SK-01.pdf',
-            ]);
+                'sk_document' => $file,
+            ], ['Accept' => 'application/json']);
 
         $response->assertStatus(201);
         $mutationId = $response->json('data.id');
@@ -373,21 +377,23 @@ class AutomaticMutationNotificationTest extends TestCase
 
     public function test_generated_notifications_are_retrievable_via_api(): void
     {
+        Storage::fake('public');
         $operator = $this->createUser('operator');
         $pemohon = $this->createUser('pemohon');
         $asset = $this->createAsset($pemohon);
         $destLocation = $this->createLocation('Gedung D', 'GD_'.uniqid());
 
         $tokenPemohon = $pemohon->createToken('test')->plainTextToken;
+        $file = UploadedFile::fake()->create('SK.pdf', 100, 'application/pdf');
 
         $this->withHeader('Authorization', 'Bearer '.$tokenPemohon)
-            ->postJson('/api/v1/mutations', [
+            ->post('/api/v1/mutations', [
                 'asset_id' => $asset->id,
                 'destination_location_id' => $destLocation->id,
                 'is_asset_moves_with_applicant' => true,
                 'reason' => 'Pindah tugas',
-                'sk_document' => 'SK.pdf',
-            ])
+                'sk_document' => $file,
+            ], ['Accept' => 'application/json'])
             ->assertStatus(201);
 
         // Reset auth context

@@ -699,8 +699,8 @@ class MutationController extends Controller
             if ($request->filled('reason')) {
                 $mutation->reason = (string) $request->input('reason');
             }
-            if ($request->filled('sk_document')) {
-                $mutation->sk_document = (string) $request->input('sk_document');
+            if ($newSkDocument = $request->getSkDocument()) {
+                $mutation->sk_document = $newSkDocument;
             }
 
             // Resubmit langsung ke Bagian Aset (tidak kembali ke operator)

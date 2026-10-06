@@ -31,7 +31,7 @@ class StoreMutationRequest extends FormRequest
             'asset_id' => ['required', 'integer', 'exists:assets,id'],
             'destination_location_id' => ['required', 'integer', 'exists:locations,id'],
             'reason' => ['required', 'string', 'max:1000'],
-            'sk_document' => ['required'],
+            'sk_document' => ['required', 'file', 'mimes:pdf', 'max:30720'],
             'asset_moves_with_applicant' => ['nullable', 'boolean'],
             'target_pic_id' => ['nullable', 'integer'],
         ];
@@ -51,6 +51,9 @@ class StoreMutationRequest extends FormRequest
             'destination_location_id.exists' => 'Lokasi tujuan yang dipilih tidak ditemukan dalam sistem.',
             'reason.required' => 'Alasan mutasi wajib diisi.',
             'sk_document.required' => 'Surat Keputusan (SK) SDM wajib dilampirkan.',
+            'sk_document.file' => 'Berkas SK SDM harus berupa dokumen yang valid.',
+            'sk_document.mimes' => 'Berkas SK SDM harus berupa dokumen dengan format PDF.',
+            'sk_document.max' => 'Ukuran berkas SK SDM tidak boleh melebihi 30 MB.',
         ];
     }
 
@@ -101,11 +104,7 @@ class StoreMutationRequest extends FormRequest
      */
     public function getSkDocument(): string
     {
-        if ($this->hasFile('sk_document')) {
-            return $this->file('sk_document')->store('documents/sk_sdm', 'public');
-        }
-
-        return (string) $this->input('sk_document');
+        return $this->file('sk_document')->store('documents/sk_sdm', 'public');
     }
 
     /**
