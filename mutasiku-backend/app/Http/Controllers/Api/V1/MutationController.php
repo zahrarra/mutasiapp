@@ -14,9 +14,12 @@ use App\Models\Asset;
 use App\Models\Mutation;
 use App\Models\MutationHistory;
 use App\Models\MutationStatusHistory;
+use App\Models\User;
+use App\Notifications\MutationStatusChangedNotification;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Notification;
 
 class MutationController extends Controller
 {
@@ -171,6 +174,14 @@ class MutationController extends Controller
                 'notes' => (string) $request->validated('reason'),
             ]);
 
+            $this->notifyRole('operator', new MutationStatusChangedNotification(
+                mutation: $newMutation,
+                title: 'Pengajuan Mutasi Baru',
+                message: "Pengajuan mutasi {$newMutation->ticket_number} memerlukan verifikasi Operator.",
+                action: 'store',
+                status: 'diajukan'
+            ));
+
             return $newMutation;
         });
 
@@ -303,6 +314,27 @@ class MutationController extends Controller
                 'status_to' => $mutation->status,
                 'notes' => (string) $request->input('reason'),
             ]);
+
+            if ($isReturn) {
+                $applicant = $mutation->applicant ?? User::find($mutation->applicant_id);
+                if ($applicant) {
+                    $this->notifyUser($applicant, new MutationStatusChangedNotification(
+                        mutation: $mutation,
+                        title: 'Pengajuan Mutasi Dikembalikan',
+                        message: "Pengajuan mutasi {$mutation->ticket_number} dikembalikan oleh Operator: {$request->input('reason')}",
+                        action: 'return',
+                        status: 'dikembalikan_ke_pemohon'
+                    ));
+                }
+            } else {
+                $this->notifyRole('bagian_aset', new MutationStatusChangedNotification(
+                    mutation: $mutation,
+                    title: 'Menunggu Verifikasi Bagian Aset',
+                    message: "Pengajuan mutasi {$mutation->ticket_number} telah diverifikasi oleh Operator dan memerlukan pemeriksaan Bagian Aset.",
+                    action: 'verify',
+                    status: 'menunggu_verifikasi_bagian_aset'
+                ));
+            }
         });
 
         $this->loadMutationRelations($mutation);
@@ -358,6 +390,17 @@ class MutationController extends Controller
                     'status_to' => $mutation->status,
                     'notes' => (string) $request->input('reason'),
                 ]);
+
+                $applicant = $mutation->applicant ?? User::find($mutation->applicant_id);
+                if ($applicant) {
+                    $this->notifyUser($applicant, new MutationStatusChangedNotification(
+                        mutation: $mutation,
+                        title: 'Pengajuan Mutasi Dikembalikan',
+                        message: "Pengajuan mutasi {$mutation->ticket_number} dikembalikan oleh Bagian Aset: {$request->input('reason')}",
+                        action: 'return',
+                        status: 'dikembalikan_ke_pemohon'
+                    ));
+                }
             });
 
             $this->loadMutationRelations($mutation);
@@ -396,6 +439,14 @@ class MutationController extends Controller
                 'status_to' => $mutation->status,
                 'notes' => (string) $request->input('reason'),
             ]);
+
+            $this->notifyRole('pemimpin_divisi', new MutationStatusChangedNotification(
+                mutation: $mutation,
+                title: 'Menunggu Approval Pemimpin Divisi',
+                message: "Pengajuan mutasi {$mutation->ticket_number} telah diverifikasi oleh Bagian Aset dan memerlukan persetujuan Pemimpin Divisi.",
+                action: 'verify_asset',
+                status: 'menunggu_approval_pemimpin_divisi'
+            ));
         });
 
         $this->loadMutationRelations($mutation);
@@ -451,6 +502,27 @@ class MutationController extends Controller
                 'status_to' => $mutation->status,
                 'notes' => (string) $request->input('reason'),
             ]);
+
+            $applicant = $mutation->applicant ?? User::find($mutation->applicant_id);
+            if ($applicant) {
+                if ($isReject) {
+                    $this->notifyUser($applicant, new MutationStatusChangedNotification(
+                        mutation: $mutation,
+                        title: 'Pengajuan Mutasi Ditolak',
+                        message: "Pengajuan mutasi {$mutation->ticket_number} ditolak oleh Pemimpin Divisi: {$request->input('reason')}",
+                        action: 'reject',
+                        status: 'ditolak'
+                    ));
+                } else {
+                    $this->notifyUser($applicant, new MutationStatusChangedNotification(
+                        mutation: $mutation,
+                        title: 'Mutasi Disetujui - Menunggu Konfirmasi Pemohon',
+                        message: "Pengajuan mutasi {$mutation->ticket_number} telah disetujui Pemimpin Divisi. Silakan lakukan konfirmasi fisik penerimaan aset.",
+                        action: 'approve',
+                        status: 'menunggu_konfirmasi_pemohon'
+                    ));
+                }
+            }
         });
 
         $this->loadMutationRelations($mutation);
@@ -532,6 +604,17 @@ class MutationController extends Controller
                     'status_to' => $mutation->status,
                     'notes' => (string) $request->input('reason'),
                 ]);
+
+                $applicant = $mutation->applicant ?? User::find($mutation->applicant_id);
+                if ($applicant) {
+                    $this->notifyUser($applicant, new MutationStatusChangedNotification(
+                        mutation: $mutation,
+                        title: 'Mutasi Selesai',
+                        message: "Proses mutasi aset {$mutation->ticket_number} telah selesai.",
+                        action: 'confirm_sesuai',
+                        status: 'selesai'
+                    ));
+                }
             });
 
             $this->loadMutationRelations($mutation);
@@ -558,6 +641,14 @@ class MutationController extends Controller
                 'status_to' => $mutation->status,
                 'notes' => (string) $request->input('reason'),
             ]);
+
+            $this->notifyRole('bagian_aset', new MutationStatusChangedNotification(
+                mutation: $mutation,
+                title: 'Konfirmasi Fisik Tidak Sesuai',
+                message: "Pemohon melaporkan ketidaksesuaian fisik pada mutasi {$mutation->ticket_number} dan dikembalikan ke Bagian Aset.",
+                action: 'confirm_tidak_sesuai',
+                status: 'menunggu_verifikasi_bagian_aset'
+            ));
         });
 
         $this->loadMutationRelations($mutation);
@@ -626,6 +717,14 @@ class MutationController extends Controller
                 'status_to' => $mutation->status,
                 'notes' => (string) $request->input('reason'),
             ]);
+
+            $this->notifyRole('bagian_aset', new MutationStatusChangedNotification(
+                mutation: $mutation,
+                title: 'Pengajuan Ulang Mutasi',
+                message: "Pengajuan mutasi {$mutation->ticket_number} telah diajukan ulang oleh Pemohon dan siap diverifikasi oleh Bagian Aset.",
+                action: 'resubmit',
+                status: 'menunggu_verifikasi_bagian_aset'
+            ));
         });
 
         $this->loadMutationRelations($mutation);
@@ -635,6 +734,28 @@ class MutationController extends Controller
             'message' => 'Pengajuan mutasi berhasil diperbaiki dan diteruskan ke Bagian Aset.',
             'data' => new MutationResource($mutation),
         ], 200);
+    }
+
+    /**
+     * Notify all active users with a specific role.
+     */
+    private function notifyRole(string $roleName, MutationStatusChangedNotification $notification): void
+    {
+        $users = User::whereHas('role', fn ($q) => $q->where('name', $roleName))
+            ->where('is_active', true)
+            ->get();
+
+        if ($users->isNotEmpty()) {
+            Notification::send($users, $notification);
+        }
+    }
+
+    /**
+     * Notify an individual user.
+     */
+    private function notifyUser(User $user, MutationStatusChangedNotification $notification): void
+    {
+        $user->notify($notification);
     }
 
     /**
