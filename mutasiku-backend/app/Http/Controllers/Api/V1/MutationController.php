@@ -112,12 +112,25 @@ class MutationController extends Controller
             }
         }
 
-        $mutations = $query->orderByDesc('id')->get();
+        $perPage = min(100, max(1, (int) $request->query('per_page', 15)));
+        $mutations = $query->orderByDesc('id')->paginate($perPage);
 
         return response()->json([
             'success' => true,
             'message' => 'Daftar pengajuan mutasi berhasil diambil.',
             'data' => MutationResource::collection($mutations),
+            'meta' => [
+                'current_page' => $mutations->currentPage(),
+                'last_page' => $mutations->lastPage(),
+                'per_page' => $mutations->perPage(),
+                'total' => $mutations->total(),
+            ],
+            'links' => [
+                'first' => $mutations->url(1),
+                'last' => $mutations->url($mutations->lastPage()),
+                'prev' => $mutations->previousPageUrl(),
+                'next' => $mutations->nextPageUrl(),
+            ],
         ], 200);
     }
 
