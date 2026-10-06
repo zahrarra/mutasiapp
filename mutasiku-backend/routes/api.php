@@ -5,6 +5,7 @@ use App\Http\Controllers\Api\V1\AssetController;
 use App\Http\Controllers\Api\V1\AuthController;
 use App\Http\Controllers\Api\V1\LocationController;
 use App\Http\Controllers\Api\V1\MutationController;
+use App\Http\Controllers\Api\V1\NotificationController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
@@ -39,5 +40,10 @@ Route::prefix('v1')->group(function () {
         Route::post('/mutations/{id}/approve', [MutationController::class, 'approve']);
         Route::post('/mutations/{id}/confirm', [MutationController::class, 'confirm']);
         Route::post('/mutations/{id}/resubmit', [MutationController::class, 'resubmit']);
+
+        // Stage 6: Notifications
+        Route::get('/notifications', [NotificationController::class, 'index']);
+        Route::post('/notifications/read-all', [NotificationController::class, 'readAll']);
+        Route::post('/notifications/{id}/read', [NotificationController::class, 'read']);
     });
 });
