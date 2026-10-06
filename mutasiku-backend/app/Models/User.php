@@ -42,4 +42,9 @@ class User extends Authenticatable
     {
         return $this->hasMany(Asset::class, 'pic_id');
     }
+
+    public function mutationStatusHistories(): HasMany
+    {
+        return $this->hasMany(MutationStatusHistory::class);
+    }
 }

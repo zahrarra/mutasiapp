@@ -6,6 +6,7 @@ use App\Models\Asset;
 use App\Models\AssetCategory;
 use App\Models\Location;
 use App\Models\Mutation;
+use App\Models\MutationStatusHistory;
 use App\Models\Role;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -244,7 +245,7 @@ class MutationRoleScopingTest extends TestCase
         $response->assertStatus(200);
     }
 
-    public function test_operator_cannot_view_detail_of_mutation_outside_their_flow(): void
+    public function test_operator_can_view_detail_after_operator_stage(): void
     {
         $operator = $this->createUser('operator');
         $pemohon = $this->createUser('pemohon');
@@ -255,7 +256,169 @@ class MutationRoleScopingTest extends TestCase
         $response = $this->withHeader('Authorization', 'Bearer '.$token)
             ->getJson('/api/v1/mutations/'.$mutation->id);
 
+        $response->assertStatus(200);
+    }
+
+    public function test_bagian_aset_can_view_detail_after_verification_stage(): void
+    {
+        $bagianAset = $this->createUser('bagian_aset');
+        $pemohon = $this->createUser('pemohon');
+        $mutation = $this->createMutation($pemohon, 'menunggu_approval_pemimpin_divisi');
+
+        $token = $bagianAset->createToken('test')->plainTextToken;
+
+        $response = $this->withHeader('Authorization', 'Bearer '.$token)
+            ->getJson('/api/v1/mutations/'.$mutation->id);
+
+        $response->assertStatus(200);
+    }
+
+    public function test_bagian_aset_cannot_view_detail_of_diajukan_mutation(): void
+    {
+        $bagianAset = $this->createUser('bagian_aset');
+        $pemohon = $this->createUser('pemohon');
+        $mutation = $this->createMutation($pemohon, 'diajukan');
+
+        $token = $bagianAset->createToken('test')->plainTextToken;
+
+        $response = $this->withHeader('Authorization', 'Bearer '.$token)
+            ->getJson('/api/v1/mutations/'.$mutation->id);
+
         $response->assertStatus(403);
+    }
+
+    public function test_pemimpin_divisi_can_view_detail_after_approval_stage(): void
+    {
+        $pemimpinDivisi = $this->createUser('pemimpin_divisi');
+        $pemohon = $this->createUser('pemohon');
+        $mutation = $this->createMutation($pemohon, 'selesai');
+
+        $token = $pemimpinDivisi->createToken('test')->plainTextToken;
+
+        $response = $this->withHeader('Authorization', 'Bearer '.$token)
+            ->getJson('/api/v1/mutations/'.$mutation->id);
+
+        $response->assertStatus(200);
+    }
+
+    public function test_pemimpin_divisi_cannot_view_detail_before_their_stage(): void
+    {
+        $pemimpinDivisi = $this->createUser('pemimpin_divisi');
+        $pemohon = $this->createUser('pemohon');
+        $mutDiajukan = $this->createMutation($pemohon, 'diajukan');
+        $mutVerifAset = $this->createMutation($pemohon, 'menunggu_verifikasi_bagian_aset');
+
+        $token = $pemimpinDivisi->createToken('test')->plainTextToken;
+
+        $this->withHeader('Authorization', 'Bearer '.$token)
+            ->getJson('/api/v1/mutations/'.$mutDiajukan->id)
+            ->assertStatus(403);
+
+        $this->withHeader('Authorization', 'Bearer '.$token)
+            ->getJson('/api/v1/mutations/'.$mutVerifAset->id)
+            ->assertStatus(403);
+    }
+
+    public function test_operator_index_view_queue_and_history(): void
+    {
+        $operator = $this->createUser('operator');
+        $pemohon = $this->createUser('pemohon');
+
+        $mutQueue = $this->createMutation($pemohon, 'diajukan');
+        $mutHistory = $this->createMutation($pemohon, 'menunggu_verifikasi_bagian_aset');
+        MutationStatusHistory::create([
+            'mutation_id' => $mutHistory->id,
+            'user_id' => $operator->id,
+            'role' => 'operator',
+            'action' => 'verify',
+            'status_from' => 'diajukan',
+            'status_to' => 'menunggu_verifikasi_bagian_aset',
+        ]);
+
+        $token = $operator->createToken('test')->plainTextToken;
+
+        // Default or view=queue -> only diajukan
+        $resQueue = $this->withHeader('Authorization', 'Bearer '.$token)
+            ->getJson('/api/v1/mutations?view=queue');
+        $resQueue->assertStatus(200);
+        $this->assertCount(1, $resQueue->json('data'));
+        $this->assertEquals($mutQueue->id, $resQueue->json('data.0.id'));
+
+        // view=history -> only history
+        $resHistory = $this->withHeader('Authorization', 'Bearer '.$token)
+            ->getJson('/api/v1/mutations?view=history');
+        $resHistory->assertStatus(200);
+        $this->assertCount(1, $resHistory->json('data'));
+        $this->assertEquals($mutHistory->id, $resHistory->json('data.0.id'));
+    }
+
+    public function test_bagian_aset_index_view_queue_and_history(): void
+    {
+        $bagianAset = $this->createUser('bagian_aset');
+        $pemohon = $this->createUser('pemohon');
+
+        $this->createMutation($pemohon, 'diajukan');
+        $mutQueue = $this->createMutation($pemohon, 'menunggu_verifikasi_bagian_aset');
+        $mutHistory = $this->createMutation($pemohon, 'menunggu_approval_pemimpin_divisi');
+        MutationStatusHistory::create([
+            'mutation_id' => $mutHistory->id,
+            'user_id' => $bagianAset->id,
+            'role' => 'bagian_aset',
+            'action' => 'verify_asset',
+            'status_from' => 'menunggu_verifikasi_bagian_aset',
+            'status_to' => 'menunggu_approval_pemimpin_divisi',
+        ]);
+
+        $token = $bagianAset->createToken('test')->plainTextToken;
+
+        // Default or view=queue -> only menunggu_verifikasi_bagian_aset
+        $resQueue = $this->withHeader('Authorization', 'Bearer '.$token)
+            ->getJson('/api/v1/mutations?view=queue');
+        $resQueue->assertStatus(200);
+        $this->assertCount(1, $resQueue->json('data'));
+        $this->assertEquals($mutQueue->id, $resQueue->json('data.0.id'));
+
+        // view=history -> only menunggu_approval_pemimpin_divisi
+        $resHistory = $this->withHeader('Authorization', 'Bearer '.$token)
+            ->getJson('/api/v1/mutations?view=history');
+        $resHistory->assertStatus(200);
+        $this->assertCount(1, $resHistory->json('data'));
+        $this->assertEquals($mutHistory->id, $resHistory->json('data.0.id'));
+    }
+
+    public function test_pemimpin_divisi_index_view_queue_and_history(): void
+    {
+        $pemimpinDivisi = $this->createUser('pemimpin_divisi');
+        $pemohon = $this->createUser('pemohon');
+
+        $this->createMutation($pemohon, 'diajukan');
+        $this->createMutation($pemohon, 'menunggu_verifikasi_bagian_aset');
+        $mutQueue = $this->createMutation($pemohon, 'menunggu_approval_pemimpin_divisi');
+        $mutHistory = $this->createMutation($pemohon, 'selesai');
+        MutationStatusHistory::create([
+            'mutation_id' => $mutHistory->id,
+            'user_id' => $pemimpinDivisi->id,
+            'role' => 'pemimpin_divisi',
+            'action' => 'approve',
+            'status_from' => 'menunggu_approval_pemimpin_divisi',
+            'status_to' => 'selesai',
+        ]);
+
+        $token = $pemimpinDivisi->createToken('test')->plainTextToken;
+
+        // view=queue -> only menunggu_approval_pemimpin_divisi
+        $resQueue = $this->withHeader('Authorization', 'Bearer '.$token)
+            ->getJson('/api/v1/mutations?view=queue');
+        $resQueue->assertStatus(200);
+        $this->assertCount(1, $resQueue->json('data'));
+        $this->assertEquals($mutQueue->id, $resQueue->json('data.0.id'));
+
+        // view=history -> only selesai
+        $resHistory = $this->withHeader('Authorization', 'Bearer '.$token)
+            ->getJson('/api/v1/mutations?view=history');
+        $resHistory->assertStatus(200);
+        $this->assertCount(1, $resHistory->json('data'));
+        $this->assertEquals($mutHistory->id, $resHistory->json('data.0.id'));
     }
 
     public function test_mutation_detail_returns_404_when_not_found(): void

@@ -64,6 +64,11 @@ class Mutation extends Model
         return $this->hasMany(MutationHistory::class);
     }
 
+    public function statusHistories(): HasMany
+    {
+        return $this->hasMany(MutationStatusHistory::class);
+    }
+
     /**
      * Scope a query to only include active mutations.
      */
