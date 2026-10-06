@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Controller;
+use App\Http\Resources\UserResource;
 use App\Models\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -79,6 +80,36 @@ class AuthController extends Controller
                 'role' => $roleName,
                 'user' => $userData,
             ],
+        ], 200);
+    }
+
+    /**
+     * Get the authenticated user profile.
+     */
+    public function me(Request $request): JsonResponse
+    {
+        $user = $request->user()->loadMissing('role');
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Data profil berhasil diambil.',
+            'data' => [
+                'user' => new UserResource($user),
+            ],
+        ], 200);
+    }
+
+    /**
+     * Log out the authenticated user by revoking the current access token.
+     */
+    public function logout(Request $request): JsonResponse
+    {
+        $request->user()->currentAccessToken()->delete();
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Logout berhasil.',
+            'data' => null,
         ], 200);
     }
 }
