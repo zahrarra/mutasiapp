@@ -9,6 +9,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:mutasiku/core/widgets/custom_floating_nav_bar.dart';
+
 import '../../../../core/widgets/mutasiku_page_header.dart';
 
 import '../../../../app/router/route_names.dart';
@@ -16,8 +17,6 @@ import '../../../auth/domain/entities/user_role.dart';
 import '../../../auth/presentation/providers/auth_provider.dart';
 import '../../domain/entities/notification_item.dart';
 import '../providers/notification_provider.dart';
-
-enum _Filter { all, tugas, pembaruan }
 
 abstract final class _S {
   static const bg = Color(0xFFF6F8FA);
@@ -44,8 +43,6 @@ class NotificationScreen extends ConsumerStatefulWidget {
 }
 
 class _NotificationScreenState extends ConsumerState<NotificationScreen> {
-  _Filter _filter = _Filter.all;
-
   TextStyle _t({
     double size = 14,
     FontWeight w = FontWeight.w400,
@@ -100,31 +97,12 @@ class _NotificationScreenState extends ConsumerState<NotificationScreen> {
 
   void _markAllRead() {
     final u = ref.read(authStateProvider).user;
-    ref
-        .read(notificationProvider.notifier)
-        .markAllAsRead(role: u?.role, userId: u?.id);
-  }
-
-  bool _isTugas(NotificationItem n) {
-    final t = '${n.type} ${n.title}'.toLowerCase();
-    return t.contains('action') ||
-        t.contains('pengajuan') ||
-        t.contains('verifikasi') ||
-        t.contains('perbaikan') ||
-        t.contains('sla') ||
-        t.contains('tugas') ||
-        t.contains('konfirmasi') ||
-        t.contains('revisi');
-  }
-
-  List<NotificationItem> _filtered(List<NotificationItem> list) {
-    switch (_filter) {
-      case _Filter.all:
-        return list;
-      case _Filter.tugas:
-        return list.where(_isTugas).toList();
-      case _Filter.pembaruan:
-        return list.where((n) => !_isTugas(n)).toList();
+    if (u != null) {
+      ref
+          .read(notificationProvider.notifier)
+          .markAllAsRead(role: u.role, userId: u.id);
+    } else {
+      ref.read(notificationProvider.notifier).markAllAsRead();
     }
   }
 
@@ -180,8 +158,6 @@ class _NotificationScreenState extends ConsumerState<NotificationScreen> {
     return '${_fmtDate(d)}, $h:$min WIB';
   }
 
-
-
   (IconData, Color, Color) _iconStyle(NotificationItem n) {
     final t = '${n.type} ${n.title}'.toLowerCase();
     if (t.contains('selesai') ||
@@ -225,11 +201,8 @@ class _NotificationScreenState extends ConsumerState<NotificationScreen> {
 
     final sorted = List<NotificationItem>.from(notifications)
       ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
-    final list = _filtered(sorted);
-    final groups = _groups(list);
+    final groups = _groups(sorted);
     final unread = sorted.where((n) => !n.isRead).length;
-    final tugasN = sorted.where(_isTugas).length;
-    final pembN = sorted.length - tugasN;
 
     return Scaffold(
       backgroundColor: _S.bg,
@@ -251,118 +224,117 @@ class _NotificationScreenState extends ConsumerState<NotificationScreen> {
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          Expanded(
-                            child: SingleChildScrollView(
-                              scrollDirection: Axis.horizontal,
-                              child: Row(
-                                children: [
-                                  _chip('Semua', sorted.length, _Filter.all),
-                                  const SizedBox(width: 8),
-                                  _chip('Tugas Verifikasi', tugasN, _Filter.tugas),
-                                  const SizedBox(width: 8),
-                                  _chip('Pembaruan', pembN, _Filter.pembaruan),
-                                ],
-                              ),
+                          Text(
+                            'Semua Notifikasi',
+                            style: _t(
+                              size: 14,
+                              w: FontWeight.w700,
+                              color: _S.textPrimary,
                             ),
                           ),
-                          const SizedBox(width: 8),
                           GestureDetector(
                             onTap: unread == 0 ? null : _markAllRead,
                             child: Container(
                               padding: const EdgeInsets.symmetric(
-                                horizontal: 10,
+                                horizontal: 12,
                                 vertical: 6,
                               ),
                               decoration: BoxDecoration(
-                                color: _S.surfaceLow.withValues(alpha: 0.7),
+                                color: unread == 0
+                                    ? _S.surfaceLow.withValues(alpha: 0.5)
+                                    : _S.surfaceLow,
                                 borderRadius: BorderRadius.circular(8),
-                              ),
-                              child: Text(
-                                unread == 0
-                                    ? 'Semua Terbaca'
-                                    : 'Tandai Semua Dibaca',
-                                style: _t(
-                                  size: 11,
-                                  w: FontWeight.w600,
+                                border: Border.all(
                                   color: unread == 0
-                                      ? _S.slate400
-                                      : _S.secondary,
+                                      ? _S.slate200.withValues(alpha: 0.5)
+                                      : _S.slate200,
                                 ),
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(
+                                    Icons.done_all_rounded,
+                                    size: 14,
+                                    color: unread == 0
+                                        ? _S.slate400
+                                        : _S.secondary,
+                                  ),
+                                  const SizedBox(width: 6),
+                                  Text(
+                                    unread == 0
+                                        ? 'Semua Terbaca'
+                                        : 'Tandai Semua Dibaca',
+                                    style: _t(
+                                      size: 11,
+                                      w: FontWeight.w600,
+                                      color: unread == 0
+                                          ? _S.slate400
+                                          : _S.secondary,
+                                    ),
+                                  ),
+                                ],
                               ),
                             ),
                           ),
                         ],
                       ),
                       const SizedBox(height: 16),
-                      if (list.isEmpty)
-                        Padding(
-                          padding: const EdgeInsets.all(32),
-                          child: Text(
-                            'Tidak ada notifikasi di filter ini.',
-                            textAlign: TextAlign.center,
-                            style: _t(size: 13, color: _S.textSecondary),
-                          ),
-                        )
-                      else
-                        ...groups.entries.expand((e) {
-                          final gUnread = e.value
-                              .where((n) => !n.isRead)
-                              .length;
-                          return [
-                            Padding(
-                              padding: const EdgeInsets.only(top: 4, bottom: 6),
-                              child: Row(
-                                children: [
+                      ...groups.entries.expand((e) {
+                        final gUnread = e.value.where((n) => !n.isRead).length;
+                        return [
+                          Padding(
+                            padding: const EdgeInsets.only(top: 4, bottom: 6),
+                            child: Row(
+                              children: [
+                                Text(
+                                  e.key.toUpperCase(),
+                                  style: _t(
+                                    size: 12,
+                                    w: FontWeight.w700,
+                                    ls: 0.6,
+                                  ),
+                                ),
+                                const SizedBox(width: 8),
+                                if (e.value.isNotEmpty)
                                   Text(
-                                    e.key.toUpperCase(),
+                                    _fmtDate(e.value.first.createdAt),
                                     style: _t(
-                                      size: 12,
-                                      w: FontWeight.w700,
-                                      ls: 0.6,
+                                      size: 11,
+                                      color: _S.textSecondary,
                                     ),
                                   ),
-                                  const SizedBox(width: 8),
-                                  if (e.value.isNotEmpty)
-                                    Text(
-                                      _fmtDate(e.value.first.createdAt),
+                                const Spacer(),
+                                if (gUnread > 0)
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 8,
+                                      vertical: 2,
+                                    ),
+                                    decoration: BoxDecoration(
+                                      color: _S.surfaceHigh,
+                                      borderRadius: BorderRadius.circular(999),
+                                    ),
+                                    child: Text(
+                                      '$gUnread Baru',
                                       style: _t(
                                         size: 11,
-                                        color: _S.textSecondary,
+                                        w: FontWeight.w600,
+                                        color: _S.navy,
                                       ),
                                     ),
-                                  const Spacer(),
-                                  if (gUnread > 0)
-                                    Container(
-                                      padding: const EdgeInsets.symmetric(
-                                        horizontal: 8,
-                                        vertical: 2,
-                                      ),
-                                      decoration: BoxDecoration(
-                                        color: _S.surfaceHigh,
-                                        borderRadius: BorderRadius.circular(
-                                          999,
-                                        ),
-                                      ),
-                                      child: Text(
-                                        '$gUnread Baru',
-                                        style: _t(
-                                          size: 11,
-                                          w: FontWeight.w600,
-                                          color: _S.navy,
-                                        ),
-                                      ),
-                                    ),
-                                ],
-                              ),
+                                  ),
+                              ],
                             ),
-                            ...e.value.map(
-                              (item) => Padding(
-                                padding: const EdgeInsets.only(bottom: 12),
-                                child: _notifCard(item),
-                              ),
+                          ),
+                          ...e.value.map(
+                            (item) => Padding(
+                              padding: const EdgeInsets.only(bottom: 12),
+                              child: _notifCard(item),
                             ),
-                          ];
-                        }),
+                          ),
+                        ];
+                      }),
                     ],
                   ),
           ),
@@ -390,52 +362,6 @@ class _NotificationScreenState extends ConsumerState<NotificationScreen> {
             context.go(r?.defaultRoute ?? RouteNames.dashboardPath);
           }
         },
-      ),
-    );
-  }
-
-  Widget _chip(String label, int count, _Filter f) {
-    final active = _filter == f;
-    return GestureDetector(
-      onTap: () => setState(() => _filter = f),
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
-        decoration: BoxDecoration(
-          color: active ? _S.primaryContainer : _S.surfaceLow,
-          borderRadius: BorderRadius.circular(999),
-          boxShadow: active
-              ? [
-                  BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.06),
-                    blurRadius: 4,
-                  ),
-                ]
-              : null,
-        ),
-        child: Text.rich(
-          TextSpan(
-            children: [
-              TextSpan(
-                text: label,
-                style: _t(
-                  size: 12,
-                  w: active ? FontWeight.w600 : FontWeight.w500,
-                  color: active ? Colors.white : _S.textSecondary,
-                ),
-              ),
-              TextSpan(
-                text: ' ($count)',
-                style: _t(
-                  size: 11,
-                  w: FontWeight.w500,
-                  color: active
-                      ? Colors.white.withValues(alpha: 0.9)
-                      : _S.textSecondary.withValues(alpha: 0.8),
-                ),
-              ),
-            ],
-          ),
-        ),
       ),
     );
   }
