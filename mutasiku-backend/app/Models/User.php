@@ -47,4 +47,9 @@ class User extends Authenticatable
     {
         return $this->hasMany(MutationStatusHistory::class);
     }
+
+    public function mutations(): HasMany
+    {
+        return $this->hasMany(Mutation::class, 'applicant_id');
+    }
 }
