@@ -29,13 +29,10 @@ class StoreMutationRequest extends FormRequest
     {
         return [
             'asset_id' => ['required', 'integer', 'exists:assets,id'],
-            'destination_location_id' => ['required_without:target_location_id', 'nullable', 'integer', 'exists:locations,id'],
-            'target_location_id' => ['required_without:destination_location_id', 'nullable', 'integer', 'exists:locations,id'],
+            'destination_location_id' => ['required', 'integer', 'exists:locations,id'],
             'reason' => ['required', 'string', 'max:1000'],
-            'sk_document' => ['required_without:sk_sdm', 'nullable'],
-            'sk_sdm' => ['required_without:sk_document', 'nullable'],
+            'sk_document' => ['required'],
             'asset_moves_with_applicant' => ['nullable', 'boolean'],
-            'is_asset_moves_with_applicant' => ['nullable', 'boolean'],
             'target_pic_id' => ['nullable', 'integer'],
         ];
     }
@@ -50,11 +47,10 @@ class StoreMutationRequest extends FormRequest
         return [
             'asset_id.required' => 'Aset wajib dipilih.',
             'asset_id.exists' => 'Aset yang dipilih tidak ditemukan dalam sistem.',
-            'destination_location_id.required_without' => 'Lokasi tujuan wajib dipilih.',
-            'target_location_id.required_without' => 'Lokasi tujuan wajib dipilih.',
+            'destination_location_id.required' => 'Lokasi tujuan wajib dipilih.',
+            'destination_location_id.exists' => 'Lokasi tujuan yang dipilih tidak ditemukan dalam sistem.',
             'reason.required' => 'Alasan mutasi wajib diisi.',
-            'sk_document.required_without' => 'Surat Keputusan (SK) SDM wajib dilampirkan.',
-            'sk_sdm.required_without' => 'Surat Keputusan (SK) SDM wajib dilampirkan.',
+            'sk_document.required' => 'Surat Keputusan (SK) SDM wajib dilampirkan.',
         ];
     }
 
@@ -97,7 +93,7 @@ class StoreMutationRequest extends FormRequest
      */
     public function getDestinationLocationId(): int
     {
-        return (int) ($this->input('destination_location_id') ?? $this->input('target_location_id'));
+        return (int) $this->input('destination_location_id');
     }
 
     /**
@@ -109,11 +105,7 @@ class StoreMutationRequest extends FormRequest
             return $this->file('sk_document')->store('documents/sk_sdm', 'public');
         }
 
-        if ($this->hasFile('sk_sdm')) {
-            return $this->file('sk_sdm')->store('documents/sk_sdm', 'public');
-        }
-
-        return (string) ($this->input('sk_document') ?? $this->input('sk_sdm'));
+        return (string) $this->input('sk_document');
     }
 
     /**
@@ -121,14 +113,6 @@ class StoreMutationRequest extends FormRequest
      */
     public function isMovingWithApplicant(): bool
     {
-        if ($this->has('asset_moves_with_applicant')) {
-            return $this->boolean('asset_moves_with_applicant');
-        }
-
-        if ($this->has('is_asset_moves_with_applicant')) {
-            return $this->boolean('is_asset_moves_with_applicant');
-        }
-
-        return true;
+        return $this->boolean('asset_moves_with_applicant', true);
     }
 }

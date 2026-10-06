@@ -32,5 +32,12 @@ Route::prefix('v1')->group(function () {
         Route::get('/mutations', [MutationController::class, 'index']);
         Route::post('/mutations', [MutationController::class, 'store']);
         Route::get('/mutations/{id}', [MutationController::class, 'show']);
+
+        // Stage 5: Mutation Transitions
+        Route::post('/mutations/{id}/verify', [MutationController::class, 'verify']);
+        Route::post('/mutations/{id}/verify-asset', [MutationController::class, 'verifyAsset']);
+        Route::post('/mutations/{id}/approve', [MutationController::class, 'approve']);
+        Route::post('/mutations/{id}/confirm', [MutationController::class, 'confirm']);
+        Route::post('/mutations/{id}/resubmit', [MutationController::class, 'resubmit']);
     });
 });

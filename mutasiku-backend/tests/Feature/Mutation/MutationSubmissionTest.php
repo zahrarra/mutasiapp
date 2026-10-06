@@ -127,9 +127,9 @@ class MutationSubmissionTest extends TestCase
 
         $payload = [
             'asset_id' => $asset->id,
-            'target_location_id' => $destLocation->id,
+            'destination_location_id' => $destLocation->id,
             'reason' => 'Mutasi kerja',
-            'sk_sdm' => 'SK-SDM-002.pdf',
+            'sk_document' => 'SK-SDM-002.pdf',
             'asset_moves_with_applicant' => true,
         ];
 
