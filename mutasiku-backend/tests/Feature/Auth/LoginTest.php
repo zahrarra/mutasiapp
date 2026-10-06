@@ -193,4 +193,128 @@ class LoginTest extends TestCase
                 'message' => 'Akun Anda dinonaktifkan. Silakan hubungi Administrator.',
             ]);
     }
+
+    public function test_login_is_throttled_after_five_failed_attempts(): void
+    {
+        $role = $this->createRole('pemohon');
+        $user = User::factory()->create([
+            'email' => 'throttled@mutasiku.test',
+            'password' => 'secret123',
+            'role_id' => $role->id,
+            'is_active' => true,
+        ]);
+
+        // 5 percobaan pertama gagal dengan 401
+        for ($i = 1; $i <= 5; $i++) {
+            $response = $this->postJson('/api/v1/auth/login', [
+                'email' => $user->email,
+                'password' => 'wrong-pass',
+            ]);
+            $response->assertStatus(401)
+                ->assertJson([
+                    'success' => false,
+                    'status' => 'error',
+                    'message' => 'Email atau password salah.',
+                ]);
+        }
+
+        // Percobaan ke-6 harus di-throttle dengan HTTP 429
+        $throttledResponse = $this->postJson('/api/v1/auth/login', [
+            'email' => $user->email,
+            'password' => 'wrong-pass',
+        ]);
+
+        $throttledResponse->assertStatus(429)
+            ->assertJson([
+                'success' => false,
+                'status' => 'error',
+            ])
+            ->assertJsonStructure([
+                'success',
+                'status',
+                'message',
+                'retry_after',
+            ]);
+
+        $this->assertGreaterThan(0, $throttledResponse->json('retry_after'));
+        $this->assertStringContainsString('Terlalu banyak percobaan login', $throttledResponse->json('message'));
+        $this->assertNotEmpty($throttledResponse->headers->get('Retry-After'));
+    }
+
+    public function test_successful_login_clears_rate_limiter_attempts(): void
+    {
+        $role = $this->createRole('pemohon');
+        $user = User::factory()->create([
+            'email' => 'reset_attempt@mutasiku.test',
+            'password' => 'secret123',
+            'role_id' => $role->id,
+            'is_active' => true,
+        ]);
+
+        // 3 kali gagal
+        for ($i = 1; $i <= 3; $i++) {
+            $this->postJson('/api/v1/auth/login', [
+                'email' => $user->email,
+                'password' => 'wrong-pass',
+            ])->assertStatus(401);
+        }
+
+        // Login sukses harus mereset counter
+        $this->postJson('/api/v1/auth/login', [
+            'email' => $user->email,
+            'password' => 'secret123',
+        ])->assertStatus(200);
+
+        // Setelah reset, percobaan gagal ke-4 seharusnya tidak memicu throttle
+        // melainkan hanya mengembalikan 401 karena counter direset ke 1
+        $this->postJson('/api/v1/auth/login', [
+            'email' => $user->email,
+            'password' => 'wrong-pass',
+        ])->assertStatus(401);
+    }
+
+    public function test_rate_limiter_is_scoped_by_email_and_ip(): void
+    {
+        $role = $this->createRole('pemohon');
+        $userA = User::factory()->create([
+            'email' => 'user_a@mutasiku.test',
+            'password' => 'secretA',
+            'role_id' => $role->id,
+            'is_active' => true,
+        ]);
+
+        $userB = User::factory()->create([
+            'email' => 'user_b@mutasiku.test',
+            'password' => 'secretB',
+            'role_id' => $role->id,
+            'is_active' => true,
+        ]);
+
+        // User A gagal 5 kali berturut-turut dari IP default
+        for ($i = 1; $i <= 5; $i++) {
+            $this->postJson('/api/v1/auth/login', [
+                'email' => $userA->email,
+                'password' => 'wrong',
+            ])->assertStatus(401);
+        }
+
+        // User A sekarang terkunci
+        $this->postJson('/api/v1/auth/login', [
+            'email' => $userA->email,
+            'password' => 'wrong',
+        ])->assertStatus(429);
+
+        // User B dari IP yang sama TIDAK terpengaruh dan tetap bisa login sukses
+        $this->postJson('/api/v1/auth/login', [
+            'email' => $userB->email,
+            'password' => 'secretB',
+        ])->assertStatus(200);
+
+        // User A jika mencoba dari IP berbeda tidak terpengaruh limit IP lama
+        $this->withServerVariables(['REMOTE_ADDR' => '192.168.10.50'])
+            ->postJson('/api/v1/auth/login', [
+                'email' => $userA->email,
+                'password' => 'secretA',
+            ])->assertStatus(200);
+    }
 }
