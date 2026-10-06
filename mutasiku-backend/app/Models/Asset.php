@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Asset extends Model
 {
@@ -39,5 +40,15 @@ class Asset extends Model
     public function pic(): BelongsTo
     {
         return $this->belongsTo(User::class, 'pic_id');
+    }
+
+    public function mutations(): HasMany
+    {
+        return $this->hasMany(Mutation::class);
+    }
+
+    public function mutationHistories(): HasMany
+    {
+        return $this->hasMany(MutationHistory::class);
     }
 }
