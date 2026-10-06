@@ -1,11 +1,17 @@
 <?php
 
+use App\Http\Controllers\Api\V1\Admin\AssetCategoryController as AdminAssetCategoryController;
+use App\Http\Controllers\Api\V1\Admin\AssetController as AdminAssetController;
+use App\Http\Controllers\Api\V1\Admin\LocationController as AdminLocationController;
+use App\Http\Controllers\Api\V1\Admin\RoleController as AdminRoleController;
+use App\Http\Controllers\Api\V1\Admin\UserController as AdminUserController;
 use App\Http\Controllers\Api\V1\AssetCategoryController;
 use App\Http\Controllers\Api\V1\AssetController;
 use App\Http\Controllers\Api\V1\AuthController;
 use App\Http\Controllers\Api\V1\LocationController;
 use App\Http\Controllers\Api\V1\MutationController;
 use App\Http\Controllers\Api\V1\NotificationController;
+use App\Http\Middleware\EnsureUserIsAdmin;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
@@ -45,5 +51,14 @@ Route::prefix('v1')->group(function () {
         Route::get('/notifications', [NotificationController::class, 'index']);
         Route::post('/notifications/read-all', [NotificationController::class, 'readAll']);
         Route::post('/notifications/{id}/read', [NotificationController::class, 'read']);
+
+        // Stage 7: Admin CRUD
+        Route::prefix('admin')->middleware(EnsureUserIsAdmin::class)->group(function () {
+            Route::apiResource('users', AdminUserController::class);
+            Route::apiResource('roles', AdminRoleController::class);
+            Route::apiResource('locations', AdminLocationController::class);
+            Route::apiResource('asset-categories', AdminAssetCategoryController::class);
+            Route::apiResource('assets', AdminAssetController::class);
+        });
     });
 });
