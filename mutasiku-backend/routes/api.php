@@ -4,6 +4,7 @@ use App\Http\Controllers\Api\V1\AssetCategoryController;
 use App\Http\Controllers\Api\V1\AssetController;
 use App\Http\Controllers\Api\V1\AuthController;
 use App\Http\Controllers\Api\V1\LocationController;
+use App\Http\Controllers\Api\V1\MutationController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
@@ -27,5 +28,9 @@ Route::prefix('v1')->group(function () {
         Route::get('/assets', [AssetController::class, 'index']);
         Route::get('/assets/{id}', [AssetController::class, 'show']);
         Route::get('/assets/{id}/history', [AssetController::class, 'history']);
+
+        Route::get('/mutations', [MutationController::class, 'index']);
+        Route::post('/mutations', [MutationController::class, 'store']);
+        Route::get('/mutations/{id}', [MutationController::class, 'show']);
     });
 });

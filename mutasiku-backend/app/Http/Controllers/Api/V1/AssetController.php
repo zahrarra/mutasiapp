@@ -92,10 +92,15 @@ class AssetController extends Controller
             ], 403);
         }
 
+        $histories = $asset->mutationHistories()
+            ->with(['previousLocation', 'newLocation', 'previousPic.role', 'newPic.role', 'updater.role'])
+            ->orderByDesc('date')
+            ->get();
+
         return response()->json([
             'success' => true,
             'message' => 'Riwayat perubahan aset berhasil diambil.',
-            'data' => AssetHistoryResource::collection(collect([])),
+            'data' => AssetHistoryResource::collection($histories),
         ], 200);
     }
 }

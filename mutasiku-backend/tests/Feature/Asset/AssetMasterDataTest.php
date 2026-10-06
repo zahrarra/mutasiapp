@@ -5,6 +5,7 @@ namespace Tests\Feature\Asset;
 use App\Models\Asset;
 use App\Models\AssetCategory;
 use App\Models\Location;
+use App\Models\MutationHistory;
 use App\Models\Role;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -306,6 +307,42 @@ class AssetMasterDataTest extends TestCase
                 'message' => 'Riwayat perubahan aset berhasil diambil.',
                 'data' => [],
             ]);
+    }
+
+    public function test_asset_history_succeeds_for_authorized_user_with_data(): void
+    {
+        $bagianAset = $this->createUser('bagian_aset');
+        $token = $bagianAset->createToken('test')->plainTextToken;
+
+        $pemohon = $this->createUser('pemohon');
+        $asset = $this->createAsset($pemohon);
+
+        $loc1 = $this->createLocation('Gedung A', 'GA_H1');
+        $loc2 = $this->createLocation('Gedung B', 'GB_H2');
+        $operator = $this->createUser('operator');
+
+        MutationHistory::create([
+            'asset_id' => $asset->id,
+            'ticket_number' => 'TI-2026-0001',
+            'date' => now()->subDay(),
+            'previous_location_id' => $loc1->id,
+            'new_location_id' => $loc2->id,
+            'previous_pic_id' => $pemohon->id,
+            'new_pic_id' => null,
+            'updated_by' => $operator->id,
+        ]);
+
+        $response = $this->withHeader('Authorization', 'Bearer '.$token)
+            ->getJson('/api/v1/assets/'.$asset->id.'/history');
+
+        $response->assertStatus(200);
+        $this->assertCount(1, $response->json('data'));
+        $this->assertEquals('TI-2026-0001', $response->json('data.0.ticket_number'));
+        $this->assertEquals($loc1->id, $response->json('data.0.previous_location_id'));
+        $this->assertEquals($loc2->id, $response->json('data.0.new_location_id'));
+        $this->assertEquals($pemohon->id, $response->json('data.0.previous_pic_id'));
+        $this->assertNull($response->json('data.0.new_pic_id'));
+        $this->assertEquals($operator->id, $response->json('data.0.updated_by'));
     }
 
     public function test_pemohon_can_view_history_of_their_own_asset(): void
