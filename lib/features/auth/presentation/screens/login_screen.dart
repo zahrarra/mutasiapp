@@ -25,6 +25,7 @@ import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 import '../../../../app/router/route_names.dart';
+import '../../../../core/validators/form_validators.dart';
 import '../providers/auth_provider.dart';
 
 /// Design tokens sesuai baseline Stitch Halaman Login (Executive Redesign)
@@ -72,8 +73,8 @@ class LoginScreen extends ConsumerStatefulWidget {
 
 class _LoginScreenState extends ConsumerState<LoginScreen> {
   final _formKey = GlobalKey<FormState>();
-  final _usernameController = TextEditingController(text: 'pemohon');
-  final _passwordController = TextEditingController(text: 'password123');
+  final _usernameController = TextEditingController();
+  final _passwordController = TextEditingController();
   bool _obscure = true;
   bool _remember = false;
 
@@ -987,7 +988,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
           color: _LoginTheme.textBody,
         ),
         decoration: InputDecoration(
-          hintText: 'Email / NIP',
+          hintText: 'Email',
           hintStyle: GoogleFonts.plusJakartaSans(
             fontSize: 14.5,
             color: _LoginTheme.textPlaceholder,
@@ -1003,8 +1004,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
             vertical: 14,
           ),
         ),
-        validator: (v) =>
-            (v == null || v.trim().isEmpty) ? 'Email / NIP wajib diisi' : null,
+        validator: FormValidators.email,
       ),
     );
   }
