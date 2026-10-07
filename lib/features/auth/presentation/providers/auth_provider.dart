@@ -187,6 +187,14 @@ class AuthNotifier extends StateNotifier<AuthState> {
     await logoutUseCase();
     state = const AuthState(isLoading: false, user: null);
   }
+
+  /// Dipanggil secara otomatis ketika token kedaluwarsa atau dicabut (HTTP 401).
+  Future<void> handleSessionExpired() async {
+    if (state.isAuthenticated) {
+      state = const AuthState(isLoading: false, user: null);
+      await logoutUseCase();
+    }
+  }
 }
 
 /// Provider utama state autentikasi aplikasi.
@@ -194,10 +202,17 @@ final authStateProvider = StateNotifierProvider<AuthNotifier, AuthState>((ref) {
   final loginUseCase = ref.watch(loginUseCaseProvider);
   final logoutUseCase = ref.watch(logoutUseCaseProvider);
   final authRepository = ref.watch(authRepositoryProvider);
+  final apiClient = ref.watch(apiClientProvider);
 
-  return AuthNotifier(
+  final notifier = AuthNotifier(
     loginUseCase: loginUseCase,
     logoutUseCase: logoutUseCase,
     authRepository: authRepository,
   );
+
+  apiClient.onUnauthorized = () {
+    notifier.handleSessionExpired();
+  };
+
+  return notifier;
 });

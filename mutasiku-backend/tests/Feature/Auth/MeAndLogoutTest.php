@@ -56,6 +56,29 @@ class MeAndLogoutTest extends TestCase
         $response->assertStatus(401);
     }
 
+    public function test_get_me_returns_403_for_inactive_user(): void
+    {
+        $role = $this->createRole('pemohon');
+
+        $user = User::factory()->create([
+            'email' => 'inactive_user@mutasiku.test',
+            'role_id' => $role->id,
+            'is_active' => false,
+        ]);
+
+        $token = $user->createToken('auth_token')->plainTextToken;
+
+        $response = $this->withHeader('Authorization', 'Bearer '.$token)
+            ->getJson('/api/v1/auth/me');
+
+        $response->assertStatus(403)
+            ->assertJson([
+                'success' => false,
+                'status' => 'error',
+                'message' => 'Akun Anda dinonaktifkan. Silakan hubungi Administrator.',
+            ]);
+    }
+
     public function test_post_logout_with_valid_token_returns_200(): void
     {
         $role = $this->createRole('pemohon');

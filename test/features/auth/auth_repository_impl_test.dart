@@ -9,6 +9,7 @@
 // 6. Email tanpa format valid -> DITOLAK
 
 import 'dart:convert';
+import 'dart:io';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
@@ -144,6 +145,73 @@ void main() {
           );
         }
 
+        if (request.url.path == '/api/v1/auth/me') {
+          final authHeader = request.headers['authorization'] ?? '';
+          if (!authHeader.startsWith('Bearer ')) {
+            return http.Response(
+              jsonEncode({'success': false, 'message': 'Unauthenticated.'}),
+              401,
+              headers: {'content-type': 'application/json'},
+            );
+          }
+          final token = authHeader.replaceFirst('Bearer ', '').trim();
+          if (token == 'invalid_token') {
+            return http.Response(
+              jsonEncode({'success': false, 'message': 'Unauthenticated.'}),
+              401,
+              headers: {'content-type': 'application/json'},
+            );
+          }
+          if (token == 'inactive_token') {
+            return http.Response(
+              jsonEncode({
+                'success': false,
+                'status': 'error',
+                'message': 'Akun Anda dinonaktifkan. Silakan hubungi Administrator.',
+              }),
+              403,
+              headers: {'content-type': 'application/json'},
+            );
+          }
+          if (token == 'mock_sanctum_token_2') {
+            return http.Response(
+              jsonEncode({
+                'success': true,
+                'message': 'Data profil berhasil diambil.',
+                'data': {
+                  'user': {
+                    'id': 2,
+                    'name': 'Pemohon MutasiKu',
+                    'email': 'pemohon@mutasiku.test',
+                    'nip': '100002',
+                    'role': 'pemohon',
+                    'is_active': true,
+                  },
+                },
+              }),
+              200,
+              headers: {'content-type': 'application/json'},
+            );
+          }
+          return http.Response(
+            jsonEncode({'success': false, 'message': 'Unauthenticated.'}),
+            401,
+            headers: {'content-type': 'application/json'},
+          );
+        }
+
+        if (request.url.path == '/api/v1/auth/logout') {
+          return http.Response(
+            jsonEncode({
+              'success': true,
+              'message': 'Logout berhasil.',
+              'data': null,
+            }),
+            200,
+            headers: {'content-type': 'application/json'},
+          );
+        }
+
         return http.Response('Not Found', 404);
       });
     }
@@ -255,6 +323,133 @@ void main() {
       final valFailure = failure as ValidationFailure;
       expect(valFailure.fieldErrors?['email'], contains('Format email tidak valid.'));
       expect(await secureStorage.hasAuthToken(), isFalse);
+    });
+
+    group('Session Restore, Inactive User, Network Error & Logout Tests', () {
+      test('1. getCurrentUser() dengan token valid + /auth/me sukses -> user berhasil dipulihkan', () async {
+        await secureStorage.saveAuthToken('mock_sanctum_token_2');
+        final repo = createRepository(createMockBackendClient());
+
+        final result = await repo.getCurrentUser();
+
+        expect(result, isA<Success<User?>>());
+        final user = (result as Success<User?>).data;
+        expect(user, isNotNull);
+        expect(user!.email, 'pemohon@mutasiku.test');
+        expect(user.role, UserRole.pemohon);
+        expect(user.isActive, isTrue);
+
+        // Token tetap ada di secure storage
+        expect(await secureStorage.hasAuthToken(), isTrue);
+      });
+
+      test('2. /auth/me mengembalikan 401 -> token dihapus dan user tidak dipulihkan', () async {
+        await secureStorage.saveAuthToken('invalid_token');
+        final repo = createRepository(createMockBackendClient());
+
+        final result = await repo.getCurrentUser();
+
+        expect(result, isA<Success<User?>>());
+        final user = (result as Success<User?>).data;
+        expect(user, isNull);
+
+        // Token dihapus dari secure storage karena 401
+        expect(await secureStorage.hasAuthToken(), isFalse);
+      });
+
+      test('3. Network error / offline -> token TIDAK dihapus', () async {
+        await secureStorage.saveAuthToken('mock_sanctum_token_2');
+
+        // Client yang melempar SocketException (simulasi koneksi putus)
+        final offlineClient = MockClient((request) async {
+          throw const SocketException('No Internet Connection');
+        });
+
+        final repo = createRepository(offlineClient);
+
+        final result = await repo.getCurrentUser();
+
+        // Mengembalikan failure dan token TIDAK dihapus
+        expect(result, isA<AppFailure<User?>>());
+        final failure = (result as AppFailure<User?>).failure;
+        expect(failure, isA<NetworkFailure>());
+        expect(await secureStorage.hasAuthToken(), isTrue);
+        expect(await secureStorage.getAuthToken(), 'mock_sanctum_token_2');
+      });
+
+      test('4. User is_active = false (backend 403) -> session tidak dipulihkan & token dihapus', () async {
+        await secureStorage.saveAuthToken('inactive_token');
+        final repo = createRepository(createMockBackendClient());
+
+        final result = await repo.getCurrentUser();
+
+        expect(result, isA<Success<User?>>());
+        final user = (result as Success<User?>).data;
+        expect(user, isNull);
+
+        // Token dihapus agar user nonaktif tidak bisa restore session
+        expect(await secureStorage.hasAuthToken(), isFalse);
+      });
+
+      test('5. logout() -> endpoint logout dipanggil, token dihapus, ApiClient kehilangan token', () async {
+        await secureStorage.saveAuthToken('mock_sanctum_token_2');
+        final repo = createRepository(createMockBackendClient());
+
+        // Restore user dulu
+        await repo.getCurrentUser();
+
+        // Logout
+        await repo.logout();
+
+        // Token dihapus dari storage
+        expect(await secureStorage.hasAuthToken(), isFalse);
+
+        // Memanggil getCurrentUser lagi menghasilkan null
+        final afterLogout = await repo.getCurrentUser();
+        expect(afterLogout, isA<Success<User?>>());
+        expect((afterLogout as Success<User?>).data, isNull);
+      });
+
+      test('6. User aktif -> tetap bisa restore session normal', () async {
+        await secureStorage.saveAuthToken('mock_sanctum_token_2');
+        final repo = createRepository(createMockBackendClient());
+
+        final result = await repo.getCurrentUser();
+
+        expect(result, isA<Success<User?>>());
+        final user = (result as Success<User?>).data;
+        expect(user, isNotNull);
+        expect(user!.isActive, isTrue);
+        expect(user.name, 'Pemohon MutasiKu');
+      });
+
+      test('7. ApiClient global 401 callback dipanggil saat request terautentikasi menerima 401', () async {
+        bool unauthCalled = false;
+        final client = MockClient((request) async {
+          return http.Response(
+            jsonEncode({'message': 'Unauthenticated.'}),
+            401,
+            headers: {'content-type': 'application/json'},
+          );
+        });
+
+        final apiClient = ApiClient(
+          baseUrl: 'http://127.0.0.1:8000',
+          httpClient: client,
+          onUnauthorized: () {
+            unauthCalled = true;
+          },
+        );
+
+        // Sebelum token di-set: request 401 tidak memicu onUnauthorized (misal saat login gagal)
+        await apiClient.get('/api/v1/auth/me');
+        expect(unauthCalled, isFalse);
+
+        // Setelah token di-set: request 401 memicu onUnauthorized
+        apiClient.setAuthToken('expired_token');
+        await apiClient.get('/api/v1/auth/me');
+        expect(unauthCalled, isTrue);
+      });
     });
   });
 }

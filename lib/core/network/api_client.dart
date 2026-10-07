@@ -35,10 +35,14 @@ class ApiClient {
   ApiClient({
     required this.baseUrl,
     http.Client? httpClient,
+    this.onUnauthorized,
   }) : _client = httpClient ?? http.Client();
 
   final String baseUrl;
   final http.Client _client;
+
+  /// Callback yang dipanggil saat request terautentikasi menerima response 401 Unauthorized.
+  void Function()? onUnauthorized;
 
   String? _authToken;
 
@@ -223,6 +227,11 @@ class ApiClient {
   Failure _failureFromStatusCode(int statusCode, String body) {
     switch (statusCode) {
       case 401:
+        final hadAuthToken = _authToken != null;
+        _authToken = null;
+        if (hadAuthToken) {
+          onUnauthorized?.call();
+        }
         return UnauthorizedFailure(message: _extractMessage(body) ?? '401 Unauthorized');
       case 403:
         return ForbiddenFailure(message: _extractMessage(body) ?? '403 Forbidden');

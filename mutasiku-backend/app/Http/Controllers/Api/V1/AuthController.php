@@ -111,6 +111,14 @@ class AuthController extends Controller
     {
         $user = $request->user()->loadMissing('role');
 
+        if (! $user->is_active) {
+            return response()->json([
+                'success' => false,
+                'status' => 'error',
+                'message' => 'Akun Anda dinonaktifkan. Silakan hubungi Administrator.',
+            ], 403);
+        }
+
         return response()->json([
             'success' => true,
             'message' => 'Data profil berhasil diambil.',

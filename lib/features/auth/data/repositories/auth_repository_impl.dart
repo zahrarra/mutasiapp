@@ -144,13 +144,22 @@ class AuthRepositoryImpl implements AuthRepository {
     if (!hasToken) return Result.success(null);
 
     final token = await secureStorage.getAuthToken();
-    if (token != null && apiClient != null) {
+    if (token == null || token.isEmpty) return Result.success(null);
+
+    if (apiClient != null) {
       apiClient!.setAuthToken(token);
       final response = await apiClient!.get('/api/v1/auth/me');
       switch (response) {
         case Success(:final data):
           final userMap = data['data']?['user'] as Map<String, dynamic>?;
           if (userMap != null) {
+            final isActive = userMap['is_active'] as bool? ?? true;
+            if (!isActive) {
+              await secureStorage.clearAll();
+              apiClient!.clearAuthToken();
+              return Result.success(null);
+            }
+
             final roleStr = userMap['role'] as String?;
             final role = UserRole.fromApiValue(roleStr) ?? UserRole.pemohon;
 
@@ -161,16 +170,20 @@ class AuthRepositoryImpl implements AuthRepository {
               email: userMap['email'] as String? ?? '',
               role: role,
               department: userMap['department'] as String? ?? 'Aset & Logistik',
-              isActive: userMap['is_active'] as bool? ?? true,
+              isActive: true,
             );
             return Result.success(_currentUser);
           }
           return Result.success(null);
 
-        case AppFailure():
-          await secureStorage.clearAll();
-          apiClient!.clearAuthToken();
-          return Result.success(null);
+        case AppFailure(:final failure):
+          if (failure is UnauthorizedFailure || failure is ForbiddenFailure) {
+            await secureStorage.clearAll();
+            apiClient!.clearAuthToken();
+            return Result.success(null);
+          }
+          // NetworkFailure, ServerFailure (5xx): JANGAN hapus token!
+          return Result.failure(failure);
       }
     }
 
@@ -180,6 +193,10 @@ class AuthRepositoryImpl implements AuthRepository {
     if (userRepository != null) {
       final userResult = await userRepository!.getUserById(userId);
       if (userResult is Success<User>) {
+        if (!userResult.data.isActive) {
+          await secureStorage.clearAll();
+          return Result.success(null);
+        }
         _currentUser = userResult.data;
         return Result.success(_currentUser);
       }
