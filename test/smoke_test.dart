@@ -37,6 +37,7 @@ import 'package:mutasiku/features/auth/presentation/providers/auth_provider.dart
 import 'package:mutasiku/features/mutation/data/repositories/mutation_repository_impl.dart';
 import 'package:mutasiku/features/mutation/domain/entities/mutation_status.dart';
 import 'package:mutasiku/features/mutation/domain/repositories/mutation_repository.dart';
+import 'package:mutasiku/features/mutation/presentation/providers/mutation_provider.dart';
 import 'package:mutasiku/features/notification/domain/entities/notification_item.dart';
 import 'package:mutasiku/features/operator/presentation/screens/operator_mutations_screen.dart';
 import 'package:mutasiku/features/profile/presentation/screens/profile_screen.dart';
@@ -321,6 +322,9 @@ void main() {
         ProviderScope(
           overrides: [
             authStateProvider.overrideWith((ref) => _MockAuthNotifier(operatorUser)),
+            apiMutationRepositoryProvider.overrideWith(
+              (ref) => ref.watch(mutationRepositoryProvider),
+            ),
           ],
           child: const MaterialApp(home: OperatorMutationsScreen()),
         ),
