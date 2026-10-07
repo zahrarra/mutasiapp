@@ -81,6 +81,7 @@ void main() {
       final element = ProviderContainer(
         overrides: [
           authStateProvider.overrideWith((ref) => _FakeAuthNotifier(kabagTestUser)),
+          apiMutationRepositoryProvider.overrideWith((ref) => ref.watch(mutationRepositoryProvider)),
         ],
       );
 
@@ -141,6 +142,7 @@ void main() {
       final element = ProviderContainer(
         overrides: [
           authStateProvider.overrideWith((ref) => _FakeAuthNotifier(kabagTestUser)),
+          apiMutationRepositoryProvider.overrideWith((ref) => ref.watch(mutationRepositoryProvider)),
         ],
       );
 
@@ -193,6 +195,7 @@ void main() {
       final element = ProviderContainer(
         overrides: [
           authStateProvider.overrideWith((ref) => _FakeAuthNotifier(kabagTestUser)),
+          apiMutationRepositoryProvider.overrideWith((ref) => ref.watch(mutationRepositoryProvider)),
         ],
       );
 
@@ -229,6 +232,7 @@ void main() {
       final container = ProviderContainer(
         overrides: [
           authStateProvider.overrideWith((ref) => _FakeAuthNotifier(kabagTestUser)),
+          apiMutationRepositoryProvider.overrideWith((ref) => ref.watch(mutationRepositoryProvider)),
         ],
       );
 
@@ -292,6 +296,7 @@ void main() {
       final element = ProviderContainer(
         overrides: [
           authStateProvider.overrideWith((ref) => _FakeAuthNotifier(kabagTestUser)),
+          apiMutationRepositoryProvider.overrideWith((ref) => ref.watch(mutationRepositoryProvider)),
         ],
       );
 

@@ -136,6 +136,12 @@ class _PemohonDashboardScreenState
                   _buildQuickActionBanner(),
                   const SizedBox(height: 14),
 
+                  if (mutationsAsync.hasError &&
+                      mutationsAsync.valueOrNull == null) ...[
+                    _buildErrorBanner(mutationsAsync.error.toString()),
+                    const SizedBox(height: 14),
+                  ],
+
                   // 3 Metric Cards: Dalam Proses, Perlu Tindakan, Selesai
                   _buildMetricGrid(mutationsAsync),
                   const SizedBox(height: 16),
@@ -1177,7 +1183,24 @@ class _PemohonDashboardScreenState
           ],
         ),
         const SizedBox(height: 10),
-        if (items.isEmpty)
+        if (mutationsAsync.isLoading && list.isEmpty)
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(24),
+            decoration: BoxDecoration(
+              color: _C.surface,
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: _C.borderLight),
+            ),
+            child: const Center(
+              child: SizedBox(
+                width: 24,
+                height: 24,
+                child: CircularProgressIndicator(strokeWidth: 2),
+              ),
+            ),
+          )
+        else if (items.isEmpty)
           Container(
             width: double.infinity,
             padding: const EdgeInsets.all(16),
@@ -1597,5 +1620,55 @@ class _PemohonDashboardScreenState
       case MutationStatus.rejected:
         return 'Ditolak';
     }
+  }
+
+  Widget _buildErrorBanner(String error) {
+    final cleanMsg = error.replaceFirst('Exception: ', '');
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: _C.errorBg,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: _C.error.withValues(alpha: 0.25)),
+      ),
+      child: Row(
+        children: [
+          const Icon(Icons.error_outline_rounded, color: _C.error, size: 22),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Gagal memuat data mutasi',
+                  style: _font(
+                    size: 13,
+                    weight: FontWeight.w700,
+                    color: _C.error,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  cleanMsg,
+                  style: _font(size: 11, color: _C.textSecondary),
+                ),
+              ],
+            ),
+          ),
+          TextButton(
+            onPressed: () => ref.invalidate(mutationListProvider),
+            child: Text(
+              'Coba Lagi',
+              style: _font(
+                size: 12,
+                weight: FontWeight.w700,
+                color: _C.navy,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
   }
 }

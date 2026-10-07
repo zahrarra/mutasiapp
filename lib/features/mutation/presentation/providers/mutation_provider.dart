@@ -67,17 +67,31 @@ final submitMutationUseCaseProvider = Provider<SubmitMutationUseCase>((ref) {
 });
 
 /// Provider untuk [GetMutationsUseCase].
+///
+/// Menggunakan [apiMutationRepositoryProvider] agar alur Pemohon membaca data
+/// langsung dari backend Laravel API melalui [ApiClient].
 final getMutationsUseCaseProvider = Provider<GetMutationsUseCase>((ref) {
-  final repo = ref.watch(mutationRepositoryProvider);
+  final repo = ref.watch(apiMutationRepositoryProvider);
 
   return GetMutationsUseCase(repository: repo);
 });
 
 /// Provider untuk [GetMutationDetailUseCase].
+///
+/// Mempertahankan default [mutationRepositoryProvider] agar alur mock di role lain
+/// tetap stabil tanpa regresi.
 final getMutationDetailUseCaseProvider = Provider<GetMutationDetailUseCase>((
   ref,
 ) {
   final repo = ref.watch(mutationRepositoryProvider);
+
+  return GetMutationDetailUseCase(repository: repo);
+});
+
+/// Provider khusus untuk [GetMutationDetailUseCase] yang terhubung ke API Laravel.
+final apiGetMutationDetailUseCaseProvider =
+    Provider<GetMutationDetailUseCase>((ref) {
+  final repo = ref.watch(apiMutationRepositoryProvider);
 
   return GetMutationDetailUseCase(repository: repo);
 });
@@ -161,7 +175,31 @@ final mutationListProvider = FutureProvider<List<Mutation>>((ref) async {
 
 // ─── Mutation Detail Provider ────────────────────────────────────────────────
 
-/// Provider detail satu mutasi berdasarkan ID.
+/// Provider detail satu mutasi berdasarkan ID via API Laravel.
+/// Digunakan oleh alur Pemohon untuk membaca data detail pengajuan mutasi dari server.
+final pemohonMutationDetailProvider = FutureProvider.family<Mutation, String>((
+  ref,
+  id,
+) async {
+  final useCase = ref.watch(apiGetMutationDetailUseCaseProvider);
+
+  final result = await useCase(id);
+
+  if (result is Success<Mutation>) {
+    return result.data;
+  }
+
+  if (result is AppFailure<Mutation>) {
+    throw Exception(result.failure.userMessage);
+  }
+
+  throw Exception('Pengajuan mutasi tidak ditemukan.');
+});
+
+/// Alias untuk [pemohonMutationDetailProvider].
+final apiMutationDetailProvider = pemohonMutationDetailProvider;
+
+/// Provider detail satu mutasi berdasarkan ID (Default / Mock).
 final mutationDetailProvider = FutureProvider.family<Mutation, String>((
   ref,
   id,

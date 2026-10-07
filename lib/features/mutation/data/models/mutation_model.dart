@@ -256,7 +256,7 @@ class MutationModel extends Mutation {
         skDoc;
     final docName = json['document_name']?.toString() ??
         json['documentName']?.toString() ??
-        (docPath != null ? docPath.split(RegExp(r'[\\/]')).last : null);
+        docPath?.split(RegExp(r'[\\/]')).last;
 
     // 6. Boolean is_asset_moves_with_applicant
     final isMovingRaw = json['is_asset_moves_with_applicant'] ??

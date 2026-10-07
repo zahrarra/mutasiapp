@@ -21,6 +21,7 @@ import 'package:mutasiku/features/kabag/presentation/screens/kabag_reject_form_s
 import 'package:mutasiku/features/mutation/data/repositories/mutation_repository_impl.dart';
 import 'package:mutasiku/features/mutation/domain/entities/mutation_status.dart';
 import 'package:mutasiku/features/mutation/presentation/providers/mutation_provider.dart';
+import 'package:mutasiku/features/kabag/presentation/providers/kabag_approval_provider.dart';
 import 'package:mutasiku/features/notification/presentation/screens/notification_screen.dart';
 
 class FakeKabagAuthRepository implements AuthRepository {
@@ -74,6 +75,9 @@ void main() {
       overrides: [
         authStateProvider.overrideWith(
           (ref) => FakeKabagAuthNotifier(kabagUser),
+        ),
+        apiMutationRepositoryProvider.overrideWith(
+          (ref) => ref.watch(mutationRepositoryProvider),
         ),
       ],
       child: MaterialApp(
@@ -227,6 +231,9 @@ void main() {
         authStateProvider.overrideWith(
           (ref) => FakeKabagAuthNotifier(kabagUser),
         ),
+        apiMutationRepositoryProvider.overrideWith(
+          (ref) => ref.watch(mutationRepositoryProvider),
+        ),
       ],
       child: Consumer(
         builder: (context, ref, _) {
@@ -254,7 +261,7 @@ void main() {
 
     // Cek status mutasi terupdate ke waitingDivisionHeadApproval
     final detail =
-        await containerRef.read(mutationDetailProvider('mut_004').future);
+        await containerRef.read(kabagMutationDetailProvider('mut_004').future);
     expect(detail.status.isWaitingDivisionApproval, true);
     expect(detail.assetVerifiedBy, 'Bambang Kabag');
   });
@@ -268,6 +275,9 @@ void main() {
       overrides: [
         authStateProvider.overrideWith(
           (ref) => FakeKabagAuthNotifier(kabagUser),
+        ),
+        apiMutationRepositoryProvider.overrideWith(
+          (ref) => ref.watch(mutationRepositoryProvider),
         ),
       ],
       child: Consumer(
@@ -296,7 +306,7 @@ void main() {
 
     // Cek status mutasi terupdate ke waitingKadivApproval
     final detail =
-        await containerRef.read(mutationDetailProvider('mut_004_kadiv').future);
+        await containerRef.read(kabagMutationDetailProvider('mut_004_kadiv').future);
     expect(detail.status.isWaitingDivisionApproval, true);
     expect(detail.assetVerifiedBy, 'Bambang Kabag');
     expect(detail.requiresKadivApproval, true);
@@ -311,6 +321,9 @@ void main() {
       overrides: [
         authStateProvider.overrideWith(
           (ref) => FakeKabagAuthNotifier(kabagUser),
+        ),
+        apiMutationRepositoryProvider.overrideWith(
+          (ref) => ref.watch(mutationRepositoryProvider),
         ),
       ],
       child: Consumer(
@@ -348,7 +361,7 @@ void main() {
 
     // Cek status mutasi terupdate ke returned
     final detail =
-        await containerRef.read(mutationDetailProvider('mut_004').future);
+        await containerRef.read(kabagMutationDetailProvider('mut_004').future);
     expect(detail.status, MutationStatus.returned);
     expect(detail.rejectedBy, 'Bambang Kabag');
     expect(detail.returnReason,

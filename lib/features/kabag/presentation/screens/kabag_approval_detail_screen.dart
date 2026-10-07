@@ -11,7 +11,6 @@ import '../../../../app/theme/app_colors.dart';
 import '../../../../app/theme/app_spacing.dart';
 import '../../../mutation/domain/entities/mutation.dart';
 import '../../../mutation/domain/entities/mutation_status.dart';
-import '../../../mutation/presentation/providers/mutation_provider.dart';
 import '../../../mutation/presentation/models/mutation_tracking_step.dart';
 import '../../../../core/widgets/app_feedback.dart';
 import '../../../../core/widgets/document_preview_dialog.dart';
@@ -30,7 +29,7 @@ class KabagApprovalDetailScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final asyncMutation = ref.watch(mutationDetailProvider(mutationId));
+    final asyncMutation = ref.watch(kabagMutationDetailProvider(mutationId));
     final actionState = ref.watch(kabagApprovalActionProvider);
 
     return Scaffold(
@@ -64,7 +63,7 @@ class KabagApprovalDetailScreen extends ConsumerWidget {
               const SizedBox(height: AppSpacing.md),
               ElevatedButton(
                 onPressed: () =>
-                    ref.invalidate(mutationDetailProvider(mutationId)),
+                    ref.invalidate(kabagMutationDetailProvider(mutationId)),
                 child: const Text('Coba Lagi'),
               ),
             ],

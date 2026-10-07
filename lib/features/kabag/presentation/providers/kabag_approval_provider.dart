@@ -33,9 +33,12 @@ final rejectMutationKabagUseCaseProvider =
 
 final getKabagApprovalsUseCaseProvider =
     Provider<GetKabagApprovalsUseCase>((ref) {
-  final repo = ref.watch(mutationRepositoryProvider);
+  final repo = ref.watch(apiMutationRepositoryProvider);
   return GetKabagApprovalsUseCase(repository: repo);
 });
+
+/// Provider detail satu mutasi untuk Kabag Aset via API Laravel.
+final kabagMutationDetailProvider = apiMutationDetailProvider;
 
 // ─── Filter & Search State ───────────────────────────────────────────────────
 
@@ -272,6 +275,8 @@ class KabagApprovalActionNotifier
         result: result.data,
       );
       ref.invalidate(kabagAllMutationsProvider);
+      ref.invalidate(kabagMutationDetailProvider(mutationId));
+      ref.invalidate(apiMutationDetailProvider(mutationId));
       ref.invalidate(mutationDetailProvider(mutationId));
       ref.invalidate(mutationListProvider);
       ref.invalidate(kadivAllMutationsProvider);
@@ -330,6 +335,8 @@ class KabagApprovalActionNotifier
         result: result.data,
       );
       ref.invalidate(kabagAllMutationsProvider);
+      ref.invalidate(kabagMutationDetailProvider(mutationId));
+      ref.invalidate(apiMutationDetailProvider(mutationId));
       ref.invalidate(mutationDetailProvider(mutationId));
       ref.invalidate(mutationListProvider);
 

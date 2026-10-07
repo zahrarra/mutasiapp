@@ -174,6 +174,7 @@ void main() {
         overrides: [
           authStateProvider.overrideWith((ref) => _FakeAuthNotifier(pemohonB)),
           mutationRepositoryProvider.overrideWithValue(repo),
+          apiMutationRepositoryProvider.overrideWithValue(repo),
         ],
       );
       addTearDown(container.dispose);
@@ -221,6 +222,7 @@ void main() {
         overrides: [
           authStateProvider.overrideWith((ref) => _FakeAuthNotifier(pemohonA)),
           mutationRepositoryProvider.overrideWithValue(repo),
+          apiMutationRepositoryProvider.overrideWithValue(repo),
         ],
       );
       addTearDown(container.dispose);
@@ -330,6 +332,7 @@ void main() {
         overrides: [
           authStateProvider.overrideWith((ref) => _FakeAuthNotifier(pemohonA)),
           mutationRepositoryProvider.overrideWithValue(repo),
+          apiMutationRepositoryProvider.overrideWithValue(repo),
         ],
       );
       addTearDown(container.dispose);

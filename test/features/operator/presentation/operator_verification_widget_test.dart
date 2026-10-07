@@ -22,6 +22,7 @@ import 'package:mutasiku/features/asset/domain/entities/asset_category.dart';
 import 'package:mutasiku/features/asset/domain/entities/asset_status.dart';
 import 'package:mutasiku/features/mutation/domain/entities/mutation.dart';
 import 'package:mutasiku/features/mutation/domain/entities/mutation_status.dart';
+import 'package:mutasiku/features/operator/presentation/providers/operator_verification_provider.dart';
 import 'package:mutasiku/features/operator/presentation/screens/operator_dashboard_screen.dart';
 import 'package:mutasiku/features/operator/presentation/screens/operator_mutations_screen.dart';
 import 'package:mutasiku/features/operator/presentation/screens/operator_verification_detail_screen.dart';
@@ -80,6 +81,9 @@ void main() {
       overrides: [
         authStateProvider.overrideWith(
           (ref) => FakeAuthNotifier(operatorUser),
+        ),
+        apiMutationRepositoryProvider.overrideWith(
+          (ref) => ref.watch(mutationRepositoryProvider),
         ),
       ],
       child: MaterialApp(
@@ -187,6 +191,9 @@ void main() {
         authStateProvider.overrideWith(
           (ref) => FakeAuthNotifier(operatorUser),
         ),
+        apiMutationRepositoryProvider.overrideWith(
+          (ref) => ref.watch(mutationRepositoryProvider),
+        ),
       ],
       child: Consumer(
         builder: (context, ref, _) {
@@ -210,8 +217,8 @@ void main() {
     expect(find.byKey(const Key('btn_operator_next_ticket')), findsOneWidget);
 
     // Cek status mutasi telah terupdate ke waitingAssetVerification
-    final detail =
-        await containerRef.read(mutationDetailProvider('mut_001').future);
+    final detail = await containerRef
+        .read(operatorMutationDetailProvider('mut_001').future);
     expect(detail.status, MutationStatus.waitingAssetVerification);
     expect(detail.verifiedBy, 'Siti Operator');
   });
@@ -225,6 +232,9 @@ void main() {
       overrides: [
         authStateProvider.overrideWith(
           (ref) => FakeAuthNotifier(operatorUser),
+        ),
+        apiMutationRepositoryProvider.overrideWith(
+          (ref) => ref.watch(mutationRepositoryProvider),
         ),
       ],
       child: Consumer(
@@ -420,6 +430,12 @@ void main() {
         overrides: [
           authStateProvider.overrideWith(
             (ref) => FakeAuthNotifier(operatorUser),
+          ),
+          apiMutationRepositoryProvider.overrideWith(
+            (ref) => ref.watch(mutationRepositoryProvider),
+          ),
+          operatorMutationDetailProvider('mut_unreg_test').overrideWith(
+            (ref) => Future.value(unregMutation),
           ),
           mutationDetailProvider('mut_unreg_test').overrideWith(
             (ref) => Future.value(unregMutation),

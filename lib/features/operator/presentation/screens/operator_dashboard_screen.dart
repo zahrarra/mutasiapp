@@ -1066,9 +1066,19 @@ class _OperatorDashboardScreenState
               borderRadius: BorderRadius.circular(16),
               border: Border.all(color: const Color(0xFFFCA5A5)),
             ),
-            child: Text(
-              'Gagal memuat antrean: $e',
-              style: _font(size: 12, color: const Color(0xFFB42318)),
+            child: Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    'Gagal memuat antrean: $e',
+                    style: _font(size: 12, color: const Color(0xFFB42318)),
+                  ),
+                ),
+                TextButton(
+                  onPressed: () => ref.invalidate(operatorAllMutationsProvider),
+                  child: const Text('Coba Lagi'),
+                ),
+              ],
             ),
           ),
           data: (all) {

@@ -78,6 +78,7 @@ void main() {
       overrides: [
         assetRepositoryProvider.overrideWithValue(assetRepo),
         mutationRepositoryProvider.overrideWithValue(mutationRepo),
+        apiMutationRepositoryProvider.overrideWithValue(mutationRepo),
         authStateProvider.overrideWith((ref) => FakeAuthNotifier(currentUser)),
       ],
     );

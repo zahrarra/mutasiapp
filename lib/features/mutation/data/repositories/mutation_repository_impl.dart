@@ -618,16 +618,8 @@ class MutationRepositoryImpl implements MutationRepository {
           try {
             final mutations = MutationModel.listFromJson(data);
             if (userId.isNotEmpty) {
-              final userMutations = mutations.where((m) {
-                if (m.applicantId == userId) return true;
-                final isUserStd = (userId == 'usr_pemohon' ||
-                    userId == 'usr_101' ||
-                    userId == 'user_pemohon');
-                final isMutStd = (m.applicantId == 'usr_pemohon' ||
-                    m.applicantId == 'usr_101' ||
-                    m.applicantId == 'user_pemohon');
-                return isUserStd && isMutStd;
-              }).toList();
+              final userMutations =
+                  mutations.where((m) => m.applicantId == userId).toList();
               if (userMutations.isNotEmpty) {
                 return Result.success(userMutations);
               }

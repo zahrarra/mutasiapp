@@ -53,6 +53,9 @@ void main() {
         authStateProvider.overrideWith(
           (ref) => FakeAuthNotifier(pemohonUser),
         ),
+        apiMutationRepositoryProvider.overrideWith(
+          (ref) => ref.watch(mutationRepositoryProvider),
+        ),
       ],
     );
     addTearDown(container.dispose);
@@ -128,6 +131,9 @@ void main() {
         authStateProvider.overrideWith(
           (ref) => FakeAuthNotifier(pemohonUser),
         ),
+        apiMutationRepositoryProvider.overrideWith(
+          (ref) => ref.watch(mutationRepositoryProvider),
+        ),
       ],
     );
     addTearDown(container.dispose);
@@ -163,6 +169,9 @@ void main() {
       overrides: [
         authStateProvider.overrideWith(
           (ref) => FakeAuthNotifier(operatorUser),
+        ),
+        apiMutationRepositoryProvider.overrideWith(
+          (ref) => ref.watch(mutationRepositoryProvider),
         ),
         connectivityStatusProvider.overrideWith(
           (ref) => Stream.value(ConnectivityStatus.online),

@@ -15,6 +15,7 @@ import 'package:mutasiku/features/kabag/presentation/screens/kabag_approval_deta
 import 'package:mutasiku/features/mutation/data/repositories/mutation_repository_impl.dart';
 import 'package:mutasiku/features/mutation/domain/entities/mutation_status.dart';
 import 'package:mutasiku/features/mutation/presentation/providers/mutation_provider.dart';
+import 'package:mutasiku/features/operator/presentation/providers/operator_verification_provider.dart';
 import 'package:mutasiku/features/operator/presentation/screens/operator_verification_detail_screen.dart';
 
 class FakeAuthRepository implements AuthRepository {
@@ -89,6 +90,9 @@ void main() {
           authStateProvider.overrideWith(
             (ref) => FakeAuthNotifier(operatorUser),
           ),
+          apiMutationRepositoryProvider.overrideWith(
+            (ref) => ref.watch(mutationRepositoryProvider),
+          ),
         ],
         child: Consumer(
           builder: (context, ref, _) {
@@ -138,8 +142,8 @@ void main() {
       expect(find.text('Detail Pengajuan'), findsOneWidget);
 
       // 8. Status pengajuan berubah ke returned
-      final detail =
-          await containerRef.read(mutationDetailProvider('mut_001').future);
+      final detail = await containerRef
+          .read(operatorMutationDetailProvider('mut_001').future);
       expect(detail.status, MutationStatus.returned);
       expect(detail.returnReason,
           'Dokumen SK belum ditandatangani oleh pejabat berwenang.');
@@ -163,6 +167,9 @@ void main() {
         overrides: [
           authStateProvider.overrideWith(
             (ref) => FakeAuthNotifier(bagianAsetUser),
+          ),
+          apiMutationRepositoryProvider.overrideWith(
+            (ref) => ref.watch(mutationRepositoryProvider),
           ),
         ],
         child: Consumer(

@@ -346,6 +346,7 @@ void main() {
         ProviderScope(
           overrides: [
             mutationRepositoryProvider.overrideWithValue(repo),
+            apiMutationRepositoryProvider.overrideWithValue(repo),
             authStateProvider.overrideWith(
               (ref) => FakePemohonAuthNotifier(testUser),
             ),
@@ -443,6 +444,7 @@ void main() {
         ProviderScope(
           overrides: [
             mutationRepositoryProvider.overrideWithValue(repo),
+            apiMutationRepositoryProvider.overrideWithValue(repo),
             authStateProvider.overrideWith(
               (ref) => FakePemohonAuthNotifier(testUser),
             ),
@@ -544,6 +546,7 @@ void main() {
         ProviderScope(
           overrides: [
             mutationRepositoryProvider.overrideWithValue(repo),
+            apiMutationRepositoryProvider.overrideWithValue(repo),
             authStateProvider.overrideWith(
               (ref) => FakePemohonAuthNotifier(testUser),
             ),
@@ -654,6 +657,7 @@ void main() {
         ProviderScope(
           overrides: [
             mutationRepositoryProvider.overrideWithValue(repo),
+            apiMutationRepositoryProvider.overrideWithValue(repo),
             authStateProvider.overrideWith(
               (ref) => FakePemohonAuthNotifier(testUser),
             ),
@@ -715,6 +719,7 @@ void main() {
         ProviderScope(
           overrides: [
             mutationRepositoryProvider.overrideWithValue(repo),
+            apiMutationRepositoryProvider.overrideWithValue(repo),
             authStateProvider.overrideWith(
               (ref) => FakePemohonAuthNotifier(testUser),
             ),
@@ -756,6 +761,7 @@ void main() {
         ProviderScope(
           overrides: [
             mutationRepositoryProvider.overrideWithValue(repo),
+            apiMutationRepositoryProvider.overrideWithValue(repo),
             authStateProvider.overrideWith(
               (ref) => FakePemohonAuthNotifier(testUser),
             ),
@@ -798,6 +804,7 @@ void main() {
         ProviderScope(
           overrides: [
             mutationRepositoryProvider.overrideWithValue(repo),
+            apiMutationRepositoryProvider.overrideWithValue(repo),
             authStateProvider.overrideWith(
               (ref) => FakePemohonAuthNotifier(testUser),
             ),
@@ -891,6 +898,7 @@ void main() {
         ProviderScope(
           overrides: [
             mutationRepositoryProvider.overrideWithValue(repo),
+            apiMutationRepositoryProvider.overrideWithValue(repo),
             authStateProvider.overrideWith(
               (ref) => FakePemohonAuthNotifier(testUser),
             ),
@@ -954,6 +962,7 @@ void main() {
         ProviderScope(
           overrides: [
             mutationRepositoryProvider.overrideWithValue(repo2),
+            apiMutationRepositoryProvider.overrideWithValue(repo2),
             authStateProvider.overrideWith(
               (ref) => FakePemohonAuthNotifier(testUser),
             ),
@@ -1000,6 +1009,7 @@ void main() {
           container: container = ProviderContainer(
             overrides: [
               mutationRepositoryProvider.overrideWithValue(repo),
+            apiMutationRepositoryProvider.overrideWithValue(repo),
               authStateProvider.overrideWith(
                 (ref) => FakePemohonAuthNotifier(testUser),
               ),

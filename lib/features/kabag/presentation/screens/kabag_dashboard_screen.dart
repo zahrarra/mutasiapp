@@ -1671,9 +1671,22 @@ class _KabagDashboardScreenState extends ConsumerState<KabagDashboardScreen> {
           borderRadius: BorderRadius.circular(12),
           border: Border.all(color: const Color(0xFFFECACA)),
         ),
-        child: Text(
-          'Gagal memuat antrean mutasi: $err',
-          style: _font(size: 13, color: const Color(0xFFEF4444)),
+        child: Column(
+          children: [
+            Text(
+              'Gagal memuat antrean mutasi: $err',
+              style: _font(size: 13, color: const Color(0xFFEF4444)),
+            ),
+            const SizedBox(height: 8),
+            TextButton.icon(
+              onPressed: () => ref.invalidate(kabagAllMutationsProvider),
+              icon: const Icon(Icons.refresh, size: 16, color: Color(0xFFEF4444)),
+              label: const Text(
+                'Coba Lagi',
+                style: TextStyle(color: Color(0xFFEF4444)),
+              ),
+            ),
+          ],
         ),
       ),
     );

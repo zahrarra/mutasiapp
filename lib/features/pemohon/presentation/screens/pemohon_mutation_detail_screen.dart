@@ -38,16 +38,10 @@ class PemohonMutationDetailScreen extends ConsumerWidget {
     if (mutation.applicantId != null && mutation.applicantId == user.id) {
       return true;
     }
-    if ((user.id == 'usr_pemohon' ||
-            user.id == 'usr_101' ||
-            user.id == 'user_pemohon') &&
-        (mutation.applicantId == 'usr_pemohon' ||
-            mutation.applicantId == 'usr_101' ||
-            mutation.applicantId == 'user_pemohon')) {
-      return true;
-    }
-    if (mutation.applicantName.trim().toLowerCase() ==
-        user.name.trim().toLowerCase()) {
+    if (mutation.applicantName.trim().isNotEmpty &&
+        user.name.trim().isNotEmpty &&
+        mutation.applicantName.trim().toLowerCase() ==
+            user.name.trim().toLowerCase()) {
       return true;
     }
     return false;
@@ -55,7 +49,7 @@ class PemohonMutationDetailScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final asyncDetail = ref.watch(mutationDetailProvider(mutationId));
+    final asyncDetail = ref.watch(pemohonMutationDetailProvider(mutationId));
     final authState = ref.watch(authStateProvider);
 
     return Scaffold(
@@ -83,7 +77,7 @@ class PemohonMutationDetailScreen extends ConsumerWidget {
         loading: () => const LoadingIndicator(),
         error: (e, _) => ErrorView(
           message: e.toString(),
-          onRetry: () => ref.invalidate(mutationDetailProvider(mutationId)),
+          onRetry: () => ref.invalidate(pemohonMutationDetailProvider(mutationId)),
         ),
         data: (m) {
           // Ownership guard
@@ -139,7 +133,7 @@ class PemohonMutationDetailScreen extends ConsumerWidget {
 
           return RefreshIndicator(
             onRefresh: () async {
-              ref.invalidate(mutationDetailProvider(mutationId));
+              ref.invalidate(pemohonMutationDetailProvider(mutationId));
             },
             child: SingleChildScrollView(
               physics: const AlwaysScrollableScrollPhysics(),
@@ -191,7 +185,7 @@ class PemohonMutationDetailScreen extends ConsumerWidget {
                             m.id,
                           ),
                         );
-                        ref.invalidate(mutationDetailProvider(mutationId));
+                        ref.invalidate(pemohonMutationDetailProvider(mutationId));
                       },
                       icon: const Icon(Icons.edit_outlined, color: Colors.white),
                       label: const Text(

@@ -63,7 +63,8 @@ class OperatorVerificationDetailScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final asyncMutation = ref.watch(mutationDetailProvider(mutationId));
+    final asyncMutation =
+        ref.watch(operatorMutationDetailProvider(mutationId));
     final actionState = ref.watch(verificationActionProvider);
 
     return Scaffold(
@@ -133,8 +134,8 @@ class OperatorVerificationDetailScreen extends ConsumerWidget {
                       ),
                       const SizedBox(height: 20),
                       ElevatedButton.icon(
-                        onPressed: () =>
-                            ref.invalidate(mutationDetailProvider(mutationId)),
+                        onPressed: () => ref
+                            .invalidate(operatorMutationDetailProvider(mutationId)),
                         icon: const Icon(Icons.refresh_rounded, size: 16),
                         label: const Text('Coba Lagi'),
                         style: ElevatedButton.styleFrom(
@@ -2146,6 +2147,7 @@ class OperatorVerificationDetailScreen extends ConsumerWidget {
               type: NotificationType.action,
               relatedMutationId: mutation.id,
             );
+        ref.invalidate(operatorMutationDetailProvider(mutation.id));
         ref.invalidate(mutationDetailProvider(mutation.id));
         AppFeedback.showSuccess(
           context,
@@ -2216,6 +2218,7 @@ class OperatorVerificationDetailScreen extends ConsumerWidget {
                   type: NotificationType.warning,
                   relatedMutationId: mutation.id,
                 );
+            ref.invalidate(operatorMutationDetailProvider(mutation.id));
             ref.invalidate(mutationDetailProvider(mutation.id));
             AppFeedback.showReturned(
               context,

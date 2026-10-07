@@ -9,7 +9,6 @@ import 'package:go_router/go_router.dart';
 import '../../../../app/router/route_names.dart';
 import '../../../../app/theme/app_colors.dart';
 import '../../../../app/theme/app_spacing.dart';
-import '../../../mutation/presentation/providers/mutation_provider.dart';
 import '../../../../core/widgets/app_feedback.dart';
 import '../../../auth/domain/entities/user_role.dart';
 import '../../../auth/presentation/providers/auth_provider.dart';
@@ -40,7 +39,8 @@ class _KabagRejectFormScreenState extends ConsumerState<KabagRejectFormScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final asyncMutation = ref.watch(mutationDetailProvider(widget.mutationId));
+    final asyncMutation =
+        ref.watch(kabagMutationDetailProvider(widget.mutationId));
     final actionState = ref.watch(kabagApprovalActionProvider);
 
     return Scaffold(
@@ -268,7 +268,18 @@ class _KabagRejectFormScreenState extends ConsumerState<KabagRejectFormScreen> {
         ),
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (err, _) => Center(
-          child: Text('Gagal memuat pengajuan: $err'),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Text('Gagal memuat pengajuan: $err'),
+              const SizedBox(height: 8),
+              ElevatedButton(
+                onPressed: () => ref.invalidate(
+                    kabagMutationDetailProvider(widget.mutationId)),
+                child: const Text('Coba Lagi'),
+              ),
+            ],
+          ),
         ),
       ),
     );

@@ -32,9 +32,13 @@ final returnMutationUseCaseProvider = Provider<ReturnMutationUseCase>((ref) {
 
 final getPendingVerificationsUseCaseProvider =
     Provider<GetPendingVerificationsUseCase>((ref) {
-      final repo = ref.watch(mutationRepositoryProvider);
+      final repo = ref.watch(apiMutationRepositoryProvider);
       return GetPendingVerificationsUseCase(repository: repo);
     });
+
+/// Provider detail satu mutasi untuk Operator via API Laravel.
+final operatorMutationDetailProvider = apiMutationDetailProvider;
+
 
 /// Otomatis load asset dari AssetRepository berdasarkan assetId (SIMAK BMN).
 final operatorMasterAssetProvider = FutureProvider.family<Asset?, String>((
@@ -356,6 +360,8 @@ class VerificationActionNotifier
       );
       // Invalidate list agar ter-refresh
 
+      ref.invalidate(operatorMutationDetailProvider(mutationId));
+      ref.invalidate(apiMutationDetailProvider(mutationId));
       ref.invalidate(mutationDetailProvider(mutationId));
       ref.invalidate(mutationListProvider);
       ref.invalidate(operatorAllMutationsProvider);
@@ -404,6 +410,8 @@ class VerificationActionNotifier
         result: result.data,
       );
 
+      ref.invalidate(operatorMutationDetailProvider(mutationId));
+      ref.invalidate(apiMutationDetailProvider(mutationId));
       ref.invalidate(mutationDetailProvider(mutationId));
       ref.invalidate(mutationListProvider);
       ref.invalidate(operatorAllMutationsProvider);

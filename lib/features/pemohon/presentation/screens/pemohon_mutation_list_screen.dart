@@ -8,6 +8,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:mutasiku/core/widgets/custom_floating_nav_bar.dart';
+import 'package:mutasiku/core/widgets/error_view.dart';
 import 'package:mutasiku/core/widgets/mutasiku_page_header.dart';
 import 'package:mutasiku/features/auth/domain/entities/user_role.dart';
 
@@ -234,6 +235,17 @@ class _PemohonMutationListScreenState
                           const Padding(
                             padding: EdgeInsets.all(32),
                             child: Center(child: CircularProgressIndicator()),
+                          )
+                        else if (asyncList.hasError && all.isEmpty)
+                          Padding(
+                            padding: const EdgeInsets.all(24),
+                            child: ErrorView(
+                              message: asyncList.error
+                                  .toString()
+                                  .replaceFirst('Exception: ', ''),
+                              onRetry: () =>
+                                  ref.invalidate(mutationListProvider),
+                            ),
                           )
                         else if (filtered.isEmpty)
                           Padding(
