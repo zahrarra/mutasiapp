@@ -1520,3 +1520,7 @@ class _IsometricGraphicPainter extends CustomPainter {
   @override
   bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }
+
+// ─── Pemimpin Divisi Dashboard Screen Alias ───────────────────────────────────
+typedef PemimpinDivisiDashboardScreen = KadivDashboardScreen;
+

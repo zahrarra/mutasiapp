@@ -1120,7 +1120,6 @@ class _PemohonDashboardScreenState
       case MutationStatus.verified:
         return 1;
       case MutationStatus.waitingDivisionHeadApproval:
-      case MutationStatus.waitingKabagApproval:
       case MutationStatus.waitingKadivApproval:
         return 2;
       case MutationStatus.approved:
@@ -1488,7 +1487,6 @@ class _PemohonDashboardScreenState
     return m.status == MutationStatus.submitted ||
         m.status == MutationStatus.waitingAssetVerification ||
         m.status == MutationStatus.verified ||
-        m.status == MutationStatus.waitingKabagApproval ||
         m.status == MutationStatus.waitingKadivApproval ||
         m.status == MutationStatus.waitingDivisionHeadApproval ||
         m.status == MutationStatus.approved ||
@@ -1562,7 +1560,6 @@ class _PemohonDashboardScreenState
         return _C.infoBg;
       case MutationStatus.waitingAssetVerification:
       case MutationStatus.waitingDivisionHeadApproval:
-      case MutationStatus.waitingKabagApproval:
       case MutationStatus.waitingKadivApproval:
         return _C.warningBg;
       case MutationStatus.rejected:
@@ -1585,7 +1582,6 @@ class _PemohonDashboardScreenState
         return _C.info;
       case MutationStatus.waitingAssetVerification:
       case MutationStatus.waitingDivisionHeadApproval:
-      case MutationStatus.waitingKabagApproval:
       case MutationStatus.waitingKadivApproval:
         return _C.warning;
       case MutationStatus.rejected:
@@ -1601,8 +1597,6 @@ class _PemohonDashboardScreenState
         return 'Perlu Perbaikan';
       case MutationStatus.waitingAssetVerification:
         return 'Verifikasi Aset';
-      case MutationStatus.waitingKabagApproval:
-        return 'Menunggu Kabag';
       case MutationStatus.waitingDivisionHeadApproval:
       case MutationStatus.waitingKadivApproval:
         return 'Menunggu Kadiv';
@@ -1616,7 +1610,7 @@ class _PemohonDashboardScreenState
       case MutationStatus.completed:
         return 'Selesai';
       case MutationStatus.waitingSync:
-        return 'Offline';
+        return 'Sinkronisasi';
       case MutationStatus.rejected:
         return 'Ditolak';
     }

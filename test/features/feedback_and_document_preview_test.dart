@@ -41,12 +41,12 @@ void main() {
     role: UserRole.operator,
   );
 
-  const kabagUser = User(
-    id: 'usr_kabag',
-    username: 'kabag1',
-    name: 'Hendra Kabag',
-    email: 'kabag@mutasiku.id',
-    role: UserRole.kabagAset,
+  const bagianAsetUser = User(
+    id: 'usr_bagian_aset',
+    username: 'bagian_aset1',
+    name: 'Hendra Bagian Aset',
+    email: 'bagian_aset@mutasiku.id',
+    role: UserRole.bagianAset,
   );
 
   const kadivUser = User(
@@ -55,14 +55,6 @@ void main() {
     name: 'Drs. Ahmad Dahlan',
     email: 'kadiv@mutasiku.id',
     role: UserRole.kadiv,
-  );
-
-  const staffUser = User(
-    id: 'usr_staff',
-    username: 'staff1',
-    name: 'Rizky Staff Aset',
-    email: 'staff@mutasiku.id',
-    role: UserRole.staffAset,
   );
 
   final testAsset = Asset(
@@ -227,11 +219,10 @@ void main() {
       expect(DocumentPreviewDialog.hasAccess(testMutationWithPdf, anotherPemohonUser), isFalse);
     });
 
-    test('Role authorization check: Operator, Kabag, Kadiv, Staff Aset have legitimate access', () {
+    test('Role authorization check: Operator, Bagian Aset, Kadiv have legitimate access', () {
       expect(DocumentPreviewDialog.hasAccess(testMutationWithPdf, operatorUser), isTrue);
-      expect(DocumentPreviewDialog.hasAccess(testMutationWithPdf, kabagUser), isTrue);
+      expect(DocumentPreviewDialog.hasAccess(testMutationWithPdf, bagianAsetUser), isTrue);
       expect(DocumentPreviewDialog.hasAccess(testMutationWithPdf, kadivUser), isTrue);
-      expect(DocumentPreviewDialog.hasAccess(testMutationWithPdf, staffUser), isTrue);
     });
 
     testWidgets('DocumentPreviewDialog displays Image preview for supported image format', (tester) async {
@@ -272,7 +263,7 @@ void main() {
                   DocumentPreviewDialog.show(
                     context,
                     mutation: testMutationUnsupported,
-                    currentUser: kabagUser,
+                    currentUser: bagianAsetUser,
                   );
                 },
                 child: const Text('View Doc'),

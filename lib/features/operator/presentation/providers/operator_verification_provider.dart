@@ -15,7 +15,7 @@ import '../../../mutation/domain/usecases/get_pending_verifications_usecase.dart
 import '../../../mutation/domain/usecases/return_mutation_usecase.dart';
 import '../../../mutation/domain/usecases/verify_mutation_usecase.dart';
 import '../../../mutation/presentation/providers/mutation_provider.dart';
-import '../../../kabag/presentation/providers/kabag_approval_provider.dart';
+import '../../../bagian_aset/presentation/providers/bagian_aset_verification_provider.dart';
 import '../../../kadiv/presentation/providers/kadiv_approval_provider.dart';
 
 // ─── Use Case Providers ───────────────────────────────────────────────────────
@@ -156,14 +156,14 @@ final operatorAllMutationsProvider = FutureProvider<List<Mutation>>((
 class VerificationStats {
   final int pendingCount;
   final int returnedCount;
-  final int waitingKabagCount;
+  final int waitingAssetCount;
   final int tiCount;
   final int umumCount;
 
   const VerificationStats({
     required this.pendingCount,
     required this.returnedCount,
-    required this.waitingKabagCount,
+    required this.waitingAssetCount,
     this.tiCount = 0,
     this.umumCount = 0,
   });
@@ -180,8 +180,8 @@ final verificationStatsProvider = Provider<VerificationStats>((ref) {
       final returned = mutations
           .where((m) => m.status == MutationStatus.returned)
           .length;
-      final waitingKabag = mutations
-          .where((m) => m.status == MutationStatus.waitingKabagApproval)
+      final waitingAsset = mutations
+          .where((m) => m.status == MutationStatus.waitingAssetVerification)
           .length;
       final ti = mutations
           .where((m) => m.status == MutationStatus.submitted && isTiAsset(m))
@@ -193,7 +193,7 @@ final verificationStatsProvider = Provider<VerificationStats>((ref) {
       return VerificationStats(
         pendingCount: pending,
         returnedCount: returned,
-        waitingKabagCount: waitingKabag,
+        waitingAssetCount: waitingAsset,
         tiCount: ti,
         umumCount: umum,
       );
@@ -201,14 +201,14 @@ final verificationStatsProvider = Provider<VerificationStats>((ref) {
     loading: () => const VerificationStats(
       pendingCount: 0,
       returnedCount: 0,
-      waitingKabagCount: 0,
+      waitingAssetCount: 0,
       tiCount: 0,
       umumCount: 0,
     ),
     error: (_, _) => const VerificationStats(
       pendingCount: 0,
       returnedCount: 0,
-      waitingKabagCount: 0,
+      waitingAssetCount: 0,
       tiCount: 0,
       umumCount: 0,
     ),
@@ -232,7 +232,6 @@ final filteredIncomingMutationsProvider = Provider<AsyncValue<List<Mutation>>>((
         OperatorStatusFilter.submitted => m.status == MutationStatus.submitted,
         OperatorStatusFilter.allocated =>
           m.status == MutationStatus.waitingAssetVerification ||
-              m.status == MutationStatus.waitingKabagApproval ||
               m.status == MutationStatus.verified ||
               m.status == MutationStatus.waitingDivisionHeadApproval ||
               m.status == MutationStatus.waitingKadivApproval ||
@@ -365,7 +364,7 @@ class VerificationActionNotifier
       ref.invalidate(mutationDetailProvider(mutationId));
       ref.invalidate(mutationListProvider);
       ref.invalidate(operatorAllMutationsProvider);
-      ref.invalidate(kabagAllMutationsProvider);
+      ref.invalidate(bagianAsetAllMutationsProvider);
       ref.invalidate(kadivAllMutationsProvider);
       return true;
     } else if (result is AppFailure<Mutation>) {
@@ -415,7 +414,7 @@ class VerificationActionNotifier
       ref.invalidate(mutationDetailProvider(mutationId));
       ref.invalidate(mutationListProvider);
       ref.invalidate(operatorAllMutationsProvider);
-      ref.invalidate(kabagAllMutationsProvider);
+      ref.invalidate(bagianAsetAllMutationsProvider);
       return true;
     } else if (result is AppFailure<Mutation>) {
       state = VerificationActionState(

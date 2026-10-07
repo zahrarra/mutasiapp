@@ -12,6 +12,7 @@ import '../../../../app/theme/app_spacing.dart';
 import '../../../mutation/presentation/providers/mutation_provider.dart';
 import '../../../../core/widgets/app_feedback.dart';
 import '../providers/kadiv_approval_provider.dart';
+import '../../../../core/widgets/mutasiku_page_header.dart';
 
 class KadivRejectFormScreen extends ConsumerStatefulWidget {
   final String mutationId;
@@ -42,14 +43,20 @@ class _KadivRejectFormScreenState extends ConsumerState<KadivRejectFormScreen> {
     final actionState = ref.watch(kadivApprovalActionProvider);
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Tolak Pengajuan (Kadiv)'),
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
-          onPressed: () => _safePop(context),
-        ),
-      ),
-      body: asyncMutation.when(
+      backgroundColor: const Color(0xFFF6F8FA),
+      body: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SafeArea(
+            bottom: false,
+            child: MutasiKuPageHeader(
+              title: 'Tolak Pengajuan (Kadiv)',
+              subtitle: 'Tuliskan alasan penolakan pengajuan untuk pemohon',
+              onBack: () => _safePop(context),
+            ),
+          ),
+          Expanded(
+            child: asyncMutation.when(
         data: (mutation) => Padding(
           padding: const EdgeInsets.all(AppSpacing.md),
           child: Form(
@@ -119,7 +126,7 @@ class _KadivRejectFormScreenState extends ConsumerState<KadivRejectFormScreen> {
                         const Row(
                           children: [
                             Text(
-                              'Alasan Penolakan Kadiv',
+                              'Alasan Penolakan Pemimpin Divisi',
                               style: TextStyle(
                                 fontSize: 14,
                                 fontWeight: FontWeight.bold,
@@ -139,7 +146,7 @@ class _KadivRejectFormScreenState extends ConsumerState<KadivRejectFormScreen> {
                         ),
                         const SizedBox(height: AppSpacing.xs),
                         const Text(
-                          'Sesuai aturan bisnis, penolakan mutasi oleh Kepala Divisi wajib menyertakan alasan yang jelas dan dapat dipertanggungjawabkan.',
+                          'Sesuai aturan bisnis, penolakan mutasi oleh Pemimpin Divisi wajib menyertakan alasan yang jelas dan dapat dipertanggungjawabkan.',
                           style: TextStyle(
                             fontSize: 12,
                             color: AppColors.textSecondary,
@@ -269,8 +276,11 @@ class _KadivRejectFormScreenState extends ConsumerState<KadivRejectFormScreen> {
           child: Text('Gagal memuat data mutasi: $err'),
         ),
       ),
-    );
-  }
+    ),
+  ],
+),
+);
+}
 
   void _handleSubmit(BuildContext context, String mutationId) {
     if (!_formKey.currentState!.validate()) {
@@ -363,3 +373,7 @@ class _KadivRejectFormScreenState extends ConsumerState<KadivRejectFormScreen> {
     }
   }
 }
+
+// ─── Pemimpin Divisi Reject Form Screen Alias ─────────────────────────────────
+typedef PemimpinDivisiRejectFormScreen = KadivRejectFormScreen;
+

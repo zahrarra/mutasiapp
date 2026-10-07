@@ -15,7 +15,6 @@ import '../../../mutation/presentation/providers/mutation_provider.dart';
 import '../../../auth/domain/entities/user_role.dart';
 import '../../../notification/domain/entities/notification_item.dart';
 import '../../../notification/presentation/providers/notification_provider.dart';
-import '../../../staff/presentation/providers/staff_mutation_provider.dart';
 
 // ─── Use Case Providers ───────────────────────────────────────────────────────
 
@@ -174,13 +173,7 @@ final filteredKadivApprovalsProvider =
         KadivStatusFilter.all =>
           m.status.isWaitingDivisionApproval ||
               m.kadivApprovedBy != null ||
-              m.kadivRejectedBy != null ||
-              (m.requiresKadivApproval &&
-                  (m.status == MutationStatus.approved ||
-                      m.status == MutationStatus.waitingConfirmation ||
-                      m.status == MutationStatus.rejected ||
-                      m.status == MutationStatus.pendingConfirmation ||
-                      m.status == MutationStatus.completed)),
+              m.kadivRejectedBy != null,
       };
     }).toList();
 
@@ -256,7 +249,7 @@ class KadivApprovalActionNotifier
   /// Eksekusi Approve oleh Kadiv
   Future<bool> approve({required String mutationId}) async {
     final authState = ref.read(authStateProvider);
-    final kadivName = authState.user?.name ?? 'Kadiv';
+    final kadivName = authState.user?.name ?? 'Pemimpin Divisi';
 
     state = state.copyWith(
       isLoading: true,
@@ -272,13 +265,12 @@ class KadivApprovalActionNotifier
     if (result is Success<Mutation>) {
       state = KadivApprovalActionState(
         isLoading: false,
-        successMessage: 'Pengajuan mutasi berhasil disetujui oleh Kadiv.',
+        successMessage: 'Pengajuan mutasi berhasil disetujui oleh Pemimpin Divisi.',
         result: result.data,
       );
       ref.invalidate(kadivAllMutationsProvider);
       ref.invalidate(mutationDetailProvider(mutationId));
       ref.invalidate(mutationListProvider);
-      ref.invalidate(staffAllMutationsProvider);
 
       try {
         ref.read(notificationProvider.notifier).notifyRole(
@@ -325,7 +317,7 @@ class KadivApprovalActionNotifier
     required String reason,
   }) async {
     final authState = ref.read(authStateProvider);
-    final kadivName = authState.user?.name ?? 'Kadiv';
+    final kadivName = authState.user?.name ?? 'Pemimpin Divisi';
 
     state = state.copyWith(
       isLoading: true,
@@ -342,7 +334,7 @@ class KadivApprovalActionNotifier
     if (result is Success<Mutation>) {
       state = KadivApprovalActionState(
         isLoading: false,
-        successMessage: 'Pengajuan mutasi berhasil ditolak oleh Kadiv.',
+        successMessage: 'Pengajuan mutasi berhasil ditolak oleh Pemimpin Divisi.',
         result: result.data,
       );
       ref.invalidate(kadivAllMutationsProvider);
@@ -354,9 +346,9 @@ class KadivApprovalActionNotifier
           ref.read(notificationProvider.notifier).notifyUser(
                 targetUserId: result.data.applicantId!,
                 targetRole: UserRole.pemohon,
-                title: 'Pengajuan Mutasi Ditolak Kadiv',
+                title: 'Pengajuan Mutasi Ditolak Pemimpin Divisi',
                 message:
-                    'Pengajuan mutasi ${result.data.ticketNumber} ditolak oleh Kadiv dengan alasan: $reason',
+                    'Pengajuan mutasi ${result.data.ticketNumber} ditolak oleh Pemimpin Divisi dengan alasan: $reason',
                 type: NotificationType.warning,
                 relatedMutationId: mutationId,
               );
@@ -406,3 +398,11 @@ final kadivApprovalActionProvider = StateNotifierProvider<
     ref: ref,
   );
 });
+
+// ─── Pemimpin Divisi Aliases ──────────────────────────────────────────────────
+typedef PemimpinDivisiApprovalActionState = KadivApprovalActionState;
+typedef PemimpinDivisiApprovalActionNotifier = KadivApprovalActionNotifier;
+final pemimpinDivisiApprovalActionProvider = kadivApprovalActionProvider;
+final filteredPemimpinDivisiApprovalsProvider = filteredKadivApprovalsProvider;
+final pemimpinDivisiStatsProvider = kadivStatsProvider;
+

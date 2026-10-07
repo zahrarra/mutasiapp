@@ -1,7 +1,7 @@
 // test/features/notification/notification_flow_and_wiring_test.dart
 //
 // Comprehensive validation test suite for Notification functionality and wiring
-// across all MutasiKu roles: Pemohon, Operator, Kabag, Kadiv, Staff Aset.
+// across all MutasiKu roles: Pemohon, Operator, Bagian Aset, Kadiv, Admin.
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -69,12 +69,12 @@ void main() {
     role: UserRole.operator,
   );
 
-  const kabagUser = User(
-    id: 'usr_kabag',
-    username: 'kabag',
-    name: 'Yusuf Kabag',
-    email: 'kabag@mutasiku.id',
-    role: UserRole.kabagAset,
+  const bagianAsetUser = User(
+    id: 'usr_bagian_aset',
+    username: 'bagian_aset',
+    name: 'Yusuf Bagian Aset',
+    email: 'bagian_aset@mutasiku.id',
+    role: UserRole.bagianAset,
   );
 
   const kadivUser = User(
@@ -83,14 +83,6 @@ void main() {
     name: 'Dahlan Kadiv',
     email: 'kadiv@mutasiku.id',
     role: UserRole.kadiv,
-  );
-
-  const staffUser = User(
-    id: 'usr_staff',
-    username: 'staff',
-    name: 'Rizky Staff',
-    email: 'staff@mutasiku.id',
-    role: UserRole.staffAset,
   );
 
   group('1. Notification Data Isolation across all roles', () {
@@ -110,9 +102,9 @@ void main() {
           isTrue,
         );
         expect(n.targetRole, isNot(UserRole.operator));
-        expect(n.targetRole, isNot(UserRole.kabagAset));
+        expect(n.targetRole, isNot(UserRole.bagianAset));
         expect(n.targetRole, isNot(UserRole.kadiv));
-        expect(n.targetRole, isNot(UserRole.staffAset));
+        expect(n.targetRole, isNot(UserRole.admin));
       }
     });
 
@@ -357,11 +349,11 @@ void main() {
       );
     });
 
-    testWidgets('Kabag notification tap routes to /kabag/approvals/:id', (tester) async {
+    testWidgets('Bagian Aset notification tap routes to /bagian-aset/verifications/:id', (tester) async {
       await testRoleRouting(
         tester: tester,
-        user: kabagUser,
-        expectedPathPrefix: '/kabag/approvals',
+        user: bagianAsetUser,
+        expectedPathPrefix: '/bagian-aset/verifications',
         isPemohonScreen: false,
       );
     });
@@ -374,16 +366,6 @@ void main() {
         isPemohonScreen: false,
       );
     });
-
-    testWidgets('Staff Aset notification tap routes to /staff-aset/mutations/:id (never /staff/...)',
-        (tester) async {
-      await testRoleRouting(
-        tester: tester,
-        user: staffUser,
-        expectedPathPrefix: '/staff-aset/mutations',
-        isPemohonScreen: false,
-      );
-    });
   });
 
   group('6 & 7. Tandai Semua Dibaca', () {
@@ -391,7 +373,7 @@ void main() {
         (tester) async {
       final container = ProviderContainer(
         overrides: [
-          authStateProvider.overrideWith((ref) => _FakeAuthNotifier(kabagUser)),
+          authStateProvider.overrideWith((ref) => _FakeAuthNotifier(bagianAsetUser)),
         ],
       );
       addTearDown(container.dispose);
@@ -416,7 +398,7 @@ void main() {
       // Button becomes "Semua Terbaca"
       expect(find.text('Semua Terbaca'), findsOneWidget);
 
-      // All Kabag notifications are now read
+      // All Bagian Aset notifications are now read
       final notifs = container.read(roleNotificationsProvider);
       expect(notifs.every((n) => n.isRead), isTrue);
 
@@ -446,21 +428,21 @@ void main() {
       );
       expect(oprNotifs.length, equals(1));
 
-      // 2. Operator verify -> Kabag receives waiting for approval
+      // 2. Operator forward -> Bagian Aset receives waiting for verification
       notifier.notifyRole(
-        targetRole: UserRole.kabagAset,
-        title: 'Menunggu Approval Kabag',
+        targetRole: UserRole.bagianAset,
+        title: 'Menunggu Verifikasi Bagian Aset',
         message: 'Pengajuan TIK-2026-001 telah diverifikasi.',
         type: NotificationType.action,
         relatedMutationId: 'mut_event_1',
       );
 
-      final kbgNotifs = notifier.state.where(
-        (n) => n.targetRole == UserRole.kabagAset && n.relatedMutationId == 'mut_event_1',
+      final bgNotifs = notifier.state.where(
+        (n) => n.targetRole == UserRole.bagianAset && n.relatedMutationId == 'mut_event_1',
       );
-      expect(kbgNotifs.length, equals(1));
+      expect(bgNotifs.length, equals(1));
 
-      // 3. Kabag approves (kadiv required) -> Kadiv receives waiting for approval
+      // 3. Bagian Aset forwards -> Kadiv receives waiting for approval
       notifier.notifyRole(
         targetRole: UserRole.kadiv,
         title: 'Menunggu Approval Kadiv',
@@ -474,26 +456,12 @@ void main() {
       );
       expect(kdvNotifs.length, equals(1));
 
-      // 4. Kadiv approves -> Staff Aset receives asset update task
-      notifier.notifyRole(
-        targetRole: UserRole.staffAset,
-        title: 'Tugas Pembaruan Fisik Aset',
-        message: 'Pengajuan TIK-2026-001 telah disetujui Kadiv.',
-        type: NotificationType.action,
-        relatedMutationId: 'mut_event_1',
-      );
-
-      final stfNotifs = notifier.state.where(
-        (n) => n.targetRole == UserRole.staffAset && n.relatedMutationId == 'mut_event_1',
-      );
-      expect(stfNotifs.length, equals(1));
-
-      // 5. Staff Aset updates -> Pemohon receives pending confirmation
+      // 4. Kadiv approves -> Pemohon receives pending confirmation
       notifier.notifyUser(
         targetUserId: pemohonUser.id,
         targetRole: UserRole.pemohon,
         title: 'Menunggu Konfirmasi Penerimaan',
-        message: 'Data fisik aset TIK-2026-001 telah diperbarui.',
+        message: 'Pengajuan TIK-2026-001 telah disetujui Kadiv.',
         type: NotificationType.action,
         relatedMutationId: 'mut_event_1',
       );
@@ -506,9 +474,9 @@ void main() {
       );
       expect(pmhConfirmNotifs.length, equals(1));
 
-      // 6. Pemohon confirms -> Staff Aset & Pemohon receive completion
+      // 5. Pemohon confirms -> Bagian Aset & Pemohon receive completion
       notifier.notifyRole(
-        targetRole: UserRole.staffAset,
+        targetRole: UserRole.bagianAset,
         title: 'Mutasi Selesai',
         message: 'Pemohon telah mengonfirmasi penerimaan aset TIK-2026-001.',
         type: NotificationType.success,
@@ -523,13 +491,13 @@ void main() {
         relatedMutationId: 'mut_event_1',
       );
 
-      final stfDone = notifier.state.where(
+      final bgDone = notifier.state.where(
         (n) =>
-            n.targetRole == UserRole.staffAset &&
+            n.targetRole == UserRole.bagianAset &&
             n.relatedMutationId == 'mut_event_1' &&
             n.title == 'Mutasi Selesai',
       );
-      expect(stfDone.length, equals(1));
+      expect(bgDone.length, equals(1));
 
       final pmhDone = notifier.state.where(
         (n) =>
@@ -539,7 +507,7 @@ void main() {
       );
       expect(pmhDone.length, equals(1));
 
-      // 7. Rejection & Return events
+      // 6. Rejection & Return events
       notifier.notifyUser(
         targetUserId: pemohonUser.id,
         targetRole: UserRole.pemohon,
@@ -551,8 +519,8 @@ void main() {
       notifier.notifyUser(
         targetUserId: pemohonUser.id,
         targetRole: UserRole.pemohon,
-        title: 'Pengajuan Mutasi Ditolak Kabag',
-        message: 'Alasan penolakan anggaran.',
+        title: 'Pengajuan Mutasi Dikembalikan Bagian Aset',
+        message: 'Alasan pengembalian anggaran.',
         type: NotificationType.warning,
         relatedMutationId: 'mut_event_3',
       );

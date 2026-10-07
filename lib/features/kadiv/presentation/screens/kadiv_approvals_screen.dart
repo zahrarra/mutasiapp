@@ -13,6 +13,7 @@ import '../../../auth/domain/entities/user_role.dart';
 import '../../../../core/widgets/custom_floating_nav_bar.dart';
 import '../../../mutation/domain/entities/mutation.dart';
 import '../providers/kadiv_approval_provider.dart';
+import '../../../../core/widgets/mutasiku_page_header.dart';
 
 class _C {
   static const navy = Color(0xFF0F3D56);
@@ -220,7 +221,7 @@ class _KadivApprovalsScreenState extends ConsumerState<KadivApprovalsScreen> {
     };
     final subtitle = switch (filter) {
       KadivStatusFilter.waiting =>
-        'Seluruh pengajuan mutasi tingkat Kadiv telah selesai diproses.',
+        'Seluruh pengajuan mutasi tingkat Pemimpin Divisi telah selesai diproses.',
       KadivStatusFilter.approved =>
         'Pengajuan yang Anda setujui akan muncul di sini.',
       KadivStatusFilter.rejected =>
@@ -404,53 +405,12 @@ class _ApprovalsTopBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      color: _C.surface,
-      child: SafeArea(
-        bottom: false,
-        child: Container(
-          height: 60,
-          padding: const EdgeInsets.symmetric(horizontal: 16),
-          decoration: const BoxDecoration(
-            color: _C.surface,
-            border: Border(bottom: BorderSide(color: _C.border, width: 1)),
-          ),
-          child: Row(
-            children: [
-              GestureDetector(
-                onTap: onBack,
-                child: Container(
-                  width: 38,
-                  height: 38,
-                  decoration: BoxDecoration(
-                    color: _C.background,
-                    borderRadius: BorderRadius.circular(10),
-                    border: Border.all(color: _C.border),
-                  ),
-                  child: const Icon(Icons.arrow_back_rounded,
-                      size: 18, color: _C.textSecondary),
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(title,
-                        style: const TextStyle(
-                            fontSize: 15,
-                            fontWeight: FontWeight.w700,
-                            color: _C.textPrimary)),
-                    Text(subtitle,
-                        style: const TextStyle(
-                            fontSize: 11, color: _C.textSecondary)),
-                  ],
-                ),
-              ),
-            ],
-          ),
-        ),
+    return SafeArea(
+      bottom: false,
+      child: MutasiKuPageHeader(
+        title: title,
+        subtitle: subtitle,
+        onBack: onBack,
       ),
     );
   }
@@ -624,3 +584,6 @@ class _ErrorState extends StatelessWidget {
     );
   }
 }
+
+// ─── Pemimpin Divisi Screen Alias ─────────────────────────────────────────────
+typedef PemimpinDivisiApprovalsScreen = KadivApprovalsScreen;

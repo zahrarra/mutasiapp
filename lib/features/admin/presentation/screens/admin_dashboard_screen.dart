@@ -138,12 +138,7 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
         .length;
     final oprCount = usersList.where((u) => u.role == UserRole.operator).length;
     final asetCount = usersList
-        .where(
-          (u) =>
-              u.role == UserRole.bagianAset ||
-              u.role == UserRole.staffAset ||
-              u.role == UserRole.kabagAset,
-        )
+        .where((u) => u.role == UserRole.bagianAset)
         .length;
     final kadivCount = usersList.where((u) => u.role == UserRole.kadiv).length;
     final usersBreakdown = usersList.isNotEmpty

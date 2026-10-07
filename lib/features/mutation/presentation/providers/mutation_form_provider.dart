@@ -287,7 +287,7 @@ final availablePicsProvider = Provider<List<String>>((ref) {
     'Drs. Ahmad Dahlan (Kadiv)',
     'Network Support Team',
     'Driver Operasional General Affair',
-    'Staff Aset — Rizky',
+    'Bagian Aset — Rizky',
     'Rina (HR Dept)',
     'Procurement Team',
   ];

@@ -102,30 +102,6 @@ abstract final class RoleNavConfig {
           ),
         ];
 
-      case UserRole.kabagAset:
-        return const [
-          CustomNavItem(
-            icon: Icons.home_outlined,
-            label: 'Home',
-            route: RouteNames.kabagDashboardPath,
-          ),
-          CustomNavItem(
-            icon: Icons.assignment_ind_outlined,
-            label: 'Approval',
-            route: RouteNames.kabagApprovalsPath,
-          ),
-          CustomNavItem(
-            icon: Icons.notifications_none_rounded,
-            label: 'Notifikasi',
-            route: RouteNames.kabagNotificationsPath,
-          ),
-          CustomNavItem(
-            icon: Icons.person_outline_rounded,
-            label: 'Profil',
-            route: RouteNames.profilePath,
-          ),
-        ];
-
       case UserRole.kadiv:
         return const [
           CustomNavItem(
@@ -142,30 +118,6 @@ abstract final class RoleNavConfig {
             icon: Icons.notifications_none_rounded,
             label: 'Notifikasi',
             route: RouteNames.kadivNotificationsPath,
-          ),
-          CustomNavItem(
-            icon: Icons.person_outline_rounded,
-            label: 'Profil',
-            route: RouteNames.profilePath,
-          ),
-        ];
-
-      case UserRole.staffAset:
-        return const [
-          CustomNavItem(
-            icon: Icons.home_outlined,
-            label: 'Home',
-            route: RouteNames.staffDashboardPath,
-          ),
-          CustomNavItem(
-            icon: Icons.edit_location_alt_outlined,
-            label: 'Update Aset',
-            route: RouteNames.staffMutationsPath,
-          ),
-          CustomNavItem(
-            icon: Icons.notifications_none_rounded,
-            label: 'Notifikasi',
-            route: RouteNames.staffNotificationsPath,
           ),
           CustomNavItem(
             icon: Icons.person_outline_rounded,

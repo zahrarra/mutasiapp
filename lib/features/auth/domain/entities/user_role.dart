@@ -1,12 +1,12 @@
 // lib/features/auth/domain/entities/user_role.dart
 //
-// Role enum untuk domain layer.
-// Sumber: AGENTS.md §10, TECHNICAL-DESIGN.md §7, ROLE-FLOW.md §9–10.
+// Role enum untuk domain layer resmi PRD V1.1.
+// Sumber: AGENTS.md §10, TECHNICAL-DESIGN.md §7, ROLE-FLOW.md §9–10, PRD V1.1 §5.
 //
 // ATURAN:
 // - Gunakan enum ini di seluruh UI — jangan gunakan string role mentah.
 // - Mapping dari string API dilakukan di data layer (UserModel).
-// - Admin dan Operator adalah role BERBEDA (AGENTS.md §10).
+// - Role aktif hanya 5: Admin, Pemohon, Operator, Bagian Aset, Pemimpin Divisi (Kadiv).
 
 import 'user_permission.dart';
 
@@ -24,14 +24,8 @@ enum UserRole {
   /// Bagian Aset — memverifikasi keabsahan data aset & menentukan PIC baru.
   bagianAset,
 
-  /// Kepala Bagian Aset (Legacy alias untuk bagianAset).
-  kabagAset,
-
   /// Pemimpin Divisi Umum dan Aset (Kadiv) — approval final.
-  kadiv,
-
-  /// Staff Aset (Legacy).
-  staffAset;
+  kadiv;
 
   /// Daftar role aktif resmi sesuai PRD V1.1 §5.
   static const List<UserRole> activeRoles = [
@@ -50,9 +44,7 @@ enum UserRole {
         UserRole.pemohon => 'Pemohon',
         UserRole.operator => 'Operator',
         UserRole.bagianAset => 'Bagian Aset',
-        UserRole.kabagAset => 'Kabag Aset',
         UserRole.kadiv => 'Pemimpin Divisi',
-        UserRole.staffAset => 'Staff Aset',
       };
 
   /// Label alias untuk displayName.
@@ -67,9 +59,7 @@ enum UserRole {
         UserRole.pemohon => '/pemohon/dashboard',
         UserRole.operator => '/operator/dashboard',
         UserRole.bagianAset => '/bagian-aset/dashboard',
-        UserRole.kabagAset => '/kabag/dashboard',
         UserRole.kadiv => '/kadiv/dashboard',
-        UserRole.staffAset => '/staff-aset/dashboard',
       };
 
   // ─── Route Prefix ─────────────────────────────────────────────────────────
@@ -80,9 +70,7 @@ enum UserRole {
         UserRole.pemohon => '/pemohon',
         UserRole.operator => '/operator',
         UserRole.bagianAset => '/bagian-aset',
-        UserRole.kabagAset => '/kabag',
         UserRole.kadiv => '/kadiv',
-        UserRole.staffAset => '/staff-aset',
       };
 
   // ─── Permissions ──────────────────────────────────────────────────────────
@@ -105,21 +93,10 @@ enum UserRole {
           },
         UserRole.bagianAset => {
             UserPermission.verifyAssetData,
-            UserPermission.approveKabag,
-            UserPermission.updateAssetLocation,
-            UserPermission.viewNotifications,
-          },
-        UserRole.kabagAset => {
-            UserPermission.verifyAssetData,
-            UserPermission.approveKabag,
             UserPermission.viewNotifications,
           },
         UserRole.kadiv => {
             UserPermission.approveKadiv,
-            UserPermission.viewNotifications,
-          },
-        UserRole.staffAset => {
-            UserPermission.updateAssetLocation,
             UserPermission.viewNotifications,
           },
       };
@@ -136,9 +113,7 @@ enum UserRole {
         UserRole.pemohon => 'pemohon',
         UserRole.operator => 'operator',
         UserRole.bagianAset => 'bagian_aset',
-        UserRole.kabagAset => 'kabag_aset',
         UserRole.kadiv => 'kadiv',
-        UserRole.staffAset => 'staff_aset',
       };
 
   /// Parse dari string API.
@@ -158,9 +133,17 @@ enum UserRole {
       'kepala_divisi' ||
       'kepala divisi' =>
         UserRole.kadiv,
-      'bagian_aset' || 'bagianaset' || 'bagian aset' || 'aset' => UserRole.bagianAset,
-      'kabag_aset' || 'kabagaset' || 'kabag aset' => UserRole.kabagAset,
-      'staff_aset' || 'staffaset' || 'staff aset' => UserRole.staffAset,
+      'bagian_aset' ||
+      'bagianaset' ||
+      'bagian aset' ||
+      'aset' ||
+      'kabag_aset' ||
+      'kabagaset' ||
+      'kabag aset' ||
+      'staff_aset' ||
+      'staffaset' ||
+      'staff aset' =>
+        UserRole.bagianAset,
       _ => null,
     };
   }

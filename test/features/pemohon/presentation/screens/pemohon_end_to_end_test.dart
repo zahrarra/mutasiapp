@@ -139,7 +139,7 @@ class _FakeFullMutationRepository implements MutationRepository {
   }) async {
     final current = _mutations[mutationId]!;
     final updated = current.copyWith(
-      status: MutationStatus.waitingKabagApproval,
+      status: MutationStatus.waitingAssetVerification,
       verifiedBy: operatorName,
       verifiedAt: DateTime.now(),
       requiresKadivApproval: requiresKadivApproval,
@@ -164,20 +164,6 @@ class _FakeFullMutationRepository implements MutationRepository {
     _mutations[mutationId] = updated;
     return Result.success(updated);
   }
-
-  @override
-  Future<Result<Mutation>> approveMutationKabag({
-    required String mutationId,
-    required String kabagName,
-    required bool requiresKadivApproval,
-  }) async => throw UnimplementedError();
-
-  @override
-  Future<Result<Mutation>> rejectMutationKabag({
-    required String mutationId,
-    required String reason,
-    required String kabagName,
-  }) async => throw UnimplementedError();
 
   @override
   Future<Result<Mutation>> approveMutationKadiv({
@@ -235,14 +221,6 @@ class _FakeFullMutationRepository implements MutationRepository {
     _mutations[mutationId] = updated;
     return Result.success(updated);
   }
-
-  @override
-  Future<Result<Mutation>> processStaffAssetUpdate({
-    required String mutationId,
-    required String newLocation,
-    required String newPic,
-    required String staffName,
-  }) async => throw UnimplementedError();
 }
 
 class _FakePemohonAuthRepository implements AuthRepository {

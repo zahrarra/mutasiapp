@@ -99,23 +99,6 @@ class FakeKadivMutationRepository implements MutationRepository {
     throw UnimplementedError();
   }
 
-  @override
-  Future<Result<Mutation>> approveMutationKabag({
-    required String mutationId,
-    required String kabagName,
-    required bool requiresKadivApproval,
-  }) async {
-    throw UnimplementedError();
-  }
-
-  @override
-  Future<Result<Mutation>> rejectMutationKabag({
-    required String mutationId,
-    required String reason,
-    required String kabagName,
-  }) async {
-    throw UnimplementedError();
-  }
 
   @override
   Future<Result<Mutation>> approveMutationKadiv({
@@ -170,15 +153,6 @@ class FakeKadivMutationRepository implements MutationRepository {
     throw UnimplementedError();
   }
 
-  @override
-  Future<Result<Mutation>> processStaffAssetUpdate({
-    required String mutationId,
-    required String newLocation,
-    required String newPic,
-    required String staffName,
-  }) async {
-    throw UnimplementedError();
-  }
 }
 
 void main() {
@@ -209,7 +183,7 @@ void main() {
       targetPic: 'Bambang',
       reason: 'Relokasi server data center.',
       status: status,
-      approvedBy: 'Kabag Aset',
+      approvedBy: 'Bagian Aset',
       approvedAt: DateTime(2026, 9, 17, 10, 0),
       createdAt: DateTime(2026, 9, 17, 8, 0),
     );

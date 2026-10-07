@@ -1,7 +1,13 @@
-// lib/features/kabag/presentation/screens/kabag_approval_detail_screen.dart
+// lib/features/bagian_aset/presentation/screens/bagian_aset_verification_detail_screen.dart
 //
-// Screen: Detail Approval Pengajuan Mutasi oleh Kabag Aset (KBG-003).
-// Sumber: SCREEN-SPEC.md KBG-003, ROLE-FLOW.md §5, WIREFRAME.md §7.
+// Screen: Detail Verifikasi Pengajuan Mutasi oleh Bagian Aset.
+// Sumber: PRD V1.1 §5, §6.4, §8 Aturan 12 & 13.
+//
+// Bagian Aset BUKAN approver:
+// 1. Memeriksa keabsahan data aset, lokasi tujuan, dan SK SDM.
+// 2. Menentukan PIC baru jika pemohon tidak membawa aset (isAssetMovingWithApplicant == false).
+// 3. Mengembalikan pengajuan jika tidak valid.
+// 4. Meneruskan pengajuan yang valid ke antrean Approval Pemimpin Divisi.
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -9,66 +15,76 @@ import 'package:go_router/go_router.dart';
 import '../../../../app/router/route_names.dart';
 import '../../../../app/theme/app_colors.dart';
 import '../../../../app/theme/app_spacing.dart';
-import '../../../mutation/domain/entities/mutation.dart';
-import '../../../mutation/domain/entities/mutation_status.dart';
-import '../../../mutation/presentation/models/mutation_tracking_step.dart';
+import '../../../auth/domain/entities/user_role.dart';
+import '../../../auth/presentation/providers/auth_provider.dart';
 import '../../../../core/widgets/app_feedback.dart';
 import '../../../../core/widgets/document_preview_dialog.dart';
 import '../../../../core/widgets/inline_searchable_dropdown.dart';
-import '../../../auth/presentation/providers/auth_provider.dart';
+import '../../../../core/widgets/mutasiku_page_header.dart';
+import '../../../mutation/domain/entities/mutation.dart';
+import '../../../mutation/domain/entities/mutation_status.dart';
+import '../../../mutation/presentation/models/mutation_tracking_step.dart';
 import '../../../mutation/presentation/providers/mutation_form_provider.dart';
-import '../providers/kabag_approval_provider.dart';
+import '../../../mutation/presentation/providers/mutation_provider.dart';
+import '../../../mutation/presentation/widgets/mutation_return_dialog.dart';
+import '../../../notification/domain/entities/notification_item.dart';
+import '../../../notification/presentation/providers/notification_provider.dart';
+import '../providers/bagian_aset_verification_provider.dart';
 
-class KabagApprovalDetailScreen extends ConsumerWidget {
+class BagianAsetVerificationDetailScreen extends ConsumerWidget {
   final String mutationId;
 
-  const KabagApprovalDetailScreen({
+  const BagianAsetVerificationDetailScreen({
     super.key,
     required this.mutationId,
   });
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final asyncMutation = ref.watch(kabagMutationDetailProvider(mutationId));
-    final actionState = ref.watch(kabagApprovalActionProvider);
+    final asyncMutation =
+        ref.watch(bagianAsetMutationDetailProvider(mutationId));
+    final actionState = ref.watch(bagianAsetVerificationActionProvider);
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Verifikasi Mutasi Aset'),
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
-          onPressed: () {
-            if (context.canPop()) {
-              context.pop();
-            } else {
-              context.go(RouteNames.bagianAsetVerificationsPath);
-            }
-          },
-        ),
-      ),
-      body: asyncMutation.when(
-        data: (mutation) => _buildBody(context, ref, mutation, actionState),
-        loading: () => const Center(child: CircularProgressIndicator()),
-        error: (err, _) => Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              const Icon(Icons.error_outline, size: 48, color: AppColors.error),
-              const SizedBox(height: AppSpacing.md),
-              Text(
-                'Gagal memuat detail approval: $err',
-                textAlign: TextAlign.center,
-                style: const TextStyle(color: AppColors.error),
-              ),
-              const SizedBox(height: AppSpacing.md),
-              ElevatedButton(
-                onPressed: () =>
-                    ref.invalidate(kabagMutationDetailProvider(mutationId)),
-                child: const Text('Coba Lagi'),
-              ),
-            ],
+      backgroundColor: const Color(0xFFF6F8FA),
+      body: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SafeArea(
+            bottom: false,
+            child: MutasiKuPageHeader(
+              title: 'Verifikasi Mutasi Aset',
+              subtitle: 'Detail dan verifikasi pengajuan mutasi aset',
+              onBack: () => _safePop(context, ref),
+            ),
           ),
-        ),
+          Expanded(
+            child: asyncMutation.when(
+              data: (mutation) => _buildBody(context, ref, mutation, actionState),
+              loading: () => const Center(child: CircularProgressIndicator()),
+              error: (err, _) => Center(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const Icon(Icons.error_outline, size: 48, color: AppColors.error),
+                    const SizedBox(height: AppSpacing.md),
+                    Text(
+                      'Gagal memuat detail pengajuan: $err',
+                      textAlign: TextAlign.center,
+                      style: const TextStyle(color: AppColors.error),
+                    ),
+                    const SizedBox(height: AppSpacing.md),
+                    ElevatedButton(
+                      onPressed: () => ref.invalidate(
+                          bagianAsetMutationDetailProvider(mutationId)),
+                      child: const Text('Coba Lagi'),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -77,10 +93,9 @@ class KabagApprovalDetailScreen extends ConsumerWidget {
     BuildContext context,
     WidgetRef ref,
     Mutation mutation,
-    KabagApprovalActionState actionState,
+    BagianAsetVerificationActionState actionState,
   ) {
-    final isWaitingApproval =
-        mutation.status.isWaitingAssetVerification;
+    final isWaitingVerification = mutation.status.isWaitingAssetVerification;
 
     return Column(
       children: [
@@ -125,20 +140,24 @@ class KabagApprovalDetailScreen extends ConsumerWidget {
                         ),
                       ),
                       const SizedBox(width: 8),
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 10, vertical: 4),
-                        decoration: BoxDecoration(
-                          color: mutation.status.backgroundColor,
-                          borderRadius:
-                              BorderRadius.circular(AppRadius.pill),
-                        ),
-                        child: Text(
-                          mutation.status.displayName,
-                          style: TextStyle(
-                            fontSize: 12,
-                            fontWeight: FontWeight.w600,
-                            color: mutation.status.color,
+                      Flexible(
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 10, vertical: 4),
+                          decoration: BoxDecoration(
+                            color: mutation.status.backgroundColor,
+                            borderRadius:
+                                BorderRadius.circular(AppRadius.pill),
+                          ),
+                          child: Text(
+                            mutation.status.displayName,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600,
+                              color: mutation.status.color,
+                            ),
                           ),
                         ),
                       ),
@@ -147,9 +166,9 @@ class KabagApprovalDetailScreen extends ConsumerWidget {
                 ),
                 const SizedBox(height: AppSpacing.md),
 
-                // Note jika berstatus ditolak
-                if (mutation.status == MutationStatus.rejected &&
-                    mutation.rejectionReason != null) ...[
+                // Note jika berstatus dikembalikan atau ditolak
+                if (mutation.status == MutationStatus.returned &&
+                    (mutation.returnReason != null || mutation.assetReturnReason != null)) ...[
                   Container(
                     width: double.infinity,
                     padding: const EdgeInsets.all(AppSpacing.md),
@@ -163,22 +182,21 @@ class KabagApprovalDetailScreen extends ConsumerWidget {
                       children: [
                         const Row(
                           children: [
-                            Icon(Icons.cancel_outlined,
-                                color: AppColors.error, size: 20),
+                            Icon(Icons.info_outline, color: AppColors.error, size: 18),
                             SizedBox(width: AppSpacing.xs),
                             Text(
-                              'Alasan Penolakan (Kabag Aset)',
+                              'Alasan Pengembalian:',
                               style: TextStyle(
-                                fontSize: 13,
                                 fontWeight: FontWeight.bold,
-                                color: AppColors.textPrimary,
+                                color: AppColors.error,
+                                fontSize: 13,
                               ),
                             ),
                           ],
                         ),
-                        const SizedBox(height: AppSpacing.xs),
+                        const SizedBox(height: 6),
                         Text(
-                          mutation.rejectionReason!,
+                          mutation.assetReturnReason ?? mutation.returnReason ?? '-',
                           style: const TextStyle(
                             fontSize: 13,
                             color: AppColors.textPrimary,
@@ -190,100 +208,183 @@ class KabagApprovalDetailScreen extends ConsumerWidget {
                   const SizedBox(height: AppSpacing.md),
                 ],
 
-                // Detail Fields Card
-                _buildSectionCard([
-                  _buildDetailRow(
-                    'Aset',
-                    mutation.asset.name,
-                    subtext:
-                        'Kode: ${mutation.asset.id} • ${mutation.asset.category.name}',
-                  ),
-                  const Divider(height: AppSpacing.md, color: AppColors.border),
-                  _buildDetailRow('Pemohon', mutation.applicantName),
-                  const Divider(height: AppSpacing.md, color: AppColors.border),
-                  _buildTransitionRow(
-                    label: 'Lokasi',
-                    from: mutation.currentLocation,
-                    to: mutation.targetLocation,
-                  ),
-                  const Divider(height: AppSpacing.md, color: AppColors.border),
-                  _buildTransitionRow(
-                    label: 'PIC / Penanggung Jawab',
-                    from: mutation.currentPic,
-                    to: mutation.targetPic,
-                  ),
-                  const Divider(height: AppSpacing.md, color: AppColors.border),
-                  _buildDetailRow('Alasan Mutasi', mutation.reason),
-                  const Divider(height: AppSpacing.md, color: AppColors.border),
-                  _buildDocumentRow(mutation, context, ref),
-                  const Divider(height: AppSpacing.md, color: AppColors.border),
-                  _buildDetailRow(
-                      'Waktu Pengajuan', _formatDateTime(mutation.createdAt)),
-                ]),
-                const SizedBox(height: AppSpacing.md),
-
-                // Timeline Workflow Card (WF-KBG-003 & SCREEN-SPEC KBG-003)
+                // 1. Data Pemohon
                 _buildSectionCard([
                   const Text(
-                    'Timeline Workflow',
+                    'Informasi Pemohon',
                     style: TextStyle(
-                      fontSize: 13,
+                      fontSize: 15,
                       fontWeight: FontWeight.bold,
                       color: AppColors.textPrimary,
                     ),
                   ),
-                  const SizedBox(height: AppSpacing.md),
-                  ...() {
-                    final trackingSteps =
-                        MutationTrackingHelper.getStepsForMutation(
-                      mutation.status,
-                      mutation: mutation,
-                    );
-                    final widgets = <Widget>[];
-                    for (var i = 0; i < trackingSteps.length; i++) {
-                      if (i > 0) widgets.add(_buildTimelineLine());
-                      final step = trackingSteps[i];
-                      widgets.add(
-                        _buildTimelineItem(
-                          title: step.title,
-                          subtitle: step.subtitle,
-                          isCompleted: step.isCompleted,
-                          isCurrent: step.isCurrent,
-                          isRejected: step.isAlert,
-                        ),
-                      );
-                    }
-                    return widgets;
-                  }(),
+                  const SizedBox(height: AppSpacing.sm),
+                  const Divider(height: 1, color: AppColors.border),
+                  const SizedBox(height: AppSpacing.sm),
+                  _buildDetailRow('Nama Pemohon', mutation.applicantName),
+                  const SizedBox(height: AppSpacing.sm),
+                  _buildDetailRow(
+                    'Tanggal Pengajuan',
+                    _formatDateTime(mutation.createdAt),
+                  ),
                 ]),
+                const SizedBox(height: AppSpacing.md),
+
+                // 2. Data Aset
+                _buildSectionCard([
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      const Text(
+                        'Data Aset',
+                        style: TextStyle(
+                          fontSize: 15,
+                          fontWeight: FontWeight.bold,
+                          color: AppColors.textPrimary,
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Flexible(
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 8, vertical: 2),
+                          decoration: BoxDecoration(
+                            color: AppColors.primaryContainer.withValues(alpha: 0.5),
+                            borderRadius: BorderRadius.circular(AppRadius.pill),
+                          ),
+                          child: Text(
+                            mutation.asset.category.name,
+                            style: const TextStyle(
+                              fontSize: 11,
+                              fontWeight: FontWeight.w600,
+                              color: AppColors.primary,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: AppSpacing.sm),
+                  const Divider(height: 1, color: AppColors.border),
+                  const SizedBox(height: AppSpacing.sm),
+                  _buildDetailRow('Nama Aset', mutation.asset.name),
+                  const SizedBox(height: AppSpacing.sm),
+                  _buildDetailRow('Kode Aset', mutation.asset.assetCode),
+                  const SizedBox(height: AppSpacing.sm),
+                  _buildDetailRow(
+                    'Nomor Seri',
+                    mutation.displaySerialNumber,
+                  ),
+                  const SizedBox(height: AppSpacing.sm),
+                  _buildDetailRow('Kondisi Aset', mutation.asset.condition),
+                  const SizedBox(height: AppSpacing.sm),
+                  _buildDetailRow(
+                    'Aset Ikut Pemohon Pindah?',
+                    mutation.isAssetMovingWithApplicant
+                        ? 'Ya (Dibawa Pemohon)'
+                        : 'Tidak (Ditinggalkan di Unit Asal)',
+                  ),
+                ]),
+                const SizedBox(height: AppSpacing.md),
+
+                // 3. Perpindahan Lokasi & PIC
+                _buildSectionCard([
+                  const Text(
+                    'Rencana Perpindahan',
+                    style: TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.bold,
+                      color: AppColors.textPrimary,
+                    ),
+                  ),
+                  const SizedBox(height: AppSpacing.sm),
+                  const Divider(height: 1, color: AppColors.border),
+                  const SizedBox(height: AppSpacing.sm),
+                  _buildTransitionRow(
+                    label: 'Perpindahan Lokasi',
+                    from: mutation.currentLocation,
+                    to: mutation.targetLocation,
+                  ),
+                  const SizedBox(height: AppSpacing.md),
+                  _buildTransitionRow(
+                    label: 'Perubahan Penanggung Jawab (PIC)',
+                    from: mutation.currentPic,
+                    to: mutation.targetPic.isNotEmpty
+                        ? mutation.targetPic
+                        : (mutation.isAssetMovingWithApplicant
+                            ? mutation.applicantName
+                            : 'Belum Ditentukan (Wajib Ditentukan Bagian Aset)'),
+                  ),
+                  const SizedBox(height: AppSpacing.sm),
+                  _buildDetailRow('Alasan Mutasi', mutation.reason),
+                ]),
+                const SizedBox(height: AppSpacing.md),
+
+                // 4. Dokumen Pendukung (SK SDM)
+                _buildSectionCard([
+                  const Text(
+                    'Dokumen Pendukung (SK SDM)',
+                    style: TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.bold,
+                      color: AppColors.textPrimary,
+                    ),
+                  ),
+                  const SizedBox(height: AppSpacing.sm),
+                  const Divider(height: 1, color: AppColors.border),
+                  const SizedBox(height: AppSpacing.sm),
+                  _buildDocumentRow(mutation, context, ref),
+                ]),
+                const SizedBox(height: AppSpacing.md),
+
+                // 5. Timeline Alur Mutasi (5 Langkah PRD V1.1)
+                _buildSectionCard([
+                  const Text(
+                    'Riwayat & Status Alur',
+                    style: TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.bold,
+                      color: AppColors.textPrimary,
+                    ),
+                  ),
+                  const SizedBox(height: AppSpacing.sm),
+                  const Divider(height: 1, color: AppColors.border),
+                  const SizedBox(height: AppSpacing.md),
+                  ..._buildTimelineSteps(mutation),
+                ]),
+                const SizedBox(height: 100),
               ],
             ),
           ),
         ),
 
-        // Bottom Action Buttons (Hanya tampil bila berstatus waitingKabagApproval)
-        if (isWaitingApproval)
+        // Action Buttons Bottom Bar jika berstatus waitingAssetVerification
+        if (isWaitingVerification)
           Container(
             padding: const EdgeInsets.all(AppSpacing.md),
-            decoration: const BoxDecoration(
+            decoration: BoxDecoration(
               color: Colors.white,
-              border: Border(top: BorderSide(color: AppColors.border)),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.06),
+                  blurRadius: 10,
+                  offset: const Offset(0, -4),
+                ),
+              ],
             ),
             child: SafeArea(
               child: Row(
                 children: [
-                  // Secondary Action: [ Kembalikan / Tolak ]
+                  // Secondary Action: [ Kembalikan ]
                   Expanded(
+                    flex: 1,
                     child: OutlinedButton(
                       key: const Key('btn_tolak_approval'),
                       onPressed: actionState.isLoading
                           ? null
-                          : () {
-                              context.push(
-                                RouteNames.bagianAsetReturnFormPath
-                                    .replaceFirst(':id', mutation.id),
-                              );
-                            },
+                          : () => _showReturnModal(context, ref, mutation),
                       style: OutlinedButton.styleFrom(
                         foregroundColor: AppColors.error,
                         side: const BorderSide(color: AppColors.error),
@@ -302,14 +403,14 @@ class KabagApprovalDetailScreen extends ConsumerWidget {
                   ),
                   const SizedBox(width: AppSpacing.md),
 
-                  // Primary Action: [ Verifikasi & Teruskan / Setujui ]
+                  // Primary Action: [ Verifikasi & Teruskan ke Pemimpin Divisi ]
                   Expanded(
                     flex: 2,
                     child: ElevatedButton(
                       key: const Key('btn_setujui_approval'),
                       onPressed: actionState.isLoading
                           ? null
-                          : () => _showApproveConfirmDialog(
+                          : () => _showVerifyConfirmDialog(
                               context, ref, mutation),
                       style: ElevatedButton.styleFrom(
                         backgroundColor: AppColors.primary,
@@ -343,6 +444,45 @@ class KabagApprovalDetailScreen extends ConsumerWidget {
           ),
       ],
     );
+  }
+
+  List<Widget> _buildTimelineSteps(Mutation mutation) {
+    final steps = MutationTrackingHelper.buildTrackingSteps(
+      status: mutation.status,
+      requiresKadivApproval: true,
+      applicantName: mutation.applicantName,
+      createdAt: mutation.createdAt,
+      verifiedBy: mutation.verifiedBy,
+      returnReason: mutation.returnReason,
+      assetVerifiedBy: mutation.assetVerifiedBy,
+      assetReturnReason: mutation.assetReturnReason,
+      approvedBy: mutation.approvedBy,
+      rejectedBy: mutation.rejectedBy,
+      rejectionReason: mutation.rejectionReason,
+      kadivApprovedBy: mutation.kadivApprovedBy,
+      kadivRejectedBy: mutation.kadivRejectedBy,
+      kadivRejectionReason: mutation.kadivRejectionReason,
+      kadivRejectedAt: mutation.kadivRejectedAt,
+      confirmationReason: mutation.confirmationReason,
+    );
+
+    final widgets = <Widget>[];
+    for (int i = 0; i < steps.length; i++) {
+      final s = steps[i];
+      widgets.add(
+        _buildTimelineItem(
+          title: s.title,
+          subtitle: s.subtitle,
+          isCompleted: s.isCompleted,
+          isCurrent: s.isCurrent,
+          isRejected: s.isAlert,
+        ),
+      );
+      if (i < steps.length - 1) {
+        widgets.add(_buildTimelineLine());
+      }
+    }
+    return widgets;
   }
 
   Widget _buildSectionCard(List<Widget> children) {
@@ -604,7 +744,7 @@ class KabagApprovalDetailScreen extends ConsumerWidget {
     );
   }
 
-  void _showApproveConfirmDialog(
+  void _showVerifyConfirmDialog(
     BuildContext context,
     WidgetRef ref,
     Mutation mutation,
@@ -721,8 +861,8 @@ class KabagApprovalDetailScreen extends ConsumerWidget {
               }
               Navigator.of(dialogContext).pop();
               final success = await ref
-                  .read(kabagApprovalActionProvider.notifier)
-                  .approve(
+                  .read(bagianAsetVerificationActionProvider.notifier)
+                  .verifyAndForward(
                     mutationId: mutation.id,
                     newPic: needsPic ? picController.text.trim() : null,
                   );
@@ -735,7 +875,7 @@ class KabagApprovalDetailScreen extends ConsumerWidget {
                   );
                   _safePop(context, ref);
                 } else {
-                  final err = ref.read(kabagApprovalActionProvider).error;
+                  final err = ref.read(bagianAsetVerificationActionProvider).error;
                   AppFeedback.showError(
                     context,
                     err ?? 'Gagal memverifikasi pengajuan.',
@@ -751,6 +891,50 @@ class KabagApprovalDetailScreen extends ConsumerWidget {
           ),
         ],
       ),
+    );
+  }
+
+  void _showReturnModal(
+    BuildContext context,
+    WidgetRef ref,
+    Mutation mutation,
+  ) {
+    showMutationReturnDialog(
+      context: context,
+      mutation: mutation,
+      onConfirm: (reason) async {
+        final success = await ref
+            .read(bagianAsetVerificationActionProvider.notifier)
+            .returnToApplicant(mutationId: mutation.id, reason: reason);
+
+        if (context.mounted) {
+          if (success) {
+            ref.read(notificationProvider.notifier).notifyUser(
+                  targetUserId: mutation.applicantId ?? 'usr_pemohon',
+                  targetRole: UserRole.pemohon,
+                  title: 'Pengajuan Dikembalikan Bagian Aset',
+                  message:
+                      'Pengajuan mutasi ${mutation.ticketNumber} (${mutation.asset.name}) dikembalikan oleh Bagian Aset: $reason',
+                  type: NotificationType.warning,
+                  relatedMutationId: mutation.id,
+                );
+            ref.invalidate(mutationDetailProvider(mutation.id));
+            AppFeedback.showReturned(
+              context,
+              'Pengajuan dikembalikan',
+            );
+            return true;
+          } else {
+            final err = ref.read(bagianAsetVerificationActionProvider).error;
+            AppFeedback.showError(
+              context,
+              err ?? 'Gagal mengembalikan pengajuan.',
+            );
+            return false;
+          }
+        }
+        return false;
+      },
     );
   }
 

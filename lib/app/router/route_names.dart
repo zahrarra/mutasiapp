@@ -82,26 +82,8 @@ abstract final class RouteNames {
   static const String bagianAsetNotificationsPath = '/bagian-aset/notifications';
   static const String bagianAsetNotificationsName = 'bagianAsetNotifications';
 
-  // ─── Kabag Aset Routes (Legacy Alias for Bagian Aset) ────────────────────
-  static const String kabagDashboardPath = '/kabag/dashboard';
-  static const String kabagDashboardName = 'kabagDashboard';
 
-  static const String kabagApprovalsPath = '/kabag/approvals';
-  static const String kabagApprovalsName = 'kabagApprovals';
-
-  static const String kabagApprovalDetailPath = '/kabag/approvals/:id';
-  static const String kabagApprovalDetailName = 'kabagApprovalDetail';
-
-  static const String kabagRejectFormPath = '/kabag/approvals/:id/reject';
-  static const String kabagRejectFormName = 'kabagRejectForm';
-
-  static const String kabagHistoryPath = '/kabag/approval-history';
-  static const String kabagHistoryName = 'kabagHistory';
-
-  static const String kabagNotificationsPath = '/kabag/notifications';
-  static const String kabagNotificationsName = 'kabagNotifications';
-
-  // ─── Kadiv Routes ─────────────────────────────────────────────────────────
+  // ─── Kadiv / Pemimpin Divisi Routes ──────────────────────────────────────
   static const String kadivDashboardPath = '/kadiv/dashboard';
   static const String kadivDashboardName = 'kadivDashboard';
 
@@ -120,21 +102,20 @@ abstract final class RouteNames {
   static const String kadivNotificationsPath = '/kadiv/notifications';
   static const String kadivNotificationsName = 'kadivNotifications';
 
-  // ─── Staff Aset Routes ────────────────────────────────────────────────────
-  static const String staffDashboardPath = '/staff-aset/dashboard';
-  static const String staffDashboardName = 'staffDashboard';
+  // Pemimpin Divisi Aliases
+  static const String pemimpinDivisiDashboardPath = kadivDashboardPath;
+  static const String pemimpinDivisiDashboardName = kadivDashboardName;
+  static const String pemimpinDivisiApprovalsPath = kadivApprovalsPath;
+  static const String pemimpinDivisiApprovalsName = kadivApprovalsName;
+  static const String pemimpinDivisiApprovalDetailPath = kadivApprovalDetailPath;
+  static const String pemimpinDivisiApprovalDetailName = kadivApprovalDetailName;
+  static const String pemimpinDivisiRejectFormPath = kadivRejectFormPath;
+  static const String pemimpinDivisiRejectFormName = kadivRejectFormName;
+  static const String pemimpinDivisiHistoryPath = kadivHistoryPath;
+  static const String pemimpinDivisiHistoryName = kadivHistoryName;
+  static const String pemimpinDivisiNotificationsPath = kadivNotificationsPath;
+  static const String pemimpinDivisiNotificationsName = kadivNotificationsName;
 
-  static const String staffMutationsPath = '/staff-aset/mutations';
-  static const String staffMutationsName = 'staffMutations';
-
-  static const String staffMutationDetailPath = '/staff-aset/mutations/:id';
-  static const String staffMutationDetailName = 'staffMutationDetail';
-
-  static const String staffAssetsPath = '/staff-aset/assets';
-  static const String staffAssetsName = 'staffAssets';
-
-  static const String staffNotificationsPath = '/staff-aset/notifications';
-  static const String staffNotificationsName = 'staffNotifications';
 
   // ─── Admin Routes ─────────────────────────────────────────────────────────
   static const String adminDashboardPath = '/admin/dashboard';

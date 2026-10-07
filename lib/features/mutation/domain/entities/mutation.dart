@@ -107,11 +107,11 @@ class Mutation {
   /// Catatan / alasan pengembalian jika ditolak/dikembalikan oleh Operator
   final String? returnReason;
 
-  /// Apakah mutasi ini memerlukan approval Kadiv sebelum lanjut ke Staff Aset.
-  /// Ditentukan oleh Kabag Aset saat menyetujui pengajuan.
+  /// Apakah mutasi ini memerlukan approval Pemimpin Divisi.
+  /// Ditentukan oleh Bagian Aset saat memverifikasi pengajuan.
   final bool requiresKadivApproval;
 
-  /// Catatan / alasan penolakan jika ditolak oleh Kabag Aset
+  /// Catatan / alasan pengembalian jika dikembalikan oleh Bagian Aset
   final String? rejectionReason;
 
   /// Tanggal verifikasi / pengembalian dilakukan oleh Operator
@@ -120,16 +120,16 @@ class Mutation {
   /// Nama Operator yang melakukan verifikasi / pengembalian
   final String? verifiedBy;
 
-  /// Tanggal persetujuan dilakukan oleh Kabag Aset
+  /// Tanggal verifikasi dilakukan oleh Bagian Aset
   final DateTime? approvedAt;
 
-  /// Nama Kabag Aset yang menyetujui
+  /// Nama verifikator Bagian Aset yang memverifikasi
   final String? approvedBy;
 
-  /// Tanggal penolakan dilakukan oleh Kabag Aset
+  /// Tanggal pengembalian dilakukan oleh Bagian Aset
   final DateTime? rejectedAt;
 
-  /// Nama Kabag Aset yang menolak
+  /// Nama verifikator Bagian Aset yang mengembalikan
   final String? rejectedBy;
 
   /// Tanggal persetujuan dilakukan oleh Kadiv
@@ -147,10 +147,10 @@ class Mutation {
   /// Catatan / alasan penolakan jika ditolak oleh Kadiv
   final String? kadivRejectionReason;
 
-  /// Tanggal pembaruan lokasi & PIC fisik dilakukan oleh Staff Aset
+  /// Tanggal pembaruan lokasi & PIC fisik dilakukan oleh Bagian Aset (legacy field)
   final DateTime? staffUpdatedAt;
 
-  /// Nama Staff Aset yang melakukan pembaruan
+  /// Nama petugas Bagian Aset yang melakukan pembaruan (legacy field)
   final String? staffUpdatedBy;
 
   /// Waktu pembuatan pengajuan

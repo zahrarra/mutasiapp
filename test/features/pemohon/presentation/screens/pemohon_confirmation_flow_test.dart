@@ -3,7 +3,7 @@
 // Comprehensive unit and widget tests for Fitur Konfirmasi Pemohon:
 // - Only pendingConfirmation mutations can be confirmed
 // - Pemohon only sees their own mutations (access control)
-// - Displays latest asset, location, PIC, and Staff Aset update info
+// - Displays latest asset, location, PIC, and Bagian Aset update info
 // - Tombol Sesuai: saves confirmation, status becomes completed, invalidates providers & notifications, updates UI without refresh
 // - Tombol Tidak Sesuai: prompts reason, saves returnReason, returns to returned status
 // - Zero manual refresh button, standard Back button only
@@ -221,13 +221,13 @@ void main() {
   );
 
   group('Fitur Konfirmasi Pemohon Tests', () {
-    testWidgets('1. Displays latest asset, location, PIC, and Staff Aset info', (tester) async {
+    testWidgets('1. Displays latest asset, location, PIC, and Bagian Aset info', (tester) async {
       final mutation = _createTestMutation(
         id: 'mut_conf_1',
         applicantId: pemohonUser.id,
         applicantName: pemohonUser.name,
         status: MutationStatus.pendingConfirmation,
-        staffUpdatedBy: 'Ahmad Staff Aset',
+        staffUpdatedBy: 'Ahmad Bagian Aset',
         staffUpdatedAt: DateTime(2026, 9, 24, 10, 30),
       );
       final repo = _FakeMutationRepository([mutation]);
@@ -253,8 +253,8 @@ void main() {
       expect(find.text('MacBook Pro M3 Max'), findsOneWidget);
       expect(find.text('AST-ELK-2026-0001'), findsOneWidget);
 
-      // Check Staff Aset update banner and route
-      expect(find.textContaining('Ahmad Staff Aset'), findsOneWidget);
+      // Check Bagian Aset update banner and route
+      expect(find.textContaining('Ahmad Bagian Aset'), findsOneWidget);
       expect(find.text('Kantor Pusat'), findsOneWidget);
       expect(find.text('Cabang Bandung'), findsAtLeastNWidgets(1));
       expect(find.text('Budi Santoso'), findsOneWidget);
@@ -333,7 +333,7 @@ void main() {
         applicantId: pemohonUser.id,
         applicantName: pemohonUser.name,
         status: MutationStatus.pendingConfirmation,
-        staffUpdatedBy: 'Ahmad Staff Aset',
+        staffUpdatedBy: 'Ahmad Bagian Aset',
       );
       final repo = _FakeMutationRepository([mutation]);
 
@@ -387,7 +387,7 @@ void main() {
         applicantId: pemohonUser.id,
         applicantName: pemohonUser.name,
         status: MutationStatus.pendingConfirmation,
-        staffUpdatedBy: 'Ahmad Staff Aset',
+        staffUpdatedBy: 'Ahmad Bagian Aset',
       );
       final repo = _FakeMutationRepository([mutation]);
 

@@ -1,23 +1,25 @@
-// lib/features/mutation/domain/usecases/reject_mutation_kabag_usecase.dart
+// lib/features/mutation/domain/usecases/return_mutation_bagian_aset_usecase.dart
 //
-// Use case: Penolakan Pengajuan Mutasi oleh Kabag Aset.
-// Sumber: PRD.md §6.4, §8 Aturan 7, ROLE-FLOW.md §5, SCREEN-SPEC.md KBG-004.
+// Use case: Pengembalian Pengajuan Mutasi oleh Bagian Aset ke Pemohon.
+// Sumber: PRD V1.1 §5, §6.4, §8 Aturan 13.
+//
+// Pengajuan yang tidak valid pada verifikasi Bagian Aset harus dikembalikan
+// kepada Pemohon dengan alasan wajib diisi.
 
 import '../../../../core/errors/failures.dart';
 import '../../../../core/errors/result.dart';
 import '../entities/mutation.dart';
-import '../entities/mutation_status.dart';
 import '../repositories/mutation_repository.dart';
 
-class RejectMutationKabagUseCase {
+class ReturnMutationBagianAsetUseCase {
   final MutationRepository repository;
 
-  const RejectMutationKabagUseCase({required this.repository});
+  const ReturnMutationBagianAsetUseCase({required this.repository});
 
   Future<Result<Mutation>> call({
     required String mutationId,
     required String reason,
-    required String kabagName,
+    required String verifierName,
   }) async {
     if (mutationId.trim().isEmpty) {
       return const Result.failure(
@@ -25,15 +27,13 @@ class RejectMutationKabagUseCase {
       );
     }
 
-    // Aturan Bisnis PRD §8 Aturan 7: "Penolakan harus memiliki alasan."
-    // SCREEN-SPEC.md KBG-004: "Alasan wajib diisi."
     if (reason.trim().isEmpty) {
       return const Result.failure(
-        ValidationFailure(message: 'Alasan penolakan wajib diisi.'),
+        ValidationFailure(message: 'Alasan pengembalian wajib diisi.'),
       );
     }
 
-    // Pastikan mutasi ada dan berstatus waitingKabagApproval
+    // Pastikan mutasi ada dan berstatus waitingAssetVerification
     final existingResult = await repository.getMutationById(mutationId);
     if (existingResult is AppFailure<Mutation>) {
       return Result.failure(existingResult.failure);
@@ -46,19 +46,19 @@ class RejectMutationKabagUseCase {
       );
     }
 
-    if (mutation.status != MutationStatus.waitingKabagApproval) {
+    if (!mutation.status.isWaitingAssetVerification) {
       return Result.failure(
         ValidationFailure(
           message:
-              'Hanya pengajuan berstatus Menunggu Approval Kabag yang dapat ditolak (Status saat ini: ${mutation.status.displayName}).',
+              'Hanya pengajuan berstatus Menunggu Verifikasi Bagian Aset yang dapat dikembalikan (Status saat ini: ${mutation.status.displayName}).',
         ),
       );
     }
 
-    return repository.rejectMutationKabag(
+    return repository.assetSectionReturn(
       mutationId: mutationId,
       reason: reason.trim(),
-      kabagName: kabagName,
+      verifierName: verifierName,
     );
   }
 }

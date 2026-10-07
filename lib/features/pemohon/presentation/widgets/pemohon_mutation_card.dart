@@ -48,7 +48,6 @@ class PemohonMutationCard extends StatelessWidget {
       case MutationStatus.verified:
         return 'Tahap 2/6: Pemeriksaan Kelengkapan';
       case MutationStatus.waitingAssetVerification:
-      case MutationStatus.waitingKabagApproval:
         return 'Tahap 3/6: Verifikasi Bagian Aset';
       case MutationStatus.waitingKadivApproval:
       case MutationStatus.waitingDivisionHeadApproval:
@@ -121,12 +120,6 @@ class PemohonMutationCard extends StatelessWidget {
         statusBorderColor = const Color(0xFFFEDF89);
         statusBadgeLabel = 'Verifikasi Bagian Aset';
         break;
-      case MutationStatus.waitingKabagApproval:
-        statusBgColor = const Color(0xFFFEF0C7);
-        statusTextColor = const Color(0xFFB45309);
-        statusBorderColor = const Color(0xFFFEDF89);
-        statusBadgeLabel = 'Approval Kabag';
-        break;
       case MutationStatus.waitingKadivApproval:
       case MutationStatus.waitingDivisionHeadApproval:
         statusBgColor = const Color(0xFFFEF0C7);
@@ -144,7 +137,7 @@ class PemohonMutationCard extends StatelessWidget {
         statusBgColor = const Color(0xFFE0F2FE);
         statusTextColor = const Color(0xFF0369A1);
         statusBorderColor = const Color(0xFFBAE6FD);
-        statusBadgeLabel = 'Eksekusi Staff';
+        statusBadgeLabel = 'Disetujui';
         break;
       case MutationStatus.waitingConfirmation:
         borderColor = const Color(0xFFB2DDFF);

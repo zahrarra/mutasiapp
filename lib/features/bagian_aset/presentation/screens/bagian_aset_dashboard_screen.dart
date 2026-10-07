@@ -1,7 +1,7 @@
-// lib/features/kabag/presentation/screens/kabag_dashboard_screen.dart
+// lib/features/bagian_aset/presentation/screens/bagian_aset_dashboard_screen.dart
 //
 // Dashboard Bagian Aset — UI Baseline Stitch 1:1 Pixel-Accurate
-// Screen Reference: 771bf0516fe94eed81fee36dbcb8cc09 (MutasiKu — Dashboard Kabag Aset - Modern Style).
+// Screen Reference: 771bf0516fe94eed81fee36dbcb8cc09 (MutasiKu — Dashboard Bagian Aset - Modern Style).
 // Fitur & PRD V1.1 §6.4:
 // - Verifikasi keabsahan data aset yang lolos dari Operator.
 // - Menentukan/menunjuk PIC baru jika aset ditinggalkan (isAssetMovingWithApplicant == false).
@@ -21,7 +21,7 @@ import '../../../auth/presentation/providers/auth_provider.dart';
 import '../../../mutation/domain/entities/mutation.dart';
 import '../../../mutation/presentation/providers/mutation_form_provider.dart';
 import '../../../notification/presentation/providers/notification_provider.dart';
-import '../providers/kabag_approval_provider.dart';
+import '../providers/bagian_aset_verification_provider.dart';
 
 /// Design tokens persis sesuai Stitch screen 771bf0516fe94eed81fee36dbcb8cc09
 abstract final class _C {
@@ -34,15 +34,15 @@ abstract final class _C {
   static const borderLight = Color(0xFFF1F5F9);
 }
 
-class KabagDashboardScreen extends ConsumerStatefulWidget {
-  const KabagDashboardScreen({super.key});
+class BagianAsetDashboardScreen extends ConsumerStatefulWidget {
+  const BagianAsetDashboardScreen({super.key});
 
   @override
-  ConsumerState<KabagDashboardScreen> createState() =>
-      _KabagDashboardScreenState();
+  ConsumerState<BagianAsetDashboardScreen> createState() =>
+      _BagianAsetDashboardScreenState();
 }
 
-class _KabagDashboardScreenState extends ConsumerState<KabagDashboardScreen> {
+class _BagianAsetDashboardScreenState extends ConsumerState<BagianAsetDashboardScreen> {
   final _searchController = TextEditingController();
   String _query = '';
   String? _selectedCategoryFilter; // null, 'lolos', 'pic', 'ti', 'umum'
@@ -453,9 +453,9 @@ class _KabagDashboardScreenState extends ConsumerState<KabagDashboardScreen> {
                                     final nav = Navigator.of(bottomSheetContext);
 
                                     final success = await ref
-                                        .read(kabagApprovalActionProvider
+                                        .read(bagianAsetVerificationActionProvider
                                             .notifier)
-                                        .approve(
+                                        .verifyAndForward(
                                           mutationId: mutation.id,
                                           newPic: selectedPic,
                                         );
@@ -627,8 +627,8 @@ class _KabagDashboardScreenState extends ConsumerState<KabagDashboardScreen> {
                           final nav = Navigator.of(dialogContext);
 
                           final success = await ref
-                              .read(kabagApprovalActionProvider.notifier)
-                              .approve(mutationId: mutation.id);
+                              .read(bagianAsetVerificationActionProvider.notifier)
+                              .verifyAndForward(mutationId: mutation.id);
 
                           if (!mounted) return;
                           nav.pop();
@@ -701,7 +701,7 @@ class _KabagDashboardScreenState extends ConsumerState<KabagDashboardScreen> {
     final authState = ref.watch(authStateProvider);
     final user = authState.user;
     final userName = user?.name ?? 'Bagian Aset';
-    final asyncMutations = ref.watch(kabagAllMutationsProvider);
+    final asyncMutations = ref.watch(bagianAsetAllMutationsProvider);
     final unreadCount = ref.watch(unreadNotificationCountProvider);
 
     return Scaffold(
@@ -709,8 +709,8 @@ class _KabagDashboardScreenState extends ConsumerState<KabagDashboardScreen> {
       body: RefreshIndicator(
         color: _C.teal,
         onRefresh: () async {
-          ref.invalidate(kabagAllMutationsProvider);
-          await ref.read(kabagAllMutationsProvider.future);
+          ref.invalidate(bagianAsetAllMutationsProvider);
+          await ref.read(bagianAsetAllMutationsProvider.future);
         },
         child: CustomScrollView(
           physics: const AlwaysScrollableScrollPhysics(
@@ -1207,8 +1207,8 @@ class _KabagDashboardScreenState extends ConsumerState<KabagDashboardScreen> {
                 ElevatedButton(
                   key: const Key('btn_hero_review_pengajuan'),
                   onPressed: () {
-                    ref.read(kabagStatusFilterProvider.notifier).state =
-                        KabagStatusFilter.waiting;
+                    ref.read(bagianAsetStatusFilterProvider.notifier).state =
+                        BagianAsetStatusFilter.waiting;
                     context.push(RouteNames.bagianAsetVerificationsPath);
                   },
                   style: ElevatedButton.styleFrom(
@@ -1248,8 +1248,8 @@ class _KabagDashboardScreenState extends ConsumerState<KabagDashboardScreen> {
                 GestureDetector(
                   key: const Key('btn_hero_perlu_tindakan'),
                   onTap: () {
-                    ref.read(kabagStatusFilterProvider.notifier).state =
-                        KabagStatusFilter.waiting;
+                    ref.read(bagianAsetStatusFilterProvider.notifier).state =
+                        BagianAsetStatusFilter.waiting;
                     context.push(RouteNames.bagianAsetVerificationsPath);
                   },
                   child: Row(
@@ -1604,8 +1604,8 @@ class _KabagDashboardScreenState extends ConsumerState<KabagDashboardScreen> {
         InkWell(
           key: const Key('btn_dashboard_lihat_semua'),
           onTap: () {
-            ref.read(kabagStatusFilterProvider.notifier).state =
-                KabagStatusFilter.waiting;
+            ref.read(bagianAsetStatusFilterProvider.notifier).state =
+                BagianAsetStatusFilter.waiting;
             context.push(RouteNames.bagianAsetVerificationsPath);
           },
           borderRadius: BorderRadius.circular(4),

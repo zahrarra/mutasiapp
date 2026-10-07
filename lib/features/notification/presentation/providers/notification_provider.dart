@@ -71,18 +71,6 @@ class NotificationNotifier extends StateNotifier<List<NotificationItem>> {
         targetRole: UserRole.bagianAset,
       ),
 
-      // ── Legacy Staff Aset Notifications (Compatibility) ──────────────────
-      NotificationItem(
-        id: 'notif_stf_1',
-        title: 'Tugas Pembaruan Fisik Aset',
-        message:
-            'Pengajuan mutasi ELEKTRONIK-2026-00077 telah disetujui. Silakan lakukan pemindahan fisik dan perbarui lokasi & PIC aset.',
-        type: NotificationType.action,
-        createdAt: now.subtract(const Duration(hours: 3)),
-        relatedMutationId: 'mut_007',
-        targetRole: UserRole.staffAset,
-      ),
-
       // ── Kadiv Notifications ──────────────────────────────────────────────
       NotificationItem(
         id: 'notif_kdv_1',
@@ -179,12 +167,7 @@ class NotificationNotifier extends StateNotifier<List<NotificationItem>> {
 
   static bool _matchesRole(UserRole? targetRole, UserRole? currentRole) {
     if (targetRole == null || currentRole == null) return true;
-    if (targetRole == currentRole) return true;
-    if ((targetRole == UserRole.bagianAset && currentRole == UserRole.kabagAset) ||
-        (targetRole == UserRole.kabagAset && currentRole == UserRole.bagianAset)) {
-      return true;
-    }
-    return false;
+    return targetRole == currentRole;
   }
 
   static bool _isTargetedFor(
@@ -267,10 +250,7 @@ bool isNotificationVisibleToUser(NotificationItem item, dynamic user) {
       return false; // Notifikasi user A tidak pernah tampil untuk user B
     }
     if (item.targetRole != null) {
-      final matchesRole = item.targetRole == userRole ||
-          (userRole == UserRole.bagianAset && item.targetRole == UserRole.kabagAset) ||
-          (userRole == UserRole.kabagAset && item.targetRole == UserRole.bagianAset);
-      if (!matchesRole) {
+      if (item.targetRole != userRole) {
         return false;
       }
     }
@@ -279,9 +259,7 @@ bool isNotificationVisibleToUser(NotificationItem item, dynamic user) {
 
   // 2. Jika notifikasi ditujukan ke seluruh role:
   if (item.targetRole != null) {
-    return item.targetRole == userRole ||
-        (userRole == UserRole.bagianAset && item.targetRole == UserRole.kabagAset) ||
-        (userRole == UserRole.kabagAset && item.targetRole == UserRole.bagianAset);
+    return item.targetRole == userRole;
   }
 
   // 3. Notifikasi tanpa target role & user tidak boleh bocor

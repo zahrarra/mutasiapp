@@ -23,12 +23,6 @@ enum UserPermission {
   /// Review & approval mutasi final (Pemimpin Divisi / Kadiv).
   approveKadiv,
 
-  /// Review & approval mutasi level Kabag Aset (Legacy).
-  approveKabag,
-
-  /// Update lokasi & PIC aset (Legacy Staff Aset).
-  updateAssetLocation,
-
   /// Melihat notifikasi aktivitas mutasi (Semua Role).
   viewNotifications,
 }

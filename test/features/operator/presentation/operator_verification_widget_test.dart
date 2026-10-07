@@ -182,7 +182,7 @@ void main() {
   });
 
   testWidgets(
-      'Operator verify flow advances status to waitingKabagApproval and invalidates providers',
+      'Operator verify flow advances status to waitingAssetVerification and invalidates providers',
       (tester) async {
     late WidgetRef containerRef;
 

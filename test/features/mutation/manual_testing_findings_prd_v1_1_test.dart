@@ -29,7 +29,7 @@ import 'package:mutasiku/features/auth/domain/repositories/auth_repository.dart'
 import 'package:mutasiku/features/auth/domain/usecases/login_usecase.dart';
 import 'package:mutasiku/features/auth/domain/usecases/logout_usecase.dart';
 import 'package:mutasiku/features/auth/presentation/providers/auth_provider.dart';
-import 'package:mutasiku/features/kabag/presentation/screens/kabag_approval_detail_screen.dart';
+import 'package:mutasiku/features/bagian_aset/presentation/screens/bagian_aset_verification_detail_screen.dart';
 import 'package:mutasiku/features/kadiv/presentation/screens/kadiv_approval_detail_screen.dart';
 import 'package:mutasiku/features/mutation/domain/entities/mutation.dart';
 import 'package:mutasiku/features/mutation/domain/entities/mutation_status.dart';
@@ -141,17 +141,6 @@ class _MockMutationRepository implements MutationRepository {
     return Result.success(updated);
   }
 
-  @override
-  Future<Result<Mutation>> approveMutationKabag({
-    required String mutationId,
-    required String kabagName,
-    required bool requiresKadivApproval,
-  }) async {
-    return assetSectionForward(
-      mutationId: mutationId,
-      verifierName: kabagName,
-    );
-  }
 
   @override
   Future<Result<Mutation>> divisionApprove({
@@ -528,7 +517,7 @@ void main() {
               ),
             ],
             child: const MaterialApp(
-              home: KabagApprovalDetailScreen(
+              home: BagianAsetVerificationDetailScreen(
                 mutationId: 'mut_test_aset',
               ),
             ),

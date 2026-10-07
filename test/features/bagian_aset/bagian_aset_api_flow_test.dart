@@ -13,7 +13,7 @@ import 'package:mutasiku/features/auth/domain/repositories/auth_repository.dart'
 import 'package:mutasiku/features/auth/domain/usecases/login_usecase.dart';
 import 'package:mutasiku/features/auth/domain/usecases/logout_usecase.dart';
 import 'package:mutasiku/features/auth/presentation/providers/auth_provider.dart';
-import 'package:mutasiku/features/kabag/presentation/providers/kabag_approval_provider.dart';
+import 'package:mutasiku/features/bagian_aset/presentation/providers/bagian_aset_verification_provider.dart';
 import 'package:mutasiku/features/mutation/data/repositories/mutation_repository_impl.dart';
 import 'package:mutasiku/features/mutation/domain/entities/mutation_status.dart';
 

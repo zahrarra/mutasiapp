@@ -9,8 +9,8 @@
 // CATATAN FLOW PENGAJUAN:
 // Pemohon memasukkan data aset secara manual pada form pengajuan.
 // Aset TIDAK dicari terlebih dahulu dari AssetRepository/database.
-// Setelah pengajuan disetujui sampai tahap Staff Aset, barulah data
-// aset dapat diproses/diperbarui pada database aset.
+// Setelah pengajuan disetujui Pemimpin Divisi dan dikonfirmasi Pemohon,
+// barulah data aset otomatis diperbarui pada database aset.
 
 import '../../../../core/errors/failures.dart';
 import '../../../../core/errors/result.dart';
@@ -146,7 +146,7 @@ class MutationRepositoryImpl implements MutationRepository {
       );
 
       // Mock Aset 4 - Meja Kerja Eksekutif
-      // Sudah verifikasi valid -> Menunggu Approval Kabag
+      // Sudah verifikasi valid -> Menunggu Verifikasi Bagian Aset
       const asset4 = Asset(
         id: 'AST-00018',
         assetCode: 'AST-FUR-2022-0018',
@@ -223,7 +223,7 @@ class MutationRepositoryImpl implements MutationRepository {
           targetPic: 'Siti Rahma',
           reason: 'Pengadaan furnitur ruang manager cabang baru.',
           documentName: 'Nota_Dinas.pdf',
-          status: MutationStatus.waitingKabagApproval,
+          status: MutationStatus.waitingAssetVerification,
           verifiedBy: 'Operator Aset',
           verifiedAt: DateTime.now().subtract(const Duration(hours: 4)),
           createdAt: DateTime.now().subtract(const Duration(days: 1)),
@@ -241,7 +241,7 @@ class MutationRepositoryImpl implements MutationRepository {
           targetPic: 'Siti Rahma',
           reason: 'Pengadaan antar cabang memerlukan approval Kadiv.',
           documentName: 'Nota_Dinas.pdf',
-          status: MutationStatus.waitingKabagApproval,
+          status: MutationStatus.waitingAssetVerification,
           requiresKadivApproval: true,
           verifiedBy: 'Operator Aset',
           verifiedAt: DateTime.now().subtract(const Duration(hours: 3)),
@@ -274,7 +274,7 @@ class MutationRepositoryImpl implements MutationRepository {
           requiresKadivApproval: true,
           verifiedBy: 'Operator Aset',
           verifiedAt: DateTime.now().subtract(const Duration(hours: 6)),
-          approvedBy: 'H. M. Yusuf (Kabag Aset)',
+          approvedBy: 'H. M. Yusuf (Bagian Aset)',
           approvedAt: DateTime.now().subtract(const Duration(hours: 2)),
           createdAt: DateTime.now().subtract(const Duration(days: 1)),
         ),
@@ -306,13 +306,13 @@ class MutationRepositoryImpl implements MutationRepository {
           status: MutationStatus.pendingConfirmation,
           verifiedBy: 'Operator Aset',
           verifiedAt: DateTime.now().subtract(const Duration(days: 3)),
-          approvedBy: 'H. M. Yusuf (Kabag Aset)',
+          approvedBy: 'H. M. Yusuf (Bagian Aset)',
           approvedAt: DateTime.now().subtract(const Duration(days: 2)),
           createdAt: DateTime.now().subtract(const Duration(days: 4)),
         ),
 
         // Seed data mut_007:
-        // Menunggu pembaruan aset oleh Staff Aset (approved)
+        // Menunggu verifikasi keabsahan aset oleh Bagian Aset (waitingAssetVerification)
         Mutation(
           id: 'mut_007',
           ticketNumber: 'ELEKTRONIK-2026-00077',
@@ -335,10 +335,10 @@ class MutationRepositoryImpl implements MutationRepository {
           targetPic: 'Agus Santoso',
           reason: 'Dukungan operasional staf baru di Cabang Solo.',
           documentName: 'Surat_Penugasan_Solo.pdf',
-          status: MutationStatus.approved,
+          status: MutationStatus.waitingAssetVerification,
           verifiedBy: 'Operator Aset',
           verifiedAt: DateTime.now().subtract(const Duration(days: 1)),
-          approvedBy: 'H. M. Yusuf (Kabag Aset)',
+          approvedBy: 'H. M. Yusuf (Bagian Aset)',
           approvedAt: DateTime.now().subtract(const Duration(hours: 3)),
           createdAt: DateTime.now().subtract(const Duration(days: 2)),
         ),
@@ -1047,36 +1047,6 @@ class MutationRepositoryImpl implements MutationRepository {
   }
 
   @override
-  Future<Result<Mutation>> approveMutationKabag({
-    required String mutationId,
-    required String kabagName,
-    required bool requiresKadivApproval,
-  }) async {
-    final index = _mutations.indexWhere((m) => m.id == mutationId);
-    final targetPic = index != -1 && _mutations[index].targetPic.isNotEmpty
-        ? _mutations[index].targetPic
-        : 'PIC Ditentukan';
-    return assetSectionForward(
-      mutationId: mutationId,
-      verifierName: kabagName,
-      newPic: targetPic,
-    );
-  }
-
-  @override
-  Future<Result<Mutation>> rejectMutationKabag({
-    required String mutationId,
-    required String reason,
-    required String kabagName,
-  }) async {
-    return assetSectionReturn(
-      mutationId: mutationId,
-      reason: reason,
-      verifierName: kabagName,
-    );
-  }
-
-  @override
   Future<Result<Mutation>> approveMutationKadiv({
     required String mutationId,
     required String kadivName,
@@ -1110,76 +1080,5 @@ class MutationRepositoryImpl implements MutationRepository {
       confirmedBy: confirmedBy,
       isSesuai: true,
     );
-  }
-
-  @override
-  Future<Result<Mutation>> processStaffAssetUpdate({
-    required String mutationId,
-    required String newLocation,
-    required String newPic,
-    required String staffName,
-  }) async {
-    await Future.delayed(const Duration(milliseconds: 300));
-
-    final index = _mutations.indexWhere((m) => m.id == mutationId);
-    if (index == -1) {
-      return const Result.failure(
-        NotFoundFailure(message: 'Pengajuan mutasi tidak ditemukan.'),
-      );
-    }
-
-    final current = _mutations[index];
-
-    if (current.status != MutationStatus.approved &&
-        current.status != MutationStatus.waitingDivisionHeadApproval &&
-        current.status != MutationStatus.waitingConfirmation) {
-      return const Result.failure(
-        ValidationFailure(
-          message:
-              'Hanya mutasi berstatus Disetujui yang dapat diperbarui oleh Staff Aset.',
-        ),
-      );
-    }
-
-    // 1. Update data layer Asset & riwayat mutasi HANYA jika asset terdaftar
-    Asset updatedAsset = current.asset;
-    if (!current.isUnregisteredAsset &&
-        current.assetId != null &&
-        current.assetId!.isNotEmpty) {
-      final assetUpdateResult = await assetRepository.updateAssetLocationAndPic(
-        assetId: current.assetId!,
-        newLocation: newLocation,
-        newPic: newPic,
-        ticketNumber: current.ticketNumber,
-        updatedBy: staffName,
-      );
-
-      updatedAsset = assetUpdateResult is Success<Asset>
-          ? assetUpdateResult.data
-          : current.asset.copyWith(
-              location: newLocation,
-              pic: newPic,
-            );
-    } else {
-      // Unregistered asset: jangan mencoba updateAssetLocationAndPic()
-      updatedAsset = current.asset.copyWith(
-        location: newLocation,
-        pic: newPic,
-      );
-    }
-
-    // 2. Ubah status mutation menjadi pendingConfirmation
-    final updatedMutation = current.copyWith(
-      asset: updatedAsset,
-      targetLocation: newLocation,
-      targetPic: newPic,
-      status: MutationStatus.pendingConfirmation,
-      staffUpdatedAt: DateTime.now(),
-      staffUpdatedBy: staffName,
-    );
-
-    _mutations[index] = updatedMutation;
-
-    return Result.success(updatedMutation);
   }
 }

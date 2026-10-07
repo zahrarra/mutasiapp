@@ -1,10 +1,11 @@
-// test/features/kabag/presentation/kabag_approval_widget_test.dart
+// test/features/bagian_aset/presentation/bagian_aset_widget_test.dart
 //
-// Widget & presentation tests untuk screen Kabag Aset.
+// Widget & presentation tests untuk screen Bagian Aset (PRD V1.1 §6.4).
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:go_router/go_router.dart';
 import 'package:mutasiku/core/errors/result.dart';
 import 'package:mutasiku/features/asset/data/repositories/asset_repository_impl.dart';
 import 'package:mutasiku/features/auth/domain/entities/user.dart';
@@ -13,21 +14,20 @@ import 'package:mutasiku/features/auth/domain/repositories/auth_repository.dart'
 import 'package:mutasiku/features/auth/domain/usecases/login_usecase.dart';
 import 'package:mutasiku/features/auth/domain/usecases/logout_usecase.dart';
 import 'package:mutasiku/features/auth/presentation/providers/auth_provider.dart';
-import 'package:go_router/go_router.dart';
-import 'package:mutasiku/features/kabag/presentation/screens/kabag_approval_detail_screen.dart';
-import 'package:mutasiku/features/kabag/presentation/screens/kabag_approvals_screen.dart';
-import 'package:mutasiku/features/kabag/presentation/screens/kabag_dashboard_screen.dart';
-import 'package:mutasiku/features/kabag/presentation/screens/kabag_reject_form_screen.dart';
+import 'package:mutasiku/features/bagian_aset/presentation/screens/bagian_aset_dashboard_screen.dart';
+import 'package:mutasiku/features/bagian_aset/presentation/screens/bagian_aset_return_form_screen.dart';
+import 'package:mutasiku/features/bagian_aset/presentation/screens/bagian_aset_verification_detail_screen.dart';
+import 'package:mutasiku/features/bagian_aset/presentation/screens/bagian_aset_verifications_screen.dart';
 import 'package:mutasiku/features/mutation/data/repositories/mutation_repository_impl.dart';
 import 'package:mutasiku/features/mutation/domain/entities/mutation_status.dart';
 import 'package:mutasiku/features/mutation/presentation/providers/mutation_provider.dart';
-import 'package:mutasiku/features/kabag/presentation/providers/kabag_approval_provider.dart';
+import 'package:mutasiku/features/bagian_aset/presentation/providers/bagian_aset_verification_provider.dart';
 import 'package:mutasiku/features/notification/presentation/screens/notification_screen.dart';
 
-class FakeKabagAuthRepository implements AuthRepository {
+class FakeBagianAsetAuthRepository implements AuthRepository {
   final User? user;
 
-  FakeKabagAuthRepository({this.user});
+  FakeBagianAsetAuthRepository({this.user});
 
   @override
   Future<Result<User?>> getCurrentUser() async => Result.success(user);
@@ -44,12 +44,14 @@ class FakeKabagAuthRepository implements AuthRepository {
   Future<void> logout() async {}
 }
 
-class FakeKabagAuthNotifier extends AuthNotifier {
-  FakeKabagAuthNotifier(User user)
+class FakeBagianAsetAuthNotifier extends AuthNotifier {
+  FakeBagianAsetAuthNotifier(User user)
       : super(
-          loginUseCase: LoginUseCase(repository: FakeKabagAuthRepository(user: user)),
-          logoutUseCase: LogoutUseCase(repository: FakeKabagAuthRepository(user: user)),
-          authRepository: FakeKabagAuthRepository(user: user),
+          loginUseCase: LoginUseCase(
+              repository: FakeBagianAsetAuthRepository(user: user)),
+          logoutUseCase: LogoutUseCase(
+              repository: FakeBagianAsetAuthRepository(user: user)),
+          authRepository: FakeBagianAsetAuthRepository(user: user),
         ) {
     state = AuthState(isLoading: false, user: user);
   }
@@ -62,19 +64,19 @@ void main() {
     MutationRepositoryImpl(assetRepository: assetRepo);
   });
 
-  const kabagUser = User(
-    id: 'u_kbg_01',
-    username: 'kabag1',
-    name: 'Bambang Kabag',
-    email: 'kabag@mutasiku.id',
-    role: UserRole.kabagAset,
+  const bagianAsetUser = User(
+    id: 'u_ba_01',
+    username: 'bagianaset1',
+    name: 'Bambang Bagian Aset',
+    email: 'bagian.aset@mutasiku.id',
+    role: UserRole.bagianAset,
   );
 
   Widget createTestWidget(Widget child) {
     return ProviderScope(
       overrides: [
         authStateProvider.overrideWith(
-          (ref) => FakeKabagAuthNotifier(kabagUser),
+          (ref) => FakeBagianAsetAuthNotifier(bagianAsetUser),
         ),
         apiMutationRepositoryProvider.overrideWith(
           (ref) => ref.watch(mutationRepositoryProvider),
@@ -86,15 +88,20 @@ void main() {
     );
   }
 
-  testWidgets('KabagDashboardScreen displays header, hero banner and overview stat cards',
+  testWidgets(
+      'BagianAsetDashboardScreen displays header, hero banner and overview stat cards',
       (tester) async {
-    await tester.pumpWidget(createTestWidget(const KabagDashboardScreen()));
+    await tester
+        .pumpWidget(createTestWidget(const BagianAsetDashboardScreen()));
     await tester.pumpAndSettle();
 
     // Verifikasi header Bagian Aset Stitch 1:1 (Hamburger & Halo, [Nama]! & Subtitle)
     expect(find.byIcon(Icons.menu_rounded), findsOneWidget);
-    expect(find.text('Halo, Bambang Kabag!'), findsOneWidget);
-    expect(find.text('Staf Tata Kelola Aset • Verifikasi & Eksekusi Data Fisik'), findsOneWidget);
+    expect(find.text('Halo, Bambang Bagian Aset!'), findsOneWidget);
+    expect(
+        find.text(
+            'Staf Tata Kelola Aset • Verifikasi & Eksekusi Data Fisik'),
+        findsOneWidget);
     expect(find.text('VERIFIKASI & PEMBARUAN ASET'), findsOneWidget);
 
     // Verifikasi 4 Quick Category cards
@@ -104,7 +111,8 @@ void main() {
     expect(find.text('Aset Umum'), findsOneWidget);
   });
 
-  testWidgets('KabagDashboardScreen filter Aset TI and Aset Umum work reactively against real data',
+  testWidgets(
+      'BagianAsetDashboardScreen filter Aset TI and Aset Umum work reactively against real data',
       (tester) async {
     tester.view.physicalSize = const Size(800, 1200);
     tester.view.devicePixelRatio = 1.0;
@@ -124,7 +132,8 @@ void main() {
       );
     });
 
-    await tester.pumpWidget(createTestWidget(const KabagDashboardScreen()));
+    await tester
+        .pumpWidget(createTestWidget(const BagianAsetDashboardScreen()));
     await tester.pumpAndSettle();
 
     // Sebelum filter: tiket Aset TI (ELEKTRONIK-2026-00124) dan Aset Umum (FURNITUR-2026-00018) tampil
@@ -148,9 +157,11 @@ void main() {
     expect(find.text('ELEKTRONIK-2026-00124'), findsNothing);
   });
 
-  testWidgets('KabagApprovalsScreen renders search bar, filters, and cards',
+  testWidgets(
+      'BagianAsetVerificationsScreen renders search bar, filters, and cards',
       (tester) async {
-    await tester.pumpWidget(createTestWidget(const KabagApprovalsScreen()));
+    await tester
+        .pumpWidget(createTestWidget(const BagianAsetVerificationsScreen()));
     await tester.pumpAndSettle();
 
     // Verifikasi appbar & filter
@@ -160,19 +171,22 @@ void main() {
     expect(find.byKey(const Key('input_search_approvals')), findsOneWidget);
 
     // Verifikasi filter dropdowns
-    expect(find.byKey(const Key('dropdown_filter_kabag_status')), findsOneWidget);
-    expect(find.byKey(const Key('dropdown_filter_kabag_sort')), findsOneWidget);
+    expect(
+        find.byKey(const Key('dropdown_filter_bagian_aset_status')), findsOneWidget);
+    expect(
+        find.byKey(const Key('dropdown_filter_bagian_aset_sort')), findsOneWidget);
 
     // Verifikasi badge status tampil
     expect(find.text('Menunggu Verifikasi Bagian Aset'), findsWidgets);
   });
 
-  testWidgets('KabagApprovalsScreen search filters list correctly',
+  testWidgets('BagianAsetVerificationsScreen search filters list correctly',
       (tester) async {
-    await tester.pumpWidget(createTestWidget(const KabagApprovalsScreen()));
+    await tester
+        .pumpWidget(createTestWidget(const BagianAsetVerificationsScreen()));
     await tester.pumpAndSettle();
 
-    // mut_004 ada di antrean Kabag (Dewi Lestari, FURNITUR-2026-00018)
+    // mut_004 ada di antrean Bagian Aset (Dewi Lestari, FURNITUR-2026-00018)
     expect(find.text('FURNITUR-2026-00018'), findsOneWidget);
 
     // Cari tiket yang tidak ada
@@ -184,18 +198,17 @@ void main() {
     expect(find.text('Tidak Ada Pengajuan Menunggu'), findsOneWidget);
 
     // Hapus pencarian
-    await tester.enterText(
-        find.byKey(const Key('input_search_approvals')), '');
+    await tester.enterText(find.byKey(const Key('input_search_approvals')), '');
     await tester.pumpAndSettle();
 
     expect(find.text('FURNITUR-2026-00018'), findsOneWidget);
   });
 
   testWidgets(
-      'KabagApprovalDetailScreen displays complete mutation data and workflow',
+      'BagianAsetVerificationDetailScreen displays complete mutation data and workflow',
       (tester) async {
     await tester.pumpWidget(createTestWidget(
-      const KabagApprovalDetailScreen(mutationId: 'mut_004'),
+      const BagianAsetVerificationDetailScreen(mutationId: 'mut_004'),
     ));
     await tester.pumpAndSettle();
 
@@ -222,14 +235,14 @@ void main() {
   });
 
   testWidgets(
-      'Kabag approve flow WITHOUT Kadiv sets status to approved and invalidates providers',
+      'Bagian Aset verify & forward flow WITHOUT Kadiv sets status to approved and invalidates providers',
       (tester) async {
     late WidgetRef containerRef;
 
     final testWidget = ProviderScope(
       overrides: [
         authStateProvider.overrideWith(
-          (ref) => FakeKabagAuthNotifier(kabagUser),
+          (ref) => FakeBagianAsetAuthNotifier(bagianAsetUser),
         ),
         apiMutationRepositoryProvider.overrideWith(
           (ref) => ref.watch(mutationRepositoryProvider),
@@ -239,7 +252,7 @@ void main() {
         builder: (context, ref, _) {
           containerRef = ref;
           return const MaterialApp(
-            home: KabagApprovalDetailScreen(mutationId: 'mut_004'),
+            home: BagianAsetVerificationDetailScreen(mutationId: 'mut_004'),
           );
         },
       ),
@@ -248,7 +261,7 @@ void main() {
     await tester.pumpWidget(testWidget);
     await tester.pumpAndSettle();
 
-    // Tap Setujui
+    // Tap Setujui / Teruskan
     await tester.tap(find.byKey(const Key('btn_setujui_approval')));
     await tester.pumpAndSettle();
 
@@ -263,18 +276,18 @@ void main() {
     final detail =
         await containerRef.read(kabagMutationDetailProvider('mut_004').future);
     expect(detail.status.isWaitingDivisionApproval, true);
-    expect(detail.assetVerifiedBy, 'Bambang Kabag');
+    expect(detail.assetVerifiedBy, 'Bambang Bagian Aset');
   });
 
   testWidgets(
-      'Kabag approve flow WITH Kadiv sets status to waitingKadivApproval and invalidates providers',
+      'Bagian Aset verify & forward flow WITH Kadiv sets status to waitingKadivApproval and invalidates providers',
       (tester) async {
     late WidgetRef containerRef;
 
     final testWidget = ProviderScope(
       overrides: [
         authStateProvider.overrideWith(
-          (ref) => FakeKabagAuthNotifier(kabagUser),
+          (ref) => FakeBagianAsetAuthNotifier(bagianAsetUser),
         ),
         apiMutationRepositoryProvider.overrideWith(
           (ref) => ref.watch(mutationRepositoryProvider),
@@ -284,7 +297,8 @@ void main() {
         builder: (context, ref, _) {
           containerRef = ref;
           return const MaterialApp(
-            home: KabagApprovalDetailScreen(mutationId: 'mut_004_kadiv'),
+            home:
+                BagianAsetVerificationDetailScreen(mutationId: 'mut_004_kadiv'),
           );
         },
       ),
@@ -305,22 +319,22 @@ void main() {
     await tester.pumpAndSettle();
 
     // Cek status mutasi terupdate ke waitingKadivApproval
-    final detail =
-        await containerRef.read(kabagMutationDetailProvider('mut_004_kadiv').future);
+    final detail = await containerRef
+        .read(bagianAsetMutationDetailProvider('mut_004_kadiv').future);
     expect(detail.status.isWaitingDivisionApproval, true);
-    expect(detail.assetVerifiedBy, 'Bambang Kabag');
+    expect(detail.assetVerifiedBy, 'Bambang Bagian Aset');
     expect(detail.requiresKadivApproval, true);
   });
 
   testWidgets(
-      'Kabag reject flow requires reason and sets status to rejected with reason saved',
+      'Bagian Aset return flow requires reason and sets status to returned with reason saved',
       (tester) async {
     late WidgetRef containerRef;
 
     final testWidget = ProviderScope(
       overrides: [
         authStateProvider.overrideWith(
-          (ref) => FakeKabagAuthNotifier(kabagUser),
+          (ref) => FakeBagianAsetAuthNotifier(bagianAsetUser),
         ),
         apiMutationRepositoryProvider.overrideWith(
           (ref) => ref.watch(mutationRepositoryProvider),
@@ -330,7 +344,7 @@ void main() {
         builder: (context, ref, _) {
           containerRef = ref;
           return const MaterialApp(
-            home: KabagRejectFormScreen(mutationId: 'mut_004'),
+            home: BagianAsetReturnFormScreen(mutationId: 'mut_004'),
           );
         },
       ),
@@ -355,7 +369,7 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    // Submit rejection
+    // Submit return
     await tester.tap(find.byKey(const Key('btn_submit_tolak')));
     await tester.pumpAndSettle();
 
@@ -363,38 +377,28 @@ void main() {
     final detail =
         await containerRef.read(kabagMutationDetailProvider('mut_004').future);
     expect(detail.status, MutationStatus.returned);
-    expect(detail.rejectedBy, 'Bambang Kabag');
     expect(detail.returnReason,
         'Anggaran relokasi furnitur belum dialokasikan untuk cabang ini.');
   });
 
   testWidgets(
-      'NotificationScreen marks as read and navigates to kabag detail when item tapped',
+      'NotificationScreen marks as read and navigates to bagian aset detail when item tapped',
       (tester) async {
     String? navigatedPath;
 
     final router = GoRouter(
-      initialLocation: '/kabag/notifications',
+      initialLocation: '/bagian-aset/notifications',
       routes: [
         GoRoute(
-          path: '/kabag/notifications',
+          path: '/bagian-aset/notifications',
           builder: (context, state) => const NotificationScreen(),
-        ),
-        GoRoute(
-          path: '/kabag/approvals/:id',
-          builder: (context, state) {
-            navigatedPath = state.uri.toString();
-            return Scaffold(
-              body: Text('Kabag Detail: ${state.pathParameters['id']}'),
-            );
-          },
         ),
         GoRoute(
           path: '/bagian-aset/verifications/:id',
           builder: (context, state) {
             navigatedPath = state.uri.toString();
             return Scaffold(
-              body: Text('Kabag Detail: ${state.pathParameters['id']}'),
+              body: Text('Bagian Aset Detail: ${state.pathParameters['id']}'),
             );
           },
         ),
@@ -405,7 +409,7 @@ void main() {
       ProviderScope(
         overrides: [
           authStateProvider.overrideWith(
-            (ref) => FakeKabagAuthNotifier(kabagUser),
+            (ref) => FakeBagianAsetAuthNotifier(bagianAsetUser),
           ),
         ],
         child: MaterialApp.router(
@@ -422,8 +426,8 @@ void main() {
     await tester.tap(find.textContaining('FURNITUR-2026-00018').first);
     await tester.pumpAndSettle();
 
-    // Verify navigation reached kabag / bagian-aset approval detail route
+    // Verify navigation reached bagian-aset verification detail route
     expect(navigatedPath, contains('mut_004'));
-    expect(find.text('Kabag Detail: mut_004'), findsOneWidget);
+    expect(find.text('Bagian Aset Detail: mut_004'), findsOneWidget);
   });
 }

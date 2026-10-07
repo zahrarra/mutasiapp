@@ -6,7 +6,7 @@
 // 3. PDF > 30 MB -> ditolak dengan pesan ukuran
 // 4. Image (PNG/JPG) -> upload + preview sebagai image
 // 5. Preservasi reference & bytes nyata (bukan hanya nama string)
-// 6. Hak akses dokumen across roles (Pemohon, Operator, Kabag, Kadiv, Staff, Admin)
+// 6. Hak akses dokumen across roles (Pemohon, Operator, Bagian Aset, Kadiv, Admin)
 // 7. Error handling saat file tidak tersedia / gagal dibuka
 // 8. Ketahanan terhadap MissingPluginException
 
@@ -57,12 +57,12 @@ void main() {
     role: UserRole.operator,
   );
 
-  const kabagUser = User(
-    id: 'usr_kabag',
-    username: 'kabag1',
-    name: 'Bpk. Hendra Kabag',
-    email: 'kabag@mutasiku.id',
-    role: UserRole.kabagAset,
+  const bagianAsetUser = User(
+    id: 'usr_bagian_aset',
+    username: 'bagian_aset1',
+    name: 'Bpk. Hendra Bagian Aset',
+    email: 'bagian_aset@mutasiku.id',
+    role: UserRole.bagianAset,
   );
 
   const kadivUser = User(
@@ -71,14 +71,6 @@ void main() {
     name: 'Drs. Supriyanto Kadiv',
     email: 'kadiv@mutasiku.id',
     role: UserRole.kadiv,
-  );
-
-  const staffUser = User(
-    id: 'usr_staff',
-    username: 'staff1',
-    name: 'Rian Staff Aset',
-    email: 'staff@mutasiku.id',
-    role: UserRole.staffAset,
   );
 
   const adminUser = User(
@@ -297,16 +289,12 @@ void main() {
       expect(DocumentPreviewDialog.hasAccess(sampleMutation, operatorUser), isTrue);
     });
 
-    test('Kabag Aset memiliki akses ke dokumen pengajuan', () {
-      expect(DocumentPreviewDialog.hasAccess(sampleMutation, kabagUser), isTrue);
+    test('Bagian Aset memiliki akses ke dokumen pengajuan', () {
+      expect(DocumentPreviewDialog.hasAccess(sampleMutation, bagianAsetUser), isTrue);
     });
 
     test('Kadiv memiliki akses ke dokumen pengajuan', () {
       expect(DocumentPreviewDialog.hasAccess(sampleMutation, kadivUser), isTrue);
-    });
-
-    test('Staff Aset memiliki akses ke dokumen pengajuan', () {
-      expect(DocumentPreviewDialog.hasAccess(sampleMutation, staffUser), isTrue);
     });
 
     test('Admin memiliki akses ke dokumen pengajuan', () {
@@ -385,7 +373,7 @@ void main() {
                 onPressed: () => DocumentPreviewDialog.show(
                   ctx,
                   mutation: missingDocMutation,
-                  currentUser: kabagUser,
+                  currentUser: bagianAsetUser,
                 ),
                 child: const Text('Buka Preview'),
               ),
@@ -432,7 +420,7 @@ void main() {
                 onPressed: () => DocumentPreviewDialog.show(
                   ctx,
                   mutation: missingImgMutation,
-                  currentUser: staffUser,
+                  currentUser: bagianAsetUser,
                 ),
                 child: const Text('Buka Preview'),
               ),

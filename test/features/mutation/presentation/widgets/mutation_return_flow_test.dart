@@ -11,7 +11,7 @@ import 'package:mutasiku/features/auth/domain/repositories/auth_repository.dart'
 import 'package:mutasiku/features/auth/domain/usecases/login_usecase.dart';
 import 'package:mutasiku/features/auth/domain/usecases/logout_usecase.dart';
 import 'package:mutasiku/features/auth/presentation/providers/auth_provider.dart';
-import 'package:mutasiku/features/kabag/presentation/screens/kabag_approval_detail_screen.dart';
+import 'package:mutasiku/features/bagian_aset/presentation/screens/bagian_aset_verification_detail_screen.dart';
 import 'package:mutasiku/features/mutation/data/repositories/mutation_repository_impl.dart';
 import 'package:mutasiku/features/mutation/domain/entities/mutation_status.dart';
 import 'package:mutasiku/features/mutation/presentation/providers/mutation_provider.dart';
@@ -68,10 +68,10 @@ void main() {
   );
 
   const bagianAsetUser = User(
-    id: 'u_kbg_01',
-    username: 'kabag1',
-    name: 'Bambang Kabag',
-    email: 'kabag@mutasiku.id',
+    id: 'u_ast_01',
+    username: 'bagian_aset1',
+    name: 'Bambang Bagian Aset',
+    email: 'bagian_aset@mutasiku.id',
     role: UserRole.bagianAset,
   );
 
@@ -177,7 +177,7 @@ void main() {
             containerRef = ref;
             return const MaterialApp(
               home: Scaffold(
-                body: KabagApprovalDetailScreen(mutationId: 'mut_004'),
+                body: BagianAsetVerificationDetailScreen(mutationId: 'mut_004'),
               ),
             );
           },

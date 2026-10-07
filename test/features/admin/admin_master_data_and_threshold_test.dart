@@ -88,7 +88,7 @@ void main() {
       final updated = current.copyWith(
         name: 'Danu Sanjaya, S.Kom',
         department: 'Divisi Audit Internal',
-        role: UserRole.staffAset,
+        role: UserRole.bagianAset,
       );
 
       final updateResult = await userRepo.updateUser(updated);
@@ -97,7 +97,7 @@ void main() {
       final reFetch = await userRepo.getUserById(current.id);
       expect((reFetch as Success<User>).data.name, equals('Danu Sanjaya, S.Kom'));
       expect(reFetch.data.department, equals('Divisi Audit Internal'));
-      expect(reFetch.data.role, equals(UserRole.staffAset));
+      expect(reFetch.data.role, equals(UserRole.bagianAset));
     });
 
     test('3. Admin dapat menonaktifkan user dan user nonaktif DITOLAK saat login', () async {
