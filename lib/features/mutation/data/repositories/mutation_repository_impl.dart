@@ -14,6 +14,7 @@
 
 import '../../../../core/errors/failures.dart';
 import '../../../../core/errors/result.dart';
+import '../../../../core/network/api_client.dart';
 import '../../../asset/domain/entities/asset.dart';
 import '../../../asset/domain/entities/asset_category.dart';
 import '../../../asset/domain/entities/asset_status.dart';
@@ -21,6 +22,7 @@ import '../../../asset/domain/repositories/asset_repository.dart';
 import '../../domain/entities/mutation.dart';
 import '../../domain/entities/mutation_status.dart';
 import '../../domain/repositories/mutation_repository.dart';
+import '../models/mutation_model.dart';
 
 class MutationRepositoryImpl implements MutationRepository {
   // Dependency ini masih dipertahankan agar tidak memutus konfigurasi
@@ -29,8 +31,12 @@ class MutationRepositoryImpl implements MutationRepository {
   // Untuk submitMutation(), dependency ini TIDAK digunakan karena
   // pengajuan mutasi menerima data aset secara manual dari Pemohon.
   final AssetRepository assetRepository;
+  final ApiClient? apiClient;
 
-  MutationRepositoryImpl({required this.assetRepository}) {
+  MutationRepositoryImpl({
+    required this.assetRepository,
+    this.apiClient,
+  }) {
     _initInitialSeedData();
   }
 
@@ -596,6 +602,47 @@ class MutationRepositoryImpl implements MutationRepository {
 
   @override
   Future<Result<List<Mutation>>> getMutationsByUser(String userId) async {
+    if (apiClient != null) {
+      final response = await apiClient!.get('/api/v1/mutations');
+      switch (response) {
+        case Success(:final data):
+          final success = data['success'] as bool? ?? true;
+          if (!success) {
+            return Result.failure(
+              ServerFailure(
+                message: data['message'] as String? ??
+                    'Gagal mengambil daftar mutasi user dari server.',
+              ),
+            );
+          }
+          try {
+            final mutations = MutationModel.listFromJson(data);
+            if (userId.isNotEmpty) {
+              final userMutations = mutations.where((m) {
+                if (m.applicantId == userId) return true;
+                final isUserStd = (userId == 'usr_pemohon' ||
+                    userId == 'usr_101' ||
+                    userId == 'user_pemohon');
+                final isMutStd = (m.applicantId == 'usr_pemohon' ||
+                    m.applicantId == 'usr_101' ||
+                    m.applicantId == 'user_pemohon');
+                return isUserStd && isMutStd;
+              }).toList();
+              if (userMutations.isNotEmpty) {
+                return Result.success(userMutations);
+              }
+            }
+            return Result.success(mutations);
+          } catch (e) {
+            return Result.failure(
+              ServerFailure(message: 'Format data mutasi tidak valid: $e'),
+            );
+          }
+        case AppFailure(:final failure):
+          return Result.failure(failure);
+      }
+    }
+
     await Future.delayed(const Duration(milliseconds: 200));
 
     final userMutations = _mutations.where((m) {
@@ -614,6 +661,38 @@ class MutationRepositoryImpl implements MutationRepository {
 
   @override
   Future<Result<Mutation>> getMutationById(String id) async {
+    if (apiClient != null) {
+      final response = await apiClient!.get('/api/v1/mutations/$id');
+      switch (response) {
+        case Success(:final data):
+          final success = data['success'] as bool? ?? true;
+          if (!success) {
+            return Result.failure(
+              NotFoundFailure(
+                message: data['message'] as String? ??
+                    'Pengajuan mutasi tidak ditemukan.',
+              ),
+            );
+          }
+          final mutationMap = data['data'] as Map<String, dynamic>?;
+          if (mutationMap == null) {
+            return const Result.failure(
+              ServerFailure(message: 'Data detail mutasi tidak valid'),
+            );
+          }
+          try {
+            final mutation = MutationModel.fromJson(mutationMap);
+            return Result.success(mutation);
+          } catch (e) {
+            return Result.failure(
+              ServerFailure(message: 'Format detail mutasi tidak valid: $e'),
+            );
+          }
+        case AppFailure(:final failure):
+          return Result.failure(failure);
+      }
+    }
+
     await Future.delayed(const Duration(milliseconds: 150));
 
     try {
@@ -629,6 +708,32 @@ class MutationRepositoryImpl implements MutationRepository {
 
   @override
   Future<Result<List<Mutation>>> getAllMutations() async {
+    if (apiClient != null) {
+      final response = await apiClient!.get('/api/v1/mutations');
+      switch (response) {
+        case Success(:final data):
+          final success = data['success'] as bool? ?? true;
+          if (!success) {
+            return Result.failure(
+              ServerFailure(
+                message: data['message'] as String? ??
+                    'Gagal mengambil daftar mutasi dari server.',
+              ),
+            );
+          }
+          try {
+            final mutations = MutationModel.listFromJson(data);
+            return Result.success(mutations);
+          } catch (e) {
+            return Result.failure(
+              ServerFailure(message: 'Format data mutasi tidak valid: $e'),
+            );
+          }
+        case AppFailure(:final failure):
+          return Result.failure(failure);
+      }
+    }
+
     await Future.delayed(const Duration(milliseconds: 150));
     return Result.success(List.unmodifiable(_mutations.reversed.toList()));
   }

@@ -12,6 +12,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter/foundation.dart';
 
 import '../../../../core/errors/result.dart';
+import '../../../../core/providers/core_providers.dart';
 import '../../../asset/domain/entities/asset.dart';
 import '../../../asset/presentation/providers/asset_provider.dart';
 import '../../../auth/presentation/providers/auth_provider.dart';
@@ -28,13 +29,22 @@ import '../../../operator/presentation/providers/operator_verification_provider.
 
 /// Provider untuk [MutationRepository].
 ///
-/// MutationRepositoryImpl masih menggunakan AssetRepository sebagai
-/// dependency repository karena dependency tersebut masih digunakan
-/// pada struktur data/repository lain.
+/// Default provider mempertahankan mock repository agar seluruh widget test & alur
+/// lama tetap berjalan stabil tanpa regresi.
 final mutationRepositoryProvider = Provider<MutationRepository>((ref) {
   final assetRepo = ref.watch(assetRepositoryProvider);
-
   return MutationRepositoryImpl(assetRepository: assetRepo);
+});
+
+/// Provider untuk [MutationRepository] yang terhubung ke Laravel backend via [ApiClient].
+final apiMutationRepositoryProvider = Provider<MutationRepository>((ref) {
+  final assetRepo = ref.watch(assetRepositoryProvider);
+  final apiClient = ref.watch(apiClientProvider);
+
+  return MutationRepositoryImpl(
+    assetRepository: assetRepo,
+    apiClient: apiClient,
+  );
 });
 
 /// Provider untuk [SubmitMutationUseCase].

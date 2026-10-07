@@ -126,4 +126,65 @@ enum MutationStatus {
       this == MutationStatus.waitingConfirmation ||
       this == MutationStatus.pendingConfirmation ||
       this == MutationStatus.approved;
+
+  /// Mengonversi nilai string status dari API backend Laravel ke enum [MutationStatus].
+  ///
+  /// Status backend yang valid:
+  /// - `diajukan` -> [MutationStatus.submitted]
+  /// - `menunggu_verifikasi_bagian_aset` -> [MutationStatus.waitingAssetVerification]
+  /// - `dikembalikan_ke_pemohon` -> [MutationStatus.returned]
+  /// - `menunggu_approval_pemimpin_divisi` -> [MutationStatus.waitingDivisionHeadApproval]
+  /// - `ditolak` -> [MutationStatus.rejected]
+  /// - `menunggu_konfirmasi_pemohon` -> [MutationStatus.waitingConfirmation]
+  /// - `selesai` -> [MutationStatus.completed]
+  ///
+  /// Fallback aman jika status tidak dikenali atau null adalah [MutationStatus.submitted].
+  static MutationStatus fromApiValue(String? value) {
+    if (value == null) return MutationStatus.submitted;
+    switch (value.trim().toLowerCase()) {
+      case 'diajukan':
+        return MutationStatus.submitted;
+      case 'menunggu_verifikasi_bagian_aset':
+        return MutationStatus.waitingAssetVerification;
+      case 'dikembalikan_ke_pemohon':
+        return MutationStatus.returned;
+      case 'menunggu_approval_pemimpin_divisi':
+        return MutationStatus.waitingDivisionHeadApproval;
+      case 'ditolak':
+        return MutationStatus.rejected;
+      case 'menunggu_konfirmasi_pemohon':
+        return MutationStatus.waitingConfirmation;
+      case 'selesai':
+        return MutationStatus.completed;
+      // Status lokal / legacy fallback
+      case 'waiting_sync':
+      case 'menunggu_sinkronisasi':
+        return MutationStatus.waitingSync;
+      default:
+        return MutationStatus.submitted;
+    }
+  }
+
+  /// Nilai status untuk komunikasi dengan API backend.
+  String get apiValue => switch (this) {
+        MutationStatus.submitted => 'diajukan',
+        MutationStatus.waitingAssetVerification =>
+          'menunggu_verifikasi_bagian_aset',
+        MutationStatus.returned => 'dikembalikan_ke_pemohon',
+        MutationStatus.waitingDivisionHeadApproval =>
+          'menunggu_approval_pemimpin_divisi',
+        MutationStatus.rejected => 'ditolak',
+        MutationStatus.waitingConfirmation => 'menunggu_konfirmasi_pemohon',
+        MutationStatus.completed => 'selesai',
+        MutationStatus.waitingSync => 'diajukan',
+        // Legacy
+        MutationStatus.waitingKabagApproval =>
+          'menunggu_verifikasi_bagian_aset',
+        MutationStatus.waitingKadivApproval =>
+          'menunggu_approval_pemimpin_divisi',
+        MutationStatus.verified => 'menunggu_verifikasi_bagian_aset',
+        MutationStatus.approved => 'menunggu_konfirmasi_pemohon',
+        MutationStatus.pendingConfirmation => 'menunggu_konfirmasi_pemohon',
+      };
 }
+
