@@ -76,6 +76,9 @@ void main() {
       final element = ProviderContainer(
         overrides: [
           authStateProvider.overrideWith((ref) => _FakeAuthNotifier(bagianAsetTestUser)),
+          apiMutationRepositoryProvider.overrideWith(
+            (ref) => ref.watch(mutationRepositoryProvider),
+          ),
         ],
       );
 
@@ -135,6 +138,9 @@ void main() {
       final element = ProviderContainer(
         overrides: [
           authStateProvider.overrideWith((ref) => _FakeAuthNotifier(bagianAsetTestUser)),
+          apiMutationRepositoryProvider.overrideWith(
+            (ref) => ref.watch(mutationRepositoryProvider),
+          ),
         ],
       );
 
@@ -186,6 +192,9 @@ void main() {
       final element = ProviderContainer(
         overrides: [
           authStateProvider.overrideWith((ref) => _FakeAuthNotifier(bagianAsetTestUser)),
+          apiMutationRepositoryProvider.overrideWith(
+            (ref) => ref.watch(mutationRepositoryProvider),
+          ),
         ],
       );
 

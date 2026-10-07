@@ -220,6 +220,12 @@ final filteredBagianAsetVerificationsProvider =
   });
 });
 
+/// Compatibility alias untuk pengujian legacy
+final kabagStatsProvider = bagianAsetStatsProvider;
+final kabagStatusFilterProvider = bagianAsetStatusFilterProvider;
+typedef KabagStatusFilter = BagianAsetStatusFilter;
+final filteredKabagApprovalsProvider = filteredBagianAsetVerificationsProvider;
+
 // ─── Action Notifier ─────────────────────────────────────────────────────────
 
 class BagianAsetVerificationActionState {

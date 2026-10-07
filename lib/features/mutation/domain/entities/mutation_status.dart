@@ -170,9 +170,6 @@ enum MutationStatus {
         MutationStatus.waitingConfirmation => 'menunggu_konfirmasi_pemohon',
         MutationStatus.completed => 'selesai',
         MutationStatus.waitingSync => 'diajukan',
-        // Legacy
-        MutationStatus.waitingKabagApproval =>
-          'menunggu_verifikasi_bagian_aset',
         MutationStatus.waitingKadivApproval =>
           'menunggu_approval_pemimpin_divisi',
         MutationStatus.verified => 'menunggu_verifikasi_bagian_aset',

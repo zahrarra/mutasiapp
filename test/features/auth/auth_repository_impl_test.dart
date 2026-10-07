@@ -33,7 +33,6 @@ class FakeSecureStorage implements SecureStorage {
   @override
   Future<bool> hasAuthToken() async => _storage.containsKey('auth_token');
 
-  @override
   Future<void> deleteAuthToken() async => _storage.remove('auth_token');
 
   @override
@@ -42,7 +41,6 @@ class FakeSecureStorage implements SecureStorage {
   @override
   Future<String?> getUserId() async => _storage['user_id'];
 
-  @override
   Future<void> deleteUserId() async => _storage.remove('user_id');
 
   @override

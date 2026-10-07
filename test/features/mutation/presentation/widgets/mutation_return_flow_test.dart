@@ -12,6 +12,7 @@ import 'package:mutasiku/features/auth/domain/usecases/login_usecase.dart';
 import 'package:mutasiku/features/auth/domain/usecases/logout_usecase.dart';
 import 'package:mutasiku/features/auth/presentation/providers/auth_provider.dart';
 import 'package:mutasiku/features/bagian_aset/presentation/screens/bagian_aset_verification_detail_screen.dart';
+import 'package:mutasiku/features/bagian_aset/presentation/providers/bagian_aset_verification_provider.dart';
 import 'package:mutasiku/features/mutation/data/repositories/mutation_repository_impl.dart';
 import 'package:mutasiku/features/mutation/domain/entities/mutation_status.dart';
 import 'package:mutasiku/features/mutation/presentation/providers/mutation_provider.dart';
@@ -220,8 +221,10 @@ void main() {
       expect(find.text('Verifikasi Mutasi Aset'), findsOneWidget);
 
       // 8. Status pengajuan berubah ke returned
-      final detail =
-          await containerRef.read(mutationDetailProvider('mut_004').future);
+      final detailFuture = containerRef
+          .read(bagianAsetMutationDetailProvider('mut_004').future);
+      await tester.pump(const Duration(milliseconds: 300));
+      final detail = await detailFuture;
       expect(detail.status, MutationStatus.returned);
       expect(detail.returnReason,
           'Data fisik aset tidak sesuai dengan kode inventaris.');

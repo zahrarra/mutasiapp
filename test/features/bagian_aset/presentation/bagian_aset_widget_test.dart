@@ -371,11 +371,14 @@ void main() {
 
     // Submit return
     await tester.tap(find.byKey(const Key('btn_submit_tolak')));
-    await tester.pumpAndSettle();
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 500));
 
     // Cek status mutasi terupdate ke returned
-    final detail =
-        await containerRef.read(kabagMutationDetailProvider('mut_004').future);
+    final detailFuture =
+        containerRef.read(bagianAsetMutationDetailProvider('mut_004').future);
+    await tester.pump(const Duration(milliseconds: 300));
+    final detail = await detailFuture;
     expect(detail.status, MutationStatus.returned);
     expect(detail.returnReason,
         'Anggaran relokasi furnitur belum dialokasikan untuk cabang ini.');
