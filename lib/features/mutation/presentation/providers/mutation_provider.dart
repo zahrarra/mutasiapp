@@ -61,7 +61,7 @@ final apiMutationRepositoryProvider = Provider<MutationRepository>((ref) {
 /// - reason
 /// - documentName
 final submitMutationUseCaseProvider = Provider<SubmitMutationUseCase>((ref) {
-  final mutationRepo = ref.watch(mutationRepositoryProvider);
+  final mutationRepo = ref.watch(apiMutationRepositoryProvider);
 
   return SubmitMutationUseCase(mutationRepository: mutationRepo);
 });

@@ -20,21 +20,24 @@ import '../../../notification/presentation/providers/notification_provider.dart'
 
 final approveMutationKadivUseCaseProvider =
     Provider<ApproveMutationKadivUseCase>((ref) {
-  final repo = ref.watch(mutationRepositoryProvider);
+  final repo = ref.watch(apiMutationRepositoryProvider);
   return ApproveMutationKadivUseCase(repository: repo);
 });
 
 final rejectMutationKadivUseCaseProvider =
     Provider<RejectMutationKadivUseCase>((ref) {
-  final repo = ref.watch(mutationRepositoryProvider);
+  final repo = ref.watch(apiMutationRepositoryProvider);
   return RejectMutationKadivUseCase(repository: repo);
 });
 
 final getKadivApprovalsUseCaseProvider =
     Provider<GetKadivApprovalsUseCase>((ref) {
-  final repo = ref.watch(mutationRepositoryProvider);
+  final repo = ref.watch(apiMutationRepositoryProvider);
   return GetKadivApprovalsUseCase(repository: repo);
 });
+
+/// Provider detail satu mutasi untuk Pemimpin Divisi via API Laravel.
+final kadivMutationDetailProvider = apiMutationDetailProvider;
 
 // ─── Filter & Search State ───────────────────────────────────────────────────
 
@@ -269,6 +272,7 @@ class KadivApprovalActionNotifier
         result: result.data,
       );
       ref.invalidate(kadivAllMutationsProvider);
+      ref.invalidate(kadivMutationDetailProvider(mutationId));
       ref.invalidate(mutationDetailProvider(mutationId));
       ref.invalidate(mutationListProvider);
 
@@ -338,6 +342,7 @@ class KadivApprovalActionNotifier
         result: result.data,
       );
       ref.invalidate(kadivAllMutationsProvider);
+      ref.invalidate(kadivMutationDetailProvider(mutationId));
       ref.invalidate(mutationDetailProvider(mutationId));
       ref.invalidate(mutationListProvider);
 

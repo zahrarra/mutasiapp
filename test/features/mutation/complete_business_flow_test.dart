@@ -12,7 +12,6 @@
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:mutasiku/core/config/business_config.dart';
 import 'package:mutasiku/core/errors/failures.dart';
 import 'package:mutasiku/core/errors/result.dart';
 import 'package:mutasiku/features/asset/data/repositories/asset_repository_impl.dart';
@@ -197,11 +196,6 @@ void main() {
     // 2. Operator verifies with requiresKadivApproval = true
     final operatorContainer = createContainer(currentUser: operatorUser);
     addTearDown(operatorContainer.dispose);
-
-    // Operator checks threshold
-    final threshold = operatorContainer.read(kadivApprovalThresholdProvider);
-    expect(threshold, equals(50000000.0));
-    expect(mutation.asset.estimatedValue! >= threshold, isTrue);
 
     final verifySuccess = await operatorContainer.read(verificationActionProvider.notifier).verify(
       mutationId: mutation.id,

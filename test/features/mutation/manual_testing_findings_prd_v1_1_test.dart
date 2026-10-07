@@ -593,6 +593,7 @@ void main() {
           ProviderScope(
             overrides: [
               mutationRepositoryProvider.overrideWithValue(repo),
+              apiMutationRepositoryProvider.overrideWithValue(repo),
               authStateProvider.overrideWith(
                 (ref) => _TestAuthNotifier(testKadiv),
               ),

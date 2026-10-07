@@ -21,12 +21,12 @@ import '../../../kadiv/presentation/providers/kadiv_approval_provider.dart';
 // ─── Use Case Providers ───────────────────────────────────────────────────────
 
 final verifyMutationUseCaseProvider = Provider<VerifyMutationUseCase>((ref) {
-  final repo = ref.watch(mutationRepositoryProvider);
+  final repo = ref.watch(apiMutationRepositoryProvider);
   return VerifyMutationUseCase(repository: repo);
 });
 
 final returnMutationUseCaseProvider = Provider<ReturnMutationUseCase>((ref) {
-  final repo = ref.watch(mutationRepositoryProvider);
+  final repo = ref.watch(apiMutationRepositoryProvider);
   return ReturnMutationUseCase(repository: repo);
 });
 

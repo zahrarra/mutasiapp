@@ -102,6 +102,9 @@ void main() {
           (ref) => FakeKadivAuthNotifier(kadivUser),
         ),
         mutationRepositoryProvider.overrideWithValue(mutationRepository),
+        apiMutationRepositoryProvider.overrideWith(
+          (ref) => ref.watch(mutationRepositoryProvider),
+        ),
       ],
       child: MaterialApp.router(
         routerConfig: router,

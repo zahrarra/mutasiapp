@@ -97,20 +97,20 @@ void main() {
       final items = RoleNavConfig.getNavItemsForRole(UserRole.admin);
       expect(items.length, 4);
 
-      expect(items[0].label, 'Home');
-      expect(items[0].icon, Icons.grid_view_rounded);
+      expect(items[0].label, 'Beranda');
+      expect(items[0].icon, Icons.home);
       expect(items[0].route, RouteNames.adminDashboardPath);
 
       expect(items[1].label, 'Master Data');
-      expect(items[1].icon, Icons.dns_outlined);
+      expect(items[1].icon, Icons.storage_outlined);
       expect(items[1].route, RouteNames.adminCategoriesPath);
 
-      expect(items[2].label, 'Users');
-      expect(items[2].icon, Icons.group_outlined);
-      expect(items[2].route, RouteNames.adminUsersPath);
+      expect(items[2].label, 'Audit Log');
+      expect(items[2].icon, Icons.history_outlined);
+      expect(items[2].route, RouteNames.adminAuditLogPath);
 
       expect(items[3].label, 'Profil');
-      expect(items[3].icon, Icons.person_outline_rounded);
+      expect(items[3].icon, Icons.person_outline);
       expect(items[3].route, RouteNames.profilePath);
 
       // Verify Admin has NO notification item
@@ -238,6 +238,128 @@ void main() {
         return false;
       });
       expect(badgeContainers.isEmpty, isTrue);
+    });
+
+    testWidgets('renders Admin navbar matching Dashboard Admin design tokens and navigates to Audit Log',
+        (tester) async {
+      final router = GoRouter(
+        initialLocation: RouteNames.adminDashboardPath,
+        routes: [
+          GoRoute(
+            path: RouteNames.adminDashboardPath,
+            builder: (context, state) => Scaffold(
+              bottomNavigationBar: CustomFloatingNavBar.scaffoldBottomBar(
+                items: RoleNavConfig.getNavItemsForRole(UserRole.admin),
+              ),
+              body: const Text('Admin Dashboard Body'),
+            ),
+          ),
+          GoRoute(
+            path: RouteNames.adminAuditLogPath,
+            builder: (context, state) => const Text('Admin Audit Log Body'),
+          ),
+          GoRoute(
+            path: RouteNames.profilePath,
+            builder: (context, state) => const Text('Admin Profil Body'),
+          ),
+        ],
+      );
+
+      await tester.pumpWidget(
+        ProviderScope(
+          child: MaterialApp.router(
+            routerConfig: router,
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      // Check all 4 admin items rendered with matching labels
+      expect(find.text('Beranda'), findsOneWidget);
+      expect(find.text('Master Data'), findsOneWidget);
+      expect(find.text('Audit Log'), findsOneWidget);
+      expect(find.text('Profil'), findsOneWidget);
+
+      // Check active item has primaryNavy color and w700 weight
+      final berandaText = tester.widget<Text>(find.text('Beranda'));
+      expect(berandaText.style?.fontWeight, FontWeight.w700);
+      expect(berandaText.style?.fontSize, 11);
+      expect(berandaText.style?.color, const Color(0xFF0F3D56));
+
+      // Inactive item has w500 weight and slate400 color
+      final auditText = tester.widget<Text>(find.text('Audit Log'));
+      expect(auditText.style?.fontWeight, FontWeight.w500);
+      expect(auditText.style?.fontSize, 11);
+      expect(auditText.style?.color, const Color(0xFF94A3B8));
+
+      // Tapping on Audit Log navigates to Audit Log screen
+      await tester.tap(find.text('Audit Log'));
+      await tester.pumpAndSettle();
+      expect(find.text('Admin Audit Log Body'), findsOneWidget);
+    });
+
+    testWidgets('renders Bagian Aset navbar matching standard design tokens (pill 48x28, icon 20, font 11)',
+        (tester) async {
+      final router = GoRouter(
+        initialLocation: RouteNames.bagianAsetVerificationsPath,
+        routes: [
+          GoRoute(
+            path: RouteNames.bagianAsetVerificationsPath,
+            builder: (context, state) => Scaffold(
+              bottomNavigationBar: CustomFloatingNavBar.scaffoldBottomBar(
+                items: RoleNavConfig.getNavItemsForRole(UserRole.bagianAset),
+                currentRoute: RouteNames.bagianAsetVerificationsPath,
+              ),
+              body: const Text('Verifikasi Body'),
+            ),
+          ),
+        ],
+      );
+
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            unreadNotificationCountProvider.overrideWithValue(2),
+          ],
+          child: MaterialApp.router(
+            routerConfig: router,
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      // Check all 4 Bagian Aset items rendered
+      expect(find.text('Beranda'), findsOneWidget);
+      expect(find.text('Verifikasi'), findsOneWidget);
+      expect(find.text('Notifikasi'), findsOneWidget);
+      expect(find.text('Profil'), findsOneWidget);
+
+      // Check active item (Verifikasi) uses standard tokens: w700, size 11, primary color
+      final verifText = tester.widget<Text>(find.text('Verifikasi'));
+      expect(verifText.style?.fontWeight, FontWeight.w700);
+      expect(verifText.style?.fontSize, 11);
+      expect(verifText.style?.color, const Color(0xFF0F3D56));
+
+      // Check inactive item (Beranda) uses standard tokens: w500, size 11, slate400 color
+      final berandaText = tester.widget<Text>(find.text('Beranda'));
+      expect(berandaText.style?.fontWeight, FontWeight.w500);
+      expect(berandaText.style?.fontSize, 11);
+      expect(berandaText.style?.color, const Color(0xFF94A3B8));
+
+      // Check pill container sizes (48 x 28)
+      final pillContainers = tester.widgetList<Container>(find.byType(Container)).where((c) {
+        final box = c.decoration;
+        if (box is BoxDecoration) {
+          return c.constraints?.maxWidth == 48 ||
+              (box.borderRadius == BorderRadius.circular(999) &&
+                  box.color == const Color(0xFFECF4FF));
+        }
+        return false;
+      });
+      expect(pillContainers.isNotEmpty, isTrue);
+
+      // Check notification badge rendered inside standard pill layout
+      expect(find.byType(Badge), findsOneWidget);
     });
   });
 }

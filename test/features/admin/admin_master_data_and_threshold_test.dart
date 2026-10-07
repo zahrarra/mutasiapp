@@ -5,7 +5,6 @@
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:mutasiku/core/config/business_config.dart';
 import 'package:mutasiku/core/errors/failures.dart';
 import 'package:mutasiku/core/errors/result.dart';
 import 'package:mutasiku/core/storage/secure_storage.dart';
@@ -261,45 +260,6 @@ void main() {
         (deleteResult as AppFailure<void>).failure.message,
         contains('tidak dapat dihapus permanen karena masih digunakan'),
       );
-    });
-  });
-
-  group('KADIV APPROVAL THRESHOLD DYNAMIC LOGIC', () {
-    test('1. Default threshold adalah Rp 50.000.000', () {
-      final container = ProviderContainer();
-      addTearDown(container.dispose);
-
-      final threshold = container.read(kadivApprovalThresholdProvider);
-      expect(threshold, equals(50000000.0));
-    });
-
-    test('2. Perubahan threshold secara dinamis memengaruhi penentuan requiresKadivApproval', () {
-      final container = ProviderContainer();
-      addTearDown(container.dispose);
-
-      const assetValue = 35000000.0; // Rp 35.000.000
-      const isCrossLocation = false; // Mutasi internal
-
-      // Pada default threshold Rp 50.000.000:
-      final thresholdDefault = container.read(kadivApprovalThresholdProvider);
-      final meetsDefault = assetValue >= thresholdDefault;
-      final requiresKadivDefault = meetsDefault || isCrossLocation;
-      expect(requiresKadivDefault, isFalse);
-
-      // Admin mengubah threshold menjadi Rp 25.000.000
-      container.read(kadivApprovalThresholdProvider.notifier).state = 25000000.0;
-      final updatedThreshold = container.read(kadivApprovalThresholdProvider);
-      expect(updatedThreshold, equals(25000000.0));
-
-      // Dengan threshold baru, aset bernilai Rp 35.000.000 kini memenuhi threshold
-      final meetsUpdated = assetValue >= updatedThreshold;
-      final requiresKadivUpdated = meetsUpdated || isCrossLocation;
-      expect(requiresKadivUpdated, isTrue);
-
-      // Namun aset bernilai Rp 18.500.000 tetap tidak memerlukan Kadiv
-      const lowerAssetValue = 18500000.0;
-      final meetsLower = lowerAssetValue >= updatedThreshold;
-      expect(meetsLower || isCrossLocation, isFalse);
     });
   });
 

@@ -16,6 +16,7 @@ class MutationResource extends JsonResource
     {
         return [
             'id' => $this->id,
+            'mutation_id' => $this->id,
             'ticket_number' => $this->ticket_number,
             'asset_id' => $this->asset_id,
             'applicant_id' => $this->applicant_id,

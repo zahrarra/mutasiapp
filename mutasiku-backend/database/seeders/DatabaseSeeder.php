@@ -13,6 +13,7 @@ class DatabaseSeeder extends Seeder
             AssetCategorySeeder::class,
             LocationSeeder::class,
             UserSeeder::class,
+            AssetSeeder::class,
         ]);
     }
 }

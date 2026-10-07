@@ -129,22 +129,22 @@ abstract final class RoleNavConfig {
       case UserRole.admin:
         return const [
           CustomNavItem(
-            icon: Icons.grid_view_rounded,
-            label: 'Home',
+            icon: Icons.home,
+            label: 'Beranda',
             route: RouteNames.adminDashboardPath,
           ),
           CustomNavItem(
-            icon: Icons.dns_outlined,
+            icon: Icons.storage_outlined,
             label: 'Master Data',
             route: RouteNames.adminCategoriesPath,
           ),
           CustomNavItem(
-            icon: Icons.group_outlined,
-            label: 'Users',
-            route: RouteNames.adminUsersPath,
+            icon: Icons.history_outlined,
+            label: 'Audit Log',
+            route: RouteNames.adminAuditLogPath,
           ),
           CustomNavItem(
-            icon: Icons.person_outline_rounded,
+            icon: Icons.person_outline,
             label: 'Profil',
             route: RouteNames.profilePath,
           ),
@@ -241,6 +241,15 @@ class CustomFloatingNavBar extends ConsumerWidget {
       }
     }
 
+    // Admin Master Data alias (categories & locations)
+    if (item.route == RouteNames.adminCategoriesPath) {
+      if (activeLocation == RouteNames.adminCategoriesPath ||
+          activeLocation == RouteNames.adminLocationsPath ||
+          activeLocation == RouteNames.adminCriteriaPath) {
+        return true;
+      }
+    }
+
     // Sub-route detail tetap aktif di tab induk (opsional)
     if (item.route != RouteNames.pemohonMutasiPath &&
         activeLocation.startsWith('${item.route}/')) {
@@ -253,15 +262,109 @@ class CustomFloatingNavBar extends ConsumerWidget {
   void _onTap(BuildContext context, CustomNavItem item, bool isActive) {
     if (onItemTap != null) {
       onItemTap!(item);
+      return;
     }
     if (isActive) return;
-    context.go(item.route);
+    if (item.route == RouteNames.adminAuditLogPath) {
+      context.push(item.route);
+    } else {
+      context.go(item.route);
+    }
   }
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final activeLocation = _getActiveRoute(context);
     final unreadCount = ref.watch(unreadNotificationCountProvider);
+    final isAdmin = items.any((item) => item.route.startsWith('/admin'));
+    final isBagianAset =
+        items.any((item) => item.route.startsWith('/bagian-aset'));
+    final useStandardStyle = isAdmin || isBagianAset;
+
+    if (useStandardStyle) {
+      return Container(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(999),
+          border: Border.all(
+            color: const Color(0xFFE2E8F0).withValues(alpha: 0.8),
+          ),
+          boxShadow: const [
+            BoxShadow(
+              color: Color(0x18000000),
+              blurRadius: 16,
+              offset: Offset(0, 4),
+            ),
+          ],
+        ),
+        child: Row(
+          children: items.map((item) {
+            final isActive = _isItemActive(item, activeLocation);
+            final isNotif = item.label.toLowerCase() == 'notifikasi';
+            final showBadge = item.hasBadge ?? (isNotif && unreadCount > 0);
+
+            final color = isActive
+                ? const Color(0xFF0F3D56)
+                : const Color(0xFF94A3B8);
+
+            Widget iconWidget = Icon(
+              item.icon,
+              size: 20,
+              color: color,
+            );
+            if (showBadge) {
+              iconWidget = Badge(
+                smallSize: 8,
+                backgroundColor: AppColors.error,
+                child: iconWidget,
+              );
+            }
+
+            return Expanded(
+              child: GestureDetector(
+                behavior: HitTestBehavior.opaque,
+                onTap: () => _onTap(context, item, isActive),
+                child: Padding(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Container(
+                        width: 48,
+                        height: 28,
+                        alignment: Alignment.center,
+                        decoration: BoxDecoration(
+                          color: isActive
+                              ? const Color(0xFFECF4FF)
+                              : Colors.transparent,
+                          borderRadius: BorderRadius.circular(999),
+                        ),
+                        child: iconWidget,
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        item.label,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          fontSize: 11,
+                          fontWeight:
+                              isActive ? FontWeight.w700 : FontWeight.w500,
+                          color: color,
+                          letterSpacing: -0.2,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            );
+          }).toList(),
+        ),
+      );
+    }
 
     return Container(
       height: 66,

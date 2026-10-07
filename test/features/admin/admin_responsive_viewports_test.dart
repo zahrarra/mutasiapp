@@ -107,13 +107,11 @@ void main() {
         // Check essential Stitch elements
         expect(find.text('MUTASIKU ADMIN'), findsOneWidget);
         expect(find.text('RINGKASAN MASTER DATA SISTEM'), findsOneWidget);
-        expect(find.text('3 Kriteria Kadiv Aktif'), findsOneWidget);
         expect(find.text('Daftar Modul Master Data'), findsOneWidget);
         expect(find.text('Kelola Pengguna (User Management)'), findsOneWidget);
         expect(find.text('Role & Hak Akses (RBAC)'), findsOneWidget);
         expect(find.text('Master Unit Kerja & Pool Cabang'), findsOneWidget);
-        expect(find.text('Kriteria Approval Kadiv'), findsWidgets);
-        expect(find.text('Kategori Aset & Kriteria Approval'), findsOneWidget);
+        expect(find.text('Kategori Master Aset'), findsOneWidget);
 
         // Verify no RenderFlex overflow
         expect(tester.takeException(), isNull);

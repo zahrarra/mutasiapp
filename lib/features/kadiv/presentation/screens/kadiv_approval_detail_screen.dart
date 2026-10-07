@@ -28,7 +28,7 @@ class KadivApprovalDetailScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final asyncMutation = ref.watch(mutationDetailProvider(mutationId));
+    final asyncMutation = ref.watch(kadivMutationDetailProvider(mutationId));
     final actionState = ref.watch(kadivApprovalActionProvider);
 
     return Scaffold(
@@ -62,7 +62,7 @@ class KadivApprovalDetailScreen extends ConsumerWidget {
                     const SizedBox(height: AppSpacing.md),
                     ElevatedButton(
                       onPressed: () =>
-                          ref.invalidate(mutationDetailProvider(mutationId)),
+                          ref.invalidate(kadivMutationDetailProvider(mutationId)),
                       child: const Text('Coba Lagi'),
                     ),
                   ],
@@ -817,6 +817,7 @@ class KadivApprovalDetailScreen extends ConsumerWidget {
 
                 if (context.mounted) {
                   if (success) {
+                    ref.invalidate(kadivMutationDetailProvider(mutation.id));
                     ref.invalidate(mutationDetailProvider(mutation.id));
                     AppFeedback.showSuccess(
                       context,

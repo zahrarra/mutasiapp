@@ -89,6 +89,7 @@ void main() {
       final container = ProviderContainer(
         overrides: [
           authStateProvider.overrideWith((ref) => _FakeAuthNotifier(kadivTestUser)),
+          apiMutationRepositoryProvider.overrideWith((ref) => ref.watch(mutationRepositoryProvider)),
         ],
       );
 
@@ -138,6 +139,7 @@ void main() {
       final container = ProviderContainer(
         overrides: [
           authStateProvider.overrideWith((ref) => _FakeAuthNotifier(kadivTestUser)),
+          apiMutationRepositoryProvider.overrideWith((ref) => ref.watch(mutationRepositoryProvider)),
         ],
       );
 
@@ -193,6 +195,7 @@ void main() {
       final container = ProviderContainer(
         overrides: [
           authStateProvider.overrideWith((ref) => _FakeAuthNotifier(kadivTestUser)),
+          apiMutationRepositoryProvider.overrideWith((ref) => ref.watch(mutationRepositoryProvider)),
         ],
       );
 
@@ -272,6 +275,7 @@ void main() {
         overrides: [
           authStateProvider.overrideWith((ref) => _FakeAuthNotifier(kadivTestUser)),
           mutationRepositoryProvider.overrideWithValue(repo),
+          apiMutationRepositoryProvider.overrideWithValue(repo),
         ],
         child: MaterialApp.router(
           routerConfig: router,
@@ -336,6 +340,7 @@ void main() {
       final container = ProviderContainer(
         overrides: [
           authStateProvider.overrideWith((ref) => _FakeAuthNotifier(kadivTestUser)),
+          apiMutationRepositoryProvider.overrideWith((ref) => ref.watch(mutationRepositoryProvider)),
         ],
       );
 

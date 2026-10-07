@@ -6,14 +6,12 @@
 
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../app/router/route_names.dart';
 import '../../../../app/theme/app_colors.dart';
 import '../../../../app/theme/app_spacing.dart';
-import '../../../../core/config/business_config.dart';
 import '../../../../core/errors/result.dart';
 import '../../../../core/widgets/app_feedback.dart';
 import '../../../../core/widgets/custom_floating_nav_bar.dart';
@@ -76,99 +74,6 @@ class _AssetCategoryScreenState extends ConsumerState<AssetCategoryScreen> {
     _searchController.dispose();
     _scrollController.dispose();
     super.dispose();
-  }
-
-  String _formatRupiah(double value) {
-    final intVal = value.toInt();
-    final s = intVal.toString();
-    final buffer = StringBuffer();
-    for (int i = 0; i < s.length; i++) {
-      if (i > 0 && (s.length - i) % 3 == 0) {
-        buffer.write('.');
-      }
-      buffer.write(s[i]);
-    }
-    return 'Rp $buffer';
-  }
-
-  void _showEditThresholdDialog(BuildContext context, double currentThreshold) {
-    final formKey = GlobalKey<FormState>();
-    final thresholdCtrl = TextEditingController(
-      text: currentThreshold.toInt().toString(),
-    );
-
-    showDialog(
-      context: context,
-      builder: (dialogCtx) => AlertDialog(
-        title: Text('Ubah Threshold Approval Kadiv', style: _inter(size: 16, w: FontWeight.bold, color: const Color(0xFF0F172A))),
-        content: Form(
-          key: formKey,
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                'Tentukan batas minimum nilai aset yang secara otomatis memerlukan eskalasi persetujuan Kepala Divisi (Kadiv):',
-                style: _inter(size: 13, color: const Color(0xFF475569), height: 1.4),
-              ),
-              const SizedBox(height: AppSpacing.md),
-              TextFormField(
-                controller: thresholdCtrl,
-                keyboardType: TextInputType.number,
-                inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-                style: _inter(size: 13, w: FontWeight.w500, color: const Color(0xFF0F172A)),
-                decoration: InputDecoration(
-                  labelText: 'Nilai Nominal Threshold (Rupiah) *',
-                  labelStyle: _inter(size: 13, color: const Color(0xFF64748B)),
-                  prefixText: 'Rp ',
-                  prefixStyle: _inter(size: 13, w: FontWeight.w600, color: const Color(0xFF0F172A)),
-                  hintText: '50000000',
-                  hintStyle: _inter(size: 13, color: const Color(0xFF94A3B8)),
-                ),
-                validator: (val) {
-                  if (val == null || val.trim().isEmpty) {
-                    return 'Threshold tidak boleh kosong';
-                  }
-                  final parsed = double.tryParse(val.trim());
-                  if (parsed == null || parsed <= 0) {
-                    return 'Threshold harus berupa angka positif';
-                  }
-                  return null;
-                },
-              ),
-            ],
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(dialogCtx).pop(),
-            child: Text('Batal', style: _inter(size: 13, w: FontWeight.w600, color: const Color(0xFF64748B))),
-          ),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFF0F3D56),
-              foregroundColor: Colors.white,
-            ),
-            onPressed: () {
-              if (!formKey.currentState!.validate()) return;
-              final newThreshold = double.parse(thresholdCtrl.text.trim());
-              Navigator.of(dialogCtx).pop();
-
-              ref.read(kadivApprovalThresholdProvider.notifier).state =
-                  newThreshold;
-
-              AppFeedback.showSuccess(
-                context,
-                'Threshold approval Kadiv berhasil diperbarui.',
-                details:
-                    'Kini aset dengan estimasi nilai >= ${_formatRupiah(newThreshold)} akan otomatis mewajibkan persetujuan Kadiv saat diverifikasi Operator.',
-              );
-            },
-            child: Text('Simpan Threshold', style: _inter(size: 13, w: FontWeight.bold, color: Colors.white)),
-          ),
-        ],
-      ),
-    );
   }
 
   void _showAddCategoryDialog(BuildContext context) {
@@ -612,7 +517,7 @@ class _AssetCategoryScreenState extends ConsumerState<AssetCategoryScreen> {
                 icon: Icons.gavel,
                 color: const Color(0xFFB45309),
                 title: 'Otorisasi Kadiv',
-                subtitle: '3 aturan batas nominal & wilayah terverifikasi',
+                subtitle: 'Otorisasi mutasi berjenjang terverifikasi',
               ),
               const SizedBox(height: 16),
               SizedBox(
@@ -829,7 +734,6 @@ class _AssetCategoryScreenState extends ConsumerState<AssetCategoryScreen> {
   @override
   Widget build(BuildContext context) {
     final categoriesAsync = ref.watch(assetCategoriesProvider);
-    final currentThreshold = ref.watch(kadivApprovalThresholdProvider);
     final usersAsync = ref.watch(masterUsersProvider);
     final locationsAsync = ref.watch(masterLocationsProvider);
     final totalUsersCount = usersAsync.maybeWhen(
@@ -1180,100 +1084,6 @@ class _AssetCategoryScreenState extends ConsumerState<AssetCategoryScreen> {
                               ],
                             ),
                           ),
-                          const SizedBox(height: 12),
-
-                          // ── 3. Notification / Alert Banner (amber-50) ──────
-                          Container(
-                            width: double.infinity,
-                            padding: EdgeInsets.all(isDesktop ? 16 : 12),
-                            decoration: BoxDecoration(
-                              color: const Color(0xFFFFFBEB),
-                              border: Border.all(
-                                color: const Color(0xFFFDE68A),
-                              ),
-                              borderRadius: BorderRadius.circular(12),
-                              boxShadow: const [
-                                BoxShadow(
-                                  color: Color(0x0A000000),
-                                  blurRadius: 2,
-                                  offset: Offset(0, 1),
-                                ),
-                              ],
-                            ),
-                            child: Row(
-                              children: [
-                                Container(
-                                  width: isDesktop ? 36 : 32,
-                                  height: isDesktop ? 36 : 32,
-                                  decoration: BoxDecoration(
-                                    color: const Color(0xFFFEF3C7),
-                                    borderRadius: BorderRadius.circular(8),
-                                  ),
-                                  child: Icon(
-                                    Icons.gavel,
-                                    size: isDesktop ? 20 : 18,
-                                    color: const Color(0xFFB45309),
-                                  ),
-                                ),
-                                const SizedBox(width: 12),
-                                Expanded(
-                                  child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                    children: [
-                                      Text(
-                                        '3 Kriteria Kadiv Aktif',
-                                        maxLines: 1,
-                                        overflow: TextOverflow.ellipsis,
-                                        style: _inter(
-                                          size: isDesktop ? 13 : 12,
-                                          w: FontWeight.bold,
-                                          color: const Color(0xFF0F172A),
-                                        ),
-                                      ),
-                                      const SizedBox(height: 1),
-                                      Text(
-                                        'Peraturan batas otorisasi transfer aset antar wilayah',
-                                        maxLines: 1,
-                                        overflow: TextOverflow.ellipsis,
-                                        style: _inter(
-                                          size: isDesktop ? 12 : 11,
-                                          color: const Color(0xFF64748B),
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                                const SizedBox(width: 10),
-                                SizedBox(
-                                  height: isDesktop ? 36 : 32,
-                                  child: ElevatedButton(
-                                    style: ElevatedButton.styleFrom(
-                                      backgroundColor: const Color(0xFF0F3D56),
-                                      foregroundColor: Colors.white,
-                                      elevation: 0,
-                                      padding: EdgeInsets.symmetric(
-                                          horizontal: isDesktop ? 14 : 10),
-                                      shape: RoundedRectangleBorder(
-                                        borderRadius: BorderRadius.circular(8),
-                                      ),
-                                    ),
-                                    onPressed: () => _showEditThresholdDialog(
-                                      context,
-                                      currentThreshold,
-                                    ),
-                                    child: Text(
-                                      'Atur Regulasi',
-                                      style: _inter(
-                                        size: isDesktop ? 12 : 11,
-                                        w: FontWeight.bold,
-                                        color: Colors.white,
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
                           const SizedBox(height: 16),
 
                           // ── 4. Daftar Modul Master Data (Vertical List) ─────
@@ -1375,35 +1185,15 @@ class _AssetCategoryScreenState extends ConsumerState<AssetCategoryScreen> {
                               } catch (_) {}
                             },
                           ),
-                          const SizedBox(height: 10),
-
-                          // Item 4: Kriteria Approval Kadiv
-                          _buildModuleListItem(
-                            context: context,
-                            icon: Icons.rule,
-                            iconBg: const Color(0xFFFFFBEB),
-                            iconColor: const Color(0xFFB45309),
-                            title: 'Kriteria Approval Kadiv',
-                            subtitle: 'Parameter Nilai Mutasi & Lintas Wilayah',
-                            badgeText: '3 Aturan',
-                            badgeColor: const Color(0xFFB45309),
-                            badgeBg: const Color(0xFFFFFBEB),
-                            badgeBorder: const Color(0xFFFDE68A),
-                            isDesktop: isDesktop,
-                            onTap: () => _showEditThresholdDialog(
-                              context,
-                              currentThreshold,
-                            ),
-                          ),
                       const SizedBox(height: 24),
 
-                      // ── 5. Kategori Aset & Kriteria Approval Section ───
+                      // ── 5. Kategori Master Aset Section ───
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
                           Expanded(
                             child: Text(
-                              'Kategori Aset & Kriteria Approval',
+                              'Kategori Master Aset',
                               style: _inter(
                                 size: 14,
                                 w: FontWeight.bold,
@@ -1436,74 +1226,6 @@ class _AssetCategoryScreenState extends ConsumerState<AssetCategoryScreen> {
                             onPressed: () => _showAddCategoryDialog(context),
                           ),
                         ],
-                      ),
-                      const SizedBox(height: 8),
-
-                      // Sub-banner aturan approval Kadiv
-                      Container(
-                        padding: const EdgeInsets.all(12),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFFF0FDF4),
-                          borderRadius: BorderRadius.circular(12),
-                          border: Border.all(color: const Color(0xFFBBF7D0)),
-                        ),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Wrap(
-                              alignment: WrapAlignment.spaceBetween,
-                              crossAxisAlignment: WrapCrossAlignment.center,
-                              spacing: 8,
-                              runSpacing: 6,
-                              children: [
-                                Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    const Icon(
-                                      Icons.verified_user_outlined,
-                                      size: 16,
-                                      color: Color(0xFF15803D),
-                                    ),
-                                    const SizedBox(width: 6),
-                                    Text(
-                                      'Aturan Approval Kadiv',
-                                      style: _inter(
-                                        size: 12,
-                                        w: FontWeight.bold,
-                                        color: const Color(0xFF15803D),
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                                Container(
-                                  padding: const EdgeInsets.symmetric(
-                                      horizontal: 8, vertical: 2),
-                                  decoration: BoxDecoration(
-                                    color: const Color(0xFFDCFCE7),
-                                    borderRadius: BorderRadius.circular(9999),
-                                  ),
-                                  child: Text(
-                                    'Batas: ${_formatRupiah(currentThreshold)}',
-                                    style: _inter(
-                                      size: 11,
-                                      w: FontWeight.bold,
-                                      color: const Color(0xFF166534),
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
-                            const SizedBox(height: 6),
-                            Text(
-                              'Aset dengan nilai estimasi di atas batas nominal atau lintas wilayah otomatis memerlukan otorisasi Kepala Divisi (Kadiv).',
-                              style: _inter(
-                                size: 11,
-                                color: const Color(0xFF475569),
-                                height: 1.4,
-                              ),
-                            ),
-                          ],
-                        ),
                       ),
                       const SizedBox(height: 12),
 

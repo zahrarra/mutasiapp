@@ -243,8 +243,8 @@ class _BagianAsetVerificationsScreenState
           ),
         ],
       ),
-      bottomNavigationBar: CustomFloatingNavBar.forRole(
-        role,
+      bottomNavigationBar: CustomFloatingNavBar.scaffoldBottomBar(
+        items: RoleNavConfig.getNavItemsForRole(role),
         currentRoute: RouteNames.bagianAsetVerificationsPath,
         onItemTap: (item) => context.go(item.route),
       ),

@@ -8,6 +8,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../features/auth/presentation/screens/landing_screen.dart';
+import '../../features/admin/presentation/screens/admin_audit_log_screen.dart';
 import '../../features/admin/presentation/screens/admin_dashboard_screen.dart';
 import '../../features/admin/presentation/screens/admin_locations_screen.dart';
 import '../../features/admin/presentation/screens/admin_users_screen.dart';
@@ -149,6 +150,11 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         path: RouteNames.adminUsersPath,
         name: RouteNames.adminUsersName,
         builder: (context, state) => const AdminUsersScreen(),
+      ),
+      GoRoute(
+        path: RouteNames.adminAuditLogPath,
+        name: RouteNames.adminAuditLogName,
+        builder: (context, state) => const AdminAuditLogScreen(),
       ),
 
       // ─── Pemohon ──────────────────────────────────────────────────────────

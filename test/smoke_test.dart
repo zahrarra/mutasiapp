@@ -480,15 +480,15 @@ void main() {
       expect(find.textContaining('Lantai 1'), findsWidgets);
     });
 
-    testWidgets('Asset Category Screen renders with Kadiv criteria banner', (tester) async {
+    testWidgets('Asset Category Screen renders with categories list', (tester) async {
       await tester.pumpWidget(
         const ProviderScope(
           child: MaterialApp(home: AssetCategoryScreen()),
         ),
       );
       await tester.pumpAndSettle();
-      expect(find.text('Kategori Aset & Kriteria Approval'), findsOneWidget);
-      expect(find.textContaining('Kadiv'), findsWidgets);
+      expect(find.text('Kategori Master Aset'), findsOneWidget);
+      expect(find.text('Tambah Kategori'), findsOneWidget);
     });
   });
 }

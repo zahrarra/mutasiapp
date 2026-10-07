@@ -198,6 +198,44 @@ class ApiClient {
     }
   }
 
+  /// POST multipart request (misal: upload dokumen / berkas form).
+  Future<Result<Map<String, dynamic>>> postMultipart(
+    String path, {
+    Map<String, String>? fields,
+    List<http.MultipartFile>? files,
+    Map<String, String>? headers,
+  }) async {
+    try {
+      final request = http.MultipartRequest('POST', _buildUri(path));
+      final allHeaders = _buildHeaders(extra: headers);
+      allHeaders.remove('Content-Type');
+      request.headers.addAll(allHeaders);
+
+      if (fields != null) {
+        request.fields.addAll(fields);
+      }
+      if (files != null) {
+        request.files.addAll(files);
+      }
+
+      final streamedResponse =
+          await _client.send(request).timeout(AppConstants.requestTimeout);
+      final response = await http.Response.fromStream(streamedResponse);
+
+      return _handleResponse(response);
+    } on SocketException {
+      return Result.failure(
+        const NetworkFailure(message: 'SocketException: no internet'),
+      );
+    } on HttpException {
+      return Result.failure(
+        const NetworkFailure(message: 'HttpException'),
+      );
+    } catch (e) {
+      return _mapException(e);
+    }
+  }
+
   // ─── Response handler ─────────────────────────────────────────────────────
 
   Result<Map<String, dynamic>> _handleResponse(http.Response response) {

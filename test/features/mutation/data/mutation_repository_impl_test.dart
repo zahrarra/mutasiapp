@@ -455,6 +455,312 @@ void main() {
       expect(result.dataOrNull!.length, equals(1));
       expect(result.dataOrNull!.first.id, equals('101'));
     });
+
+    test('10. submitMutation memanggil POST /api/v1/mutations dan mengembalikan ID dari backend', () async {
+      final mockClient = MockClient((request) async {
+        expect(request.method, equals('POST'));
+        expect(request.url.path, equals('/api/v1/mutations'));
+
+        return http.Response(
+          jsonEncode({
+            'success': true,
+            'message': 'Pengajuan mutasi berhasil dibuat.',
+            'data': {
+              ...sampleMutationJson,
+              'id': 202,
+              'mutation_id': 202,
+              'ticket_number': 'MUT-2026-00202',
+            },
+          }),
+          201,
+          headers: {'content-type': 'application/json'},
+        );
+      });
+
+      final apiClient = ApiClient(httpClient: mockClient, baseUrl: 'http://test.local');
+      final repoWithApi = MutationRepositoryImpl(assetRepository: assetRepo, apiClient: apiClient);
+
+      final submitResult = await repoWithApi.submitMutation(
+        const SubmitMutationParams(
+          applicantId: '2',
+          assetId: '1',
+          sourceLocation: 'Kantor Pusat',
+          targetLocation: '2',
+          targetPic: 'Pemohon MutasiKu',
+          reason: 'Pindah penugasan cabang',
+        ),
+      );
+
+      expect(submitResult.isSuccess, isTrue);
+      final created = submitResult.dataOrNull!;
+      expect(created.id, equals('202'));
+      expect(created.ticketNumber, equals('MUT-2026-00202'));
+      expect(created.status, equals(MutationStatus.submitted));
+    });
+
+    test('11. submitMutation memetakan response 422 Unprocessable Entity ke ValidationFailure', () async {
+      final mockClient = MockClient((request) async {
+        return http.Response(
+          jsonEncode({
+            'message': 'Aset ini sedang dalam proses mutasi aktif.',
+            'errors': {
+              'asset_id': ['Aset ini sedang dalam proses mutasi aktif.'],
+            },
+          }),
+          422,
+          headers: {'content-type': 'application/json'},
+        );
+      });
+
+      final apiClient = ApiClient(httpClient: mockClient, baseUrl: 'http://test.local');
+      final repoWithApi = MutationRepositoryImpl(assetRepository: assetRepo, apiClient: apiClient);
+
+      final submitResult = await repoWithApi.submitMutation(
+        const SubmitMutationParams(
+          applicantId: '2',
+          assetId: '1',
+          sourceLocation: 'Kantor Pusat',
+          targetLocation: '2',
+          targetPic: 'Pemohon MutasiKu',
+          reason: 'Alasan mutasi',
+        ),
+      );
+
+      expect(submitResult.isFailure, isTrue);
+      expect(submitResult.failureOrNull, isA<ValidationFailure>());
+      expect(
+        submitResult.failureOrNull?.userMessage,
+        contains('Aset ini sedang dalam proses mutasi aktif'),
+      );
+    });
+
+    test('12. operatorForward memanggil POST /api/v1/mutations/{id}/verify dengan action verify', () async {
+      final mockClient = MockClient((request) async {
+        expect(request.method, equals('POST'));
+        expect(request.url.path, equals('/api/v1/mutations/101/verify'));
+        final body = jsonDecode(request.body) as Map<String, dynamic>;
+        expect(body['action'], equals('verify'));
+
+        return http.Response(
+          jsonEncode({
+            'success': true,
+            'message': 'Pengajuan mutasi berhasil diverifikasi dan diteruskan ke Bagian Aset.',
+            'data': {
+              ...sampleMutationJson,
+              'id': 101,
+              'status': 'menunggu_verifikasi_bagian_aset',
+            },
+          }),
+          200,
+          headers: {'content-type': 'application/json'},
+        );
+      });
+
+      final apiClient = ApiClient(httpClient: mockClient, baseUrl: 'http://test.local');
+      final repoWithApi = MutationRepositoryImpl(assetRepository: assetRepo, apiClient: apiClient);
+
+      final result = await repoWithApi.operatorForward(
+        mutationId: '101',
+        operatorName: 'Operator MutasiKu',
+      );
+
+      expect(result.isSuccess, isTrue);
+      final updated = result.dataOrNull!;
+      expect(updated.id, equals('101'));
+      expect(updated.status, equals(MutationStatus.waitingAssetVerification));
+    });
+
+    test('13. operatorReturn memanggil POST /api/v1/mutations/{id}/verify dengan action return dan reason', () async {
+      final mockClient = MockClient((request) async {
+        expect(request.method, equals('POST'));
+        expect(request.url.path, equals('/api/v1/mutations/101/verify'));
+        final body = jsonDecode(request.body) as Map<String, dynamic>;
+        expect(body['action'], equals('return'));
+        expect(body['reason'], equals('Dokumen SK tidak terbaca'));
+
+        return http.Response(
+          jsonEncode({
+            'success': true,
+            'message': 'Pengajuan mutasi berhasil dikembalikan ke Pemohon.',
+            'data': {
+              ...sampleMutationJson,
+              'id': 101,
+              'status': 'dikembalikan_ke_pemohon',
+              'return_reason': 'Dokumen SK tidak terbaca',
+            },
+          }),
+          200,
+          headers: {'content-type': 'application/json'},
+        );
+      });
+
+      final apiClient = ApiClient(httpClient: mockClient, baseUrl: 'http://test.local');
+      final repoWithApi = MutationRepositoryImpl(assetRepository: assetRepo, apiClient: apiClient);
+
+      final result = await repoWithApi.operatorReturn(
+        mutationId: '101',
+        reason: 'Dokumen SK tidak terbaca',
+        operatorName: 'Operator MutasiKu',
+      );
+
+      expect(result.isSuccess, isTrue);
+      final updated = result.dataOrNull!;
+      expect(updated.id, equals('101'));
+      expect(updated.status, equals(MutationStatus.returned));
+      expect(updated.returnReason, equals('Dokumen SK tidak terbaca'));
+    });
+
+    test('14. assetSectionForward memanggil POST /api/v1/mutations/{id}/verify-asset dengan action verify', () async {
+      final mockClient = MockClient((request) async {
+        expect(request.method, equals('POST'));
+        expect(request.url.path, equals('/api/v1/mutations/101/verify-asset'));
+        final body = jsonDecode(request.body) as Map<String, dynamic>;
+        expect(body['action'], equals('verify'));
+
+        return http.Response(
+          jsonEncode({
+            'success': true,
+            'message': 'Pengajuan mutasi berhasil diverifikasi dan diteruskan ke Pemimpin Divisi.',
+            'data': {
+              ...sampleMutationJson,
+              'id': 101,
+              'status': 'menunggu_approval_pemimpin_divisi',
+            },
+          }),
+          200,
+          headers: {'content-type': 'application/json'},
+        );
+      });
+
+      final apiClient = ApiClient(httpClient: mockClient, baseUrl: 'http://test.local');
+      final repoWithApi = MutationRepositoryImpl(assetRepository: assetRepo, apiClient: apiClient);
+
+      final result = await repoWithApi.assetSectionForward(
+        mutationId: '101',
+        verifierName: 'Staff Bagian Aset',
+      );
+
+      expect(result.isSuccess, isTrue);
+      final updated = result.dataOrNull!;
+      expect(updated.id, equals('101'));
+      expect(updated.status, equals(MutationStatus.waitingDivisionHeadApproval));
+    });
+
+    test('15. assetSectionReturn memanggil POST /api/v1/mutations/{id}/verify-asset dengan action return dan reason', () async {
+      final mockClient = MockClient((request) async {
+        expect(request.method, equals('POST'));
+        expect(request.url.path, equals('/api/v1/mutations/101/verify-asset'));
+        final body = jsonDecode(request.body) as Map<String, dynamic>;
+        expect(body['action'], equals('return'));
+        expect(body['reason'], equals('Kondisi fisik aset rusak dan perlu perbaikan'));
+
+        return http.Response(
+          jsonEncode({
+            'success': true,
+            'message': 'Pengajuan mutasi berhasil dikembalikan ke Pemohon.',
+            'data': {
+              ...sampleMutationJson,
+              'id': 101,
+              'status': 'dikembalikan_ke_pemohon',
+              'return_reason': 'Kondisi fisik aset rusak dan perlu perbaikan',
+            },
+          }),
+          200,
+          headers: {'content-type': 'application/json'},
+        );
+      });
+
+      final apiClient = ApiClient(httpClient: mockClient, baseUrl: 'http://test.local');
+      final repoWithApi = MutationRepositoryImpl(assetRepository: assetRepo, apiClient: apiClient);
+
+      final result = await repoWithApi.assetSectionReturn(
+        mutationId: '101',
+        reason: 'Kondisi fisik aset rusak dan perlu perbaikan',
+        verifierName: 'Staff Bagian Aset',
+      );
+
+      expect(result.isSuccess, isTrue);
+      final updated = result.dataOrNull!;
+      expect(updated.id, equals('101'));
+      expect(updated.status, equals(MutationStatus.returned));
+      expect(updated.returnReason, equals('Kondisi fisik aset rusak dan perlu perbaikan'));
+    });
+
+    test('16. divisionApprove memanggil POST /api/v1/mutations/{id}/approve dengan action approve', () async {
+      final mockClient = MockClient((request) async {
+        expect(request.method, equals('POST'));
+        expect(request.url.path, equals('/api/v1/mutations/101/approve'));
+        final body = jsonDecode(request.body) as Map<String, dynamic>;
+        expect(body['action'], equals('approve'));
+
+        return http.Response(
+          jsonEncode({
+            'success': true,
+            'message': 'Pengajuan mutasi berhasil disetujui dan menunggu konfirmasi fisik Pemohon.',
+            'data': {
+              ...sampleMutationJson,
+              'id': 101,
+              'status': 'menunggu_konfirmasi_pemohon',
+            },
+          }),
+          200,
+          headers: {'content-type': 'application/json'},
+        );
+      });
+
+      final apiClient = ApiClient(httpClient: mockClient, baseUrl: 'http://test.local');
+      final repoWithApi = MutationRepositoryImpl(assetRepository: assetRepo, apiClient: apiClient);
+
+      final result = await repoWithApi.divisionApprove(
+        mutationId: '101',
+        divisionHeadName: 'Kepala Divisi Operasional',
+      );
+
+      expect(result.isSuccess, isTrue);
+      final updated = result.dataOrNull!;
+      expect(updated.id, equals('101'));
+      expect(updated.status, equals(MutationStatus.waitingConfirmation));
+    });
+
+    test('17. divisionReject memanggil POST /api/v1/mutations/{id}/approve dengan action reject dan reason', () async {
+      final mockClient = MockClient((request) async {
+        expect(request.method, equals('POST'));
+        expect(request.url.path, equals('/api/v1/mutations/101/approve'));
+        final body = jsonDecode(request.body) as Map<String, dynamic>;
+        expect(body['action'], equals('reject'));
+        expect(body['reason'], equals('Anggaran operasional tidak mencukupi untuk rotasi ini'));
+
+        return http.Response(
+          jsonEncode({
+            'success': true,
+            'message': 'Pengajuan mutasi telah ditolak oleh Pemimpin Divisi.',
+            'data': {
+              ...sampleMutationJson,
+              'id': 101,
+              'status': 'ditolak',
+              'rejection_reason': 'Anggaran operasional tidak mencukupi untuk rotasi ini',
+            },
+          }),
+          200,
+          headers: {'content-type': 'application/json'},
+        );
+      });
+
+      final apiClient = ApiClient(httpClient: mockClient, baseUrl: 'http://test.local');
+      final repoWithApi = MutationRepositoryImpl(assetRepository: assetRepo, apiClient: apiClient);
+
+      final result = await repoWithApi.divisionReject(
+        mutationId: '101',
+        reason: 'Anggaran operasional tidak mencukupi untuk rotasi ini',
+        divisionHeadName: 'Kepala Divisi Operasional',
+      );
+
+      expect(result.isSuccess, isTrue);
+      final updated = result.dataOrNull!;
+      expect(updated.id, equals('101'));
+      expect(updated.status, equals(MutationStatus.rejected));
+      expect(updated.rejectionReason, equals('Anggaran operasional tidak mencukupi untuk rotasi ini'));
+    });
   });
 }
 

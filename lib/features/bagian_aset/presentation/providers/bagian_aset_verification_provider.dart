@@ -27,13 +27,13 @@ import '../../../notification/presentation/providers/notification_provider.dart'
 
 final verifyAndForwardMutationUseCaseProvider =
     Provider<VerifyAndForwardMutationUseCase>((ref) {
-  final repo = ref.watch(mutationRepositoryProvider);
+  final repo = ref.watch(apiMutationRepositoryProvider);
   return VerifyAndForwardMutationUseCase(repository: repo);
 });
 
 final returnMutationBagianAsetUseCaseProvider =
     Provider<ReturnMutationBagianAsetUseCase>((ref) {
-  final repo = ref.watch(mutationRepositoryProvider);
+  final repo = ref.watch(apiMutationRepositoryProvider);
   return ReturnMutationBagianAsetUseCase(repository: repo);
 });
 

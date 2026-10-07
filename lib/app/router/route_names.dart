@@ -136,6 +136,9 @@ abstract final class RouteNames {
   static const String adminCriteriaPath = '/admin/approval-criteria';
   static const String adminCriteriaName = 'adminCriteria';
 
+  static const String adminAuditLogPath = '/admin/audit-logs';
+  static const String adminAuditLogName = 'adminAuditLog';
+
   // ─── Pemohon Routes (lengkapi) ───────────────────────────────────────────
   static const String pemohonMutasiFormPath = '/pemohon/mutasi/create/form';
   static const String pemohonMutasiFormName = 'pemohonMutasiForm';

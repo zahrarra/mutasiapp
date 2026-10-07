@@ -121,6 +121,10 @@ class MutationSubmissionTest extends TestCase
                 ],
             ]);
 
+        $createdId = $response->json('data.id');
+        $this->assertNotNull($createdId);
+        $this->assertEquals($createdId, $response->json('data.mutation_id'));
+
         $savedPath = $response->json('data.sk_document');
         $this->assertNotNull($savedPath);
         $this->assertStringStartsWith('documents/sk_sdm/', $savedPath);

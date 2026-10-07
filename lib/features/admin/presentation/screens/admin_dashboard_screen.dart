@@ -13,8 +13,8 @@ import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 import '../../../../app/router/route_names.dart';
-import '../../../../core/config/business_config.dart';
 import '../../../../core/widgets/app_feedback.dart';
+import '../../../../core/widgets/custom_floating_nav_bar.dart';
 import '../../../asset/domain/entities/asset_category.dart';
 import '../../../asset/presentation/providers/asset_provider.dart';
 import '../../../auth/domain/entities/user.dart';
@@ -56,19 +56,6 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
   final TextEditingController _searchController = TextEditingController();
   final ScrollController _scrollController = ScrollController();
   String _searchQuery = '';
-  int _selectedNavIndex = 0;
-
-  int get _activeNavIndex {
-    try {
-      final loc = GoRouterState.of(context).matchedLocation;
-      if (loc == RouteNames.profilePath) return 3;
-      if (loc == RouteNames.adminCategoriesPath) return 1;
-      if (loc == RouteNames.adminDashboardPath && _selectedNavIndex != 2) {
-        return 0;
-      }
-    } catch (_) {}
-    return _selectedNavIndex;
-  }
 
   @override
   void initState() {
@@ -127,7 +114,6 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
     final usersAsync = ref.watch(masterUsersProvider);
     final locationsAsync = ref.watch(masterLocationsProvider);
     final categoriesAsync = ref.watch(assetCategoriesProvider);
-    final threshold = ref.watch(kadivApprovalThresholdProvider);
 
     // Calculate metrics with safe null handling & authentic data
     final usersList =
@@ -185,15 +171,7 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
           actionGridColumns = 1;
         }
 
-        // Responsive floating bottom navigation bar max width
-        final double bottomNavMaxWidth;
-        if (availableWidth >= 1200) {
-          bottomNavMaxWidth = 640.0;
-        } else if (availableWidth >= 768) {
-          bottomNavMaxWidth = 520.0;
-        } else {
-          bottomNavMaxWidth = 440.0;
-        }
+
 
         return Scaffold(
           backgroundColor: _StitchColors.canvasBg,
@@ -239,7 +217,6 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
                           usersBreakdown: usersBreakdown,
                           totalLocations: totalLocations,
                           totalCategories: totalCategories,
-                          approvalRulesCount: 3,
                         ),
                         const SizedBox(height: 24),
 
@@ -248,7 +225,6 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
                           context: context,
                           totalUsers: totalUsers,
                           totalLocations: totalLocations,
-                          threshold: threshold,
                           columns: actionGridColumns,
                         ),
                         const SizedBox(height: 24),
@@ -283,20 +259,24 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
             ),
           ),
 
-          // 3. FLOATING BOTTOM NAVIGATION BAR (Responsive pill width for mobile/tablet/desktop)
-          bottomNavigationBar: SafeArea(
-            top: false,
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
-              child: Align(
-                alignment: Alignment.bottomCenter,
-                heightFactor: 1.0,
-                child: ConstrainedBox(
-                  constraints: BoxConstraints(maxWidth: bottomNavMaxWidth),
-                  child: _buildFloatingBottomNavBar(context),
-                ),
-              ),
-            ),
+          // 3. FLOATING BOTTOM NAVIGATION BAR (Standardized across all Admin screens)
+          bottomNavigationBar: CustomFloatingNavBar.scaffoldBottomBar(
+            items: RoleNavConfig.getNavItemsForRole(UserRole.admin),
+            onItemTap: (item) {
+              if (item.route == RouteNames.adminAuditLogPath) {
+                context.push(RouteNames.adminAuditLogPath);
+              } else if (item.route == RouteNames.adminDashboardPath) {
+                if (_scrollController.hasClients) {
+                  _scrollController.animateTo(
+                    0,
+                    duration: const Duration(milliseconds: 300),
+                    curve: Curves.easeOut,
+                  );
+                }
+              } else {
+                context.go(item.route);
+              }
+            },
           ),
         );
       },
@@ -721,7 +701,6 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
     required String usersBreakdown,
     required int totalLocations,
     required int totalCategories,
-    required int approvalRulesCount,
   }) {
     final card1 = _buildBentoMetricCard(
       title: 'Total Pengguna',
@@ -751,12 +730,12 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
     );
 
     final card4 = _buildBentoMetricCard(
-      title: 'Kriteria Approval',
-      value: '$approvalRulesCount',
-      tag: 'Aturan',
-      subtitle: 'Nilai Aset, Wilayah, Khusus',
-      icon: Icons.tune,
-      onTap: () => _showApprovalRulesDialog(context),
+      title: 'Hak Akses RBAC',
+      value: '5 Role',
+      tag: 'Aktif',
+      subtitle: 'Pemohon, Opr, Aset, Kadiv, Admin',
+      icon: Icons.admin_panel_settings,
+      onTap: () => _showRbacInfoModal(context),
     );
 
     return Column(
@@ -987,7 +966,6 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
     required BuildContext context,
     required int totalUsers,
     required int totalLocations,
-    required double threshold,
     required int columns,
   }) {
     final cards = [
@@ -1022,15 +1000,6 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
         tag: 'TI & Umum',
         subtitle: 'Klasifikasi Aset TI & Aset Umum beserta format tiket',
         onTap: () => context.push(RouteNames.adminCategoriesPath),
-      ),
-      _ActionCardModel(
-        key: const Key('action_approval_rules_management'),
-        icon: Icons.tune,
-        title: 'Kriteria Approval Kadiv',
-        tag: '3 Aturan',
-        subtitle:
-            'Parameter ambang batas & kriteria eskalasi approval pimpinan',
-        onTap: () => _showApprovalRulesDialog(context),
       ),
     ];
 
@@ -1325,7 +1294,7 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
             ),
             const SizedBox(width: 8),
             InkWell(
-              onTap: () => _showAllAuditLogsDialog(context),
+              onTap: () => context.push(RouteNames.adminAuditLogPath),
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
@@ -1741,132 +1710,6 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
     );
   }
 
-  // ── 6. FLOATING BOTTOM NAVIGATION BAR (Stitch 1:1 Floating Pill Style) ──────
-  Widget _buildFloatingBottomNavBar(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(999),
-        border: Border.all(
-          color: _StitchColors.slate200.withValues(alpha: 0.8),
-        ),
-        boxShadow: const [
-          BoxShadow(
-            color: Color(0x18000000),
-            blurRadius: 16,
-            offset: Offset(0, 4),
-          ),
-        ],
-      ),
-      child: Row(
-        children: [
-          Expanded(
-            child: _buildFloatingNavItem(
-              index: 0,
-              icon: Icons.home,
-              label: 'Beranda',
-              onTap: () {
-                setState(() => _selectedNavIndex = 0);
-                if (_scrollController.hasClients) {
-                  _scrollController.animateTo(
-                    0,
-                    duration: const Duration(milliseconds: 300),
-                    curve: Curves.easeOut,
-                  );
-                }
-              },
-            ),
-          ),
-          Expanded(
-            child: _buildFloatingNavItem(
-              index: 1,
-              icon: Icons.storage_outlined,
-              label: 'Master Data',
-              onTap: () {
-                setState(() => _selectedNavIndex = 1);
-                context.push(RouteNames.adminCategoriesPath);
-              },
-            ),
-          ),
-          Expanded(
-            child: _buildFloatingNavItem(
-              index: 2,
-              icon: Icons.history_outlined,
-              label: 'Audit Log',
-              onTap: () {
-                setState(() => _selectedNavIndex = 2);
-                _showAllAuditLogsDialog(context);
-              },
-            ),
-          ),
-          Expanded(
-            child: _buildFloatingNavItem(
-              index: 3,
-              icon: Icons.person_outline,
-              label: 'Profil',
-              onTap: () {
-                setState(() => _selectedNavIndex = 3);
-                context.push(RouteNames.profilePath);
-              },
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildFloatingNavItem({
-    required int index,
-    required IconData icon,
-    required String label,
-    required VoidCallback onTap,
-  }) {
-    final isSelected = _activeNavIndex == index;
-
-    return GestureDetector(
-      behavior: HitTestBehavior.opaque,
-      onTap: onTap,
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Container(
-              width: 48,
-              height: 28,
-              decoration: BoxDecoration(
-                color: isSelected
-                    ? const Color(0xFFECF4FF)
-                    : Colors.transparent,
-                borderRadius: BorderRadius.circular(999),
-              ),
-              child: Icon(
-                icon,
-                size: 20,
-                color: isSelected
-                    ? _StitchColors.primaryNavy
-                    : _StitchColors.slate400,
-              ),
-            ),
-            const SizedBox(height: 2),
-            Text(
-              label,
-              style: _t(
-                size: 11,
-                w: isSelected ? FontWeight.w700 : FontWeight.w500,
-                color: isSelected
-                    ? _StitchColors.primaryNavy
-                    : _StitchColors.slate400,
-                ls: -0.2,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
   // ── MODALS & SHEETS ────────────────────────────────────────────────────────
   void _showCreateMasterDataSheet(BuildContext context) {
     showModalBottomSheet<void>(
@@ -2094,226 +1937,6 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
     );
   }
 
-  void _showApprovalRulesDialog(BuildContext context) {
-    showDialog<void>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: Row(
-          children: [
-            const Icon(Icons.tune, color: _StitchColors.primaryNavy),
-            const SizedBox(width: 8),
-            Text(
-              'Kriteria Approval Kadiv',
-              style: _t(size: 16, w: FontWeight.w700),
-            ),
-          ],
-        ),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Aturan eskalasi mutasi yang wajib mendapatkan persetujuan Pemimpin Divisi (Kadiv):',
-              style: _t(size: 12, color: _StitchColors.slate600),
-            ),
-            const SizedBox(height: 12),
-            _buildRuleItem(
-              '1. Ambang Batas Nilai Aset',
-              'Aset dengan nilai tercatat di atas ambang batas parameter sistem.',
-            ),
-            _buildRuleItem(
-              '2. Mutasi Antar-Wilayah/Cabang',
-              'Perpindahan aset yang melintasi KC berbeda atau keluar dari Kantor Pusat.',
-            ),
-            _buildRuleItem(
-              '3. Kategori Khusus / Server TI',
-              'Perangkat server, data center, dan kendaraan dinas operasional.',
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: Text(
-              'Kelola di Kategori Aset',
-              style: _t(
-                size: 13,
-                w: FontWeight.w600,
-                color: _StitchColors.primaryNavy,
-              ),
-            ),
-          ),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(
-              backgroundColor: _StitchColors.primaryNavy,
-              foregroundColor: Colors.white,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(10),
-              ),
-            ),
-            onPressed: () => Navigator.pop(ctx),
-            child: const Text('OK'),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildRuleItem(String rule, String desc) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 8),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            rule,
-            style: _t(
-              size: 12,
-              w: FontWeight.w700,
-              color: _StitchColors.slate800,
-            ),
-          ),
-          Text(desc, style: _t(size: 11, color: _StitchColors.slate500)),
-        ],
-      ),
-    );
-  }
-
-  Future<void> _showAllAuditLogsDialog(BuildContext context) async {
-    await showModalBottomSheet<void>(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (ctx) => Container(
-        height: MediaQuery.of(context).size.height * 0.78,
-        padding: const EdgeInsets.all(20),
-        decoration: const BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Center(
-              child: Container(
-                width: 44,
-                height: 4,
-                decoration: BoxDecoration(
-                  color: _StitchColors.slate200,
-                  borderRadius: BorderRadius.circular(999),
-                ),
-              ),
-            ),
-            const SizedBox(height: 16),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Row(
-                  children: [
-                    const Icon(
-                      Icons.history_rounded,
-                      color: _StitchColors.primaryNavy,
-                      size: 22,
-                    ),
-                    const SizedBox(width: 8),
-                    Text(
-                      'Semua Log Audit Sistem',
-                      style: _t(
-                        size: 16,
-                        w: FontWeight.w700,
-                        color: _StitchColors.slate800,
-                      ),
-                    ),
-                  ],
-                ),
-                IconButton(
-                  icon: const Icon(Icons.close),
-                  tooltip: 'Kembali ke Beranda',
-                  onPressed: () => Navigator.pop(ctx),
-                ),
-              ],
-            ),
-            const SizedBox(height: 8),
-            Expanded(
-              child: ListView(
-                children: [
-                  _buildLogCard(
-                    avatarText: 'AP',
-                    title: 'Pembaruan Node Cabang',
-                    time: '12m lalu',
-                    richDesc: Text(
-                      'Node transit aset logistik regional ditambahkan ke KCP Thamrin.',
-                      style: _t(size: 12, color: _StitchColors.slate600),
-                    ),
-                    tagCode: '#LOC-1092',
-                    statusChip: const Text('Sukses'),
-                  ),
-                  const SizedBox(height: 10),
-                  _buildLogCard(
-                    avatarText: 'DP',
-                    title: 'Penugasan Role Pegawai',
-                    time: '1j lalu',
-                    richDesc: Text(
-                      'User Dimas Pratama dialokasikan hak akses Petugas Aset TI.',
-                      style: _t(size: 12, color: _StitchColors.slate600),
-                    ),
-                    tagCode: '#RBAC-441',
-                    statusChip: const Text('Admin'),
-                  ),
-                  const SizedBox(height: 10),
-                  _buildLogCard(
-                    avatarText: 'SYS',
-                    title: 'Sinkronisasi Basis Data Aset',
-                    time: '3j lalu',
-                    richDesc: Text(
-                      'Validasi 6.302 entitas inventaris server selesai tanpa anomali data.',
-                      style: _t(size: 12, color: _StitchColors.slate600),
-                    ),
-                    tagCode: '#SYNC-882',
-                    statusChip: const Text('Verifikasi'),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 12),
-            SizedBox(
-              width: double.infinity,
-              height: 44,
-              child: ElevatedButton.icon(
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: _StitchColors.primaryNavy,
-                  foregroundColor: Colors.white,
-                  elevation: 0,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                ),
-                icon: const Icon(Icons.home_outlined, size: 18),
-                label: const Text(
-                  'Kembali ke Beranda',
-                  style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
-                ),
-                onPressed: () => Navigator.pop(ctx),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-
-    if (mounted) {
-      setState(() => _selectedNavIndex = 0);
-      if (_scrollController.hasClients) {
-        _scrollController.animateTo(
-          0,
-          duration: const Duration(milliseconds: 300),
-          curve: Curves.easeOut,
-        );
-      }
-    }
-  }
-
   void _showNotificationSheet(BuildContext context) {
     showModalBottomSheet<void>(
       context: context,
@@ -2471,7 +2094,7 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
           ],
         ),
         content: Text(
-          'Konfigurasi global sistem mencakup pengaturan sinkronisasi background, toleransi token, dan ambang batas approval pimpinan.',
+          'Konfigurasi global sistem mencakup pengaturan sinkronisasi background, toleransi token, dan otorisasi tata kelola mutasi.',
           style: _t(size: 12, color: _StitchColors.slate600),
         ),
         actions: [
