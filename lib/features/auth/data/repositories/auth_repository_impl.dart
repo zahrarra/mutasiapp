@@ -1,28 +1,30 @@
 // lib/features/auth/data/repositories/auth_repository_impl.dart
 //
-// Implementasi skeleton AuthRepository untuk Foundation.
+// Implementasi AuthRepository terintegrasi backend Laravel API & local SecureStorage.
 // Sumber: SKILLS.md §5 (authentication), TECHNICAL-DESIGN.md §4.1.
 
 import '../../../../core/errors/failures.dart';
 import '../../../../core/errors/result.dart';
+import '../../../../core/network/api_client.dart';
 import '../../../../core/storage/secure_storage.dart';
 import '../../domain/entities/user.dart';
 import '../../domain/entities/user_role.dart';
 import '../../domain/repositories/auth_repository.dart';
-
 import '../../domain/repositories/user_repository.dart';
 import 'user_repository_impl.dart';
 
-/// Implementasi in-memory & secure storage untuk [AuthRepository].
+/// Implementasi [AuthRepository] dengan integrasi HTTP [ApiClient] dan [SecureStorage].
 class AuthRepositoryImpl implements AuthRepository {
   final SecureStorage secureStorage;
-  final UserRepository userRepository;
+  final ApiClient? apiClient;
+  final UserRepository? userRepository;
   User? _currentUser;
 
   AuthRepositoryImpl({
     required this.secureStorage,
+    this.apiClient,
     UserRepository? userRepository,
-  }) : userRepository = userRepository ?? UserRepositoryImpl.instance;
+  }) : userRepository = userRepository ?? (apiClient == null ? UserRepositoryImpl.instance : null);
 
   @override
   Future<Result<User>> login({
@@ -31,67 +33,105 @@ class AuthRepositoryImpl implements AuthRepository {
   }) async {
     if (username.trim().isEmpty || password.isEmpty) {
       return Result.failure(
-        const ValidationFailure(message: 'Username dan password tidak boleh kosong'),
+        const ValidationFailure(message: 'Email dan password tidak boleh kosong'),
       );
     }
 
-    final userResult = await userRepository.getUserByUsername(username);
-    User user;
-    if (userResult is Success<User>) {
-      final found = userResult.data;
-      if (!found.isActive) {
-        return Result.failure(
-          const UnauthorizedFailure(
-            message: 'Akun Anda telah dinonaktifkan oleh Administrator. Silakan hubungi Admin.',
-          ),
-        );
-      }
-      user = found;
-    } else {
-      // Determine role based on username prefix for testing convenience
-      UserRole role = UserRole.pemohon;
-      final lower = username.toLowerCase();
-      if (lower.contains('admin')) {
-        role = UserRole.admin;
-      } else if (lower.contains('kadiv') ||
-          lower.contains('pemimpin') ||
-          lower.contains('kepala divisi') ||
-          lower.contains('kepala_divisi')) {
-        role = UserRole.kadiv;
-      } else if (lower.contains('operator')) {
-        role = UserRole.operator;
-      } else if (lower.contains('kabag')) {
-        role = UserRole.kabagAset;
-      } else if (lower.contains('aset') || lower.contains('bagian')) {
-        role = UserRole.bagianAset;
-      } else if (lower.contains('staff')) {
-        role = UserRole.staffAset;
-      }
-
-      final userId = role == UserRole.pemohon
-          ? 'usr_pemohon'
-          : 'usr_${DateTime.now().millisecondsSinceEpoch}';
-
-      user = User(
-        id: userId,
-        username: username,
-        name: username.toUpperCase(),
-        email: '$lower@mutasiku.id',
-        role: role,
-        department: 'Aset & Logistik',
-        isActive: true,
+    // Alur utama: Otentikasi langsung ke API backend Laravel
+    if (apiClient != null) {
+      final response = await apiClient!.post(
+        '/api/v1/auth/login',
+        body: {
+          'email': username.trim(),
+          'password': password,
+        },
       );
+
+      switch (response) {
+        case Success(:final data):
+          final success = data['success'] as bool? ?? false;
+          if (!success) {
+            return Result.failure(
+              UnauthorizedFailure(
+                message: data['message'] as String? ?? 'Email atau password salah.',
+              ),
+            );
+          }
+
+          final token = (data['token'] ?? data['data']?['token']) as String?;
+          if (token == null || token.isEmpty) {
+            return Result.failure(
+              const ServerFailure(message: 'Token autentikasi tidak valid'),
+            );
+          }
+
+          final userMap =
+              (data['user'] ?? data['data']?['user']) as Map<String, dynamic>?;
+          if (userMap == null) {
+            return Result.failure(
+              const ServerFailure(message: 'Data user tidak valid'),
+            );
+          }
+
+          final roleStr =
+              (data['role'] ?? userMap['role'] ?? data['data']?['role']) as String?;
+          final role = UserRole.fromApiValue(roleStr) ?? UserRole.pemohon;
+
+          final user = User(
+            id: userMap['id'].toString(),
+            username: userMap['email'] as String? ?? username,
+            name: userMap['name'] as String? ?? '',
+            email: userMap['email'] as String? ?? username,
+            role: role,
+            department: userMap['department'] as String? ?? 'Aset & Logistik',
+            isActive: userMap['is_active'] as bool? ?? true,
+          );
+
+          _currentUser = user;
+          await secureStorage.saveAuthToken(token);
+          await secureStorage.saveUserId(user.id);
+          apiClient!.setAuthToken(token);
+
+          return Result.success(user);
+
+        case AppFailure(:final failure):
+          return Result.failure(failure);
+      }
     }
 
-    _currentUser = user;
-    await secureStorage.saveAuthToken('token_${user.id}');
-    await secureStorage.saveUserId(user.id);
+    // Fallback: in-memory mock untuk unit test yang tidak menggunakan HTTP
+    if (userRepository != null) {
+      final userResult = await userRepository!.getUserByUsername(username);
+      if (userResult is Success<User>) {
+        final found = userResult.data;
+        if (!found.isActive) {
+          return Result.failure(
+            const UnauthorizedFailure(
+              message:
+                  'Akun Anda telah dinonaktifkan oleh Administrator. Silakan hubungi Admin.',
+            ),
+          );
+        }
+        _currentUser = found;
+        await secureStorage.saveAuthToken('token_${found.id}');
+        await secureStorage.saveUserId(found.id);
+        return Result.success(found);
+      }
+    }
 
-    return Result.success(user);
+    return Result.failure(
+      const UnauthorizedFailure(message: 'Email atau password salah.'),
+    );
   }
 
   @override
   Future<void> logout() async {
+    if (apiClient != null) {
+      try {
+        await apiClient!.post('/api/v1/auth/logout');
+      } catch (_) {}
+      apiClient!.clearAuthToken();
+    }
     _currentUser = null;
     await secureStorage.clearAll();
   }
@@ -103,22 +143,48 @@ class AuthRepositoryImpl implements AuthRepository {
     final hasToken = await secureStorage.hasAuthToken();
     if (!hasToken) return Result.success(null);
 
+    final token = await secureStorage.getAuthToken();
+    if (token != null && apiClient != null) {
+      apiClient!.setAuthToken(token);
+      final response = await apiClient!.get('/api/v1/auth/me');
+      switch (response) {
+        case Success(:final data):
+          final userMap = data['data']?['user'] as Map<String, dynamic>?;
+          if (userMap != null) {
+            final roleStr = userMap['role'] as String?;
+            final role = UserRole.fromApiValue(roleStr) ?? UserRole.pemohon;
+
+            _currentUser = User(
+              id: userMap['id'].toString(),
+              username: userMap['email'] as String? ?? '',
+              name: userMap['name'] as String? ?? '',
+              email: userMap['email'] as String? ?? '',
+              role: role,
+              department: userMap['department'] as String? ?? 'Aset & Logistik',
+              isActive: userMap['is_active'] as bool? ?? true,
+            );
+            return Result.success(_currentUser);
+          }
+          return Result.success(null);
+
+        case AppFailure():
+          await secureStorage.clearAll();
+          apiClient!.clearAuthToken();
+          return Result.success(null);
+      }
+    }
+
     final userId = await secureStorage.getUserId();
     if (userId == null) return Result.success(null);
 
-    final userResult = await userRepository.getUserById(userId);
-    if (userResult is Success<User>) {
-      _currentUser = userResult.data;
-    } else {
-      _currentUser = User(
-        id: userId,
-        username: 'user_mutasiku',
-        name: 'User MutasiKu',
-        email: 'user@mutasiku.id',
-        role: UserRole.pemohon,
-        department: 'Umum',
-      );
+    if (userRepository != null) {
+      final userResult = await userRepository!.getUserById(userId);
+      if (userResult is Success<User>) {
+        _currentUser = userResult.data;
+        return Result.success(_currentUser);
+      }
     }
-    return Result.success(_currentUser);
+
+    return Result.success(null);
   }
 }

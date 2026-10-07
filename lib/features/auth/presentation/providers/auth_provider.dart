@@ -24,9 +24,11 @@ final userRepositoryProvider = Provider<UserRepository>((ref) {
 /// Provider untuk [AuthRepository].
 final authRepositoryProvider = Provider<AuthRepository>((ref) {
   final secureStorage = ref.watch(secureStorageProvider);
+  final apiClient = ref.watch(apiClientProvider);
   final userRepo = ref.watch(userRepositoryProvider);
   return AuthRepositoryImpl(
     secureStorage: secureStorage,
+    apiClient: apiClient,
     userRepository: userRepo,
   );
 });

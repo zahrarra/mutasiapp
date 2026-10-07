@@ -37,6 +37,6 @@ abstract final class AppConstants {
   // Lihat .env.example.
 
   /// Base URL default (override via environment)
-  /// OPEN QUESTION: URL production belum ditentukan (PRD §13.5).
-  static const String defaultBaseUrl = 'https://api.mutasiku.example.com';
+  static const String defaultBaseUrl =
+      String.fromEnvironment('API_BASE_URL', defaultValue: 'http://127.0.0.1:8000');
 }

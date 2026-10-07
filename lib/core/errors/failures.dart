@@ -9,11 +9,11 @@ sealed class Failure {
     }
 
     if (this is UnauthorizedFailure) {
-      return 'Sesi Anda telah berakhir. Silakan login kembali.';
+      return message ?? 'Sesi Anda telah berakhir. Silakan login kembali.';
     }
 
     if (this is ForbiddenFailure) {
-      return 'Anda tidak memiliki izin untuk melakukan tindakan ini.';
+      return message ?? 'Anda tidak memiliki izin untuk melakukan tindakan ini.';
     }
 
     if (this is ValidationFailure) {

@@ -223,11 +223,11 @@ class ApiClient {
   Failure _failureFromStatusCode(int statusCode, String body) {
     switch (statusCode) {
       case 401:
-        return const UnauthorizedFailure(message: '401 Unauthorized');
+        return UnauthorizedFailure(message: _extractMessage(body) ?? '401 Unauthorized');
       case 403:
-        return const ForbiddenFailure(message: '403 Forbidden');
+        return ForbiddenFailure(message: _extractMessage(body) ?? '403 Forbidden');
       case 404:
-        return const NotFoundFailure(message: '404 Not Found');
+        return NotFoundFailure(message: _extractMessage(body) ?? '404 Not Found');
       case 409:
         return ConflictFailure(message: _extractMessage(body));
       case 422:
