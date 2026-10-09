@@ -118,8 +118,8 @@ class _AdminLocationsScreenState extends ConsumerState<AdminLocationsScreen> {
                   description: descCtrl.text.trim().isNotEmpty
                       ? descCtrl.text.trim()
                       : (isBranch
-                          ? 'Unit Kerja Kantor Cabang Regional'
-                          : 'Unit Kerja Kantor Pusat'),
+                            ? 'Unit Kerja Kantor Cabang Regional'
+                            : 'Unit Kerja Kantor Pusat'),
                   isBranch: isBranch,
                   isActive: true,
                 );
@@ -133,8 +133,7 @@ class _AdminLocationsScreenState extends ConsumerState<AdminLocationsScreen> {
                   AppFeedback.showSuccess(
                     context,
                     'Lokasi "${result.data.name}" berhasil ditambahkan.',
-                    details:
-                        'Lokasi baru kini otomatis tersedia pada form mutasi Pemohon dan verifikasi Operator.',
+                    details: 'Lokasi baru kini otomatis tersedia pada form mutasi Pemohon dan verifikasi Operator.',
                   );
                 } else if (result is AppFailure<LocationItem>) {
                   AppFeedback.showError(
@@ -319,293 +318,319 @@ class _AdminLocationsScreenState extends ConsumerState<AdminLocationsScreen> {
           ),
           Expanded(
             child: locationsAsync.when(
-        data: (allLocations) {
-          final filtered = allLocations.where((loc) {
-            final q = _searchQuery.toLowerCase();
-            return loc.name.toLowerCase().contains(q) ||
-                (loc.description ?? '').toLowerCase().contains(q);
-          }).toList();
+              data: (allLocations) {
+                final filtered = allLocations.where((loc) {
+                  final q = _searchQuery.toLowerCase();
+                  return loc.name.toLowerCase().contains(q) ||
+                      (loc.description ?? '').toLowerCase().contains(q);
+                }).toList();
 
-          return Column(
-            children: [
-              // Search Header (Translucent & themed)
-              Padding(
-                padding: const EdgeInsets.fromLTRB(
-                  AppSpacing.md,
-                  AppSpacing.md,
-                  AppSpacing.md,
-                  AppSpacing.xs,
-                ),
-                child: TextField(
-                  controller: _searchController,
-                  decoration: InputDecoration(
-                    hintText: 'Cari gedung, lantai, atau cabang...',
-                    hintStyle: TextStyle(
-                      fontSize: 13,
-                      color: AppColors.textSecondary.withValues(alpha: 0.8),
-                    ),
-                    prefixIcon: const Icon(
-                      Icons.search,
-                      size: 20,
-                      color: Color(0xFF0F3D56),
-                    ),
-                    suffixIcon: _searchQuery.isNotEmpty
-                        ? IconButton(
-                            icon: const Icon(Icons.clear, size: 18),
-                            onPressed: () {
-                              _searchController.clear();
-                              setState(() => _searchQuery = '');
-                            },
-                          )
-                        : null,
-                    filled: true,
-                    fillColor: const Color(0xFF0F3D56).withValues(alpha: 0.05),
-                    contentPadding: const EdgeInsets.symmetric(
-                      horizontal: AppSpacing.md,
-                      vertical: AppSpacing.sm,
-                    ),
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(999),
-                      borderSide: BorderSide(
-                        color: const Color(0xFF0F3D56).withValues(alpha: 0.15),
-                      ),
-                    ),
-                    enabledBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(999),
-                      borderSide: BorderSide(
-                        color: const Color(0xFF0F3D56).withValues(alpha: 0.15),
-                      ),
-                    ),
-                    focusedBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(999),
-                      borderSide: const BorderSide(
-                        color: Color(0xFF0F3D56),
-                        width: 1.5,
-                      ),
-                    ),
-                  ),
-                  onChanged: (val) {
-                    setState(() => _searchQuery = val.trim());
-                  },
-                ),
-              ),
-
-              // Total Count Info
-              Padding(
-                padding: const EdgeInsets.fromLTRB(
-                  AppSpacing.md,
-                  AppSpacing.sm,
-                  AppSpacing.md,
-                  AppSpacing.xs,
-                ),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                return Column(
                   children: [
-                    Text(
-                      'Total ${filtered.length} Lokasi (${filtered.where((l) => l.isActive).length} Aktif di Form)',
-                      style: const TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w600,
-                        color: AppColors.textSecondary,
+                    // Search Header (Translucent & themed)
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(
+                        AppSpacing.md,
+                        AppSpacing.md,
+                        AppSpacing.md,
+                        AppSpacing.xs,
+                      ),
+                      child: TextField(
+                        controller: _searchController,
+                        decoration: InputDecoration(
+                          hintText: 'Cari gedung, lantai, atau cabang...',
+                          hintStyle: TextStyle(
+                            fontSize: 13,
+                            color: AppColors.textSecondary.withValues(
+                              alpha: 0.8,
+                            ),
+                          ),
+                          prefixIcon: const Icon(
+                            Icons.search,
+                            size: 20,
+                            color: Color(0xFF0F3D56),
+                          ),
+                          suffixIcon: _searchQuery.isNotEmpty
+                              ? IconButton(
+                                  icon: const Icon(Icons.clear, size: 18),
+                                  onPressed: () {
+                                    _searchController.clear();
+                                    setState(() => _searchQuery = '');
+                                  },
+                                )
+                              : null,
+                          filled: true,
+                          fillColor: const Color(0xFF0F3D56)
+                              .withValues(alpha: 0.05),
+                          contentPadding: const EdgeInsets.symmetric(
+                            horizontal: AppSpacing.md,
+                            vertical: AppSpacing.sm,
+                          ),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(999),
+                            borderSide: BorderSide(
+                              color: const Color(0xFF0F3D56)
+                                  .withValues(alpha: 0.15),
+                            ),
+                          ),
+                          enabledBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(999),
+                            borderSide: BorderSide(
+                              color: const Color(0xFF0F3D56)
+                                  .withValues(alpha: 0.15),
+                            ),
+                          ),
+                          focusedBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(999),
+                            borderSide: const BorderSide(
+                              color: Color(0xFF0F3D56),
+                              width: 1.5,
+                            ),
+                          ),
+                        ),
+                        onChanged: (val) {
+                          setState(() => _searchQuery = val.trim());
+                        },
                       ),
                     ),
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 8,
-                        vertical: 2,
-                      ),
-                      decoration: BoxDecoration(
-                        color: AppColors.primaryContainer,
-                        borderRadius: BorderRadius.circular(AppRadius.pill),
-                      ),
-                      child: Text(
-                        'Master Lokasi Aktif',
-                        style: const TextStyle(
-                          fontSize: 11,
-                          fontWeight: FontWeight.bold,
-                          color: AppColors.primary,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
 
-              // List of Locations
-              Expanded(
-                child: filtered.isEmpty
-                    ? const Center(
-                        child: Text(
-                          'Lokasi tidak ditemukan.',
-                          style: TextStyle(color: AppColors.textSecondary),
-                        ),
-                      )
-                    : ListView.separated(
-                        padding: const EdgeInsets.all(AppSpacing.md),
-                        itemCount: filtered.length,
-                        separatorBuilder: (_, _) =>
-                            const SizedBox(height: AppSpacing.sm),
-                        itemBuilder: (context, index) {
-                          final item = filtered[index];
-                          final isCabang = item.isBranch;
-
-                          return Card(
-                            elevation: 0,
-                            shape: RoundedRectangleBorder(
-                              borderRadius:
-                                  BorderRadius.circular(AppSpacing.radiusMd),
-                              side: BorderSide(
-                                color: item.isActive
-                                    ? AppColors.border
-                                    : AppColors.error.withValues(alpha: 0.3),
+                    // Total Count Info
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(
+                        AppSpacing.md,
+                        AppSpacing.sm,
+                        AppSpacing.md,
+                        AppSpacing.xs,
+                      ),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text(
+                            'Total ${filtered.length} Lokasi (${filtered.where((l) => l.isActive).length} Aktif di Form)',
+                            style: const TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600,
+                              color: AppColors.textSecondary,
+                            ),
+                          ),
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 8,
+                              vertical: 2,
+                            ),
+                            decoration: BoxDecoration(
+                              color: AppColors.primaryContainer,
+                              borderRadius: BorderRadius.circular(
+                                AppRadius.pill,
                               ),
                             ),
-                            child: ListTile(
-                              leading: CircleAvatar(
-                                backgroundColor: !item.isActive
-                                    ? const Color(0xFFF1F5F9)
-                                    : isCabang
-                                        ? AppColors.warningContainer
-                                        : AppColors.infoContainer,
-                                child: Icon(
-                                  !item.isActive
-                                      ? Icons.location_off_outlined
-                                      : isCabang
-                                          ? Icons.location_city_outlined
-                                          : Icons.apartment_outlined,
-                                  color: !item.isActive
-                                      ? AppColors.textDisabled
-                                      : isCabang
-                                          ? AppColors.warning
-                                          : AppColors.info,
-                                  size: 20,
-                                ),
+                            child: Text(
+                              'Master Lokasi Aktif',
+                              style: const TextStyle(
+                                fontSize: 11,
+                                fontWeight: FontWeight.bold,
+                                color: AppColors.primary,
                               ),
-                              title: Row(
-                                children: [
-                                  Expanded(
-                                    child: Text(
-                                      item.name,
-                                      style: TextStyle(
-                                        fontWeight: FontWeight.bold,
-                                        fontSize: 14,
-                                        color: item.isActive
-                                            ? AppColors.textPrimary
-                                            : AppColors.textSecondary,
-                                        decoration: item.isActive
-                                            ? null
-                                            : TextDecoration.lineThrough,
-                                      ),
-                                    ),
-                                  ),
-                                  Container(
-                                    padding: const EdgeInsets.symmetric(
-                                      horizontal: 6,
-                                      vertical: 2,
-                                    ),
-                                    decoration: BoxDecoration(
-                                      color: item.isActive
-                                          ? AppColors.successContainer
-                                          : const Color(0xFFF1F5F9),
-                                      borderRadius: BorderRadius.circular(
-                                        AppRadius.pill,
-                                      ),
-                                    ),
-                                    child: Text(
-                                      item.isActive ? 'Aktif' : 'Nonaktif',
-                                      style: TextStyle(
-                                        fontSize: 10,
-                                        fontWeight: FontWeight.bold,
-                                        color: item.isActive
-                                            ? AppColors.success
-                                            : AppColors.textSecondary,
-                                      ),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                              subtitle: Text(
-                                item.description ??
-                                    (isCabang
-                                        ? 'Unit Kerja Kantor Cabang Regional'
-                                        : 'Unit Kerja Kantor Pusat / Data Center'),
-                                style: const TextStyle(
-                                  fontSize: 12,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+
+                    // List of Locations
+                    Expanded(
+                      child: filtered.isEmpty
+                          ? const Center(
+                              child: Text(
+                                'Lokasi tidak ditemukan.',
+                                style: TextStyle(
                                   color: AppColors.textSecondary,
                                 ),
                               ),
-                              trailing: Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  IconButton(
-                                    icon: Icon(
-                                      item.isActive
-                                          ? Icons.toggle_on
-                                          : Icons.toggle_off,
+                            )
+                          : ListView.separated(
+                              padding: const EdgeInsets.all(AppSpacing.md),
+                              itemCount: filtered.length,
+                              separatorBuilder: (_, _) =>
+                                  const SizedBox(height: AppSpacing.sm),
+                              itemBuilder: (context, index) {
+                                final item = filtered[index];
+                                final isCabang = item.isBranch;
+
+                                return Card(
+                                  elevation: 0,
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(
+                                      AppSpacing.radiusMd,
+                                    ),
+                                    side: BorderSide(
                                       color: item.isActive
-                                          ? AppColors.success
-                                          : AppColors.textDisabled,
-                                      size: 28,
+                                          ? AppColors.border
+                                          : AppColors.error.withValues(
+                                              alpha: 0.3,
+                                            ),
                                     ),
-                                    tooltip: item.isActive
-                                        ? 'Nonaktifkan Lokasi'
-                                        : 'Aktifkan Lokasi',
-                                    onPressed: () async {
-                                      final newStatus = !item.isActive;
-                                      final res = await ref
-                                          .read(
-                                              masterLocationsProvider.notifier)
-                                          .toggleActive(item.id, newStatus);
-                                      if (!context.mounted) return;
-                                      if (res is Success<void>) {
-                                        AppFeedback.showSuccess(
-                                          context,
-                                          newStatus
-                                              ? 'Lokasi "${item.name}" diaktifkan.'
-                                              : 'Lokasi "${item.name}" dinonaktifkan.',
-                                        );
-                                      }
-                                    },
                                   ),
-                                  IconButton(
-                                    icon: const Icon(
-                                      Icons.edit_outlined,
-                                      size: 18,
+                                  child: ListTile(
+                                    leading: CircleAvatar(
+                                      backgroundColor: !item.isActive
+                                          ? const Color(0xFFF1F5F9)
+                                          : isCabang
+                                          ? AppColors.warningContainer
+                                          : AppColors.infoContainer,
+                                      child: Icon(
+                                        !item.isActive
+                                            ? Icons.location_off_outlined
+                                            : isCabang
+                                            ? Icons.location_city_outlined
+                                            : Icons.apartment_outlined,
+                                        color: !item.isActive
+                                            ? AppColors.textDisabled
+                                            : isCabang
+                                            ? AppColors.warning
+                                            : AppColors.info,
+                                        size: 20,
+                                      ),
                                     ),
-                                    tooltip: 'Edit Lokasi',
-                                    onPressed: () => _showEditLocationDialog(
-                                        context, item),
-                                  ),
-                                  IconButton(
-                                    icon: const Icon(
-                                      Icons.delete_outline,
-                                      size: 18,
-                                      color: AppColors.error,
+                                    title: Row(
+                                      children: [
+                                        Expanded(
+                                          child: Text(
+                                            item.name,
+                                            style: TextStyle(
+                                              fontWeight: FontWeight.bold,
+                                              fontSize: 14,
+                                              color: item.isActive
+                                                  ? AppColors.textPrimary
+                                                  : AppColors.textSecondary,
+                                              decoration: item.isActive
+                                                  ? null
+                                                  : TextDecoration.lineThrough,
+                                            ),
+                                          ),
+                                        ),
+                                        Container(
+                                          padding: const EdgeInsets.symmetric(
+                                            horizontal: 6,
+                                            vertical: 2,
+                                          ),
+                                          decoration: BoxDecoration(
+                                            color: item.isActive
+                                                ? AppColors.successContainer
+                                                : const Color(0xFFF1F5F9),
+                                            borderRadius: BorderRadius.circular(
+                                              AppRadius.pill,
+                                            ),
+                                          ),
+                                          child: Text(
+                                            item.isActive
+                                                ? 'Aktif'
+                                                : 'Nonaktif',
+                                            style: TextStyle(
+                                              fontSize: 10,
+                                              fontWeight: FontWeight.bold,
+                                              color: item.isActive
+                                                  ? AppColors.success
+                                                  : AppColors.textSecondary,
+                                            ),
+                                          ),
+                                        ),
+                                      ],
                                     ),
-                                    tooltip: 'Hapus Lokasi',
-                                    onPressed: () => _confirmDeleteLocation(
-                                        context, item),
+                                    subtitle: Text(
+                                      item.description ??
+                                          (isCabang
+                                              ? 'Unit Kerja Kantor Cabang Regional'
+                                              : 'Unit Kerja Kantor Pusat / Data Center'),
+                                      style: const TextStyle(
+                                        fontSize: 12,
+                                        color: AppColors.textSecondary,
+                                      ),
+                                    ),
+                                    trailing: Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        IconButton(
+                                          icon: Icon(
+                                            item.isActive
+                                                ? Icons.toggle_on
+                                                : Icons.toggle_off,
+                                            color: item.isActive
+                                                ? AppColors.success
+                                                : AppColors.textDisabled,
+                                            size: 28,
+                                          ),
+                                          tooltip: item.isActive
+                                              ? 'Nonaktifkan Lokasi'
+                                              : 'Aktifkan Lokasi',
+                                          onPressed: () async {
+                                            final newStatus = !item.isActive;
+                                            final res = await ref
+                                                .read(
+                                                  masterLocationsProvider
+                                                      .notifier,
+                                                )
+                                                .toggleActive(
+                                                  item.id,
+                                                  newStatus,
+                                                );
+                                            if (!context.mounted) return;
+                                            if (res is Success<void>) {
+                                              AppFeedback.showSuccess(
+                                                context,
+                                                newStatus
+                                                    ? 'Lokasi "${item.name}" diaktifkan.'
+                                                    : 'Lokasi "${item.name}" dinonaktifkan.',
+                                              );
+                                            }
+                                          },
+                                        ),
+                                        IconButton(
+                                          icon: const Icon(
+                                            Icons.edit_outlined,
+                                            size: 18,
+                                          ),
+                                          tooltip: 'Edit Lokasi',
+                                          onPressed: () =>
+                                              _showEditLocationDialog(
+                                                context,
+                                                item,
+                                              ),
+                                        ),
+                                        IconButton(
+                                          icon: const Icon(
+                                            Icons.delete_outline,
+                                            size: 18,
+                                            color: AppColors.error,
+                                          ),
+                                          tooltip: 'Hapus Lokasi',
+                                          onPressed: () =>
+                                              _confirmDeleteLocation(
+                                                context,
+                                                item,
+                                              ),
+                                        ),
+                                      ],
+                                    ),
                                   ),
-                                ],
-                              ),
+                                );
+                              },
                             ),
-                          );
-                        },
-                      ),
+                    ),
+                  ],
+                );
+              },
+              loading: () =>
+                  const LoadingIndicator(message: 'Memuat data lokasi...'),
+              error: (err, stack) => ErrorView(
+                message: err.toString(),
+                onRetry: () =>
+                    ref.read(masterLocationsProvider.notifier).loadLocations(),
               ),
-            ],
-          );
-        },
-        loading: () => const LoadingIndicator(message: 'Memuat data lokasi...'),
-        error: (err, stack) => ErrorView(
-          message: err.toString(),
-          onRetry: () =>
-              ref.read(masterLocationsProvider.notifier).loadLocations(),
-        ),
+            ),
+          ),
+        ],
       ),
-    ),
-  ],
-),
       floatingActionButton: FloatingActionButton.extended(
         backgroundColor: AppColors.primary,
         foregroundColor: Colors.white,

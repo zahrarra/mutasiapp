@@ -5,6 +5,8 @@
 
 import '../../../../core/errors/failures.dart';
 import '../../../../core/errors/result.dart';
+import '../../../../core/network/api_client.dart';
+import '../models/asset_model.dart';
 import '../../domain/entities/asset.dart';
 import '../../domain/entities/asset_category.dart';
 import '../../domain/entities/asset_history_item.dart';
@@ -12,11 +14,38 @@ import '../../domain/entities/asset_status.dart';
 import '../../domain/repositories/asset_repository.dart';
 
 class AssetRepositoryImpl implements AssetRepository {
+  final ApiClient? apiClient;
+
+  AssetRepositoryImpl({this.apiClient});
   static final List<AssetCategory> _mockCategories = [
-    const AssetCategory(id: 'cat_1', code: 'ELK', name: 'Elektronik & IT', description: 'Laptop, Monitor, Printer', isActive: true),
-    const AssetCategory(id: 'cat_2', code: 'FUR', name: 'Furniture & Mebel', description: 'Meja Kerja, Kursi Kantor, Lemari', isActive: true),
-    const AssetCategory(id: 'cat_3', code: 'VEH', name: 'Kendaraan Operasional', description: 'Mobil Dinas, Sepeda Motor', isActive: true),
-    const AssetCategory(id: 'cat_4', code: 'NET', name: 'Perangkat Jaringan', description: 'Switch, Router, Access Point', isActive: true),
+    const AssetCategory(
+      id: 'cat_1',
+      code: 'ELK',
+      name: 'Elektronik & IT',
+      description: 'Laptop, Monitor, Printer',
+      isActive: true,
+    ),
+    const AssetCategory(
+      id: 'cat_2',
+      code: 'FUR',
+      name: 'Furniture & Mebel',
+      description: 'Meja Kerja, Kursi Kantor, Lemari',
+      isActive: true,
+    ),
+    const AssetCategory(
+      id: 'cat_3',
+      code: 'VEH',
+      name: 'Kendaraan Operasional',
+      description: 'Mobil Dinas, Sepeda Motor',
+      isActive: true,
+    ),
+    const AssetCategory(
+      id: 'cat_4',
+      code: 'NET',
+      name: 'Perangkat Jaringan',
+      description: 'Switch, Router, Access Point',
+      isActive: true,
+    ),
   ];
 
   static List<Asset> _generateInitialMockAssets() => [
@@ -198,7 +227,51 @@ class AssetRepositoryImpl implements AssetRepository {
     String? categoryId,
     String? location,
     AssetStatus? status,
+    bool? mine,
   }) async {
+    if (apiClient != null) {
+      final queryParams = <String, String>{};
+      if (mine == true) {
+        queryParams['mine'] = 'true';
+      }
+      final response = await apiClient!.get(
+        '/api/v1/assets',
+        queryParams: queryParams.isNotEmpty ? queryParams : null,
+      );
+      switch (response) {
+        case Success(:final data):
+          final list = data['data'] as List<dynamic>? ?? [];
+          List<Asset> assets = list
+              .whereType<Map<String, dynamic>>()
+              .map(AssetModel.fromJson)
+              .toList();
+
+          if (query != null && query.trim().isNotEmpty) {
+            final q = query.toLowerCase().trim();
+            assets = assets.where((asset) {
+              return asset.name.toLowerCase().contains(q) ||
+                  asset.assetCode.toLowerCase().contains(q) ||
+                  asset.pic.toLowerCase().contains(q) ||
+                  asset.location.toLowerCase().contains(q);
+            }).toList();
+          }
+
+          if (categoryId != null && categoryId.isNotEmpty) {
+            assets = assets
+                .where((asset) => asset.category.id == categoryId)
+                .toList();
+          }
+
+          if (status != null) {
+            assets = assets.where((asset) => asset.status == status).toList();
+          }
+
+          return Result.success(assets);
+        case AppFailure(:final failure):
+          return Result.failure(failure);
+      }
+    }
+
     List<Asset> filtered = List.from(_mockAssets);
 
     if (query != null && query.trim().isNotEmpty) {
@@ -212,7 +285,9 @@ class AssetRepositoryImpl implements AssetRepository {
     }
 
     if (categoryId != null && categoryId.isNotEmpty) {
-      filtered = filtered.where((asset) => asset.category.id == categoryId).toList();
+      filtered = filtered
+          .where((asset) => asset.category.id == categoryId)
+          .toList();
     }
 
     if (status != null) {
@@ -224,11 +299,30 @@ class AssetRepositoryImpl implements AssetRepository {
 
   @override
   Future<Result<Asset>> getAssetById(String id) async {
+    if (apiClient != null) {
+      final response = await apiClient!.get('/api/v1/assets/$id');
+      switch (response) {
+        case Success(:final data):
+          final assetMap = data['data'] as Map<String, dynamic>?;
+          if (assetMap != null) {
+            return Result.success(AssetModel.fromJson(assetMap));
+          }
+          break;
+        case AppFailure():
+          // Jika gagal di network (misal testing sandbox atau offline), fallback ke mock assets
+          break;
+      }
+    }
+
     try {
-      final asset = _mockAssets.firstWhere((a) => a.id == id || a.assetCode == id);
+      final asset = _mockAssets.firstWhere(
+        (a) => a.id == id || a.assetCode == id,
+      );
       return Result.success(asset);
     } catch (_) {
-      return Result.failure(const NotFoundFailure(message: 'Aset tidak ditemukan.'));
+      return Result.failure(
+        const NotFoundFailure(message: 'Aset tidak ditemukan.'),
+      );
     }
   }
 
@@ -238,7 +332,9 @@ class AssetRepositoryImpl implements AssetRepository {
       final asset = _mockAssets.firstWhere((a) => a.id == assetId);
       return Result.success(asset.history);
     } catch (_) {
-      return Result.failure(const NotFoundFailure(message: 'Riwayat aset tidak ditemukan.'));
+      return Result.failure(
+        const NotFoundFailure(message: 'Riwayat aset tidak ditemukan.'),
+      );
     }
   }
 
@@ -292,7 +388,8 @@ class AssetRepositoryImpl implements AssetRepository {
     final index = _mockCategories.indexWhere((c) => c.id == category.id);
     if (index == -1) {
       return Result.failure(
-          const NotFoundFailure(message: 'Kategori tidak ditemukan.'));
+        const NotFoundFailure(message: 'Kategori tidak ditemukan.'),
+      );
     }
 
     final cleanName = category.name.trim();
@@ -312,8 +409,7 @@ class AssetRepositoryImpl implements AssetRepository {
     if (duplicate) {
       return Result.failure(
         ValidationFailure(
-          message:
-              'Kode "$cleanCode" atau nama "$cleanName" sudah digunakan.',
+          message: 'Kode "$cleanCode" atau nama "$cleanName" sudah digunakan.',
         ),
       );
     }
@@ -333,23 +429,25 @@ class AssetRepositoryImpl implements AssetRepository {
     final index = _mockCategories.indexWhere((c) => c.id == id);
     if (index == -1) {
       return Result.failure(
-          const NotFoundFailure(message: 'Kategori tidak ditemukan.'));
+        const NotFoundFailure(message: 'Kategori tidak ditemukan.'),
+      );
     }
 
-    _mockCategories[index] =
-        _mockCategories[index].copyWith(isActive: isActive);
+    _mockCategories[index] = _mockCategories[index].copyWith(
+      isActive: isActive,
+    );
     return Result.success(null);
   }
 
   @override
   Future<Result<void>> deleteCategory(String id) async {
     final isUsed = _mockAssets.any(
-        (a) => a.category.id == id || a.category.code == id);
+      (a) => a.category.id == id || a.category.code == id,
+    );
     if (isUsed) {
       return Result.failure(
         const ValidationFailure(
-          message:
-              'Kategori tidak dapat dihapus permanen karena masih digunakan oleh aset terdaftar. Silakan nonaktifkan kategori.',
+          message: 'Kategori tidak dapat dihapus permanen karena masih digunakan oleh aset terdaftar. Silakan nonaktifkan kategori.',
         ),
       );
     }
@@ -420,5 +518,170 @@ class AssetRepositoryImpl implements AssetRepository {
     }
     _mockAssets[index] = asset;
     return Result.success(asset);
+  }
+
+  @override
+  Future<Result<Asset>> createAsset(CreateAssetParams params) async {
+    if (apiClient != null) {
+      // 1. Resolve asset_category_id (harus integer yang valid di tabel asset_categories)
+      int? categoryId = int.tryParse(params.assetCategoryId);
+      if (categoryId == null) {
+        try {
+          final catRes = await apiClient!.get('/api/v1/asset-categories');
+          if (catRes is Success<Map<String, dynamic>>) {
+            final list = catRes.data['data'] as List<dynamic>? ?? [];
+            for (final item in list) {
+              if (item is Map<String, dynamic>) {
+                final id = int.tryParse(item['id']?.toString() ?? '');
+                final code = item['code']?.toString().toLowerCase();
+                final name = item['name']?.toString().toLowerCase();
+                final paramLower = params.assetCategoryId.toLowerCase();
+                if (id != null &&
+                    (code == paramLower ||
+                        name == paramLower ||
+                        paramLower.contains(code ?? ''))) {
+                  categoryId = id;
+                  break;
+                }
+              }
+            }
+          }
+        } catch (_) {}
+      }
+      categoryId ??= 1;
+
+      // 2. Resolve location_id (harus integer yang valid di tabel locations)
+      int? locationId = int.tryParse(params.locationId);
+      if (locationId == null) {
+        try {
+          final locRes = await apiClient!.get('/api/v1/locations');
+          if (locRes is Success<Map<String, dynamic>>) {
+            final list = locRes.data['data'] as List<dynamic>? ?? [];
+            for (final item in list) {
+              if (item is Map<String, dynamic>) {
+                final id = int.tryParse(item['id']?.toString() ?? '');
+                final name = item['name']?.toString().toLowerCase() ?? '';
+                final code = item['code']?.toString().toLowerCase() ?? '';
+                final paramLower = params.locationId.toLowerCase();
+                if (id != null &&
+                    (paramLower.contains(name) ||
+                        name.contains(paramLower) ||
+                        code == paramLower)) {
+                  locationId = id;
+                  break;
+                }
+              }
+            }
+          }
+        } catch (_) {}
+      }
+      locationId ??= 1;
+
+      // 3. Resolve pic_id (harus integer yang valid di tabel users)
+      int? picId = int.tryParse(params.picId);
+      if (picId == null) {
+        final p = params.picId.toLowerCase();
+        if (p.contains('admin')) {
+          picId = 1;
+        } else if (p.contains('pemohon') ||
+            p.contains('dirly') ||
+            p.contains('rina')) {
+          picId = 2;
+        } else if (p.contains('operator') ||
+            p.contains('marsya') ||
+            p.contains('budi')) {
+          picId = 3;
+        } else if (p.contains('aset') ||
+            p.contains('akam') ||
+            p.contains('hendra')) {
+          picId = 4;
+        } else if (p.contains('kadiv') ||
+            p.contains('pemimpin') ||
+            p.contains('jalil')) {
+          picId = 5;
+        } else {
+          picId = 1;
+        }
+      }
+
+      final body = <String, dynamic>{
+        'asset_code': params.assetCode.trim(),
+        'name': params.name.trim(),
+        'asset_category_id': categoryId,
+        'location_id': locationId,
+        'pic_id': picId,
+        'condition': params.condition.trim(),
+        'serial_number': params.serialNumber.trim(),
+        'acquisition_year': params.acquisitionYear,
+        if (params.usageYear != null) 'usage_year': params.usageYear,
+        'is_active': params.isActive,
+      };
+
+      final response = await apiClient!.post(
+        '/api/v1/admin/assets',
+        body: body,
+      );
+
+      switch (response) {
+        case Success(:final data):
+          final success = data['success'] as bool? ?? true;
+          if (!success) {
+            return Result.failure(
+              ServerFailure(
+                message:
+                    data['message'] as String? ?? 'Gagal menambahkan aset.',
+              ),
+            );
+          }
+          final assetMap = data['data'] as Map<String, dynamic>?;
+          if (assetMap == null) {
+            return const Result.failure(
+              ServerFailure(message: 'Data response aset tidak valid.'),
+            );
+          }
+          try {
+            final newAsset = AssetModel.fromJson(assetMap);
+            final existingIndex =
+                _mockAssets.indexWhere((a) => a.id == newAsset.id);
+            if (existingIndex != -1) {
+              _mockAssets[existingIndex] = newAsset;
+            } else {
+              _mockAssets.insert(0, newAsset);
+            }
+            return Result.success(newAsset);
+          } catch (e) {
+            return Result.failure(
+              ServerFailure(message: 'Format data aset tidak valid: $e'),
+            );
+          }
+        case AppFailure(:final failure):
+          return Result.failure(failure);
+      }
+    }
+
+    final category = _mockCategories.firstWhere(
+      (c) => c.id == params.assetCategoryId,
+      orElse: () => AssetCategory(
+        id: params.assetCategoryId,
+        code: 'CAT',
+        name: 'Kategori ${params.assetCategoryId}',
+        isActive: true,
+      ),
+    );
+    final newAsset = Asset(
+      id: 'ast_${DateTime.now().millisecondsSinceEpoch}',
+      assetCode: params.assetCode.trim(),
+      name: params.name.trim(),
+      category: category,
+      location: 'Lokasi ${params.locationId}',
+      pic: 'PIC ${params.picId}',
+      status: AssetStatus.available,
+      condition: params.condition.trim(),
+      serialNumber: params.serialNumber.trim(),
+      acquisitionYear: params.acquisitionYear,
+      hasActiveMutation: false,
+    );
+    _mockAssets.insert(0, newAsset);
+    return Result.success(newAsset);
   }
 }

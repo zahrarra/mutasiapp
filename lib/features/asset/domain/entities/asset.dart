@@ -117,5 +117,8 @@ class Asset {
 
   @override
   int get hashCode =>
-      id.hashCode ^ assetCode.hashCode ^ name.hashCode ^ hasActiveMutation.hashCode;
+      id.hashCode ^
+      assetCode.hashCode ^
+      name.hashCode ^
+      hasActiveMutation.hashCode;
 }

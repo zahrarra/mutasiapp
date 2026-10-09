@@ -127,7 +127,8 @@ class LocationRepositoryImpl implements LocationRepository {
         ? item.id
         : 'loc_${DateTime.now().millisecondsSinceEpoch}';
 
-    final isBranch = item.isBranch || cleanName.toLowerCase().contains('cabang');
+    final isBranch =
+        item.isBranch || cleanName.toLowerCase().contains('cabang');
 
     final newLocation = item.copyWith(
       id: newId,
@@ -145,7 +146,9 @@ class LocationRepositoryImpl implements LocationRepository {
   Future<Result<LocationItem>> updateLocation(LocationItem item) async {
     final index = _locations.indexWhere((l) => l.id == item.id);
     if (index == -1) {
-      return Result.failure(const NotFoundFailure(message: 'Lokasi tidak ditemukan.'));
+      return Result.failure(
+        const NotFoundFailure(message: 'Lokasi tidak ditemukan.'),
+      );
     }
 
     final cleanName = item.name.trim();
@@ -156,8 +159,7 @@ class LocationRepositoryImpl implements LocationRepository {
     }
 
     final duplicate = _locations.any(
-      (l) =>
-          l.id != item.id && l.name.toLowerCase() == cleanName.toLowerCase(),
+      (l) => l.id != item.id && l.name.toLowerCase() == cleanName.toLowerCase(),
     );
     if (duplicate) {
       return Result.failure(
@@ -165,7 +167,8 @@ class LocationRepositoryImpl implements LocationRepository {
       );
     }
 
-    final isBranch = item.isBranch || cleanName.toLowerCase().contains('cabang');
+    final isBranch =
+        item.isBranch || cleanName.toLowerCase().contains('cabang');
 
     final updated = item.copyWith(
       name: cleanName,
@@ -181,7 +184,9 @@ class LocationRepositoryImpl implements LocationRepository {
   Future<Result<void>> toggleLocationActive(String id, bool isActive) async {
     final index = _locations.indexWhere((l) => l.id == id);
     if (index == -1) {
-      return Result.failure(const NotFoundFailure(message: 'Lokasi tidak ditemukan.'));
+      return Result.failure(
+        const NotFoundFailure(message: 'Lokasi tidak ditemukan.'),
+      );
     }
 
     _locations[index] = _locations[index].copyWith(isActive: isActive);
@@ -193,8 +198,7 @@ class LocationRepositoryImpl implements LocationRepository {
     if (_protectedLocationIds.contains(id)) {
       return Result.failure(
         const ValidationFailure(
-          message:
-              'Lokasi default/histori tidak dapat dihapus permanen karena masih direferensikan. Silakan nonaktifkan lokasi.',
+          message: 'Lokasi default/histori tidak dapat dihapus permanen karena masih direferensikan. Silakan nonaktifkan lokasi.',
         ),
       );
     }

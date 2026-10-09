@@ -16,6 +16,7 @@ abstract class AssetRepository {
     String? categoryId,
     String? location,
     AssetStatus? status,
+    bool? mine,
   });
 
   /// Ambil detail satu aset berdasarkan ID.
@@ -50,4 +51,33 @@ abstract class AssetRepository {
 
   /// Memperbarui informasi aset (status, lokasi, PIC).
   Future<Result<Asset>> updateAsset(Asset asset);
+
+  /// Menambahkan aset baru oleh Admin (POST /api/v1/admin/assets).
+  Future<Result<Asset>> createAsset(CreateAssetParams params);
+}
+
+class CreateAssetParams {
+  final String assetCode;
+  final String name;
+  final String assetCategoryId;
+  final String locationId;
+  final String picId;
+  final String condition;
+  final String serialNumber;
+  final int acquisitionYear;
+  final int? usageYear;
+  final bool isActive;
+
+  const CreateAssetParams({
+    required this.assetCode,
+    required this.name,
+    required this.assetCategoryId,
+    required this.locationId,
+    required this.picId,
+    required this.condition,
+    required this.serialNumber,
+    required this.acquisitionYear,
+    this.usageYear,
+    this.isActive = true,
+  });
 }

@@ -4,6 +4,7 @@
 // Sumber: SKILLS.md §7 (asset-management), TECHNICAL-DESIGN.md §8.
 
 import 'package:flutter/material.dart';
+
 import '../../../../app/theme/app_colors.dart';
 
 /// Enum status kondisi / ketersediaan aset.
@@ -22,27 +23,27 @@ enum AssetStatus {
 
   /// Label tampilan bahasa Indonesia.
   String get displayName => switch (this) {
-        AssetStatus.available => 'Tersedia',
-        AssetStatus.inMutation => 'Dalam Mutasi',
-        AssetStatus.maintenance => 'Perawatan',
-        AssetStatus.disposed => 'Disposisi',
-      };
+    AssetStatus.available => 'Tersedia',
+    AssetStatus.inMutation => 'Dalam Mutasi',
+    AssetStatus.maintenance => 'Perawatan',
+    AssetStatus.disposed => 'Disposisi',
+  };
 
   /// Warna teks badge.
   Color get color => switch (this) {
-        AssetStatus.available => AppColors.success,
-        AssetStatus.inMutation => AppColors.warning,
-        AssetStatus.maintenance => AppColors.info,
-        AssetStatus.disposed => AppColors.textDisabled,
-      };
+    AssetStatus.available => AppColors.success,
+    AssetStatus.inMutation => AppColors.warning,
+    AssetStatus.maintenance => AppColors.info,
+    AssetStatus.disposed => AppColors.textDisabled,
+  };
 
   /// Warna container / background badge.
   Color get backgroundColor => switch (this) {
-        AssetStatus.available => AppColors.successContainer,
-        AssetStatus.inMutation => AppColors.warningContainer,
-        AssetStatus.maintenance => AppColors.infoContainer,
-        AssetStatus.disposed => AppColors.disabledBackground,
-      };
+    AssetStatus.available => AppColors.successContainer,
+    AssetStatus.inMutation => AppColors.warningContainer,
+    AssetStatus.maintenance => AppColors.infoContainer,
+    AssetStatus.disposed => AppColors.disabledBackground,
+  };
 
   /// Parse dari string API.
   static AssetStatus fromApiValue(String? value) {
