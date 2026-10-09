@@ -34,8 +34,7 @@ final class HttpException extends ApiException {
   final String? body;
 
   @override
-  String toString() =>
-      'HttpException($statusCode): $message';
+  String toString() => 'HttpException($statusCode): $message';
 }
 
 /// Response tidak dapat di-parse / format tidak valid.

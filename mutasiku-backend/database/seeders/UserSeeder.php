@@ -41,21 +41,60 @@ class UserSeeder extends Seeder
                 'nip' => '100005',
                 'role' => 'pemimpin_divisi',
             ],
+            [
+                'name' => 'Budi Santoso',
+                'email' => 'budi.santoso@mutasiku.test',
+                'nip' => '100006',
+                'role' => 'pemohon',
+            ],
+            [
+                'name' => 'Ahmad Fauzi',
+                'email' => 'ahmad.fauzi@mutasiku.test',
+                'nip' => '100007',
+                'role' => 'pemohon',
+            ],
+            [
+                'name' => 'Siti Nurhaliza',
+                'email' => 'siti.nurhaliza@mutasiku.test',
+                'nip' => '100008',
+                'role' => 'pemohon',
+            ],
+            [
+                'name' => 'Dewi Lestari',
+                'email' => 'dewi.lestari@mutasiku.test',
+                'nip' => '100009',
+                'role' => 'pemohon',
+            ],
+            [
+                'name' => 'Rizky Pratama',
+                'email' => 'rizky.pratama@mutasiku.test',
+                'nip' => '100010',
+                'role' => 'pemohon',
+            ],
         ];
 
         foreach ($users as $data) {
             $role = Role::where('name', $data['role'])->firstOrFail();
 
-            User::updateOrCreate(
-                ['email' => $data['email']],
-                [
+            $existing = User::where('email', $data['email'])->first();
+            if ($existing) {
+                // Pertahankan password, is_active, dan must_change_password yang sudah ada
+                $existing->update([
                     'name' => $data['name'],
+                    'nip' => $data['nip'],
+                    'role_id' => $role->id,
+                ]);
+            } else {
+                User::create([
+                    'name' => $data['name'],
+                    'email' => $data['email'],
                     'nip' => $data['nip'],
                     'role_id' => $role->id,
                     'password' => 'password',
                     'is_active' => true,
-                ]
-            );
+                    'must_change_password' => true,
+                ]);
+            }
         }
     }
 }

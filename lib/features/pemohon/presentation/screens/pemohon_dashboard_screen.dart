@@ -121,10 +121,7 @@ class _PemohonDashboardScreenState
           slivers: [
             // ── 1. Curved Deep Navy Header Container ─────────────────────────
             SliverToBoxAdapter(
-              child: _buildCurvedHeader(
-                user: user,
-                unreadCount: unreadCount,
-              ),
+              child: _buildCurvedHeader(user: user, unreadCount: unreadCount),
             ),
 
             // ── 2. Body Content ──────────────────────────────────────────────
@@ -167,10 +164,7 @@ class _PemohonDashboardScreenState
   // ──────────────────────────────────────────────────────────────────────────
   // HEADER SECTION (Curved Deep Navy #0F3D56, Search Bar Transparan 1:1 Stitch)
   // ──────────────────────────────────────────────────────────────────────────
-  Widget _buildCurvedHeader({
-    required dynamic user,
-    required int unreadCount,
-  }) {
+  Widget _buildCurvedHeader({required dynamic user, required int unreadCount}) {
     final userName = user?.name ?? 'Pemohon';
     final topPadding = MediaQuery.of(context).padding.top;
 
@@ -178,9 +172,7 @@ class _PemohonDashboardScreenState
       width: double.infinity,
       decoration: BoxDecoration(
         color: _C.navy,
-        borderRadius: const BorderRadius.vertical(
-          bottom: Radius.circular(36),
-        ),
+        borderRadius: const BorderRadius.vertical(bottom: Radius.circular(36)),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withValues(alpha: 0.15),
@@ -260,7 +252,9 @@ class _PemohonDashboardScreenState
                         Material(
                           color: Colors.transparent,
                           child: InkWell(
-                            onTap: () => context.push(RouteNames.pemohonNotificationsPath),
+                            onTap: () => context.push(
+                              RouteNames.pemohonNotificationsPath,
+                            ),
                             borderRadius: BorderRadius.circular(999),
                             child: Container(
                               width: 40,
@@ -309,7 +303,8 @@ class _PemohonDashboardScreenState
                         Material(
                           color: Colors.transparent,
                           child: InkWell(
-                            onTap: () => context.go(RouteNames.pemohonProfilePath),
+                            onTap: () =>
+                                context.go(RouteNames.pemohonProfilePath),
                             borderRadius: BorderRadius.circular(999),
                             child: Container(
                               width: 36,
@@ -604,8 +599,9 @@ class _PemohonDashboardScreenState
     final actionCount = list.where(_needsAction).length;
 
     // 3. Selesai: Mutasi yang sudah benar-benar Selesai dari data Mutasi Saya
-    final completedCount =
-        list.where((m) => m.status == MutationStatus.completed).length;
+    final completedCount = list
+        .where((m) => m.status == MutationStatus.completed)
+        .length;
 
     return Row(
       children: [
@@ -631,10 +627,15 @@ class _PemohonDashboardScreenState
             borderColor: actionCount > 0 ? _C.warningBorder : null,
             title: 'Perlu Tindakan',
             value: '$actionCount Tiket',
-            onTap: () => context.go(
-              '${RouteNames.pemohonMutasiPath}?filter=action',
-              extra: 'action',
-            ),
+            onTap: () {
+              final hasReturned =
+                  list.any((m) => m.status == MutationStatus.returned);
+              final targetFilter = hasReturned ? 'returned' : 'allocated';
+              context.go(
+                '${RouteNames.pemohonMutasiPath}?filter=$targetFilter',
+                extra: targetFilter,
+              );
+            },
           ),
         ),
         const SizedBox(width: 8),
@@ -730,12 +731,8 @@ class _PemohonDashboardScreenState
   // ──────────────────────────────────────────────────────────────────────────
   Widget _buildActiveSection(AsyncValue<List<Mutation>> mutationsAsync) {
     final list = mutationsAsync.valueOrNull ?? const <Mutation>[];
-    final active =
-        list
-            .where(_isActive)
-            .where(_matchesSearch)
-            .toList()
-          ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
+    final active = list.where(_isActive).where(_matchesSearch).toList()
+      ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -768,11 +765,7 @@ class _PemohonDashboardScreenState
               ),
               child: Text(
                 '${active.length} Berjalan',
-                style: _font(
-                  size: 10,
-                  weight: FontWeight.w700,
-                  color: _C.info,
-                ),
+                style: _font(size: 10, weight: FontWeight.w700, color: _C.info),
               ),
             ),
           ],
@@ -812,11 +805,7 @@ class _PemohonDashboardScreenState
             onPressed: () => context.go(RouteNames.pemohonMutasiCreatePath),
             child: Text(
               'Ajukan Mutasi',
-              style: _font(
-                size: 12,
-                weight: FontWeight.w700,
-                color: _C.navy,
-              ),
+              style: _font(size: 12, weight: FontWeight.w700, color: _C.navy),
             ),
           ),
         ],
@@ -828,9 +817,9 @@ class _PemohonDashboardScreenState
     final step = _stitchStepIndex(m);
     const labels = [
       'Diajukan',
-      'Verifikasi',
-      'Disetujui',
-      'Update Aset',
+      'Pemeriksaan Operator',
+      'Verifikasi Aset',
+      'Approval Kadiv',
       'Konfirmasi',
       'Selesai',
     ];
@@ -948,11 +937,7 @@ class _PemohonDashboardScreenState
                       ),
                     ),
                     const SizedBox(width: 4),
-                    const Icon(
-                      Icons.domain_rounded,
-                      size: 15,
-                      color: _C.navy,
-                    ),
+                    const Icon(Icons.domain_rounded, size: 15, color: _C.navy),
                   ],
                 ),
               ),
@@ -975,20 +960,14 @@ class _PemohonDashboardScreenState
                           top: 10,
                           left: stepWidth / 2,
                           right: stepWidth / 2,
-                          child: Container(
-                            height: 2,
-                            color: _C.borderLight,
-                          ),
+                          child: Container(height: 2, color: _C.borderLight),
                         ),
                         // Active progress line
                         Positioned(
                           top: 10,
                           left: stepWidth / 2,
                           width: (constraints.maxWidth - stepWidth) * progress,
-                          child: Container(
-                            height: 2,
-                            color: _C.success,
-                          ),
+                          child: Container(height: 2, color: _C.success),
                         ),
                         // Dots & Labels
                         Row(
@@ -1013,8 +992,8 @@ class _PemohonDashboardScreenState
                                         color: i < step
                                             ? _C.success
                                             : i == step
-                                                ? _C.info
-                                                : _C.textSecondary,
+                                            ? _C.info
+                                            : _C.textSecondary,
                                       ),
                                     ),
                                   ],
@@ -1066,11 +1045,7 @@ class _PemohonDashboardScreenState
           color: _C.success,
           shape: BoxShape.circle,
         ),
-        child: const Icon(
-          Icons.check_rounded,
-          size: 12,
-          color: Colors.white,
-        ),
+        child: const Icon(Icons.check_rounded, size: 12, color: Colors.white),
       );
     }
     if (i == active) {
@@ -1114,16 +1089,18 @@ class _PemohonDashboardScreenState
   int _stitchStepIndex(Mutation m) {
     switch (m.status) {
       case MutationStatus.submitted:
+        return 1;
       case MutationStatus.returned:
-        return 0;
+        return (m.assetReturnReason != null && m.assetReturnReason!.isNotEmpty)
+            ? 2
+            : 1;
       case MutationStatus.waitingAssetVerification:
       case MutationStatus.verified:
-        return 1;
+        return 2;
       case MutationStatus.waitingDivisionHeadApproval:
       case MutationStatus.waitingKadivApproval:
-        return 2;
-      case MutationStatus.approved:
         return 3;
+      case MutationStatus.approved:
       case MutationStatus.waitingConfirmation:
       case MutationStatus.pendingConfirmation:
         return 4;
@@ -1592,7 +1569,7 @@ class _PemohonDashboardScreenState
   String _shortStatus(MutationStatus s) {
     switch (s) {
       case MutationStatus.submitted:
-        return 'Diajukan';
+        return 'Pemeriksaan Operator';
       case MutationStatus.returned:
         return 'Perlu Perbaikan';
       case MutationStatus.waitingAssetVerification:
@@ -1643,10 +1620,7 @@ class _PemohonDashboardScreenState
                   ),
                 ),
                 const SizedBox(height: 2),
-                Text(
-                  cleanMsg,
-                  style: _font(size: 11, color: _C.textSecondary),
-                ),
+                Text(cleanMsg, style: _font(size: 11, color: _C.textSecondary)),
               ],
             ),
           ),
@@ -1654,11 +1628,7 @@ class _PemohonDashboardScreenState
             onPressed: () => ref.invalidate(mutationListProvider),
             child: Text(
               'Coba Lagi',
-              style: _font(
-                size: 12,
-                weight: FontWeight.w700,
-                color: _C.navy,
-              ),
+              style: _font(size: 12, weight: FontWeight.w700, color: _C.navy),
             ),
           ),
         ],

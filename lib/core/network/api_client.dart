@@ -15,6 +15,7 @@
 
 import 'dart:convert';
 import 'dart:io';
+import 'dart:typed_data';
 
 import 'package:http/http.dart' as http;
 
@@ -36,17 +37,30 @@ class ApiClient {
     required this.baseUrl,
     http.Client? httpClient,
     this.onUnauthorized,
-  }) : _client = httpClient ?? http.Client();
+    this.tokenGetter,
+  }) : _client = httpClient ?? http.Client(),
+       isCustomClient = httpClient != null;
 
   final String baseUrl;
   final http.Client _client;
+  final bool isCustomClient;
+  http.Client get httpClient => _client;
 
   /// Callback yang dipanggil saat request terautentikasi menerima response 401 Unauthorized.
   void Function()? onUnauthorized;
 
+  /// Resolver asinkron untuk mengambil token dari persistent storage (misal SecureStorage).
+  final Future<String?> Function()? tokenGetter;
+
   String? _authToken;
 
   // ─── Auth ─────────────────────────────────────────────────────────────────
+
+  /// Cek apakah client memiliki token autentikasi aktif.
+  bool get hasAuthToken => _authToken != null && _authToken!.isNotEmpty;
+
+  /// Getter token aktif (untuk keperluan sinkronisasi internal).
+  String? get authToken => _authToken;
 
   /// Set token autentikasi.
   ///
@@ -64,6 +78,21 @@ class ApiClient {
   }
 
   // ─── Headers ─────────────────────────────────────────────────────────────
+
+  Future<Map<String, String>> _resolveHeaders({
+    Map<String, String>? extra,
+  }) async {
+    if ((_authToken == null || _authToken!.isEmpty) && tokenGetter != null) {
+      try {
+        final token = await tokenGetter!();
+        if (token != null && token.isNotEmpty) {
+          _authToken = token;
+        }
+      } catch (_) {}
+    }
+
+    return _buildHeaders(extra: extra);
+  }
 
   Map<String, String> _buildHeaders({Map<String, String>? extra}) {
     final headers = <String, String>{
@@ -85,8 +114,37 @@ class ApiClient {
 
   // ─── URI builder ─────────────────────────────────────────────────────────
 
+  /// Membangun URI lengkap dengan normalisasi prefix dan pencegahan duplikasi /api/v1.
+  Uri buildUri(String path, {Map<String, String>? queryParams}) =>
+      _buildUri(path, queryParams: queryParams);
+
   Uri _buildUri(String path, {Map<String, String>? queryParams}) {
-    final uri = Uri.parse('$baseUrl$path');
+    var base = baseUrl.trim();
+    while (base.endsWith('/')) {
+      base = base.substring(0, base.length - 1);
+    }
+
+    var cleanPath = path.trim();
+    if (!cleanPath.startsWith('/')) {
+      cleanPath = '/$cleanPath';
+    }
+
+    // 1. Normalisasi endpoint login jika segmen 'auth' tidak sengaja terlewat
+    if (cleanPath == '/api/v1/login') {
+      cleanPath = '/api/v1/auth/login';
+    } else if (cleanPath == '/login') {
+      cleanPath = base.endsWith('/api/v1') ? '/auth/login' : '/api/v1/auth/login';
+    } else if (cleanPath == '/auth/login' && !base.endsWith('/api/v1')) {
+      cleanPath = '/api/v1/auth/login';
+    }
+
+    // 2. Mencegah duplikasi prefix jika baseUrl sudah berakhiran /api/v1 dan path juga diawali /api/v1
+    if (base.endsWith('/api/v1') && cleanPath.startsWith('/api/v1/')) {
+      cleanPath = cleanPath.substring('/api/v1'.length);
+    }
+
+    final fullUrl = '$base$cleanPath';
+    final uri = Uri.parse(fullUrl);
     if (queryParams != null && queryParams.isNotEmpty) {
       return uri.replace(queryParameters: queryParams);
     }
@@ -102,10 +160,11 @@ class ApiClient {
     Map<String, String>? headers,
   }) async {
     try {
+      final reqHeaders = await _resolveHeaders(extra: headers);
       final response = await _client
           .get(
             _buildUri(path, queryParams: queryParams),
-            headers: _buildHeaders(extra: headers),
+            headers: reqHeaders,
           )
           .timeout(AppConstants.requestTimeout);
 
@@ -115,9 +174,38 @@ class ApiClient {
         const NetworkFailure(message: 'SocketException: no internet'),
       );
     } on HttpException {
+      return Result.failure(const NetworkFailure(message: 'HttpException'));
+    } catch (e) {
+      return _mapException(e);
+    }
+  }
+
+  /// GET raw bytes (e.g. streaming dokumen PDF / gambar berautentikasi).
+  Future<Result<Uint8List>> getBytes(
+    String path, {
+    Map<String, String>? queryParams,
+    Map<String, String>? headers,
+  }) async {
+    try {
+      final reqHeaders = await _resolveHeaders(extra: headers);
+      final response = await _client
+          .get(
+            _buildUri(path, queryParams: queryParams),
+            headers: reqHeaders,
+          )
+          .timeout(AppConstants.requestTimeout);
+
+      final statusCode = response.statusCode;
+      if (statusCode >= 200 && statusCode < 300) {
+        return Result.success(response.bodyBytes);
+      }
+      return Result.failure(_failureFromStatusCode(statusCode, response.body));
+    } on SocketException {
       return Result.failure(
-        const NetworkFailure(message: 'HttpException'),
+        const NetworkFailure(message: 'SocketException: no internet'),
       );
+    } on HttpException {
+      return Result.failure(const NetworkFailure(message: 'HttpException'));
     } catch (e) {
       return _mapException(e);
     }
@@ -130,10 +218,11 @@ class ApiClient {
     Map<String, String>? headers,
   }) async {
     try {
+      final reqHeaders = await _resolveHeaders(extra: headers);
       final response = await _client
           .post(
             _buildUri(path),
-            headers: _buildHeaders(extra: headers),
+            headers: reqHeaders,
             body: body != null ? jsonEncode(body) : null,
           )
           .timeout(AppConstants.requestTimeout);
@@ -155,10 +244,11 @@ class ApiClient {
     Map<String, String>? headers,
   }) async {
     try {
+      final reqHeaders = await _resolveHeaders(extra: headers);
       final response = await _client
           .put(
             _buildUri(path),
-            headers: _buildHeaders(extra: headers),
+            headers: reqHeaders,
             body: body != null ? jsonEncode(body) : null,
           )
           .timeout(AppConstants.requestTimeout);
@@ -180,10 +270,37 @@ class ApiClient {
     Map<String, String>? headers,
   }) async {
     try {
+      final reqHeaders = await _resolveHeaders(extra: headers);
       final response = await _client
           .patch(
             _buildUri(path),
-            headers: _buildHeaders(extra: headers),
+            headers: reqHeaders,
+            body: body != null ? jsonEncode(body) : null,
+          )
+          .timeout(AppConstants.requestTimeout);
+
+      return _handleResponse(response);
+    } on SocketException {
+      return Result.failure(
+        const NetworkFailure(message: 'SocketException: no internet'),
+      );
+    } catch (e) {
+      return _mapException(e);
+    }
+  }
+
+  /// DELETE request.
+  Future<Result<Map<String, dynamic>>> delete(
+    String path, {
+    Map<String, dynamic>? body,
+    Map<String, String>? headers,
+  }) async {
+    try {
+      final reqHeaders = await _resolveHeaders(extra: headers);
+      final response = await _client
+          .delete(
+            _buildUri(path),
+            headers: reqHeaders,
             body: body != null ? jsonEncode(body) : null,
           )
           .timeout(AppConstants.requestTimeout);
@@ -207,7 +324,7 @@ class ApiClient {
   }) async {
     try {
       final request = http.MultipartRequest('POST', _buildUri(path));
-      final allHeaders = _buildHeaders(extra: headers);
+      final allHeaders = await _resolveHeaders(extra: headers);
       allHeaders.remove('Content-Type');
       request.headers.addAll(allHeaders);
 
@@ -218,8 +335,9 @@ class ApiClient {
         request.files.addAll(files);
       }
 
-      final streamedResponse =
-          await _client.send(request).timeout(AppConstants.requestTimeout);
+      final streamedResponse = await _client
+          .send(request)
+          .timeout(AppConstants.requestTimeout);
       final response = await http.Response.fromStream(streamedResponse);
 
       return _handleResponse(response);
@@ -228,9 +346,7 @@ class ApiClient {
         const NetworkFailure(message: 'SocketException: no internet'),
       );
     } on HttpException {
-      return Result.failure(
-        const NetworkFailure(message: 'HttpException'),
-      );
+      return Result.failure(const NetworkFailure(message: 'HttpException'));
     } catch (e) {
       return _mapException(e);
     }
@@ -270,11 +386,17 @@ class ApiClient {
         if (hadAuthToken) {
           onUnauthorized?.call();
         }
-        return UnauthorizedFailure(message: _extractMessage(body) ?? '401 Unauthorized');
+        return UnauthorizedFailure(
+          message: _extractMessage(body) ?? '401 Unauthorized',
+        );
       case 403:
-        return ForbiddenFailure(message: _extractMessage(body) ?? '403 Forbidden');
+        return ForbiddenFailure(
+          message: _extractMessage(body) ?? '403 Forbidden',
+        );
       case 404:
-        return NotFoundFailure(message: _extractMessage(body) ?? '404 Not Found');
+        return NotFoundFailure(
+          message: _extractMessage(body) ?? '404 Not Found',
+        );
       case 409:
         return ConflictFailure(message: _extractMessage(body));
       case 422:
@@ -296,7 +418,23 @@ class ApiClient {
   String? _extractMessage(String body) {
     try {
       final decoded = jsonDecode(body) as Map<String, dynamic>?;
-      return decoded?['message'] as String?;
+      final msg = decoded?['message'] as String?;
+      final errors = decoded?['errors'];
+      if (errors is Map<String, dynamic> && errors.isNotEmpty) {
+        final firstList = errors.values.first;
+        if (firstList is List && firstList.isNotEmpty) {
+          final firstMsg = firstList.first.toString();
+          if (msg == null ||
+              msg.isEmpty ||
+              msg == 'Validasi gagal.' ||
+              msg == 'The given data was invalid.' ||
+              msg == firstMsg) {
+            return firstMsg;
+          }
+          return '$msg: $firstMsg';
+        }
+      }
+      return msg;
     } catch (_) {
       return null;
     }
@@ -308,25 +446,19 @@ class ApiClient {
       final errors = decoded?['errors'];
       if (errors is Map<String, dynamic>) {
         return errors.map(
-          (key, value) => MapEntry(
-            key,
-            (value as List).map((e) => e.toString()).toList(),
-          ),
+          (key, value) =>
+              MapEntry(key, (value as List).map((e) => e.toString()).toList()),
         );
       }
     } catch (_) {}
     return null;
   }
 
-  Result<Map<String, dynamic>> _mapException(Object e) {
+  Result<T> _mapException<T>(Object e) {
     if (e is TimeoutException || e.toString().contains('TimeoutException')) {
-      return const Result.failure(
-        NetworkFailure(message: 'Request timeout'),
-      );
+      return const Result.failure(NetworkFailure(message: 'Request timeout'));
     }
-    return Result.failure(
-      UnknownFailure(message: 'Unexpected error: $e'),
-    );
+    return Result.failure(UnknownFailure(message: 'Unexpected error: $e'));
   }
 
   /// Tutup HTTP client.

@@ -5,6 +5,7 @@
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+
 import '../../../auth/domain/entities/user_role.dart';
 import '../../../../core/widgets/custom_floating_nav_bar.dart';
 
