@@ -13,8 +13,11 @@ import 'package:go_router/go_router.dart';
 import '../../../../app/router/route_names.dart';
 import '../../../../app/theme/app_colors.dart';
 import '../../../../app/theme/app_spacing.dart';
+import '../../../../core/utils/sla_wita_helper.dart';
 import '../../../../core/widgets/app_feedback.dart';
 import '../../../../core/widgets/document_preview_dialog.dart';
+import '../../../../core/widgets/sla_live_badge.dart';
+import '../../../../core/providers/core_providers.dart';
 import '../../../asset/domain/entities/asset.dart';
 import '../../../auth/domain/entities/user_role.dart';
 import '../../../auth/presentation/providers/auth_provider.dart';
@@ -56,15 +59,11 @@ class _C {
 class OperatorVerificationDetailScreen extends ConsumerWidget {
   final String mutationId;
 
-  const OperatorVerificationDetailScreen({
-    super.key,
-    required this.mutationId,
-  });
+  const OperatorVerificationDetailScreen({super.key, required this.mutationId});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final asyncMutation =
-        ref.watch(operatorMutationDetailProvider(mutationId));
+    final asyncMutation = ref.watch(operatorMutationDetailProvider(mutationId));
     final actionState = ref.watch(verificationActionProvider);
 
     return Scaffold(
@@ -92,8 +91,10 @@ class OperatorVerificationDetailScreen extends ConsumerWidget {
               data: (mutation) =>
                   _buildBody(context, ref, mutation, actionState),
               loading: () => const Center(
-                child:
-                    CircularProgressIndicator(strokeWidth: 2, color: _C.secondary),
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  color: _C.secondary,
+                ),
               ),
               error: (err, _) => Center(
                 child: Padding(
@@ -134,8 +135,9 @@ class OperatorVerificationDetailScreen extends ConsumerWidget {
                       ),
                       const SizedBox(height: 20),
                       ElevatedButton.icon(
-                        onPressed: () => ref
-                            .invalidate(operatorMutationDetailProvider(mutationId)),
+                        onPressed: () => ref.invalidate(
+                          operatorMutationDetailProvider(mutationId),
+                        ),
                         icon: const Icon(Icons.refresh_rounded, size: 16),
                         label: const Text('Coba Lagi'),
                         style: ElevatedButton.styleFrom(
@@ -166,7 +168,8 @@ class OperatorVerificationDetailScreen extends ConsumerWidget {
   ) {
     final isSubmitted = mutation.status == MutationStatus.submitted;
 
-    final rawAssetId = mutation.assetId ??
+    final rawAssetId =
+        mutation.assetId ??
         (mutation.asset.id.isNotEmpty
             ? mutation.asset.id
             : mutation.asset.assetCode);
@@ -177,7 +180,8 @@ class OperatorVerificationDetailScreen extends ConsumerWidget {
         : null;
     final masterAsset = masterAssetAsync?.valueOrNull;
 
-    final isCrossLocation = mutation.currentLocation.isNotEmpty &&
+    final isCrossLocation =
+        mutation.currentLocation.isNotEmpty &&
         mutation.targetLocation.isNotEmpty &&
         mutation.currentLocation.trim().toLowerCase() !=
             mutation.targetLocation.trim().toLowerCase();
@@ -212,8 +216,11 @@ class OperatorVerificationDetailScreen extends ConsumerWidget {
                       children: [
                         const Row(
                           children: [
-                            Icon(Icons.warning_amber_rounded,
-                                color: _C.warning, size: 18),
+                            Icon(
+                              Icons.warning_amber_rounded,
+                              color: _C.warning,
+                              size: 18,
+                            ),
                             SizedBox(width: 6),
                             Expanded(
                               child: Text(
@@ -303,7 +310,13 @@ class OperatorVerificationDetailScreen extends ConsumerWidget {
                 if (!mutation.isUnregisteredAsset && masterAssetAsync != null)
                   masterAssetAsync.when(
                     data: (master) {
-                      if (master == null) {
+                      final validMaster = master ??
+                          (!mutation.isUnregisteredAsset &&
+                                  mutation.asset.name != 'Aset Tidak Terdaftar' &&
+                                  mutation.asset.assetCode != '-'
+                              ? mutation.asset
+                              : null);
+                      if (validMaster == null) {
                         return Container(
                           margin: const EdgeInsets.only(bottom: 16),
                           padding: const EdgeInsets.all(AppSpacing.md),
@@ -323,7 +336,7 @@ class OperatorVerificationDetailScreen extends ConsumerWidget {
                       }
                       return Padding(
                         padding: const EdgeInsets.only(bottom: 16),
-                        child: _buildMasterAssetCard(master),
+                        child: _buildMasterAssetCard(validMaster),
                       );
                     },
                     loading: () => Container(
@@ -353,22 +366,34 @@ class OperatorVerificationDetailScreen extends ConsumerWidget {
                         ],
                       ),
                     ),
-                    error: (err, _) => Container(
-                      margin: const EdgeInsets.only(bottom: 16),
-                      padding: const EdgeInsets.all(AppSpacing.md),
-                      decoration: BoxDecoration(
-                        color: AppColors.warningContainer.withValues(alpha: 0.3),
-                        borderRadius: BorderRadius.circular(AppRadius.card),
-                        border: Border.all(color: AppColors.warning),
-                      ),
-                      child: Text(
-                        'Gagal sinkronisasi data master: $err',
-                        style: const TextStyle(
-                          fontSize: 12,
-                          color: AppColors.textPrimary,
+                    error: (err, _) {
+                      if (!mutation.isUnregisteredAsset &&
+                          mutation.asset.name != 'Aset Tidak Terdaftar' &&
+                          mutation.asset.assetCode != '-') {
+                        return Padding(
+                          padding: const EdgeInsets.only(bottom: 16),
+                          child: _buildMasterAssetCard(mutation.asset),
+                        );
+                      }
+                      return Container(
+                        margin: const EdgeInsets.only(bottom: 16),
+                        padding: const EdgeInsets.all(AppSpacing.md),
+                        decoration: BoxDecoration(
+                          color: AppColors.warningContainer.withValues(
+                            alpha: 0.3,
+                          ),
+                          borderRadius: BorderRadius.circular(AppRadius.card),
+                          border: Border.all(color: AppColors.warning),
                         ),
-                      ),
-                    ),
+                        child: Text(
+                          'Gagal sinkronisasi data master: $err',
+                          style: const TextStyle(
+                            fontSize: 12,
+                            color: AppColors.textPrimary,
+                          ),
+                        ),
+                      );
+                    },
                   ),
 
                 // ── Snapshot Saat Pengajuan / Data Manual ────────────
@@ -396,7 +421,9 @@ class OperatorVerificationDetailScreen extends ConsumerWidget {
                     _buildDetailRow('Lokasi Tujuan', mutation.targetLocation),
                     const Divider(height: AppSpacing.md, color: _C.border),
                     _buildDetailRow(
-                        'Pemakai Lama (PIC Asal)', mutation.currentPic),
+                      'Pemakai Lama (PIC Asal)',
+                      mutation.currentPic,
+                    ),
                     const Divider(height: AppSpacing.md, color: _C.border),
                     _buildDetailRow('PIC Baru (Tujuan)', mutation.targetPic),
                     const Divider(height: AppSpacing.md, color: _C.border),
@@ -405,7 +432,9 @@ class OperatorVerificationDetailScreen extends ConsumerWidget {
                     _buildDocumentRow(mutation, context, ref),
                     const Divider(height: AppSpacing.md, color: _C.border),
                     _buildDetailRow(
-                        'Waktu Pengajuan', _formatDateTime(mutation.createdAt)),
+                      'Waktu Pengajuan',
+                      _formatDateTime(mutation.createdAt),
+                    ),
                   ])
                 else
                   _buildSectionCard([
@@ -431,16 +460,18 @@ class OperatorVerificationDetailScreen extends ConsumerWidget {
                       mutation.currentLocation,
                       extraBottom: masterAsset != null
                           ? (masterAsset.location.trim().toLowerCase() !=
-                                  mutation.currentLocation.trim().toLowerCase()
-                              ? _buildDiffIndicator(
-                                  label: 'Lokasi',
-                                  masterValue: masterAsset.location,
-                                  key: const Key('indicator_diff_location'),
-                                )
-                              : _buildMatchIndicator(
-                                  'Sesuai dengan Lokasi Master',
-                                  key: const Key('indicator_match_location'),
-                                ))
+                                    mutation.currentLocation
+                                        .trim()
+                                        .toLowerCase()
+                                ? _buildDiffIndicator(
+                                    label: 'Lokasi',
+                                    masterValue: masterAsset.location,
+                                    key: const Key('indicator_diff_location'),
+                                  )
+                                : _buildMatchIndicator(
+                                    'Sesuai dengan Lokasi Master',
+                                    key: const Key('indicator_match_location'),
+                                  ))
                           : null,
                     ),
                     const Divider(height: AppSpacing.md, color: _C.border),
@@ -451,16 +482,16 @@ class OperatorVerificationDetailScreen extends ConsumerWidget {
                       mutation.currentPic,
                       extraBottom: masterAsset != null
                           ? (masterAsset.pic.trim().toLowerCase() !=
-                                  mutation.currentPic.trim().toLowerCase()
-                              ? _buildDiffIndicator(
-                                  label: 'PIC',
-                                  masterValue: masterAsset.pic,
-                                  key: const Key('indicator_diff_pic'),
-                                )
-                              : _buildMatchIndicator(
-                                  'Sesuai dengan PIC Master',
-                                  key: const Key('indicator_match_pic'),
-                                ))
+                                    mutation.currentPic.trim().toLowerCase()
+                                ? _buildDiffIndicator(
+                                    label: 'PIC',
+                                    masterValue: masterAsset.pic,
+                                    key: const Key('indicator_diff_pic'),
+                                  )
+                                : _buildMatchIndicator(
+                                    'Sesuai dengan PIC Master',
+                                    key: const Key('indicator_match_pic'),
+                                  ))
                           : null,
                     ),
                     const Divider(height: AppSpacing.md, color: _C.border),
@@ -471,7 +502,9 @@ class OperatorVerificationDetailScreen extends ConsumerWidget {
                     _buildDocumentRow(mutation, context, ref),
                     const Divider(height: AppSpacing.md, color: _C.border),
                     _buildDetailRow(
-                        'Waktu Pengajuan', _formatDateTime(mutation.createdAt)),
+                      'Waktu Pengajuan',
+                      _formatDateTime(mutation.createdAt),
+                    ),
                   ]),
                 const SizedBox(height: 16),
 
@@ -546,8 +579,7 @@ class OperatorVerificationDetailScreen extends ConsumerWidget {
                       key: const Key('btn_verifikasi_valid'),
                       onPressed: actionState.isLoading
                           ? null
-                          : () => _executeVerification(
-                              context, ref, mutation),
+                          : () => _executeVerification(context, ref, mutation),
                       icon: actionState.isLoading
                           ? const SizedBox(
                               height: 18,
@@ -611,8 +643,10 @@ class OperatorVerificationDetailScreen extends ConsumerWidget {
             crossAxisAlignment: WrapCrossAlignment.center,
             children: [
               Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 4,
+                ),
                 decoration: BoxDecoration(
                   color: mutation.status == MutationStatus.submitted
                       ? _C.warningLight
@@ -634,7 +668,7 @@ class OperatorVerificationDetailScreen extends ConsumerWidget {
                     ),
                     const SizedBox(width: 6),
                     Text(
-                      mutation.status.displayName,
+                      mutation.status.displayNameForRole('operator'),
                       style: TextStyle(
                         fontSize: 11,
                         fontWeight: FontWeight.w600,
@@ -646,30 +680,7 @@ class OperatorVerificationDetailScreen extends ConsumerWidget {
                   ],
                 ),
               ),
-              Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                decoration: BoxDecoration(
-                  color: _C.surfaceContainerHigh,
-                  borderRadius: BorderRadius.circular(999),
-                ),
-                child: const Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(Icons.schedule_rounded,
-                        size: 13, color: _C.primaryContainer),
-                    SizedBox(width: 4),
-                    Text(
-                      'SLA: 2 Jam Tersisa',
-                      style: TextStyle(
-                        fontSize: 11,
-                        fontWeight: FontWeight.w600,
-                        color: _C.primaryContainer,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
+              SlaLiveBadge(mutation: mutation),
             ],
           ),
           const SizedBox(height: 14),
@@ -709,8 +720,7 @@ class OperatorVerificationDetailScreen extends ConsumerWidget {
               ),
               const SizedBox(width: 8),
               Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                 decoration: BoxDecoration(
                   color: _C.secondaryFixed.withValues(alpha: 0.6),
                   borderRadius: BorderRadius.circular(6),
@@ -757,10 +767,7 @@ class OperatorVerificationDetailScreen extends ConsumerWidget {
                     children: [
                       const Text(
                         'Waktu Pengajuan',
-                        style: TextStyle(
-                          fontSize: 11,
-                          color: _C.textSecondary,
-                        ),
+                        style: TextStyle(fontSize: 11, color: _C.textSecondary),
                       ),
                       const SizedBox(height: 1),
                       RichText(
@@ -770,8 +777,7 @@ class OperatorVerificationDetailScreen extends ConsumerWidget {
                             color: _C.textPrimary,
                           ),
                           children: [
-                            TextSpan(
-                                text: _formatDateTime(mutation.createdAt)),
+                            TextSpan(text: _formatDateTime(mutation.createdAt)),
                             const TextSpan(text: ' • Oleh '),
                             TextSpan(
                               text: mutation.applicantName,
@@ -876,10 +882,7 @@ class OperatorVerificationDetailScreen extends ConsumerWidget {
                 const SizedBox(height: 2),
                 Text(
                   'Pemohon Mutasi • ID: ${mutation.applicantId}',
-                  style: const TextStyle(
-                    fontSize: 11,
-                    color: _C.textSecondary,
-                  ),
+                  style: const TextStyle(fontSize: 11, color: _C.textSecondary),
                 ),
               ],
             ),
@@ -903,10 +906,7 @@ class OperatorVerificationDetailScreen extends ConsumerWidget {
                 children: [
                   const Text(
                     'Unit Kerja',
-                    style: TextStyle(
-                      fontSize: 10,
-                      color: _C.textSecondary,
-                    ),
+                    style: TextStyle(fontSize: 10, color: _C.textSecondary),
                   ),
                   const SizedBox(height: 2),
                   Text(
@@ -938,10 +938,7 @@ class OperatorVerificationDetailScreen extends ConsumerWidget {
                 children: [
                   const Text(
                     'Kontak Kantor',
-                    style: TextStyle(
-                      fontSize: 10,
-                      color: _C.textSecondary,
-                    ),
+                    style: TextStyle(fontSize: 10, color: _C.textSecondary),
                   ),
                   const SizedBox(height: 2),
                   Text(
@@ -977,7 +974,11 @@ class OperatorVerificationDetailScreen extends ConsumerWidget {
           const Expanded(
             child: Row(
               children: [
-                Icon(Icons.devices_outlined, size: 18, color: _C.primaryContainer),
+                Icon(
+                  Icons.devices_outlined,
+                  size: 18,
+                  color: _C.primaryContainer,
+                ),
                 SizedBox(width: 8),
                 Expanded(
                   child: Text(
@@ -1003,8 +1004,11 @@ class OperatorVerificationDetailScreen extends ConsumerWidget {
             child: const Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Icon(Icons.lock_outline_rounded,
-                    size: 12, color: _C.primaryContainer),
+                Icon(
+                  Icons.lock_outline_rounded,
+                  size: 12,
+                  color: _C.primaryContainer,
+                ),
                 SizedBox(width: 4),
                 Text(
                   'Dalam Mutasi',
@@ -1047,10 +1051,7 @@ class OperatorVerificationDetailScreen extends ConsumerWidget {
               children: [
                 const Text(
                   'Nama Perangkat',
-                  style: TextStyle(
-                    fontSize: 10,
-                    color: _C.textSecondary,
-                  ),
+                  style: TextStyle(fontSize: 10, color: _C.textSecondary),
                 ),
                 Text(
                   assetName,
@@ -1091,10 +1092,7 @@ class OperatorVerificationDetailScreen extends ConsumerWidget {
                 children: [
                   const Text(
                     'Kategori Aset',
-                    style: TextStyle(
-                      fontSize: 10,
-                      color: _C.textSecondary,
-                    ),
+                    style: TextStyle(fontSize: 10, color: _C.textSecondary),
                   ),
                   const SizedBox(height: 2),
                   Text(
@@ -1122,10 +1120,7 @@ class OperatorVerificationDetailScreen extends ConsumerWidget {
                 children: [
                   const Text(
                     'Kondisi Fisik',
-                    style: TextStyle(
-                      fontSize: 10,
-                      color: _C.textSecondary,
-                    ),
+                    style: TextStyle(fontSize: 10, color: _C.textSecondary),
                   ),
                   const SizedBox(height: 2),
                   Row(
@@ -1212,10 +1207,7 @@ class OperatorVerificationDetailScreen extends ConsumerWidget {
                     children: [
                       const Text(
                         'Asal Lokasi (Origin)',
-                        style: TextStyle(
-                          fontSize: 10,
-                          color: _C.textSecondary,
-                        ),
+                        style: TextStyle(fontSize: 10, color: _C.textSecondary),
                       ),
                       Text(
                         '${mutation.currentLocation} (Asal)',
@@ -1268,10 +1260,7 @@ class OperatorVerificationDetailScreen extends ConsumerWidget {
                     children: [
                       const Text(
                         'Tujuan Mutasi (Destination)',
-                        style: TextStyle(
-                          fontSize: 10,
-                          color: _C.textSecondary,
-                        ),
+                        style: TextStyle(fontSize: 10, color: _C.textSecondary),
                       ),
                       Text(
                         '${mutation.targetLocation} (Tujuan)',
@@ -1325,10 +1314,7 @@ class OperatorVerificationDetailScreen extends ConsumerWidget {
                 children: [
                   const Text(
                     'PIC Penerima Aset',
-                    style: TextStyle(
-                      fontSize: 10,
-                      color: _C.textSecondary,
-                    ),
+                    style: TextStyle(fontSize: 10, color: _C.textSecondary),
                   ),
                   Text(
                     mutation.targetPic,
@@ -1399,7 +1385,10 @@ class OperatorVerificationDetailScreen extends ConsumerWidget {
 
   // ── 5. KELENGKAPAN DOKUMEN ─────────────────────────────────────────────────
   Widget _buildDocumentSection(
-      Mutation mutation, BuildContext context, WidgetRef ref) {
+    Mutation mutation,
+    BuildContext context,
+    WidgetRef ref,
+  ) {
     final docName = mutation.documentName;
     final hasDoc = docName != null && docName.trim().isNotEmpty;
     final isPdf = docName != null && docName.toLowerCase().endsWith('.pdf');
@@ -1450,9 +1439,7 @@ class OperatorVerificationDetailScreen extends ConsumerWidget {
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: Icon(
-                  isPdf
-                      ? Icons.picture_as_pdf_rounded
-                      : Icons.image_outlined,
+                  isPdf ? Icons.picture_as_pdf_rounded : Icons.image_outlined,
                   size: 20,
                   color: isPdf ? _C.error : _C.info,
                 ),
@@ -1475,10 +1462,7 @@ class OperatorVerificationDetailScreen extends ConsumerWidget {
                     const SizedBox(height: 2),
                     const Text(
                       'Dokumen Pendukung • Ditandatangani Pemohon',
-                      style: TextStyle(
-                        fontSize: 10,
-                        color: _C.textSecondary,
-                      ),
+                      style: TextStyle(fontSize: 10, color: _C.textSecondary),
                     ),
                   ],
                 ),
@@ -1489,6 +1473,7 @@ class OperatorVerificationDetailScreen extends ConsumerWidget {
                     context,
                     mutation: mutation,
                     currentUser: ref.read(authStateProvider).user,
+                    apiClient: ref.read(apiClientProvider),
                   );
                 },
                 borderRadius: BorderRadius.circular(8),
@@ -1539,8 +1524,11 @@ class OperatorVerificationDetailScreen extends ConsumerWidget {
         children: [
           const Row(
             children: [
-              Icon(Icons.linear_scale_rounded,
-                  size: 18, color: _C.primaryContainer),
+              Icon(
+                Icons.linear_scale_rounded,
+                size: 18,
+                color: _C.primaryContainer,
+              ),
               SizedBox(width: 8),
               Text(
                 'Progres Alur Pengajuan',
@@ -1578,10 +1566,10 @@ class OperatorVerificationDetailScreen extends ConsumerWidget {
           final badgeColor = step.isCompleted
               ? _C.secondary
               : step.isAlert
-                  ? _C.error
-                  : step.isCurrent
-                      ? _C.warning
-                      : _C.textSecondary;
+              ? _C.error
+              : step.isCurrent
+              ? _C.warning
+              : _C.textSecondary;
 
           return _buildTimelineStep(
             isFirst: i == 0,
@@ -1625,18 +1613,18 @@ class OperatorVerificationDetailScreen extends ConsumerWidget {
                   color: isCompleted
                       ? _C.secondary
                       : isAlert
-                          ? _C.errorLight
-                          : isActive
-                              ? _C.surface
-                              : _C.surfaceContainerLow,
+                      ? _C.errorLight
+                      : isActive
+                      ? _C.surface
+                      : _C.surfaceContainerLow,
                   border: Border.all(
                     color: isCompleted
                         ? _C.secondary
                         : isAlert
-                            ? _C.error
-                            : isActive
-                                ? _C.primaryContainer
-                                : _C.surfaceContainerHighest,
+                        ? _C.error
+                        : isActive
+                        ? _C.primaryContainer
+                        : _C.surfaceContainerHighest,
                     width: (isActive || isAlert) ? 2 : 1,
                   ),
                 ),
@@ -1644,25 +1632,28 @@ class OperatorVerificationDetailScreen extends ConsumerWidget {
                   child: isCompleted
                       ? const Icon(Icons.check, size: 14, color: Colors.white)
                       : isAlert
-                          ? const Icon(Icons.priority_high,
-                              size: 14, color: _C.error)
-                          : isActive
-                              ? Container(
-                                  width: 8,
-                                  height: 8,
-                                  decoration: const BoxDecoration(
-                                    color: _C.primaryContainer,
-                                    shape: BoxShape.circle,
-                                  ),
-                                )
-                              : Container(
-                                  width: 6,
-                                  height: 6,
-                                  decoration: const BoxDecoration(
-                                    color: _C.surfaceContainerHighest,
-                                    shape: BoxShape.circle,
-                                  ),
-                                ),
+                      ? const Icon(
+                          Icons.priority_high,
+                          size: 14,
+                          color: _C.error,
+                        )
+                      : isActive
+                      ? Container(
+                          width: 8,
+                          height: 8,
+                          decoration: const BoxDecoration(
+                            color: _C.primaryContainer,
+                            shape: BoxShape.circle,
+                          ),
+                        )
+                      : Container(
+                          width: 6,
+                          height: 6,
+                          decoration: const BoxDecoration(
+                            color: _C.surfaceContainerHighest,
+                            shape: BoxShape.circle,
+                          ),
+                        ),
                 ),
               ),
               if (!isLast)
@@ -1703,7 +1694,9 @@ class OperatorVerificationDetailScreen extends ConsumerWidget {
                         const SizedBox(width: 6),
                         Container(
                           padding: const EdgeInsets.symmetric(
-                              horizontal: 6, vertical: 2),
+                            horizontal: 6,
+                            vertical: 2,
+                          ),
                           decoration: BoxDecoration(
                             color: badgeColor.withValues(alpha: 0.12),
                             borderRadius: BorderRadius.circular(4),
@@ -1999,10 +1992,7 @@ class OperatorVerificationDetailScreen extends ConsumerWidget {
           const SizedBox(height: 2),
           Text(
             subtext,
-            style: const TextStyle(
-              fontSize: 11,
-              color: _C.textSecondary,
-            ),
+            style: const TextStyle(fontSize: 11, color: _C.textSecondary),
           ),
         ],
         ?extraBottom,
@@ -2011,13 +2001,21 @@ class OperatorVerificationDetailScreen extends ConsumerWidget {
   }
 
   Widget _buildDocumentRow(
-      Mutation mutation, BuildContext context, WidgetRef ref) {
+    Mutation mutation,
+    BuildContext context,
+    WidgetRef ref,
+  ) {
     final documentName = mutation.documentName;
     final isPdf =
         documentName != null && documentName.toLowerCase().endsWith('.pdf');
-    final isImage = documentName != null &&
-        ['png', 'jpg', 'jpeg', 'webp']
-            .any((ext) => documentName.toLowerCase().endsWith(ext));
+    final isImage =
+        documentName != null &&
+        [
+          'png',
+          'jpg',
+          'jpeg',
+          'webp',
+        ].any((ext) => documentName.toLowerCase().endsWith(ext));
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -2038,6 +2036,7 @@ class OperatorVerificationDetailScreen extends ConsumerWidget {
                 context,
                 mutation: mutation,
                 currentUser: ref.read(authStateProvider).user,
+                apiClient: ref.read(apiClientProvider),
               );
             },
             borderRadius: BorderRadius.circular(8),
@@ -2054,14 +2053,14 @@ class OperatorVerificationDetailScreen extends ConsumerWidget {
                     isPdf
                         ? Icons.picture_as_pdf_outlined
                         : isImage
-                            ? Icons.image_outlined
-                            : Icons.description_outlined,
+                        ? Icons.image_outlined
+                        : Icons.description_outlined,
                     size: 18,
                     color: isPdf
                         ? _C.error
                         : isImage
-                            ? _C.info
-                            : _C.textSecondary,
+                        ? _C.info
+                        : _C.textSecondary,
                   ),
                   const SizedBox(width: 8),
                   Expanded(
@@ -2075,8 +2074,11 @@ class OperatorVerificationDetailScreen extends ConsumerWidget {
                     ),
                   ),
                   const SizedBox(width: 8),
-                  const Icon(Icons.open_in_new_rounded,
-                      size: 14, color: _C.info),
+                  const Icon(
+                    Icons.open_in_new_rounded,
+                    size: 14,
+                    color: _C.info,
+                  ),
                 ],
               ),
             ),
@@ -2095,26 +2097,7 @@ class OperatorVerificationDetailScreen extends ConsumerWidget {
   }
 
   String _formatDateTime(DateTime dt) {
-    const months = [
-      'Jan',
-      'Feb',
-      'Mar',
-      'Apr',
-      'Mei',
-      'Jun',
-      'Jul',
-      'Agu',
-      'Sep',
-      'Okt',
-      'Nov',
-      'Des'
-    ];
-    final day = dt.day.toString().padLeft(2, '0');
-    final month = months[dt.month - 1];
-    final year = dt.year;
-    final hour = dt.hour.toString().padLeft(2, '0');
-    final minute = dt.minute.toString().padLeft(2, '0');
-    return '$day $month $year $hour:$minute';
+    return SlaWitaHelper.formatDateTimeWita(dt);
   }
 
   static String _getInitials(String name) {
@@ -2139,7 +2122,9 @@ class OperatorVerificationDetailScreen extends ConsumerWidget {
 
     if (context.mounted) {
       if (success) {
-        ref.read(notificationProvider.notifier).notifyRole(
+        ref
+            .read(notificationProvider.notifier)
+            .notifyRole(
               targetRole: UserRole.bagianAset,
               title: 'Menunggu Verifikasi Data Aset',
               message:
@@ -2159,10 +2144,7 @@ class OperatorVerificationDetailScreen extends ConsumerWidget {
         }
       } else {
         final err = ref.read(verificationActionProvider).error;
-        AppFeedback.showError(
-          context,
-          err ?? 'Gagal memverifikasi pengajuan.',
-        );
+        AppFeedback.showError(context, err ?? 'Gagal memverifikasi pengajuan.');
       }
     }
   }
@@ -2207,8 +2189,11 @@ class OperatorVerificationDetailScreen extends ConsumerWidget {
         if (context.mounted) {
           if (success) {
             final currentMutation = ref.read(verificationActionProvider).result;
-            ref.read(notificationProvider.notifier).notifyUser(
-                  targetUserId: currentMutation?.applicantId ??
+            ref
+                .read(notificationProvider.notifier)
+                .notifyUser(
+                  targetUserId:
+                      currentMutation?.applicantId ??
                       mutation.applicantId ??
                       'usr_pemohon',
                   targetRole: UserRole.pemohon,
@@ -2220,10 +2205,7 @@ class OperatorVerificationDetailScreen extends ConsumerWidget {
                 );
             ref.invalidate(operatorMutationDetailProvider(mutation.id));
             ref.invalidate(mutationDetailProvider(mutation.id));
-            AppFeedback.showReturned(
-              context,
-              'Pengajuan dikembalikan',
-            );
+            AppFeedback.showReturned(context, 'Pengajuan dikembalikan');
             return true;
           } else {
             final err = ref.read(verificationActionProvider).error;

@@ -49,7 +49,8 @@ class ReturnMutationUseCase {
     if (mutation.status != MutationStatus.submitted) {
       return Result.failure(
         ValidationFailure(
-          message: 'Hanya pengajuan berstatus Diajukan yang dapat dikembalikan (Status saat ini: ${mutation.status.displayName}).',
+          message:
+              'Hanya pengajuan berstatus Diajukan yang dapat dikembalikan (Status saat ini: ${mutation.status.displayName}).',
         ),
       );
     }

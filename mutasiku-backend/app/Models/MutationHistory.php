@@ -17,10 +17,16 @@ class MutationHistory extends Model
         'previous_pic_id',
         'new_pic_id',
         'updated_by',
+        'field_changed',
+        'old_value',
+        'new_value',
+        'changed_by',
+        'changed_at',
     ];
 
     protected $casts = [
         'date' => 'datetime',
+        'changed_at' => 'datetime',
     ];
 
     public function asset(): BelongsTo

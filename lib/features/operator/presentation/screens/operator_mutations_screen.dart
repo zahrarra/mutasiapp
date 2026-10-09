@@ -34,14 +34,16 @@ class _C {
 }
 
 // ─── Filter tab enum ──────────────────────────────────────────────────────────
-enum _Tab { all, submitted, allocated, returned, ti, umum }
+enum _Tab { all, submitted, allocated, returned, completed, rejected, ti, umum }
 
 extension _TabExt on _Tab {
   String label(int count) => switch (this) {
     _Tab.all => 'Semua ($count)',
-    _Tab.submitted => 'Menunggu ($count)',
+    _Tab.submitted => 'Diproses ($count)',
     _Tab.allocated => 'Dialokasikan ($count)',
     _Tab.returned => 'Dikembalikan ($count)',
+    _Tab.completed => 'Selesai ($count)',
+    _Tab.rejected => 'Ditolak ($count)',
     _Tab.ti => 'Aset TI ($count)',
     _Tab.umum => 'Aset Umum ($count)',
   };
@@ -91,7 +93,14 @@ class _OperatorMutationsScreenState
   _Tab _parseFilter(String? filter) {
     if (filter == null) return _Tab.submitted;
     final f = filter.toLowerCase().trim();
-    if (f == 'submitted' || f == 'pending' || f == 'menunggu' || f == 'menunggu_verifikasi') {
+    if (f == 'submitted' ||
+        f == 'pending' ||
+        f == 'menunggu' ||
+        f == 'diproses' ||
+        f == 'processing' ||
+        f == 'progress' ||
+        f == 'dalam proses' ||
+        f == 'menunggu_verifikasi') {
       return _Tab.submitted;
     }
     if (f == 'allocated' ||
@@ -106,6 +115,12 @@ class _OperatorMutationsScreenState
     }
     if (f == 'returned' || f == 'dikembalikan') {
       return _Tab.returned;
+    }
+    if (f == 'completed' || f == 'selesai' || f == 'done') {
+      return _Tab.completed;
+    }
+    if (f == 'rejected' || f == 'ditolak') {
+      return _Tab.rejected;
     }
     if (f == 'ti' || f == 'it' || f == 'aset_ti' || f == 'asetti') {
       return _Tab.ti;
@@ -156,15 +171,27 @@ class _OperatorMutationsScreenState
         ref.read(operatorCategoryFilterProvider.notifier).state =
             OperatorCategoryFilter.all;
         break;
+      case _Tab.completed:
+        ref.read(operatorStatusFilterProvider.notifier).state =
+            OperatorStatusFilter.completed;
+        ref.read(operatorCategoryFilterProvider.notifier).state =
+            OperatorCategoryFilter.all;
+        break;
+      case _Tab.rejected:
+        ref.read(operatorStatusFilterProvider.notifier).state =
+            OperatorStatusFilter.rejected;
+        ref.read(operatorCategoryFilterProvider.notifier).state =
+            OperatorCategoryFilter.all;
+        break;
       case _Tab.ti:
         ref.read(operatorStatusFilterProvider.notifier).state =
-            OperatorStatusFilter.submitted;
+            OperatorStatusFilter.all;
         ref.read(operatorCategoryFilterProvider.notifier).state =
             OperatorCategoryFilter.ti;
         break;
       case _Tab.umum:
         ref.read(operatorStatusFilterProvider.notifier).state =
-            OperatorStatusFilter.submitted;
+            OperatorStatusFilter.all;
         ref.read(operatorCategoryFilterProvider.notifier).state =
             OperatorCategoryFilter.umum;
         break;
@@ -341,17 +368,21 @@ class _OperatorMutationsScreenState
                       onChanged: (val) {
                         if (val != null) {
                           ref
-                              .read(operatorStatusFilterProvider.notifier)
-                              .state = val;
+                                  .read(operatorStatusFilterProvider.notifier)
+                                  .state =
+                              val;
                           ref
-                              .read(operatorCategoryFilterProvider.notifier)
-                              .state = OperatorCategoryFilter.all;
+                                  .read(operatorCategoryFilterProvider.notifier)
+                                  .state =
+                              OperatorCategoryFilter.all;
                           setState(() {
                             _activeTab = switch (val) {
                               OperatorStatusFilter.all => _Tab.all,
                               OperatorStatusFilter.submitted => _Tab.submitted,
                               OperatorStatusFilter.allocated => _Tab.allocated,
                               OperatorStatusFilter.returned => _Tab.returned,
+                              OperatorStatusFilter.completed => _Tab.completed,
+                              OperatorStatusFilter.rejected => _Tab.rejected,
                             };
                           });
                         }
@@ -416,27 +447,40 @@ class _OperatorMutationsScreenState
     final allList = asyncAll.valueOrNull ?? [];
     final totalAll = allList.length;
     final totalSubmitted = allList
-        .where((m) => m.status == MutationStatus.submitted)
+        .where(
+          (m) =>
+              m.status.historyCategory == MutationHistoryCategory.processing,
+        )
         .length;
     final totalAllocated = allList
-        .where((m) =>
-            m.status == MutationStatus.waitingAssetVerification ||
-            m.status == MutationStatus.verified ||
-            m.status == MutationStatus.waitingDivisionHeadApproval ||
-            m.status == MutationStatus.waitingKadivApproval ||
-            m.status == MutationStatus.waitingConfirmation ||
-            m.status == MutationStatus.approved ||
-            m.status == MutationStatus.pendingConfirmation ||
-            m.status == MutationStatus.completed)
+        .where(
+          (m) => m.status.historyCategory == MutationHistoryCategory.allocated,
+        )
         .length;
     final totalReturned = allList
-        .where((m) => m.status == MutationStatus.returned)
+        .where(
+          (m) => m.status.historyCategory == MutationHistoryCategory.returned,
+        )
+        .length;
+    final totalCompleted = allList
+        .where(
+          (m) => m.status.historyCategory == MutationHistoryCategory.completed,
+        )
+        .length;
+    final totalRejected = allList
+        .where(
+          (m) => m.status.historyCategory == MutationHistoryCategory.rejected,
+        )
         .length;
     final totalTi = allList
-        .where((m) => m.status == MutationStatus.submitted && isTiAsset(m))
+        .where(
+          (m) => isTiAsset(m),
+        )
         .length;
     final totalUmum = allList
-        .where((m) => m.status == MutationStatus.submitted && !isTiAsset(m))
+        .where(
+          (m) => !isTiAsset(m),
+        )
         .length;
 
     final counts = {
@@ -444,6 +488,8 @@ class _OperatorMutationsScreenState
       _Tab.submitted: totalSubmitted,
       _Tab.allocated: totalAllocated,
       _Tab.returned: totalReturned,
+      _Tab.completed: totalCompleted,
+      _Tab.rejected: totalRejected,
       _Tab.ti: totalTi,
       _Tab.umum: totalUmum,
     };
@@ -939,8 +985,8 @@ class _MutationCard extends StatelessWidget {
                               m.isUnregisteredAsset
                                   ? 'SN: ${m.displaySerialNumber}'
                                   : (m.displaySerialNumber != '-'
-                                      ? '${m.displayAssetCode} • SN: ${m.displaySerialNumber}'
-                                      : m.displayAssetCode),
+                                        ? '${m.displayAssetCode} • SN: ${m.displaySerialNumber}'
+                                        : m.displayAssetCode),
                               style: const TextStyle(
                                 fontSize: 10,
                                 color: _C.textSecondary,

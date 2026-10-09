@@ -85,10 +85,8 @@ abstract final class MutationTrackingHelper {
     final steps = <MutationTrackingStep>[];
 
     // ── 1. Step: Pengajuan (Pemohon) ─────────────────────────────────────
-    final step1State = isWaitingOperator
-        ? TrackingStepState.current
-        : TrackingStepState.completed;
-    final step1Badge = isWaitingOperator ? 'Diproses' : 'Selesai';
+    final step1State = TrackingStepState.completed;
+    const step1Badge = 'Selesai';
     final step1Subtitle = 'Diajukan oleh ${applicantName ?? "Pemohon"}';
 
     steps.add(
@@ -106,7 +104,8 @@ abstract final class MutationTrackingHelper {
     final isOperatorReturned =
         isReturned && (assetReturnReason == null || assetReturnReason.isEmpty);
     final isAssetReturned =
-        isReturned && (assetReturnReason != null && assetReturnReason.isNotEmpty);
+        isReturned &&
+        (assetReturnReason != null && assetReturnReason.isNotEmpty);
 
     final step2State = () {
       if (isOperatorReturned) {
@@ -119,10 +118,12 @@ abstract final class MutationTrackingHelper {
       if (isOperatorReturned) {
         return 'Perlu Perbaikan';
       }
-      if (isWaitingOperator) return 'Sedang Diperiksa';
+      if (isWaitingOperator) return 'Menunggu Pemeriksaan';
       return 'Lengkap';
     }();
-    final step2ShortLabel = isOperatorReturned ? 'Perlu Perbaikan' : 'Kelengkapan';
+    final step2ShortLabel = isOperatorReturned
+        ? 'Perlu Perbaikan'
+        : 'Pemeriksaan Operator';
     final step2Subtitle = () {
       if (isOperatorReturned) {
         final reason = (returnReason != null && returnReason.isNotEmpty)
@@ -139,7 +140,9 @@ abstract final class MutationTrackingHelper {
     steps.add(
       MutationTrackingStep(
         key: 'operatorCheck',
-        title: isOperatorReturned ? 'Perlu Perbaikan (Operator)' : 'Pemeriksaan Kelengkapan',
+        title: isOperatorReturned
+            ? 'Perlu Perbaikan (Operator)'
+            : 'Pemeriksaan Kelengkapan Operator',
         shortLabel: step2ShortLabel,
         subtitle: step2Subtitle,
         badgeText: step2Badge,
@@ -207,7 +210,8 @@ abstract final class MutationTrackingHelper {
     }();
     final step4Subtitle = () {
       if (isRejected) {
-        final reason = kadivRejectionReason ?? rejectionReason ?? 'Pengajuan ditolak';
+        final reason =
+            kadivRejectionReason ?? rejectionReason ?? 'Pengajuan ditolak';
         final by = kadivRejectedBy ?? rejectedBy ?? 'Pemimpin Divisi';
         return 'Ditolak oleh $by: $reason';
       }

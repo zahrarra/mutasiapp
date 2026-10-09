@@ -23,7 +23,6 @@ import '../../../mutation/domain/entities/mutation_status.dart';
 import '../../../mutation/domain/usecases/update_mutation_usecase.dart';
 import '../../../mutation/presentation/providers/mutation_form_provider.dart';
 import '../../../mutation/presentation/providers/mutation_provider.dart';
-import '../../../operator/presentation/providers/operator_verification_provider.dart';
 import '../../../notification/domain/entities/notification_item.dart';
 import '../../../notification/presentation/providers/notification_provider.dart';
 
@@ -169,10 +168,7 @@ class _PemohonEditMutationScreenState
     final reason = _reasonController.text.trim();
 
     if (location.isEmpty || reason.isEmpty) {
-      AppFeedback.showWarning(
-        context,
-        'Lokasi tujuan dan alasan wajib diisi.',
-      );
+      AppFeedback.showWarning(context, 'Lokasi tujuan dan alasan wajib diisi.');
       return;
     }
 
@@ -202,20 +198,23 @@ class _PemohonEditMutationScreenState
     if (!mounted) return;
 
     if (mutation != null) {
-      // Invalidate list dan detail agar UI langsung menampilkan status terbaru
-      ref.invalidate(mutationListProvider);
-      ref.invalidate(mutationDetailProvider(widget.mutationId));
-      ref.invalidate(operatorAllMutationsProvider);
+      // Invalidate list dan detail di semua role agar UI langsung menampilkan status terbaru
+      invalidateAllRoleMutationProviders(ref, widget.mutationId);
 
-      // Notifikasi ke antrean Operator bahwa mutasi telah diajukan ulang
+      final isToBagianAset = mutation.status.isWaitingAssetVerification;
+      final targetRole =
+          isToBagianAset ? UserRole.bagianAset : UserRole.operator;
+      final targetName = isToBagianAset ? 'Bagian Aset' : 'Operator';
+
+      // Notifikasi ke antrean target bahwa mutasi telah diajukan ulang
       try {
         ref
             .read(notificationProvider.notifier)
             .notifyRole(
-              targetRole: UserRole.operator,
+              targetRole: targetRole,
               title: 'Pengajuan Diajukan Ulang',
               message:
-                  'Pengajuan mutasi ${mutation.ticketNumber} (${mutation.asset.name}) telah diperbaiki oleh Pemohon dan siap diverifikasi.',
+                  'Pengajuan mutasi ${mutation.ticketNumber} (${mutation.asset.name}) telah diperbaiki oleh Pemohon dan siap diverifikasi oleh $targetName.',
               type: NotificationType.action,
               relatedMutationId: mutation.id,
             );
@@ -236,7 +235,7 @@ class _PemohonEditMutationScreenState
 
       AppFeedback.showSuccess(
         context,
-        'Pengajuan berhasil diajukan ulang ke antrean verifikasi Operator.',
+        'Pengajuan berhasil diajukan ulang ke antrean verifikasi $targetName.',
       );
 
       // Arahkan kembali ke Detail Mutasi atau Mutasi Saya
@@ -260,7 +259,8 @@ class _PemohonEditMutationScreenState
 
   @override
   Widget build(BuildContext context) {
-    final asyncDetail = ref.watch(mutationDetailProvider(widget.mutationId));
+    final asyncDetail =
+        ref.watch(pemohonMutationDetailProvider(widget.mutationId));
     final submitState = ref.watch(updateMutationProvider);
     final availableLocations = ref.watch(availableLocationsProvider);
     final availablePics = ref.watch(availablePicsProvider);

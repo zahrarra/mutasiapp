@@ -99,7 +99,6 @@ class FakeKadivMutationRepository implements MutationRepository {
     throw UnimplementedError();
   }
 
-
   @override
   Future<Result<Mutation>> approveMutationKadiv({
     required String mutationId,
@@ -152,7 +151,6 @@ class FakeKadivMutationRepository implements MutationRepository {
   }) async {
     throw UnimplementedError();
   }
-
 }
 
 void main() {

@@ -215,9 +215,9 @@ class Mutation {
     this.staffUpdatedBy,
     required this.createdAt,
     // ignore: prefer_initializing_formals
-  })  : _assetId = assetId,
-        // ignore: prefer_initializing_formals
-        _asset = asset;
+  }) : _assetId = assetId,
+       // ignore: prefer_initializing_formals
+       _asset = asset;
 
   Mutation copyWith({
     String? id,

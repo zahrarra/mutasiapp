@@ -20,6 +20,7 @@ import 'package:http/http.dart' as http;
 import '../../../../core/errors/failures.dart';
 import '../../../../core/errors/result.dart';
 import '../../../../core/network/api_client.dart';
+import '../../../../core/storage/secure_storage.dart';
 import '../../../asset/domain/entities/asset.dart';
 import '../../../asset/domain/entities/asset_category.dart';
 import '../../../asset/domain/entities/asset_status.dart';
@@ -37,10 +38,12 @@ class MutationRepositoryImpl implements MutationRepository {
   // pengajuan mutasi menerima data aset secara manual dari Pemohon.
   final AssetRepository assetRepository;
   final ApiClient? apiClient;
+  final SecureStorage? secureStorage;
 
   MutationRepositoryImpl({
     required this.assetRepository,
     this.apiClient,
+    this.secureStorage,
   }) {
     _initInitialSeedData();
   }
@@ -54,8 +57,9 @@ class MutationRepositoryImpl implements MutationRepository {
   /// Generator nomor tiket yang dijamin unik dan tidak pernah bertabrakan
   /// dengan mutasi aktif maupun mutasi berstatus completed di histori.
   static String _generateUniqueTicketNumber(String categoryCode, int year) {
-    final existingTickets =
-        _mutations.map((m) => m.ticketNumber.toUpperCase()).toSet();
+    final existingTickets = _mutations
+        .map((m) => m.ticketNumber.toUpperCase())
+        .toSet();
 
     int maxSeq = _ticketCounter;
     final regex = RegExp(r'(\d{3,5})$');
@@ -389,6 +393,13 @@ class MutationRepositoryImpl implements MutationRepository {
 
     // ── Backend API WRITE / CREATE Integration (Laravel POST /api/v1/mutations) ──
     if (apiClient != null) {
+      if (secureStorage != null && !apiClient!.hasAuthToken) {
+        final token = await secureStorage!.getAuthToken();
+        if (token != null && token.isNotEmpty) {
+          apiClient!.setAuthToken(token);
+        }
+      }
+
       // 1. Resolve asset_id (integer required by DB foreign key)
       int? assetIdInt;
       if (params.assetId != null && params.assetId!.trim().isNotEmpty) {
@@ -400,17 +411,14 @@ class MutationRepositoryImpl implements MutationRepository {
         if (assetsRes is Success<Map<String, dynamic>>) {
           final list = assetsRes.data['data'] as List<dynamic>?;
           if (list != null && list.isNotEmpty) {
-            final matched = list.firstWhere(
-              (item) {
-                final code = item['asset_code']?.toString();
-                final serial = item['serial_number']?.toString();
-                final name = item['name']?.toString();
-                return code == params.assetId ||
-                    serial == params.customSerialNumber ||
-                    name == params.assetName;
-              },
-              orElse: () => list.first,
-            );
+            final matched = list.firstWhere((item) {
+              final code = item['asset_code']?.toString();
+              final serial = item['serial_number']?.toString();
+              final name = item['name']?.toString();
+              return code == params.assetId ||
+                  serial == params.customSerialNumber ||
+                  name == params.assetName;
+            }, orElse: () => list.first);
             assetIdInt = int.tryParse(matched['id']?.toString() ?? '1');
           }
         }
@@ -424,14 +432,13 @@ class MutationRepositoryImpl implements MutationRepository {
         if (locsRes is Success<Map<String, dynamic>>) {
           final list = locsRes.data['data'] as List<dynamic>?;
           if (list != null && list.isNotEmpty) {
-            final matched = list.firstWhere(
-              (item) {
-                final name = item['name']?.toString() ?? '';
-                return targetLocation.toLowerCase().startsWith(name.toLowerCase()) ||
-                    name.toLowerCase().startsWith(targetLocation.toLowerCase());
-              },
-              orElse: () => list.first,
-            );
+            final matched = list.firstWhere((item) {
+              final name = item['name']?.toString() ?? '';
+              return targetLocation.toLowerCase().startsWith(
+                    name.toLowerCase(),
+                  ) ||
+                  name.toLowerCase().startsWith(targetLocation.toLowerCase());
+            }, orElse: () => list.first);
             destLocationId = int.tryParse(matched['id']?.toString() ?? '1');
           }
         }
@@ -448,7 +455,8 @@ class MutationRepositoryImpl implements MutationRepository {
             filename: params.documentName ?? 'sk_sdm.pdf',
           ),
         );
-      } else if (params.documentPath != null && params.documentPath!.isNotEmpty) {
+      } else if (params.documentPath != null &&
+          params.documentPath!.isNotEmpty) {
         try {
           final file = File(params.documentPath!);
           if (await file.exists()) {
@@ -466,7 +474,8 @@ class MutationRepositoryImpl implements MutationRepository {
 
       // Pastikan ada file SK valid dalam format PDF (sesuai validasi Laravel mimes:pdf)
       if (files.isEmpty) {
-        const dummyPdf = '%PDF-1.4\n1 0 obj<</Type/Catalog/Pages 2 0 R>>endobj\n2 0 obj<</Type/Pages/Kids[]/Count 0>>endobj\nxref\n0 3\n0000000000 65535 f \n0000000009 00000 n \n0000000052 00000 n \ntrailer<</Size 3/Root 1 0 R>>\nstartxref\n99\n%%EOF\n';
+        const dummyPdf =
+            '%PDF-1.4\n1 0 obj<</Type/Catalog/Pages 2 0 R>>endobj\n2 0 obj<</Type/Pages/Kids[]/Count 0>>endobj\nxref\n0 3\n0000000000 65535 f \n0000000009 00000 n \n0000000052 00000 n \ntrailer<</Size 3/Root 1 0 R>>\nstartxref\n99\n%%EOF\n';
         files.add(
           http.MultipartFile.fromBytes(
             'sk_document',
@@ -480,8 +489,9 @@ class MutationRepositoryImpl implements MutationRepository {
         'asset_id': assetIdInt.toString(),
         'destination_location_id': destLocationId.toString(),
         'reason': reason,
-        'asset_moves_with_applicant':
-            params.isAssetMovingWithApplicant ? '1' : '0',
+        'asset_moves_with_applicant': params.isAssetMovingWithApplicant
+            ? '1'
+            : '0',
       };
 
       final response = await apiClient!.postMultipart(
@@ -496,7 +506,8 @@ class MutationRepositoryImpl implements MutationRepository {
           if (!success) {
             return Result.failure(
               ServerFailure(
-                message: data['message'] as String? ??
+                message:
+                    data['message'] as String? ??
                     'Gagal membuat pengajuan mutasi.',
               ),
             );
@@ -533,10 +544,10 @@ class MutationRepositoryImpl implements MutationRepository {
       targetPic = params.targetPic.trim().isNotEmpty
           ? params.targetPic.trim()
           : (params.applicantName?.trim().isNotEmpty == true
-              ? params.applicantName!.trim()
-              : (params.currentPic?.trim().isNotEmpty == true
-                  ? params.currentPic!.trim()
-                  : 'Pemohon'));
+                ? params.applicantName!.trim()
+                : (params.currentPic?.trim().isNotEmpty == true
+                      ? params.currentPic!.trim()
+                      : 'Pemohon'));
     } else {
       targetPic = '';
     }
@@ -559,8 +570,7 @@ class MutationRepositoryImpl implements MutationRepository {
     if (params.isUnregisteredAsset) {
       return const Result.failure(
         ValidationFailure(
-          message:
-              'Aset yang dimutasi harus merupakan aset terdaftar. Input aset bebas/manual tidak didukung.',
+          message: 'Aset yang dimutasi harus merupakan aset terdaftar. Input aset bebas/manual tidak didukung.',
         ),
       );
     }
@@ -574,7 +584,8 @@ class MutationRepositoryImpl implements MutationRepository {
 
     // Cegah duplicate active mutation untuk aset yang sama (PRD V1.1 §8 Rule 4).
     final hasActiveMutation = _mutations.any((m) {
-      final matchesAsset = (m.assetId != null && m.assetId == rawAssetId) ||
+      final matchesAsset =
+          (m.assetId != null && m.assetId == rawAssetId) ||
           (m.asset.id.isNotEmpty && m.asset.id == rawAssetId) ||
           (m.asset.assetCode.isNotEmpty && m.asset.assetCode == rawAssetId);
       return matchesAsset &&
@@ -596,8 +607,11 @@ class MutationRepositoryImpl implements MutationRepository {
     if (assetResult is Success<Asset>) {
       assetEntity = assetResult.data;
     } else {
-      final assetListResult = await assetRepository.getAssets(query: rawAssetId);
-      if (assetListResult is Success<List<Asset>> && assetListResult.data.isNotEmpty) {
+      final assetListResult = await assetRepository.getAssets(
+        query: rawAssetId,
+      );
+      if (assetListResult is Success<List<Asset>> &&
+          assetListResult.data.isNotEmpty) {
         assetEntity = assetListResult.data.firstWhere(
           (a) => a.id == rawAssetId || a.assetCode == rawAssetId,
           orElse: () => assetListResult.data.first,
@@ -606,7 +620,9 @@ class MutationRepositoryImpl implements MutationRepository {
         assetEntity = Asset(
           id: rawAssetId,
           assetCode: rawAssetId,
-          name: params.assetName.trim().isNotEmpty ? params.assetName.trim() : 'Aset $rawAssetId',
+          name: params.assetName.trim().isNotEmpty
+              ? params.assetName.trim()
+              : 'Aset $rawAssetId',
           category: manualCategory,
           location: sourceLocation.isNotEmpty ? sourceLocation : 'Kantor Pusat',
           pic: currentPic,
@@ -676,6 +692,79 @@ class MutationRepositoryImpl implements MutationRepository {
     required String reason,
     String? documentName,
   }) async {
+    if (apiClient != null) {
+      if (secureStorage != null && !apiClient!.hasAuthToken) {
+        final token = await secureStorage!.getAuthToken();
+        if (token != null && token.isNotEmpty) {
+          apiClient!.setAuthToken(token);
+        }
+      }
+
+      final cleanMutationId = mutationId.replaceAll('mut_', '');
+
+      // Resolve destination_location_id jika memungkinkan
+      int? destLocationId;
+      try {
+        final locsRes = await apiClient!.get('/api/v1/locations');
+        if (locsRes case Success(:final data)) {
+          final list = data['data'] as List<dynamic>?;
+          if (list != null && list.isNotEmpty) {
+            final matched = list.firstWhere((item) {
+              final name = item['name']?.toString() ?? '';
+              return targetLocation.toLowerCase().startsWith(name.toLowerCase()) ||
+                  name.toLowerCase().startsWith(targetLocation.toLowerCase());
+            }, orElse: () => list.first);
+            destLocationId = int.tryParse(matched['id']?.toString() ?? '1');
+          }
+        }
+      } catch (_) {}
+      destLocationId ??= 1;
+
+      final response = await apiClient!.post(
+        '/api/v1/mutations/$cleanMutationId/resubmit',
+        body: {
+          'destination_location_id': destLocationId,
+          'reason': reason,
+        },
+      );
+
+      switch (response) {
+        case Success(:final data):
+          final success = data['success'] as bool? ?? true;
+          if (!success) {
+            return Result.failure(
+              ServerFailure(
+                message:
+                    data['message'] as String? ??
+                    'Gagal mengajukan ulang mutasi ke server.',
+              ),
+            );
+          }
+          final mutationMap = data['data'] as Map<String, dynamic>?;
+          if (mutationMap == null) {
+            return const Result.failure(
+              ServerFailure(message: 'Data response mutasi tidak valid.'),
+            );
+          }
+          try {
+            final updated = MutationModel.fromJson(mutationMap);
+            final index = _mutations.indexWhere((m) => m.id == mutationId);
+            if (index != -1) {
+              _mutations[index] = updated;
+            } else {
+              _mutations.insert(0, updated);
+            }
+            return Result.success(updated);
+          } catch (e) {
+            return Result.failure(
+              ServerFailure(message: 'Format data mutasi tidak valid: $e'),
+            );
+          }
+        case AppFailure(:final failure):
+          return Result.failure(failure);
+      }
+    }
+
     await Future.delayed(const Duration(milliseconds: 300));
 
     final index = _mutations.indexWhere((m) => m.id == mutationId);
@@ -704,13 +793,14 @@ class MutationRepositoryImpl implements MutationRepository {
 
     final effectiveTargetPic = current.isAssetMovingWithApplicant
         ? (targetPic.trim().isNotEmpty
-            ? targetPic.trim()
-            : (current.targetPic.trim().isNotEmpty
-                ? current.targetPic.trim()
-                : current.applicantName))
+              ? targetPic.trim()
+              : (current.targetPic.trim().isNotEmpty
+                    ? current.targetPic.trim()
+                    : current.applicantName))
         : (targetPic.trim().isNotEmpty ? targetPic.trim() : current.targetPic);
 
-    if (current.isAssetMovingWithApplicant && effectiveTargetPic.trim().isEmpty) {
+    if (current.isAssetMovingWithApplicant &&
+        effectiveTargetPic.trim().isEmpty) {
       return const Result.failure(
         ValidationFailure(message: 'Penanggung jawab baru wajib dipilih.'),
       );
@@ -722,20 +812,22 @@ class MutationRepositoryImpl implements MutationRepository {
       );
     }
 
-    // Edit mengembalikan pengajuan ke antrean verifikasi Operator.
-    // status -> submitted, sesuai ROLE-FLOW.md §3.
-    //
-    // CATATAN:
-    // Mutation.copyWith saat ini menggunakan pola `x ?? this.x`,
-    // sehingga field nullable seperti returnReason tidak bisa
-    // dikosongkan lewat copyWith. returnReason lama akan tetap
-    // tersimpan sebagai jejak riwayat pengembalian sebelumnya.
+    // Jalur alur bisnis pengembalian:
+    // - Jika dikembalikan oleh Bagian Aset -> langsung kembali ke antrean Bagian Aset.
+    // - Jika dikembalikan oleh Operator -> kembali ke pemeriksaan Operator (submitted).
+    final isFromAssetSection = (current.assetReturnReason != null &&
+            current.assetReturnReason!.trim().isNotEmpty) ||
+        (current.rejectedBy != null && current.rejectedBy!.trim().isNotEmpty);
+    final nextStatus = isFromAssetSection
+        ? MutationStatus.waitingAssetVerification
+        : MutationStatus.submitted;
+
     final updated = current.copyWith(
       targetLocation: targetLocation,
       targetPic: effectiveTargetPic,
       reason: reason,
       documentName: documentName,
-      status: MutationStatus.submitted,
+      status: nextStatus,
     );
 
     _mutations[index] = updated;
@@ -746,14 +838,15 @@ class MutationRepositoryImpl implements MutationRepository {
   @override
   Future<Result<List<Mutation>>> getMutationsByUser(String userId) async {
     if (apiClient != null) {
-      final response = await apiClient!.get('/api/v1/mutations');
+      final response = await apiClient!.get('/api/v1/mutations?view=all&per_page=100');
       switch (response) {
         case Success(:final data):
           final success = data['success'] as bool? ?? true;
           if (!success) {
             return Result.failure(
               ServerFailure(
-                message: data['message'] as String? ??
+                message:
+                    data['message'] as String? ??
                     'Gagal mengambil daftar mutasi user dari server.',
               ),
             );
@@ -761,8 +854,9 @@ class MutationRepositoryImpl implements MutationRepository {
           try {
             final mutations = MutationModel.listFromJson(data);
             if (userId.isNotEmpty) {
-              final userMutations =
-                  mutations.where((m) => m.applicantId == userId).toList();
+              final userMutations = mutations
+                  .where((m) => m.applicantId == userId)
+                  .toList();
               if (userMutations.isNotEmpty) {
                 return Result.success(userMutations);
               }
@@ -783,8 +877,14 @@ class MutationRepositoryImpl implements MutationRepository {
     final userMutations = _mutations.where((m) {
       if (m.applicantId == userId) return true;
       // Mendukung alias ID pemohon standar (usr_pemohon, usr_101, user_pemohon)
-      final isUserStdPemohon = (userId == 'usr_pemohon' || userId == 'usr_101' || userId == 'user_pemohon');
-      final isMutationStdPemohon = (m.applicantId == 'usr_pemohon' || m.applicantId == 'usr_101' || m.applicantId == 'user_pemohon');
+      final isUserStdPemohon =
+          (userId == 'usr_pemohon' ||
+          userId == 'usr_101' ||
+          userId == 'user_pemohon');
+      final isMutationStdPemohon =
+          (m.applicantId == 'usr_pemohon' ||
+          m.applicantId == 'usr_101' ||
+          m.applicantId == 'user_pemohon');
       if (isUserStdPemohon && isMutationStdPemohon) {
         return true;
       }
@@ -796,15 +896,21 @@ class MutationRepositoryImpl implements MutationRepository {
 
   @override
   Future<Result<Mutation>> getMutationById(String id) async {
+    final cleanId = id.replaceAll('mut_', '');
     if (apiClient != null) {
-      final response = await apiClient!.get('/api/v1/mutations/$id');
+      final response = await apiClient!.get('/api/v1/mutations/$cleanId');
       switch (response) {
         case Success(:final data):
           final success = data['success'] as bool? ?? true;
           if (!success) {
+            final memoryItem = _mutations.where((m) => m.id == id || m.id == cleanId).firstOrNull;
+            if (memoryItem != null) {
+              return Result.success(memoryItem);
+            }
             return Result.failure(
               NotFoundFailure(
-                message: data['message'] as String? ??
+                message:
+                    data['message'] as String? ??
                     'Pengajuan mutasi tidak ditemukan.',
               ),
             );
@@ -824,6 +930,10 @@ class MutationRepositoryImpl implements MutationRepository {
             );
           }
         case AppFailure(:final failure):
+          final memoryItem = _mutations.where((m) => m.id == id || m.id == cleanId).firstOrNull;
+          if (memoryItem != null) {
+            return Result.success(memoryItem);
+          }
           return Result.failure(failure);
       }
     }
@@ -844,14 +954,15 @@ class MutationRepositoryImpl implements MutationRepository {
   @override
   Future<Result<List<Mutation>>> getAllMutations() async {
     if (apiClient != null) {
-      final response = await apiClient!.get('/api/v1/mutations');
+      final response = await apiClient!.get('/api/v1/mutations?view=all&per_page=100');
       switch (response) {
         case Success(:final data):
           final success = data['success'] as bool? ?? true;
           if (!success) {
             return Result.failure(
               ServerFailure(
-                message: data['message'] as String? ??
+                message:
+                    data['message'] as String? ??
                     'Gagal mengambil daftar mutasi dari server.',
               ),
             );
@@ -882,8 +993,9 @@ class MutationRepositoryImpl implements MutationRepository {
     bool? requiresKadivApproval,
   }) async {
     if (apiClient != null) {
+      final cleanMutationId = mutationId.replaceAll('mut_', '');
       final response = await apiClient!.post(
-        '/api/v1/mutations/$mutationId/verify',
+        '/api/v1/mutations/$cleanMutationId/verify',
         body: {'action': 'verify'},
       );
 
@@ -893,7 +1005,8 @@ class MutationRepositoryImpl implements MutationRepository {
           if (!success) {
             return Result.failure(
               ServerFailure(
-                message: data['message'] as String? ??
+                message:
+                    data['message'] as String? ??
                     'Gagal memverifikasi pengajuan mutasi.',
               ),
             );
@@ -917,9 +1030,7 @@ class MutationRepositoryImpl implements MutationRepository {
             return Result.success(updated);
           } catch (e) {
             return Result.failure(
-              ServerFailure(
-                message: 'Format data mutasi tidak valid: $e',
-              ),
+              ServerFailure(message: 'Format data mutasi tidak valid: $e'),
             );
           }
         case AppFailure(:final failure):
@@ -939,7 +1050,8 @@ class MutationRepositoryImpl implements MutationRepository {
     final current = _mutations[index];
     final updated = current.copyWith(
       status: MutationStatus.waitingAssetVerification,
-      requiresKadivApproval: requiresKadivApproval ?? current.requiresKadivApproval,
+      requiresKadivApproval:
+          requiresKadivApproval ?? current.requiresKadivApproval,
       verifiedAt: DateTime.now(),
       verifiedBy: operatorName,
     );
@@ -955,12 +1067,10 @@ class MutationRepositoryImpl implements MutationRepository {
     required String operatorName,
   }) async {
     if (apiClient != null) {
+      final cleanMutationId = mutationId.replaceAll('mut_', '');
       final response = await apiClient!.post(
-        '/api/v1/mutations/$mutationId/verify',
-        body: {
-          'action': 'return',
-          'reason': reason,
-        },
+        '/api/v1/mutations/$cleanMutationId/verify',
+        body: {'action': 'return', 'reason': reason},
       );
 
       switch (response) {
@@ -969,7 +1079,8 @@ class MutationRepositoryImpl implements MutationRepository {
           if (!success) {
             return Result.failure(
               ServerFailure(
-                message: data['message'] as String? ??
+                message:
+                    data['message'] as String? ??
                     'Gagal mengembalikan pengajuan mutasi.',
               ),
             );
@@ -993,9 +1104,7 @@ class MutationRepositoryImpl implements MutationRepository {
             return Result.success(updated);
           } catch (e) {
             return Result.failure(
-              ServerFailure(
-                message: 'Format data mutasi tidak valid: $e',
-              ),
+              ServerFailure(message: 'Format data mutasi tidak valid: $e'),
             );
           }
         case AppFailure(:final failure):
@@ -1031,15 +1140,61 @@ class MutationRepositoryImpl implements MutationRepository {
     String? newPic,
   }) async {
     if (apiClient != null) {
-      final body = <String, dynamic>{
-        'action': 'verify',
-      };
-      final parsedPicId = int.tryParse(newPic ?? '');
-      if (parsedPicId != null) {
-        body['target_pic_id'] = parsedPicId;
+      final cleanMutationId = mutationId.replaceAll('mut_', '');
+      final body = <String, dynamic>{'action': 'verify'};
+
+      // 1. Resolve target_pic_id ke integer database yang valid
+      int? targetPicId = int.tryParse(newPic ?? '');
+      if (targetPicId == null && newPic != null && newPic.trim().isNotEmpty) {
+        final picLower = newPic.toLowerCase();
+        if (picLower.contains('admin') || picLower.contains('zahra')) {
+          targetPicId = 1;
+        } else if (picLower.contains('pemohon') ||
+            picLower.contains('dirly') ||
+            picLower.contains('rina')) {
+          targetPicId = 2;
+        } else if (picLower.contains('operator') ||
+            picLower.contains('marsya') ||
+            picLower.contains('budi')) {
+          targetPicId = 3;
+        } else if (picLower.contains('aset') ||
+            picLower.contains('akam') ||
+            picLower.contains('hendra') ||
+            picLower.contains('rizky')) {
+          targetPicId = 4;
+        } else if (picLower.contains('kadiv') ||
+            picLower.contains('pemimpin') ||
+            picLower.contains('jalil') ||
+            picLower.contains('dahlan')) {
+          targetPicId = 5;
+        } else {
+          try {
+            final usersRes = await apiClient!.get('/api/v1/admin/users');
+            if (usersRes is Success<Map<String, dynamic>>) {
+              final list = usersRes.data['data'] as List<dynamic>? ?? [];
+              for (final u in list) {
+                if (u is Map<String, dynamic>) {
+                  final id = int.tryParse(u['id']?.toString() ?? '');
+                  final name = u['name']?.toString().toLowerCase() ?? '';
+                  if (id != null &&
+                      (picLower.contains(name) || name.contains(picLower))) {
+                    targetPicId = id;
+                    break;
+                  }
+                }
+              }
+            }
+          } catch (_) {}
+          targetPicId ??= 3; // Fallback ke Marsya (Operator / Pool PIC)
+        }
       }
+
+      if (targetPicId != null) {
+        body['target_pic_id'] = targetPicId;
+      }
+
       final response = await apiClient!.post(
-        '/api/v1/mutations/$mutationId/verify-asset',
+        '/api/v1/mutations/$cleanMutationId/verify-asset',
         body: body,
       );
 
@@ -1049,7 +1204,8 @@ class MutationRepositoryImpl implements MutationRepository {
           if (!success) {
             return Result.failure(
               ServerFailure(
-                message: data['message'] as String? ??
+                message:
+                    data['message'] as String? ??
                     'Gagal memverifikasi data aset.',
               ),
             );
@@ -1073,9 +1229,7 @@ class MutationRepositoryImpl implements MutationRepository {
             return Result.success(updated);
           } catch (e) {
             return Result.failure(
-              ServerFailure(
-                message: 'Format data mutasi tidak valid: $e',
-              ),
+              ServerFailure(message: 'Format data mutasi tidak valid: $e'),
             );
           }
         case AppFailure(:final failure):
@@ -1100,8 +1254,7 @@ class MutationRepositoryImpl implements MutationRepository {
     if (effectivePic.isEmpty) {
       return const Result.failure(
         ValidationFailure(
-          message:
-              'PIC baru wajib ditentukan oleh Bagian Aset sebelum meneruskan pengajuan.',
+          message: 'PIC baru wajib ditentukan oleh Bagian Aset sebelum meneruskan pengajuan.',
         ),
       );
     }
@@ -1127,12 +1280,10 @@ class MutationRepositoryImpl implements MutationRepository {
     required String verifierName,
   }) async {
     if (apiClient != null) {
+      final cleanMutationId = mutationId.replaceAll('mut_', '');
       final response = await apiClient!.post(
-        '/api/v1/mutations/$mutationId/verify-asset',
-        body: {
-          'action': 'return',
-          'reason': reason,
-        },
+        '/api/v1/mutations/$cleanMutationId/verify-asset',
+        body: {'action': 'return', 'reason': reason},
       );
 
       switch (response) {
@@ -1141,7 +1292,8 @@ class MutationRepositoryImpl implements MutationRepository {
           if (!success) {
             return Result.failure(
               ServerFailure(
-                message: data['message'] as String? ??
+                message:
+                    data['message'] as String? ??
                     'Gagal mengembalikan pengajuan mutasi.',
               ),
             );
@@ -1165,9 +1317,7 @@ class MutationRepositoryImpl implements MutationRepository {
             return Result.success(updated);
           } catch (e) {
             return Result.failure(
-              ServerFailure(
-                message: 'Format data mutasi tidak valid: $e',
-              ),
+              ServerFailure(message: 'Format data mutasi tidak valid: $e'),
             );
           }
         case AppFailure(:final failure):
@@ -1211,11 +1361,10 @@ class MutationRepositoryImpl implements MutationRepository {
     required String divisionHeadName,
   }) async {
     if (apiClient != null) {
+      final cleanMutationId = mutationId.replaceAll('mut_', '');
       final response = await apiClient!.post(
-        '/api/v1/mutations/$mutationId/approve',
-        body: {
-          'action': 'approve',
-        },
+        '/api/v1/mutations/$cleanMutationId/approve',
+        body: {'action': 'approve'},
       );
 
       switch (response) {
@@ -1224,7 +1373,8 @@ class MutationRepositoryImpl implements MutationRepository {
           if (!success) {
             return Result.failure(
               ServerFailure(
-                message: data['message'] as String? ??
+                message:
+                    data['message'] as String? ??
                     'Gagal menyetujui pengajuan mutasi.',
               ),
             );
@@ -1248,9 +1398,7 @@ class MutationRepositoryImpl implements MutationRepository {
             return Result.success(updated);
           } catch (e) {
             return Result.failure(
-              ServerFailure(
-                message: 'Format data mutasi tidak valid: $e',
-              ),
+              ServerFailure(message: 'Format data mutasi tidak valid: $e'),
             );
           }
         case AppFailure(:final failure):
@@ -1287,12 +1435,10 @@ class MutationRepositoryImpl implements MutationRepository {
     required String divisionHeadName,
   }) async {
     if (apiClient != null) {
+      final cleanMutationId = mutationId.replaceAll('mut_', '');
       final response = await apiClient!.post(
-        '/api/v1/mutations/$mutationId/approve',
-        body: {
-          'action': 'reject',
-          'reason': reason,
-        },
+        '/api/v1/mutations/$cleanMutationId/reject',
+        body: {'reason': reason},
       );
 
       switch (response) {
@@ -1301,7 +1447,8 @@ class MutationRepositoryImpl implements MutationRepository {
           if (!success) {
             return Result.failure(
               ServerFailure(
-                message: data['message'] as String? ??
+                message:
+                    data['message'] as String? ??
                     'Gagal menolak pengajuan mutasi.',
               ),
             );
@@ -1325,9 +1472,7 @@ class MutationRepositoryImpl implements MutationRepository {
             return Result.success(updated);
           } catch (e) {
             return Result.failure(
-              ServerFailure(
-                message: 'Format data mutasi tidak valid: $e',
-              ),
+              ServerFailure(message: 'Format data mutasi tidak valid: $e'),
             );
           }
         case AppFailure(:final failure):
@@ -1378,6 +1523,59 @@ class MutationRepositoryImpl implements MutationRepository {
     required bool isSesuai,
     String? reason,
   }) async {
+    if (apiClient != null) {
+      final cleanMutationId = mutationId.replaceAll('mut_', '');
+      final body = <String, dynamic>{
+        'confirmation': isSesuai ? 'sesuai' : 'tidak_sesuai',
+      };
+      if (!isSesuai && reason != null && reason.trim().isNotEmpty) {
+        body['reason'] = reason.trim();
+      }
+
+      final response = await apiClient!.post(
+        '/api/v1/mutations/$cleanMutationId/confirm',
+        body: body,
+      );
+
+      switch (response) {
+        case Success(:final data):
+          final success = data['success'] as bool? ?? true;
+          if (!success) {
+            return Result.failure(
+              ServerFailure(
+                message:
+                    data['message'] as String? ??
+                    'Gagal mengonfirmasi pengajuan mutasi.',
+              ),
+            );
+          }
+          final mutationMap = data['data'] as Map<String, dynamic>?;
+          if (mutationMap == null) {
+            return const Result.failure(
+              ServerFailure(
+                message: 'Data response konfirmasi Pemohon tidak valid.',
+              ),
+            );
+          }
+          try {
+            final updated = MutationModel.fromJson(mutationMap);
+            final index = _mutations.indexWhere((m) => m.id == mutationId);
+            if (index != -1) {
+              _mutations[index] = updated;
+            } else {
+              _mutations.insert(0, updated);
+            }
+            return Result.success(updated);
+          } catch (e) {
+            return Result.failure(
+              ServerFailure(message: 'Format data mutasi tidak valid: $e'),
+            );
+          }
+        case AppFailure(:final failure):
+          return Result.failure(failure);
+      }
+    }
+
     await Future.delayed(const Duration(milliseconds: 300));
 
     final index = _mutations.indexWhere((m) => m.id == mutationId);
@@ -1392,8 +1590,7 @@ class MutationRepositoryImpl implements MutationRepository {
     if (!current.status.isWaitingConfirmation) {
       return const Result.failure(
         ValidationFailure(
-          message:
-              'Konfirmasi hanya dapat dilakukan pada mutasi berstatus Menunggu Konfirmasi.',
+          message: 'Konfirmasi hanya dapat dilakukan pada mutasi berstatus Menunggu Konfirmasi.',
         ),
       );
     }
@@ -1488,10 +1685,7 @@ class MutationRepositoryImpl implements MutationRepository {
     required String mutationId,
     required String kadivName,
   }) async {
-    return divisionApprove(
-      mutationId: mutationId,
-      divisionHeadName: kadivName,
-    );
+    return divisionApprove(mutationId: mutationId, divisionHeadName: kadivName);
   }
 
   @override

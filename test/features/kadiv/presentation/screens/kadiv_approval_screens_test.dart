@@ -1,3 +1,4 @@
+import 'package:mutasiku/core/errors/failures.dart';
 // test/features/kadiv/presentation/screens/kadiv_approval_screens_test.dart
 //
 // Widget & presentation tests untuk screen Kadiv.
@@ -43,17 +44,49 @@ class FakeKadivAuthRepository implements AuthRepository {
 
   @override
   Future<void> logout() async {}
+    @override
+  Future<Result<User>> changePassword({
+    required String currentPassword,
+    required String newPassword,
+    required String confirmPassword,
+  }) async {
+    if (newPassword.length < 8) {
+      return Result.failure(
+        const ValidationFailure(message: 'Password baru minimal 8 karakter.'),
+      );
+    }
+    if (newPassword != confirmPassword) {
+      return Result.failure(
+        const ValidationFailure(message: 'Konfirmasi password baru tidak cocok.'),
+      );
+    }
+    if (newPassword == currentPassword) {
+      return Result.failure(
+        const ValidationFailure(
+          message: 'Password baru harus berbeda dengan password lama.',
+        ),
+      );
+    }
+    if (user != null) {
+      return Result.success(user!.copyWith(mustChangePassword: false));
+    }
+    return Result.failure(
+      const UnauthorizedFailure(message: 'Pengguna tidak ditemukan.'),
+    );
+  }
 }
 
 class FakeKadivAuthNotifier extends AuthNotifier {
   FakeKadivAuthNotifier(User user)
-      : super(
-          loginUseCase:
-              LoginUseCase(repository: FakeKadivAuthRepository(user: user)),
-          logoutUseCase:
-              LogoutUseCase(repository: FakeKadivAuthRepository(user: user)),
-          authRepository: FakeKadivAuthRepository(user: user),
-        ) {
+    : super(
+        loginUseCase: LoginUseCase(
+          repository: FakeKadivAuthRepository(user: user),
+        ),
+        logoutUseCase: LogoutUseCase(
+          repository: FakeKadivAuthRepository(user: user),
+        ),
+        authRepository: FakeKadivAuthRepository(user: user),
+      ) {
     state = AuthState(isLoading: false, user: user);
   }
 }
@@ -79,10 +112,7 @@ void main() {
     final router = GoRouter(
       initialLocation: '/',
       routes: [
-        GoRoute(
-          path: '/',
-          builder: (context, state) => child,
-        ),
+        GoRoute(path: '/', builder: (context, state) => child),
         GoRoute(
           path: '/kadiv/approvals',
           builder: (context, state) =>
@@ -106,37 +136,38 @@ void main() {
           (ref) => ref.watch(mutationRepositoryProvider),
         ),
       ],
-      child: MaterialApp.router(
-        routerConfig: router,
-      ),
+      child: MaterialApp.router(routerConfig: router),
     );
   }
 
-  testWidgets('KadivDashboardScreen displays greeting, action button, category grid, and recent list',
-      (tester) async {
-    await tester.pumpWidget(createTestWidget(const KadivDashboardScreen()));
-    await tester.pumpAndSettle();
+  testWidgets(
+    'KadivDashboardScreen displays greeting, action button, category grid, and recent list',
+    (tester) async {
+      await tester.pumpWidget(createTestWidget(const KadivDashboardScreen()));
+      await tester.pumpAndSettle();
 
-    // Verifikasi teks greeting
-    expect(find.text('Halo, Drs. Ahmad Dahlan (Kadiv)'), findsOneWidget);
+      // Verifikasi teks greeting
+      expect(find.text('Halo, Drs. Ahmad Dahlan (Kadiv)'), findsOneWidget);
 
-    // Verifikasi tombol primary action
-    expect(find.byKey(const Key('btn_lihat_approval_kadiv')), findsOneWidget);
+      // Verifikasi tombol primary action
+      expect(find.byKey(const Key('btn_lihat_approval_kadiv')), findsOneWidget);
 
-    // Verifikasi 3 stat card tidak ada di tampilan dashboard
-    expect(find.text('Menunggu Approval'), findsNothing);
-    expect(find.text('Disetujui'), findsNothing);
-    expect(find.text('Ditolak'), findsNothing);
+      // Verifikasi 3 stat card tidak ada di tampilan dashboard
+      expect(find.text('Menunggu Approval'), findsNothing);
+      expect(find.text('Disetujui'), findsNothing);
+      expect(find.text('Ditolak'), findsNothing);
 
-    // Verifikasi kategori aset
-    expect(find.text('Kategori Aset'), findsOneWidget);
+      // Verifikasi kategori aset
+      expect(find.text('Kategori Aset'), findsOneWidget);
 
-    // Verifikasi section pengajuan terbaru
-    expect(find.text('Pengajuan Terbaru'), findsOneWidget);
-  });
+      // Verifikasi section pengajuan terbaru
+      expect(find.text('Pengajuan Terbaru'), findsOneWidget);
+    },
+  );
 
-  testWidgets('KadivApprovalsScreen renders search, filter chips, and cards',
-      (tester) async {
+  testWidgets('KadivApprovalsScreen renders search, filter chips, and cards', (
+    tester,
+  ) async {
     await tester.pumpWidget(createTestWidget(const KadivApprovalsScreen()));
     await tester.pumpAndSettle();
 
@@ -144,10 +175,16 @@ void main() {
     expect(find.text('Approval Kadiv'), findsOneWidget);
 
     // Verifikasi search input
-    expect(find.byKey(const Key('input_search_kadiv_approvals')), findsOneWidget);
+    expect(
+      find.byKey(const Key('input_search_kadiv_approvals')),
+      findsOneWidget,
+    );
 
     // Verifikasi compact filter dropdowns
-    expect(find.byKey(const Key('dropdown_filter_kadiv_status')), findsOneWidget);
+    expect(
+      find.byKey(const Key('dropdown_filter_kadiv_status')),
+      findsOneWidget,
+    );
     expect(find.byKey(const Key('dropdown_filter_kadiv_sort')), findsOneWidget);
 
     // Verifikasi adanya item mut_005 yang berstatus Menunggu Approval Pemimpin Divisi
@@ -156,157 +193,193 @@ void main() {
   });
 
   testWidgets(
-      'KadivApprovalDetailScreen displays Bagian Aset verification result, timeline, and actions',
-      (tester) async {
-    await tester.pumpWidget(
-      createTestWidget(
-        const KadivApprovalDetailScreen(mutationId: 'mut_005'),
-      ),
-    );
-    await tester.pumpAndSettle();
+    'KadivApprovalDetailScreen displays Bagian Aset verification result, timeline, and actions',
+    (tester) async {
+      await tester.pumpWidget(
+        createTestWidget(
+          const KadivApprovalDetailScreen(mutationId: 'mut_005'),
+        ),
+      );
+      await tester.pumpAndSettle();
 
-    // Verifikasi App bar
-    expect(find.text('Detail Approval Kadiv'), findsOneWidget);
+      // Verifikasi App bar
+      expect(find.text('Detail Approval Kadiv'), findsOneWidget);
 
-    // Verifikasi Ticket & Status
-    expect(find.text('ELEKTRONIK-2026-00088'), findsOneWidget);
-    expect(find.text('Menunggu Approval Pemimpin Divisi'), findsWidgets);
+      // Verifikasi Ticket & Status
+      expect(find.text('ELEKTRONIK-2026-00088'), findsOneWidget);
+      expect(find.text('Menunggu Approval Pemimpin Divisi'), findsWidgets);
 
-    // Verifikasi HASIL VERIFIKASI BAGIAN ASET ditampilkan (Scope PRD & Task)
-    expect(find.text('Hasil Verifikasi Bagian Aset'), findsOneWidget);
-    expect(find.text('Diverifikasi Oleh: '), findsOneWidget);
-    expect(find.text('H. M. Yusuf (Bagian Aset)'), findsOneWidget);
+      // Verifikasi HASIL VERIFIKASI BAGIAN ASET ditampilkan (Scope PRD & Task)
+      expect(find.text('Hasil Verifikasi Bagian Aset'), findsOneWidget);
+      expect(find.text('Diverifikasi Oleh: '), findsOneWidget);
+      expect(find.text('H. M. Yusuf (Bagian Aset)'), findsOneWidget);
 
-    // Verifikasi Aset & Alasan
-    expect(find.text('Server Rack Enterprise Dell PowerEdge'), findsOneWidget);
-    expect(find.text('Alasan Mutasi'), findsOneWidget);
+      // Verifikasi Aset & Alasan
+      expect(
+        find.text('Server Rack Enterprise Dell PowerEdge'),
+        findsOneWidget,
+      );
+      expect(find.text('Alasan Mutasi'), findsOneWidget);
 
-    // Verifikasi Timeline Workflow
-    expect(find.text('Timeline Workflow'), findsOneWidget);
-    expect(find.text('Verifikasi Bagian Aset'), findsOneWidget);
-    expect(find.text('Approval Kadiv'), findsOneWidget);
+      // Verifikasi Timeline Workflow
+      expect(find.text('Timeline Workflow'), findsOneWidget);
+      expect(find.text('Verifikasi Bagian Aset'), findsOneWidget);
+      expect(find.text('Approval Kadiv'), findsOneWidget);
 
-    // Verifikasi Action Buttons [ Tolak ] dan [ Setujui ]
-    expect(find.byKey(const Key('btn_tolak_approval_kadiv')), findsOneWidget);
-    expect(find.byKey(const Key('btn_setujui_approval_kadiv')), findsOneWidget);
-  });
+      // Verifikasi Dokumen Lampiran & Pembukaan Pratinjau Dokumen oleh Kadiv
+      expect(find.text('Dokumen'), findsOneWidget);
+      expect(find.text('SK_Relokasi_Infrastruktur_TI.pdf'), findsOneWidget);
+      await tester.ensureVisible(find.text('SK_Relokasi_Infrastruktur_TI.pdf'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('SK_Relokasi_Infrastruktur_TI.pdf'));
+      await tester.pumpAndSettle();
+      expect(find.byType(Dialog), findsOneWidget);
+      expect(find.text('SK_Relokasi_Infrastruktur_TI.pdf'), findsWidgets);
 
-  testWidgets(
-      'KadivRejectFormScreen validates empty reason and submits rejection',
-      (tester) async {
-    await tester.pumpWidget(
-      createTestWidget(
-        const KadivRejectFormScreen(mutationId: 'mut_005'),
-      ),
-    );
-    await tester.pumpAndSettle();
+      // Tutup dialog
+      await tester.tap(find.text('Tutup'));
+      await tester.pumpAndSettle();
 
-    // Verifikasi title & context card
-    expect(find.text('Tolak Pengajuan (Kadiv)'), findsOneWidget);
-    expect(find.text('ELEKTRONIK-2026-00088'), findsOneWidget);
-
-    // Verifikasi input alasan penolakan
-    final inputReason = find.byKey(const Key('input_alasan_penolakan_kadiv'));
-    expect(inputReason, findsOneWidget);
-
-    // Coba submit tanpa mengisi alasan -> validasi muncul
-    final btnSubmit = find.byKey(const Key('btn_submit_tolak_kadiv'));
-    await tester.tap(btnSubmit);
-    await tester.pumpAndSettle();
-
-    expect(find.text('Alasan penolakan tidak boleh kosong.'), findsOneWidget);
-
-    // Masukkan alasan kurang dari 5 karakter -> validasi minimal 5 karakter
-    await tester.enterText(inputReason, 'abc');
-    await tester.tap(btnSubmit);
-    await tester.pumpAndSettle();
-
-    expect(find.text('Alasan penolakan minimal 5 karakter.'), findsOneWidget);
-  });
+      // Verifikasi Action Buttons [ Tolak ] dan [ Setujui ]
+      expect(find.byKey(const Key('btn_tolak_approval_kadiv')), findsOneWidget);
+      expect(
+        find.byKey(const Key('btn_setujui_approval_kadiv')),
+        findsOneWidget,
+      );
+    },
+  );
 
   testWidgets(
-      'Kadiv approve flow persists MutationStatus.approved and kadivApprovedBy',
-      (tester) async {
-    await tester.pumpWidget(
-      createTestWidget(
-        const KadivApprovalDetailScreen(mutationId: 'mut_005'),
-      ),
-    );
-    await tester.pumpAndSettle();
+    'KadivRejectFormScreen validates empty reason and submits rejection',
+    (tester) async {
+      await tester.pumpWidget(
+        createTestWidget(const KadivRejectFormScreen(mutationId: 'mut_005')),
+      );
+      await tester.pumpAndSettle();
 
-    // Pastikan tombol setujui ada dan klik
-    final btnApprove = find.byKey(const Key('btn_setujui_approval_kadiv'));
-    expect(btnApprove, findsOneWidget);
-    await tester.tap(btnApprove);
-    await tester.pumpAndSettle();
+      // Verifikasi title & context card
+      expect(find.text('Tolak Pengajuan (Kadiv)'), findsOneWidget);
+      expect(find.text('ELEKTRONIK-2026-00088'), findsOneWidget);
 
-    // Dialog konfirmasi muncul
-    expect(find.text('Konfirmasi Approval Kadiv'), findsOneWidget);
-    final btnConfirm = find.byKey(const Key('btn_confirm_setujui_kadiv'));
-    expect(btnConfirm, findsOneWidget);
-    await tester.tap(btnConfirm);
-    await tester.pump();
-    await tester.pump(const Duration(milliseconds: 500));
-    await tester.pump(const Duration(milliseconds: 500));
+      // Verifikasi input alasan penolakan
+      final inputReason = find.byKey(const Key('input_alasan_penolakan_kadiv'));
+      expect(inputReason, findsOneWidget);
 
-    // Verifikasi pada repository bahwa status mut_005 berubah menjadi waitingConfirmation
-    Mutation? updatedMutation;
-    await tester.runAsync(() async {
-      final updatedResult = await mutationRepository.getMutationById('mut_005');
-      updatedMutation = updatedResult.dataOrNull;
-    });
-    expect(updatedMutation, isNotNull);
-    expect(updatedMutation!.status, MutationStatus.waitingConfirmation);
-    expect(updatedMutation!.kadivApprovedBy, 'Drs. Ahmad Dahlan (Kadiv)');
-    expect(updatedMutation!.kadivApprovedAt, isNotNull);
-  });
+      // Coba submit tanpa mengisi alasan -> validasi muncul
+      final btnSubmit = find.byKey(const Key('btn_submit_tolak_kadiv'));
+      await tester.tap(btnSubmit);
+      await tester.pumpAndSettle();
+
+      expect(find.text('Alasan penolakan tidak boleh kosong.'), findsOneWidget);
+
+      // Masukkan alasan kurang dari 5 karakter -> validasi minimal 5 karakter
+      await tester.enterText(inputReason, 'abc');
+      await tester.tap(btnSubmit);
+      await tester.pumpAndSettle();
+
+      expect(find.text('Alasan penolakan minimal 5 karakter.'), findsOneWidget);
+    },
+  );
 
   testWidgets(
-      'Kadiv reject flow persists MutationStatus.rejected with kadivRejectionReason',
-      (tester) async {
-    await tester.pumpWidget(
-      createTestWidget(
-        const KadivRejectFormScreen(mutationId: 'mut_005'),
-      ),
-    );
-    await tester.pumpAndSettle();
+    'Kadiv approve flow persists MutationStatus.approved and kadivApprovedBy',
+    (tester) async {
+      await tester.pumpWidget(
+        createTestWidget(
+          const KadivApprovalDetailScreen(mutationId: 'mut_005'),
+        ),
+      );
+      await tester.pumpAndSettle();
 
-    final inputReason = find.byKey(const Key('input_alasan_penolakan_kadiv'));
-    await tester.enterText(
-        inputReason, 'Aset server utama tidak diizinkan mutasi sebelum pengadaan selesai.');
-    await tester.pumpAndSettle();
+      // Pastikan tombol setujui ada dan klik
+      final btnApprove = find.byKey(const Key('btn_setujui_approval_kadiv'));
+      expect(btnApprove, findsOneWidget);
+      await tester.tap(btnApprove);
+      await tester.pumpAndSettle();
 
-    final btnSubmit = find.byKey(const Key('btn_submit_tolak_kadiv'));
-    await tester.tap(btnSubmit);
-    await tester.pumpAndSettle();
+      // Dialog konfirmasi muncul
+      expect(find.text('Konfirmasi Approval Kadiv'), findsOneWidget);
+      final btnConfirm = find.byKey(const Key('btn_confirm_setujui_kadiv'));
+      expect(btnConfirm, findsOneWidget);
+      await tester.tap(btnConfirm);
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 500));
+      await tester.pump(const Duration(milliseconds: 500));
 
-    // Dialog konfirmasi muncul
-    expect(find.text('Konfirmasi Penolakan Kadiv'), findsOneWidget);
-    final btnConfirm = find.byKey(const Key('btn_confirm_tolak_kadiv_dialog'));
-    expect(btnConfirm, findsOneWidget);
-    await tester.tap(btnConfirm);
-    await tester.pump();
-    await tester.pump(const Duration(milliseconds: 500));
-    await tester.pump(const Duration(milliseconds: 500));
+      // Verifikasi pada repository bahwa status mut_005 berubah menjadi waitingConfirmation
+      Mutation? updatedMutation;
+      await tester.runAsync(() async {
+        final updatedResult = await mutationRepository.getMutationById(
+          'mut_005',
+        );
+        updatedMutation = updatedResult.dataOrNull;
+      });
+      expect(updatedMutation, isNotNull);
+      expect(updatedMutation!.status, MutationStatus.waitingConfirmation);
+      expect(updatedMutation!.kadivApprovedBy, 'Drs. Ahmad Dahlan (Kadiv)');
+      expect(updatedMutation!.kadivApprovedAt, isNotNull);
+    },
+  );
 
-    // Verifikasi pada repository bahwa status mut_005 berubah menjadi rejected
-    Mutation? updatedRejectMutation;
-    await tester.runAsync(() async {
-      final updatedResult = await mutationRepository.getMutationById('mut_005');
-      updatedRejectMutation = updatedResult.dataOrNull;
-    });
-    expect(updatedRejectMutation, isNotNull);
-    expect(updatedRejectMutation!.status, MutationStatus.rejected);
-    expect(updatedRejectMutation!.rejectionReason,
-        'Aset server utama tidak diizinkan mutasi sebelum pengadaan selesai.');
-    expect(updatedRejectMutation!.kadivRejectionReason,
-        'Aset server utama tidak diizinkan mutasi sebelum pengadaan selesai.');
-    expect(updatedRejectMutation!.kadivRejectedBy, 'Drs. Ahmad Dahlan (Kadiv)');
-    expect(updatedRejectMutation!.kadivRejectedAt, isNotNull);
-  });
+  testWidgets(
+    'Kadiv reject flow persists MutationStatus.rejected with kadivRejectionReason',
+    (tester) async {
+      await tester.pumpWidget(
+        createTestWidget(const KadivRejectFormScreen(mutationId: 'mut_005')),
+      );
+      await tester.pumpAndSettle();
 
-  testWidgets('KadivApprovalsScreen search filters results correctly',
-      (tester) async {
+      final inputReason = find.byKey(const Key('input_alasan_penolakan_kadiv'));
+      await tester.enterText(
+        inputReason,
+        'Aset server utama tidak diizinkan mutasi sebelum pengadaan selesai.',
+      );
+      await tester.pumpAndSettle();
+
+      final btnSubmit = find.byKey(const Key('btn_submit_tolak_kadiv'));
+      await tester.tap(btnSubmit);
+      await tester.pumpAndSettle();
+
+      // Dialog konfirmasi muncul
+      expect(find.text('Konfirmasi Penolakan Kadiv'), findsOneWidget);
+      final btnConfirm = find.byKey(
+        const Key('btn_confirm_tolak_kadiv_dialog'),
+      );
+      expect(btnConfirm, findsOneWidget);
+      await tester.tap(btnConfirm);
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 500));
+      await tester.pump(const Duration(milliseconds: 500));
+
+      // Verifikasi pada repository bahwa status mut_005 berubah menjadi rejected
+      Mutation? updatedRejectMutation;
+      await tester.runAsync(() async {
+        final updatedResult = await mutationRepository.getMutationById(
+          'mut_005',
+        );
+        updatedRejectMutation = updatedResult.dataOrNull;
+      });
+      expect(updatedRejectMutation, isNotNull);
+      expect(updatedRejectMutation!.status, MutationStatus.rejected);
+      expect(
+        updatedRejectMutation!.rejectionReason,
+        'Aset server utama tidak diizinkan mutasi sebelum pengadaan selesai.',
+      );
+      expect(
+        updatedRejectMutation!.kadivRejectionReason,
+        'Aset server utama tidak diizinkan mutasi sebelum pengadaan selesai.',
+      );
+      expect(
+        updatedRejectMutation!.kadivRejectedBy,
+        'Drs. Ahmad Dahlan (Kadiv)',
+      );
+      expect(updatedRejectMutation!.kadivRejectedAt, isNotNull);
+    },
+  );
+
+  testWidgets('KadivApprovalsScreen search filters results correctly', (
+    tester,
+  ) async {
     await tester.pumpWidget(createTestWidget(const KadivApprovalsScreen()));
     await tester.pumpAndSettle();
 
@@ -328,8 +401,9 @@ void main() {
     expect(find.text('ELEKTRONIK-2026-00088'), findsOneWidget);
   });
 
-  testWidgets('ProfileScreen renders Kadiv profile consistently',
-      (tester) async {
+  testWidgets('ProfileScreen renders Kadiv profile consistently', (
+    tester,
+  ) async {
     await tester.pumpWidget(createTestWidget(const ProfileScreen()));
     await tester.pumpAndSettle();
 

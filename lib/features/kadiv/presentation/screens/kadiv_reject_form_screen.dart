@@ -6,6 +6,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+
 import '../../../../app/router/route_names.dart';
 import '../../../../app/theme/app_colors.dart';
 import '../../../../app/theme/app_spacing.dart';
@@ -17,10 +18,7 @@ import '../../../../core/widgets/mutasiku_page_header.dart';
 class KadivRejectFormScreen extends ConsumerStatefulWidget {
   final String mutationId;
 
-  const KadivRejectFormScreen({
-    super.key,
-    required this.mutationId,
-  });
+  const KadivRejectFormScreen({super.key, required this.mutationId});
 
   @override
   ConsumerState<KadivRejectFormScreen> createState() =>
@@ -57,230 +55,244 @@ class _KadivRejectFormScreenState extends ConsumerState<KadivRejectFormScreen> {
           ),
           Expanded(
             child: asyncMutation.when(
-        data: (mutation) => Padding(
-          padding: const EdgeInsets.all(AppSpacing.md),
-          child: Form(
-            key: _formKey,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Expanded(
-                  child: SingleChildScrollView(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        // Ticket & Asset Context Card
-                        Container(
-                          width: double.infinity,
-                          padding: const EdgeInsets.all(AppSpacing.md),
-                          decoration: BoxDecoration(
-                            color: AppColors.surface,
-                            borderRadius:
-                                BorderRadius.circular(AppRadius.card),
-                            border: Border.all(color: AppColors.border),
-                          ),
+              data: (mutation) => Padding(
+                padding: const EdgeInsets.all(AppSpacing.md),
+                child: Form(
+                  key: _formKey,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Expanded(
+                        child: SingleChildScrollView(
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Text(
-                                mutation.ticketNumber,
-                                style: const TextStyle(
-                                  fontSize: 14,
-                                  fontWeight: FontWeight.bold,
-                                  color: AppColors.primary,
+                              // Ticket & Asset Context Card
+                              Container(
+                                width: double.infinity,
+                                padding: const EdgeInsets.all(AppSpacing.md),
+                                decoration: BoxDecoration(
+                                  color: AppColors.surface,
+                                  borderRadius: BorderRadius.circular(
+                                    AppRadius.card,
+                                  ),
+                                  border: Border.all(color: AppColors.border),
+                                ),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      mutation.ticketNumber,
+                                      style: const TextStyle(
+                                        fontSize: 14,
+                                        fontWeight: FontWeight.bold,
+                                        color: AppColors.primary,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 2),
+                                    Text(
+                                      '${mutation.asset.name} (${mutation.asset.id})',
+                                      style: const TextStyle(
+                                        fontSize: 13,
+                                        fontWeight: FontWeight.w500,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 2),
+                                    Text(
+                                      'Pemohon: ${mutation.applicantName} • Lokasi: ${mutation.currentLocation} → ${mutation.targetLocation}',
+                                      style: const TextStyle(
+                                        fontSize: 12,
+                                        color: AppColors.textSecondary,
+                                      ),
+                                    ),
+                                    if (mutation.approvedBy != null) ...[
+                                      const SizedBox(height: 4),
+                                      Text(
+                                        'Telah disetujui sebelumnya oleh: ${mutation.approvedBy}',
+                                        style: const TextStyle(
+                                          fontSize: 11,
+                                          color: AppColors.success,
+                                          fontWeight: FontWeight.w500,
+                                        ),
+                                      ),
+                                    ],
+                                  ],
                                 ),
                               ),
-                              const SizedBox(height: 2),
-                              Text(
-                                '${mutation.asset.name} (${mutation.asset.id})',
-                                style: const TextStyle(
-                                  fontSize: 13,
-                                  fontWeight: FontWeight.w500,
-                                ),
+                              const SizedBox(height: AppSpacing.lg),
+
+                              // Form Label & Info
+                              const Row(
+                                children: [
+                                  Text(
+                                    'Alasan Penolakan Pemimpin Divisi',
+                                    style: TextStyle(
+                                      fontSize: 14,
+                                      fontWeight: FontWeight.bold,
+                                      color: AppColors.textPrimary,
+                                    ),
+                                  ),
+                                  SizedBox(width: 4),
+                                  Text(
+                                    '*',
+                                    style: TextStyle(
+                                      fontSize: 14,
+                                      fontWeight: FontWeight.bold,
+                                      color: AppColors.error,
+                                    ),
+                                  ),
+                                ],
                               ),
-                              const SizedBox(height: 2),
-                              Text(
-                                'Pemohon: ${mutation.applicantName} • Lokasi: ${mutation.currentLocation} → ${mutation.targetLocation}',
-                                style: const TextStyle(
+                              const SizedBox(height: AppSpacing.xs),
+                              const Text(
+                                'Sesuai aturan bisnis, penolakan mutasi oleh Pemimpin Divisi wajib menyertakan alasan yang jelas dan dapat dipertanggungjawabkan.',
+                                style: TextStyle(
                                   fontSize: 12,
                                   color: AppColors.textSecondary,
                                 ),
                               ),
-                              if (mutation.approvedBy != null) ...[
-                                const SizedBox(height: 4),
-                                Text(
-                                  'Telah disetujui sebelumnya oleh: ${mutation.approvedBy}',
-                                  style: const TextStyle(
-                                    fontSize: 11,
-                                    color: AppColors.success,
-                                    fontWeight: FontWeight.w500,
+                              const SizedBox(height: AppSpacing.md),
+
+                              // Reason TextFormField
+                              TextFormField(
+                                key: const Key('input_alasan_penolakan_kadiv'),
+                                controller: _reasonController,
+                                maxLines: 5,
+                                decoration: InputDecoration(
+                                  hintText: 'Contoh: "Aset perangkat utama tidak diizinkan dialihkan ke cabang sebelum pengadaan unit pengganti rampung."',
+                                  hintStyle: const TextStyle(
+                                    fontSize: 13,
+                                    color: AppColors.textSecondary,
+                                  ),
+                                  filled: true,
+                                  fillColor: Colors.white,
+                                  contentPadding: const EdgeInsets.all(
+                                    AppSpacing.md,
+                                  ),
+                                  border: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(
+                                      AppRadius.button,
+                                    ),
+                                    borderSide: const BorderSide(
+                                      color: AppColors.border,
+                                    ),
+                                  ),
+                                  enabledBorder: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(
+                                      AppRadius.button,
+                                    ),
+                                    borderSide: const BorderSide(
+                                      color: AppColors.border,
+                                    ),
+                                  ),
+                                  focusedBorder: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(
+                                      AppRadius.button,
+                                    ),
+                                    borderSide: const BorderSide(
+                                      color: AppColors.primary,
+                                      width: 2,
+                                    ),
+                                  ),
+                                  errorBorder: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(
+                                      AppRadius.button,
+                                    ),
+                                    borderSide: const BorderSide(
+                                      color: AppColors.error,
+                                    ),
                                   ),
                                 ),
-                              ],
+                                validator: (value) {
+                                  if (value == null || value.trim().isEmpty) {
+                                    return 'Alasan penolakan tidak boleh kosong.';
+                                  }
+                                  if (value.trim().length < 5) {
+                                    return 'Alasan penolakan minimal 5 karakter.';
+                                  }
+                                  return null;
+                                },
+                              ),
                             ],
                           ),
                         ),
-                        const SizedBox(height: AppSpacing.lg),
+                      ),
 
-                        // Form Label & Info
-                        const Row(
+                      // Bottom Submit Button
+                      SafeArea(
+                        child: Row(
                           children: [
-                            Text(
-                              'Alasan Penolakan Pemimpin Divisi',
-                              style: TextStyle(
-                                fontSize: 14,
-                                fontWeight: FontWeight.bold,
-                                color: AppColors.textPrimary,
+                            Expanded(
+                              child: OutlinedButton(
+                                onPressed: actionState.isLoading
+                                    ? null
+                                    : () => _safePop(context),
+                                style: OutlinedButton.styleFrom(
+                                  padding: const EdgeInsets.symmetric(
+                                    vertical: AppSpacing.md,
+                                  ),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(
+                                      AppRadius.button,
+                                    ),
+                                  ),
+                                ),
+                                child: const Text('Batal'),
                               ),
                             ),
-                            SizedBox(width: 4),
-                            Text(
-                              '*',
-                              style: TextStyle(
-                                fontSize: 14,
-                                fontWeight: FontWeight.bold,
-                                color: AppColors.error,
+                            const SizedBox(width: AppSpacing.md),
+                            Expanded(
+                              flex: 2,
+                              child: ElevatedButton(
+                                key: const Key('btn_submit_tolak_kadiv'),
+                                onPressed: actionState.isLoading
+                                    ? null
+                                    : () => _handleSubmit(context, mutation.id),
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: AppColors.error,
+                                  foregroundColor: Colors.white,
+                                  padding: const EdgeInsets.symmetric(
+                                    vertical: AppSpacing.md,
+                                  ),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(
+                                      AppRadius.button,
+                                    ),
+                                  ),
+                                ),
+                                child: actionState.isLoading
+                                    ? const SizedBox(
+                                        height: 20,
+                                        width: 20,
+                                        child: CircularProgressIndicator(
+                                          strokeWidth: 2,
+                                          color: Colors.white,
+                                        ),
+                                      )
+                                    : const Text(
+                                        'Tolak Pengajuan',
+                                        style: TextStyle(
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
                               ),
                             ),
                           ],
-                        ),
-                        const SizedBox(height: AppSpacing.xs),
-                        const Text(
-                          'Sesuai aturan bisnis, penolakan mutasi oleh Pemimpin Divisi wajib menyertakan alasan yang jelas dan dapat dipertanggungjawabkan.',
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: AppColors.textSecondary,
-                          ),
-                        ),
-                        const SizedBox(height: AppSpacing.md),
-
-                        // Reason TextFormField
-                        TextFormField(
-                          key: const Key('input_alasan_penolakan_kadiv'),
-                          controller: _reasonController,
-                          maxLines: 5,
-                          decoration: InputDecoration(
-                            hintText:
-                                'Contoh: "Aset perangkat utama tidak diizinkan dialihkan ke cabang sebelum pengadaan unit pengganti rampung."',
-                            hintStyle: const TextStyle(
-                              fontSize: 13,
-                              color: AppColors.textSecondary,
-                            ),
-                            filled: true,
-                            fillColor: Colors.white,
-                            contentPadding:
-                                const EdgeInsets.all(AppSpacing.md),
-                            border: OutlineInputBorder(
-                              borderRadius:
-                                  BorderRadius.circular(AppRadius.button),
-                              borderSide:
-                                  const BorderSide(color: AppColors.border),
-                            ),
-                            enabledBorder: OutlineInputBorder(
-                              borderRadius:
-                                  BorderRadius.circular(AppRadius.button),
-                              borderSide:
-                                  const BorderSide(color: AppColors.border),
-                            ),
-                            focusedBorder: OutlineInputBorder(
-                              borderRadius:
-                                  BorderRadius.circular(AppRadius.button),
-                              borderSide: const BorderSide(
-                                  color: AppColors.primary, width: 2),
-                            ),
-                            errorBorder: OutlineInputBorder(
-                              borderRadius:
-                                  BorderRadius.circular(AppRadius.button),
-                              borderSide:
-                                  const BorderSide(color: AppColors.error),
-                            ),
-                          ),
-                          validator: (value) {
-                            if (value == null || value.trim().isEmpty) {
-                              return 'Alasan penolakan tidak boleh kosong.';
-                            }
-                            if (value.trim().length < 5) {
-                              return 'Alasan penolakan minimal 5 karakter.';
-                            }
-                            return null;
-                          },
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-
-                // Bottom Submit Button
-                SafeArea(
-                  child: Row(
-                    children: [
-                      Expanded(
-                        child: OutlinedButton(
-                          onPressed: actionState.isLoading
-                              ? null
-                              : () => _safePop(context),
-                          style: OutlinedButton.styleFrom(
-                            padding: const EdgeInsets.symmetric(
-                                vertical: AppSpacing.md),
-                            shape: RoundedRectangleBorder(
-                              borderRadius:
-                                  BorderRadius.circular(AppRadius.button),
-                            ),
-                          ),
-                          child: const Text('Batal'),
-                        ),
-                      ),
-                      const SizedBox(width: AppSpacing.md),
-                      Expanded(
-                        flex: 2,
-                        child: ElevatedButton(
-                          key: const Key('btn_submit_tolak_kadiv'),
-                          onPressed: actionState.isLoading
-                              ? null
-                              : () => _handleSubmit(context, mutation.id),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: AppColors.error,
-                            foregroundColor: Colors.white,
-                            padding: const EdgeInsets.symmetric(
-                                vertical: AppSpacing.md),
-                            shape: RoundedRectangleBorder(
-                              borderRadius:
-                                  BorderRadius.circular(AppRadius.button),
-                            ),
-                          ),
-                          child: actionState.isLoading
-                              ? const SizedBox(
-                                  height: 20,
-                                  width: 20,
-                                  child: CircularProgressIndicator(
-                                    strokeWidth: 2,
-                                    color: Colors.white,
-                                  ),
-                                )
-                              : const Text(
-                                  'Tolak Pengajuan',
-                                  style:
-                                      TextStyle(fontWeight: FontWeight.bold),
-                                ),
                         ),
                       ),
                     ],
                   ),
                 ),
-              ],
+              ),
+              loading: () => const Center(child: CircularProgressIndicator()),
+              error: (err, _) =>
+                  Center(child: Text('Gagal memuat data mutasi: $err')),
             ),
           ),
-        ),
-        loading: () => const Center(child: CircularProgressIndicator()),
-        error: (err, _) => Center(
-          child: Text('Gagal memuat data mutasi: $err'),
-        ),
+        ],
       ),
-    ),
-  ],
-),
-);
-}
+    );
+  }
 
   void _handleSubmit(BuildContext context, String mutationId) {
     if (!_formKey.currentState!.validate()) {
@@ -310,13 +322,12 @@ class _KadivRejectFormScreenState extends ConsumerState<KadivRejectFormScreen> {
 
                 final success = await ref
                     .read(kadivApprovalActionProvider.notifier)
-                    .reject(
-                      mutationId: mutationId,
-                      reason: reason,
-                    );
+                    .reject(mutationId: mutationId, reason: reason);
 
                 if (context.mounted) {
                   if (success) {
+                    ref.invalidate(kadivAllMutationsProvider);
+                    ref.invalidate(kadivMutationDetailProvider(mutationId));
                     ref.invalidate(mutationDetailProvider(mutationId));
                     AppFeedback.showSuccess(
                       context,
@@ -345,19 +356,12 @@ class _KadivRejectFormScreenState extends ConsumerState<KadivRejectFormScreen> {
   }
 
   void _safePopBackToList(BuildContext context) {
-    if (Navigator.of(context).canPop()) {
-      Navigator.of(context).pop();
+    try {
+      context.go(RouteNames.kadivApprovalsPath);
+    } catch (_) {
       if (Navigator.of(context).canPop()) {
         Navigator.of(context).pop();
-      } else {
-        try {
-          context.go(RouteNames.kadivApprovalsPath);
-        } catch (_) {}
       }
-    } else {
-      try {
-        context.go(RouteNames.kadivApprovalsPath);
-      } catch (_) {}
     }
   }
 
@@ -376,4 +380,3 @@ class _KadivRejectFormScreenState extends ConsumerState<KadivRejectFormScreen> {
 
 // ─── Pemimpin Divisi Reject Form Screen Alias ─────────────────────────────────
 typedef PemimpinDivisiRejectFormScreen = KadivRejectFormScreen;
-

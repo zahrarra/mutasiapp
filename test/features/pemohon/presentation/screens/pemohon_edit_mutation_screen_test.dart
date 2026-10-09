@@ -23,7 +23,7 @@ class _FakeMutationRepository implements MutationRepository {
   UpdateMutationParams? lastUpdateParams;
 
   _FakeMutationRepository(List<Mutation> list)
-      : mutations = {for (final m in list) m.id: m};
+    : mutations = {for (final m in list) m.id: m};
 
   @override
   dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
@@ -168,9 +168,9 @@ Mutation _createMutation({
 
 void main() {
   group('PemohonEditMutationScreen Tests', () {
-    testWidgets(
-        'renders real operator returnReason and workflow explanation',
-        (tester) async {
+    testWidgets('renders real operator returnReason and workflow explanation', (
+      tester,
+    ) async {
       final mutation = _createMutation(
         returnReason: 'Dokumen pendukung SK Mutasi belum lengkap.',
       );
@@ -196,6 +196,7 @@ void main() {
         ProviderScope(
           overrides: [
             mutationRepositoryProvider.overrideWithValue(repo),
+            apiMutationRepositoryProvider.overrideWithValue(repo),
           ],
           child: MaterialApp.router(routerConfig: router),
         ),
@@ -230,42 +231,46 @@ void main() {
       expect(find.byKey(const Key('btn_kembali_dashboard')), findsOneWidget);
     });
 
-    testWidgets('does NOT render fake note when returnReason is null or empty',
-        (tester) async {
-      final mutation = _createMutation(returnReason: null);
-      final repo = _FakeMutationRepository([mutation]);
+    testWidgets(
+      'does NOT render fake note when returnReason is null or empty',
+      (tester) async {
+        final mutation = _createMutation(returnReason: null);
+        final repo = _FakeMutationRepository([mutation]);
 
-      final router = GoRouter(
-        initialLocation: '/pemohon/mutasi/${mutation.id}/edit',
-        routes: [
-          GoRoute(
-            path: RouteNames.pemohonMutasiEditPath,
-            builder: (context, state) =>
-                PemohonEditMutationScreen(mutationId: mutation.id),
-          ),
-        ],
-      );
-
-      await tester.pumpWidget(
-        ProviderScope(
-          overrides: [
-            mutationRepositoryProvider.overrideWithValue(repo),
+        final router = GoRouter(
+          initialLocation: '/pemohon/mutasi/${mutation.id}/edit',
+          routes: [
+            GoRoute(
+              path: RouteNames.pemohonMutasiEditPath,
+              builder: (context, state) =>
+                  PemohonEditMutationScreen(mutationId: mutation.id),
+            ),
           ],
-          child: MaterialApp.router(routerConfig: router),
-        ),
-      );
+        );
 
-      await tester.pumpAndSettle();
+        await tester.pumpWidget(
+          ProviderScope(
+            overrides: [
+            mutationRepositoryProvider.overrideWithValue(repo),
+            apiMutationRepositoryProvider.overrideWithValue(repo),
+          ],
+            child: MaterialApp.router(routerConfig: router),
+          ),
+        );
 
-      // Alur tetap ada
-      expect(find.text('Alur Perbaikan & Pengajuan Ulang'), findsOneWidget);
+        await tester.pumpAndSettle();
 
-      // Catatan operator TIDAK ditampilkan (tidak ada catatan palsu)
-      expect(find.text('Catatan dari Operator:'), findsNothing);
-    });
+        // Alur tetap ada
+        expect(find.text('Alur Perbaikan & Pengajuan Ulang'), findsOneWidget);
 
-    testWidgets('shows guard screen when mutation status is not returned',
-        (tester) async {
+        // Catatan operator TIDAK ditampilkan (tidak ada catatan palsu)
+        expect(find.text('Catatan dari Operator:'), findsNothing);
+      },
+    );
+
+    testWidgets('shows guard screen when mutation status is not returned', (
+      tester,
+    ) async {
       final mutation = _createMutation(status: MutationStatus.submitted);
       final repo = _FakeMutationRepository([mutation]);
 
@@ -284,6 +289,7 @@ void main() {
         ProviderScope(
           overrides: [
             mutationRepositoryProvider.overrideWithValue(repo),
+            apiMutationRepositoryProvider.overrideWithValue(repo),
           ],
           child: MaterialApp.router(routerConfig: router),
         ),
@@ -292,7 +298,9 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(
-        find.textContaining('Pengajuan ini berstatus "Diajukan"'),
+        find.textContaining(
+          'Pengajuan ini berstatus "Menunggu Pemeriksaan Operator"',
+        ),
         findsOneWidget,
       );
       expect(
@@ -304,8 +312,7 @@ void main() {
       expect(find.byKey(const Key('btn_ajukan_ulang')), findsNothing);
     });
 
-    testWidgets('clicking Kembali navigates to detail route',
-        (tester) async {
+    testWidgets('clicking Kembali navigates to detail route', (tester) async {
       final mutation = _createMutation();
       final repo = _FakeMutationRepository([mutation]);
 
@@ -329,6 +336,7 @@ void main() {
         ProviderScope(
           overrides: [
             mutationRepositoryProvider.overrideWithValue(repo),
+            apiMutationRepositoryProvider.overrideWithValue(repo),
           ],
           child: MaterialApp.router(routerConfig: router),
         ),
@@ -337,8 +345,9 @@ void main() {
       await tester.pumpAndSettle();
 
       // Scroll to "Kembali" button
-      await tester
-          .ensureVisible(find.byKey(const Key('btn_kembali_dashboard')));
+      await tester.ensureVisible(
+        find.byKey(const Key('btn_kembali_dashboard')),
+      );
       await tester.pumpAndSettle();
 
       // Tap "Kembali" button
@@ -349,8 +358,9 @@ void main() {
       expect(find.text('Detail Screen'), findsOneWidget);
     });
 
-    testWidgets('resubmitting updates status to submitted and navigates back',
-        (tester) async {
+    testWidgets('resubmitting updates status to submitted and navigates back', (
+      tester,
+    ) async {
       final mutation = _createMutation();
       final repo = _FakeMutationRepository([mutation]);
 
@@ -363,8 +373,10 @@ void main() {
               return Scaffold(
                 body: ElevatedButton(
                   onPressed: () => context.push(
-                    RouteNames.pemohonMutasiEditPath
-                        .replaceFirst(':id', mutation.id),
+                    RouteNames.pemohonMutasiEditPath.replaceFirst(
+                      ':id',
+                      mutation.id,
+                    ),
                   ),
                   child: const Text('Ke Edit'),
                 ),
@@ -384,6 +396,7 @@ void main() {
         ProviderScope(
           overrides: [
             mutationRepositoryProvider.overrideWithValue(repo),
+            apiMutationRepositoryProvider.overrideWithValue(repo),
           ],
           child: MaterialApp.router(routerConfig: router),
         ),

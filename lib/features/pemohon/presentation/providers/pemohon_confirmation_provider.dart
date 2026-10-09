@@ -14,12 +14,11 @@ import '../../../mutation/domain/usecases/confirm_mutation_usecase.dart';
 import '../../../mutation/presentation/providers/mutation_provider.dart';
 import '../../../notification/domain/entities/notification_item.dart';
 import '../../../notification/presentation/providers/notification_provider.dart';
-import '../../../asset/presentation/providers/asset_provider.dart';
 
 // ─── Use Case Provider ────────────────────────────────────────────────────────
 
 final confirmMutationUseCaseProvider = Provider<ConfirmMutationUseCase>((ref) {
-  final repo = ref.watch(mutationRepositoryProvider);
+  final repo = ref.watch(apiMutationRepositoryProvider);
   return ConfirmMutationUseCase(repository: repo);
 });
 
@@ -35,9 +34,11 @@ final pendingConfirmationsProvider = FutureProvider<List<Mutation>>((
   final asyncMutations = await ref.watch(mutationListProvider.future);
 
   return asyncMutations
-      .where((m) =>
-          m.status == MutationStatus.waitingConfirmation ||
-          m.status == MutationStatus.pendingConfirmation)
+      .where(
+        (m) =>
+            m.status == MutationStatus.waitingConfirmation ||
+            m.status == MutationStatus.pendingConfirmation,
+      )
       .toList();
 });
 
@@ -116,12 +117,8 @@ class PemohonConfirmationActionNotifier
         successMessage: 'Konfirmasi berhasil. Mutasi aset telah selesai.',
         result: result.data,
       );
-      // Refresh daftar mutasi dan detail
-      ref.invalidate(mutationListProvider);
-      ref.invalidate(mutationDetailProvider(mutationId));
-      ref.invalidate(pendingConfirmationsProvider);
-      ref.invalidate(assetListProvider);
-      ref.invalidate(userResponsibleAssetsProvider);
+      // Refresh daftar mutasi dan detail untuk semua role
+      invalidateAllRoleMutationProviders(ref, mutationId);
 
       // Perbarui notifikasi terkait
       try {
@@ -199,7 +196,7 @@ class PemohonConfirmationActionNotifier
       clearSuccess: true,
     );
 
-    final repo = ref.read(mutationRepositoryProvider);
+    final repo = ref.read(apiMutationRepositoryProvider);
     final result = await repo.confirmMutationResult(
       mutationId: mutationId,
       confirmedBy: pemohonName,
@@ -210,11 +207,11 @@ class PemohonConfirmationActionNotifier
     if (result is Success<Mutation>) {
       state = PemohonConfirmationActionState(
         isLoading: false,
-        successMessage:
-            'Laporan ketidaksesuaian terkirim. Pengajuan dikembalikan ke Bagian Aset untuk verifikasi ulang.',
+        successMessage: 'Laporan ketidaksesuaian terkirim. Pengajuan dikembalikan ke Bagian Aset untuk verifikasi ulang.',
         result: result.data,
       );
       ref.invalidate(mutationListProvider);
+      ref.invalidate(pemohonMutationDetailProvider(mutationId));
       ref.invalidate(mutationDetailProvider(mutationId));
       ref.invalidate(pendingConfirmationsProvider);
 

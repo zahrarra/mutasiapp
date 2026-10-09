@@ -44,7 +44,7 @@ class PemohonMutationCard extends StatelessWidget {
   String _getStageText(MutationStatus status) {
     switch (status) {
       case MutationStatus.submitted:
-        return 'Tahap 1/6: Diajukan';
+        return 'Tahap 2/6: Pemeriksaan Operator';
       case MutationStatus.verified:
         return 'Tahap 2/6: Pemeriksaan Kelengkapan';
       case MutationStatus.waitingAssetVerification:
@@ -56,9 +56,9 @@ class PemohonMutationCard extends StatelessWidget {
         return 'Tahap 5/6: Disetujui';
       case MutationStatus.pendingConfirmation:
       case MutationStatus.waitingConfirmation:
-        return 'Tahap 6/6: Konfirmasi Pemohon';
+        return 'Tahap 5/6: Konfirmasi Pemohon';
       case MutationStatus.completed:
-        return 'Selesai';
+        return 'Tahap 6/6: Selesai';
       case MutationStatus.returned:
         return 'Perlu Perbaikan';
       case MutationStatus.rejected:
@@ -156,7 +156,7 @@ class PemohonMutationCard extends StatelessWidget {
         statusBgColor = const Color(0xFFEFF8FF);
         statusTextColor = const Color(0xFF175CD3);
         statusBorderColor = const Color(0xFFB2DDFF);
-        statusBadgeLabel = 'Diajukan';
+        statusBadgeLabel = 'Pemeriksaan Operator';
         break;
     }
 
@@ -197,11 +197,12 @@ class PemohonMutationCard extends StatelessWidget {
                                 fontFamily: 'monospace',
                                 fontWeight: FontWeight.bold,
                                 fontSize: 12,
-                                color: status == MutationStatus.pendingConfirmation
+                                color:
+                                    status == MutationStatus.pendingConfirmation
                                     ? const Color(0xFF175CD3)
                                     : (status == MutationStatus.returned
-                                        ? const Color(0xFFB45309)
-                                        : const Color(0xFF00273A)),
+                                          ? const Color(0xFFB45309)
+                                          : const Color(0xFF00273A)),
                               ),
                               overflow: TextOverflow.ellipsis,
                             ),
@@ -265,8 +266,8 @@ class PemohonMutationCard extends StatelessWidget {
                     mutation.isUnregisteredAsset
                         ? 'SN: ${mutation.displaySerialNumber}'
                         : (mutation.displaySerialNumber != '-'
-                            ? '${mutation.displayAssetCode} • SN: ${mutation.displaySerialNumber}'
-                            : mutation.displayAssetCode),
+                              ? '${mutation.displayAssetCode} • SN: ${mutation.displaySerialNumber}'
+                              : mutation.displayAssetCode),
                     style: const TextStyle(
                       fontSize: 11,
                       fontFamily: 'monospace',
@@ -377,12 +378,15 @@ class PemohonMutationCard extends StatelessWidget {
                           ),
                         ),
                         InkWell(
-                          onTap: onConfirmTap ??
+                          onTap:
+                              onConfirmTap ??
                               () => _safePush(
-                                    context,
-                                    RouteNames.pemohonConfirmationPath
-                                        .replaceFirst(':id', mutation.id),
-                                  ),
+                                context,
+                                RouteNames.pemohonConfirmationPath.replaceFirst(
+                                  ':id',
+                                  mutation.id,
+                                ),
+                              ),
                           borderRadius: BorderRadius.circular(8),
                           child: Container(
                             padding: const EdgeInsets.symmetric(
@@ -431,12 +435,15 @@ class PemohonMutationCard extends StatelessWidget {
                           ),
                         ),
                         InkWell(
-                          onTap: onEditTap ??
+                          onTap:
+                              onEditTap ??
                               () => _safePush(
-                                    context,
-                                    RouteNames.pemohonMutasiEditPath
-                                        .replaceFirst(':id', mutation.id),
-                                  ),
+                                context,
+                                RouteNames.pemohonMutasiEditPath.replaceFirst(
+                                  ':id',
+                                  mutation.id,
+                                ),
+                              ),
                           borderRadius: BorderRadius.circular(8),
                           child: Container(
                             padding: const EdgeInsets.symmetric(
@@ -525,8 +532,8 @@ class PemohonMutationCard extends StatelessWidget {
                                 TextSpan(
                                   text: _getStageText(status).contains(':')
                                       ? _getStageText(status)
-                                          .split(':')[1]
-                                          .trim()
+                                            .split(':')[1]
+                                            .trim()
                                       : _getStageText(status),
                                   style: const TextStyle(
                                     fontWeight: FontWeight.bold,

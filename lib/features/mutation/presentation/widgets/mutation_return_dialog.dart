@@ -5,8 +5,10 @@
 // Font: Montserrat. Desain compact, responsif, dan adaptif di HP.
 
 import 'dart:ui';
+
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+
 import '../../../mutation/domain/entities/mutation.dart';
 
 /// Menampilkan Modal "Kembalikan Pengajuan" di atas halaman Detail Pengajuan
@@ -20,12 +22,11 @@ Future<void> showMutationReturnDialog({
     context: context,
     barrierDismissible: false,
     barrierLabel: 'Kembalikan Pengajuan',
-    barrierColor: const Color(0xFF0F172A).withValues(alpha: 0.50), // bg-slate-900/50
+    barrierColor: const Color(0xFF0F172A)
+        .withValues(alpha: 0.50), // bg-slate-900/50
     transitionDuration: const Duration(milliseconds: 250),
-    pageBuilder: (dialogCtx, anim1, anim2) => MutationReturnDialog(
-      mutation: mutation,
-      onConfirm: onConfirm,
-    ),
+    pageBuilder: (dialogCtx, anim1, anim2) =>
+        MutationReturnDialog(mutation: mutation, onConfirm: onConfirm),
     transitionBuilder: (dialogCtx, anim1, anim2, child) {
       final curved = CurvedAnimation(parent: anim1, curve: Curves.easeOutCubic);
       return BackdropFilter(
@@ -135,7 +136,9 @@ class _MutationReturnDialogState extends State<MutationReturnDialog> {
                         width: isCompact ? 36 : 40,
                         height: isCompact ? 36 : 40,
                         decoration: BoxDecoration(
-                          color: const Color(0xFFFEE2E2), // bg-error-container/50
+                          color: const Color(
+                            0xFFFEE2E2,
+                          ), // bg-error-container/50
                           borderRadius: BorderRadius.circular(12),
                         ),
                         child: const Icon(
@@ -170,7 +173,9 @@ class _MutationReturnDialogState extends State<MutationReturnDialog> {
                         ),
                       ),
                       GestureDetector(
-                        onTap: _isLoading ? null : () => Navigator.of(context).pop(),
+                        onTap: _isLoading
+                            ? null
+                            : () => Navigator.of(context).pop(),
                         child: Container(
                           width: 32,
                           height: 32,
@@ -203,9 +208,14 @@ class _MutationReturnDialogState extends State<MutationReturnDialog> {
                       // Context Card (Ticket & Asset Info)
                       Container(
                         width: double.infinity,
-                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 14,
+                          vertical: 10,
+                        ),
                         decoration: BoxDecoration(
-                          color: const Color(0xFFECF4FF), // surface-container-low
+                          color: const Color(
+                            0xFFECF4FF,
+                          ), // surface-container-low
                           borderRadius: BorderRadius.circular(12),
                           border: Border.all(color: const Color(0xFFD5E4F4)),
                         ),
@@ -316,7 +326,8 @@ class _MutationReturnDialogState extends State<MutationReturnDialog> {
                           height: 1.45,
                         ),
                         decoration: InputDecoration(
-                          hintText: 'Tuliskan alasan pengembalian untuk pemohon...',
+                          hintText:
+                              'Tuliskan alasan pengembalian untuk pemohon...',
                           hintStyle: _m(
                             size: 12.5,
                             color: const Color(0xFF98A2B3),
@@ -326,7 +337,9 @@ class _MutationReturnDialogState extends State<MutationReturnDialog> {
                           fillColor: const Color(0xFFF8FAFC),
                           border: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(12),
-                            borderSide: const BorderSide(color: Color(0xFFD0D5DD)),
+                            borderSide: const BorderSide(
+                              color: Color(0xFFD0D5DD),
+                            ),
                           ),
                           enabledBorder: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(12),
@@ -389,7 +402,9 @@ class _MutationReturnDialogState extends State<MutationReturnDialog> {
                       // Button Batal
                       Expanded(
                         child: OutlinedButton(
-                          onPressed: _isLoading ? null : () => Navigator.of(context).pop(),
+                          onPressed: _isLoading
+                              ? null
+                              : () => Navigator.of(context).pop(),
                           style: OutlinedButton.styleFrom(
                             foregroundColor: const Color(0xFF172B4D),
                             side: const BorderSide(color: Color(0xFFD0D5DD)),
@@ -432,7 +447,10 @@ class _MutationReturnDialogState extends State<MutationReturnDialog> {
                                     color: Colors.white,
                                   ),
                                 )
-                              : const Icon(Icons.assignment_return_rounded, size: 16),
+                              : const Icon(
+                                  Icons.assignment_return_rounded,
+                                  size: 16,
+                                ),
                           label: Text(
                             _isLoading ? 'Memproses...' : 'Kembalikan',
                             style: _m(

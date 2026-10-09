@@ -18,10 +18,7 @@ import '../providers/bagian_aset_verification_provider.dart';
 class BagianAsetReturnFormScreen extends ConsumerStatefulWidget {
   final String mutationId;
 
-  const BagianAsetReturnFormScreen({
-    super.key,
-    required this.mutationId,
-  });
+  const BagianAsetReturnFormScreen({super.key, required this.mutationId});
 
   @override
   ConsumerState<BagianAsetReturnFormScreen> createState() =>
@@ -157,27 +154,33 @@ class _BagianAsetReturnFormScreenState
                         maxLines: 5,
                         maxLength: 500,
                         decoration: InputDecoration(
-                          hintText:
-                              'Contoh: Serial number aset tidak cocok dengan fisik, atau lokasi tujuan belum sesuai SK SDM.',
+                          hintText: 'Contoh: Serial number aset tidak cocok dengan fisik, atau lokasi tujuan belum sesuai SK SDM.',
                           filled: true,
                           fillColor: Colors.white,
                           border: OutlineInputBorder(
-                            borderRadius:
-                                BorderRadius.circular(AppRadius.input),
-                            borderSide:
-                                const BorderSide(color: AppColors.border),
+                            borderRadius: BorderRadius.circular(
+                              AppRadius.input,
+                            ),
+                            borderSide: const BorderSide(
+                              color: AppColors.border,
+                            ),
                           ),
                           enabledBorder: OutlineInputBorder(
-                            borderRadius:
-                                BorderRadius.circular(AppRadius.input),
-                            borderSide:
-                                const BorderSide(color: AppColors.border),
+                            borderRadius: BorderRadius.circular(
+                              AppRadius.input,
+                            ),
+                            borderSide: const BorderSide(
+                              color: AppColors.border,
+                            ),
                           ),
                           focusedBorder: OutlineInputBorder(
-                            borderRadius:
-                                BorderRadius.circular(AppRadius.input),
-                            borderSide:
-                                const BorderSide(color: AppColors.primary, width: 1.5),
+                            borderRadius: BorderRadius.circular(
+                              AppRadius.input,
+                            ),
+                            borderSide: const BorderSide(
+                              color: AppColors.primary,
+                              width: 1.5,
+                            ),
                           ),
                         ),
                         validator: (value) {
@@ -202,10 +205,12 @@ class _BagianAsetReturnFormScreenState
                           backgroundColor: AppColors.error,
                           foregroundColor: Colors.white,
                           padding: const EdgeInsets.symmetric(
-                              vertical: AppSpacing.md),
+                            vertical: AppSpacing.md,
+                          ),
                           shape: RoundedRectangleBorder(
-                            borderRadius:
-                                BorderRadius.circular(AppRadius.button),
+                            borderRadius: BorderRadius.circular(
+                              AppRadius.button,
+                            ),
                           ),
                         ),
                         child: actionState.isLoading
@@ -231,10 +236,12 @@ class _BagianAsetReturnFormScreenState
                         style: OutlinedButton.styleFrom(
                           foregroundColor: AppColors.textSecondary,
                           padding: const EdgeInsets.symmetric(
-                              vertical: AppSpacing.md),
+                            vertical: AppSpacing.md,
+                          ),
                           shape: RoundedRectangleBorder(
-                            borderRadius:
-                                BorderRadius.circular(AppRadius.button),
+                            borderRadius: BorderRadius.circular(
+                              AppRadius.button,
+                            ),
                           ),
                         ),
                         child: const Text('Batal'),
@@ -244,9 +251,8 @@ class _BagianAsetReturnFormScreenState
                 ),
               ),
               loading: () => const Center(child: CircularProgressIndicator()),
-              error: (err, _) => Center(
-                child: Text('Gagal memuat data mutasi: $err'),
-              ),
+              error: (err, _) =>
+                  Center(child: Text('Gagal memuat data mutasi: $err')),
             ),
           ),
         ],
@@ -263,10 +269,7 @@ class _BagianAsetReturnFormScreenState
 
     final success = await ref
         .read(bagianAsetVerificationActionProvider.notifier)
-        .returnToApplicant(
-          mutationId: mutationId,
-          reason: reason,
-        );
+        .returnToApplicant(mutationId: mutationId, reason: reason);
 
     if (context.mounted) {
       if (success) {
@@ -277,10 +280,7 @@ class _BagianAsetReturnFormScreenState
         _safePop(context);
       } else {
         final err = ref.read(bagianAsetVerificationActionProvider).error;
-        AppFeedback.showError(
-          context,
-          err ?? 'Gagal mengembalikan pengajuan.',
-        );
+        AppFeedback.showError(context, err ?? 'Gagal mengembalikan pengajuan.');
       }
     }
   }

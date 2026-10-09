@@ -201,7 +201,7 @@ class MasterLocationsNotifier
   final LocationRepository _repository;
 
   MasterLocationsNotifier(this._repository)
-      : super(AsyncValue.data(_repository.currentLocations)) {
+    : super(AsyncValue.data(_repository.currentLocations)) {
     loadLocations();
   }
 
@@ -251,20 +251,21 @@ class MasterLocationsNotifier
   }
 }
 
-final masterLocationsProvider = StateNotifierProvider<
-    MasterLocationsNotifier, AsyncValue<List<LocationItem>>>((ref) {
-  final repo = ref.watch(locationRepositoryProvider);
-  return MasterLocationsNotifier(repo);
-});
+final masterLocationsProvider =
+    StateNotifierProvider<
+      MasterLocationsNotifier,
+      AsyncValue<List<LocationItem>>
+    >((ref) {
+      final repo = ref.watch(locationRepositoryProvider);
+      return MasterLocationsNotifier(repo);
+    });
 
 /// Daftar lokasi aktif untuk formulir pengajuan mutasi dan filter
 final availableLocationsProvider = Provider<List<String>>((ref) {
   final locationsAsync = ref.watch(masterLocationsProvider);
   return locationsAsync.maybeWhen(
-    data: (list) => list
-        .where((loc) => loc.isActive)
-        .map((loc) => loc.name)
-        .toList(),
+    data: (list) =>
+        list.where((loc) => loc.isActive).map((loc) => loc.name).toList(),
     orElse: () => [
       'Lantai 1 — Lobby & Reception',
       'Lantai 2 — Ruang Keuangan',

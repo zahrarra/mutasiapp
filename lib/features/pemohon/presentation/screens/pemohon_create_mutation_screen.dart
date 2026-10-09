@@ -19,6 +19,8 @@ import '../../../../core/widgets/app_feedback.dart';
 import '../../../../core/widgets/document_preview_dialog.dart';
 import '../../../../core/widgets/inline_searchable_dropdown.dart';
 import '../../../../core/widgets/mutasiku_page_header.dart';
+import '../../../asset/domain/entities/asset.dart';
+import '../../../asset/presentation/providers/asset_provider.dart';
 import '../../../auth/domain/entities/user_role.dart';
 import '../../../auth/presentation/providers/auth_provider.dart';
 import '../../../mutation/domain/repositories/mutation_repository.dart';
@@ -54,6 +56,7 @@ class _PemohonCreateMutationScreenState
     extends ConsumerState<PemohonCreateMutationScreen> {
   final _formKey = GlobalKey<FormState>();
 
+  final _assetSelectController = TextEditingController();
   final _assetNameController = TextEditingController();
   final _assetCodeController = TextEditingController();
   final _sourceLocationController = TextEditingController();
@@ -106,6 +109,7 @@ class _PemohonCreateMutationScreenState
 
   @override
   void dispose() {
+    _assetSelectController.dispose();
     _assetNameController.dispose();
     _assetCodeController.dispose();
     _sourceLocationController.dispose();
@@ -170,6 +174,7 @@ class _PemohonCreateMutationScreenState
     if (draft != null && mounted) {
       setState(() {
         _selectedAssetId = draft.assetId;
+        _assetSelectController.text = draft.assetName;
         _assetNameController.text = draft.assetName;
         _assetCodeController.text = draft.assetCode;
         _sourceLocationController.text = draft.sourceLocation;
@@ -229,7 +234,9 @@ class _PemohonCreateMutationScreenState
     DocumentPreviewDialog.showFile(
       context,
       fileName: _documentName!,
-      bytes: _documentBytes != null ? Uint8List.fromList(_documentBytes!) : null,
+      bytes: _documentBytes != null
+          ? Uint8List.fromList(_documentBytes!)
+          : null,
       filePath: _documentPath,
     );
   }
@@ -266,10 +273,7 @@ class _PemohonCreateMutationScreenState
       }
     } catch (e) {
       if (mounted) {
-        AppFeedback.showError(
-          context,
-          'Gagal mengunggah dokumen: $e',
-        );
+        AppFeedback.showError(context, 'Gagal mengunggah dokumen: $e');
       }
     }
   }
@@ -295,6 +299,38 @@ class _PemohonCreateMutationScreenState
   void _showConfirmSubmitDialog() {
     FocusScope.of(context).unfocus();
     if (!(_formKey.currentState?.validate() ?? false)) return;
+
+    final userAssets =
+        ref.read(userResponsibleAssetsProvider).valueOrNull ?? [];
+    if ((_selectedAssetId == null || _selectedAssetId!.trim().isEmpty) &&
+        userAssets.isNotEmpty) {
+      final customSN = _assetCodeController.text.trim();
+      final customName = _assetNameController.text.trim();
+      final Asset? match = userAssets.cast<Asset?>().firstWhere(
+        (a) =>
+            a != null &&
+            (a.assetCode.toLowerCase() == customSN.toLowerCase() ||
+                (a.serialNumber != null &&
+                    a.serialNumber!.toLowerCase() == customSN.toLowerCase()) ||
+                a.name.toLowerCase() == customName.toLowerCase() ||
+                a.id == customSN),
+        orElse: () => userAssets.cast<Asset?>().firstWhere(
+          (a) =>
+              a != null &&
+              customName.isNotEmpty &&
+              a.name.toLowerCase().contains(customName.toLowerCase()),
+          orElse: () => null,
+        ),
+      );
+      if (match != null) {
+        _selectedAssetId = match.id;
+      }
+    }
+
+    if (_selectedAssetId == null || _selectedAssetId!.trim().isEmpty) {
+      AppFeedback.showError(context, 'Silakan pilih aset terlebih dahulu.');
+      return;
+    }
 
     final sourceLocation = _sourceLocationController.text.trim();
     final targetLoc = _locationController.text.trim();
@@ -345,9 +381,7 @@ class _PemohonCreateMutationScreenState
                   decoration: BoxDecoration(
                     color: Colors.white,
                     borderRadius: BorderRadius.circular(24),
-                    border: Border.all(
-                      color: const Color(0xFFF1F5F9),
-                    ),
+                    border: Border.all(color: const Color(0xFFF1F5F9)),
                     boxShadow: [
                       BoxShadow(
                         color: const Color(0xFF0F172A).withValues(alpha: 0.12),
@@ -368,9 +402,7 @@ class _PemohonCreateMutationScreenState
                         decoration: BoxDecoration(
                           color: const Color(0xFFECF4FF),
                           shape: BoxShape.circle,
-                          border: Border.all(
-                            color: const Color(0xFFD5E4F4),
-                          ),
+                          border: Border.all(color: const Color(0xFFD5E4F4)),
                           boxShadow: [
                             BoxShadow(
                               color: Colors.black.withValues(alpha: 0.04),
@@ -524,19 +556,47 @@ class _PemohonCreateMutationScreenState
 
     final targetPic = _bringAsset
         ? (_picController.text.trim().isNotEmpty
-            ? _picController.text.trim()
-            : (user?.name ?? ''))
+              ? _picController.text.trim()
+              : (user?.name ?? ''))
         : '';
 
     final customSN = _assetCodeController.text.trim();
-    final effectiveAssetId = (_selectedAssetId != null && _selectedAssetId!.trim().isNotEmpty)
-        ? _selectedAssetId!.trim()
-        : (customSN.isNotEmpty ? customSN : null);
+    final customName = _assetNameController.text.trim();
+    final userAssets =
+        ref.read(userResponsibleAssetsProvider).valueOrNull ?? [];
+
+    if ((_selectedAssetId == null || _selectedAssetId!.trim().isEmpty) &&
+        userAssets.isNotEmpty) {
+      final Asset? match = userAssets.cast<Asset?>().firstWhere(
+        (a) =>
+            a != null &&
+            (a.assetCode.toLowerCase() == customSN.toLowerCase() ||
+                (a.serialNumber != null &&
+                    a.serialNumber!.toLowerCase() == customSN.toLowerCase()) ||
+                a.name.toLowerCase() == customName.toLowerCase() ||
+                a.id == customSN),
+        orElse: () => userAssets.cast<Asset?>().firstWhere(
+          (a) =>
+              a != null &&
+              customName.isNotEmpty &&
+              a.name.toLowerCase().contains(customName.toLowerCase()),
+          orElse: () => null,
+        ),
+      );
+      if (match != null) {
+        _selectedAssetId = match.id;
+      }
+    }
+
+    if (_selectedAssetId == null || _selectedAssetId!.trim().isEmpty) {
+      AppFeedback.showError(context, 'Silakan pilih aset terlebih dahulu.');
+      return;
+    }
 
     final params = SubmitMutationParams(
       applicantId: user?.id,
       applicantName: user?.name,
-      assetId: effectiveAssetId,
+      assetId: _selectedAssetId!.trim(),
       assetName: _assetNameController.text.trim(),
       customSerialNumber: customSN.isNotEmpty ? customSN : null,
       isAssetMovingWithApplicant: _bringAsset,
@@ -599,6 +659,7 @@ class _PemohonCreateMutationScreenState
   Widget build(BuildContext context) {
     final submitState = ref.watch(submitMutationProvider);
     final locations = ref.watch(availableLocationsProvider);
+    final assetsAsync = ref.watch(userResponsibleAssetsProvider);
     final user = ref.watch(authStateProvider).user;
     if (_bringAsset && user != null && _picController.text.trim().isEmpty) {
       _picController.text = user.name;
@@ -618,7 +679,7 @@ class _PemohonCreateMutationScreenState
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    _sectionAsset(locations),
+                    _sectionAsset(locations, assetsAsync),
 
                     const SizedBox(height: 16),
 
@@ -647,7 +708,8 @@ class _PemohonCreateMutationScreenState
       bottom: false,
       child: MutasiKuPageHeader(
         title: 'Form Pengajuan Mutasi',
-        subtitle: 'Pengalihan lokasi fisik dan penanggung jawab (PIC) aset dinas',
+        subtitle:
+            'Pengalihan lokasi fisik dan penanggung jawab (PIC) aset dinas',
         onBack: _safePop,
       ),
     );
@@ -657,7 +719,21 @@ class _PemohonCreateMutationScreenState
   // SECTION ASET
   // ---------------------------------------------------------------------------
 
-  Widget _sectionAsset(List<String> locations) {
+  Widget _sectionAsset(
+    List<String> locations,
+    AsyncValue<List<Asset>> assetsAsync,
+  ) {
+    final userAssets = assetsAsync.valueOrNull ?? [];
+    final assetOptions = userAssets
+        .map((a) => '${a.name} (${a.assetCode})')
+        .toList();
+    final assetMap = {
+      for (final a in userAssets) '${a.name} (${a.assetCode})': a,
+      for (final a in userAssets) a.name: a,
+      for (final a in userAssets) a.assetCode: a,
+      for (final a in userAssets) a.id: a,
+    };
+
     return _card(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -702,10 +778,134 @@ class _PemohonCreateMutationScreenState
           ),
 
           const SizedBox(height: 12),
-
           const Divider(height: 1, color: Color(0x99D0D5DD)),
-
           const SizedBox(height: 14),
+
+          // ── Loading state ──
+          if (assetsAsync.isLoading)
+            Padding(
+              padding: const EdgeInsets.only(bottom: 12),
+              child: Row(
+                children: [
+                  const SizedBox(
+                    width: 14,
+                    height: 14,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  ),
+                  const SizedBox(width: 8),
+                  Text(
+                    'Memuat daftar master aset...',
+                    style: _m(size: 12, color: _C.muted),
+                  ),
+                ],
+              ),
+            ),
+
+          // ── Error state ──
+          if (assetsAsync.hasError)
+            Container(
+              margin: const EdgeInsets.only(bottom: 12),
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: const Color(0xFFFEF2F2),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: const Color(0xFFFCA5A5)),
+              ),
+              child: Row(
+                children: [
+                  const Icon(
+                    Icons.error_outline,
+                    size: 16,
+                    color: Color(0xFFDC2626),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      'Gagal memuat master aset dari server.',
+                      style: _m(size: 11, color: const Color(0xFFDC2626)),
+                    ),
+                  ),
+                  InkWell(
+                    onTap: () => ref.invalidate(userResponsibleAssetsProvider),
+                    child: const Padding(
+                      padding: EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+                      child: Text(
+                        'Coba lagi',
+                        style: TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.bold,
+                          color: Color(0xFFDC2626),
+                          decoration: TextDecoration.underline,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+
+          // ── Empty state ──
+          if (!assetsAsync.isLoading &&
+              !assetsAsync.hasError &&
+              userAssets.isEmpty)
+            Container(
+              margin: const EdgeInsets.only(bottom: 12),
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: _C.warningBg,
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: _C.warningBorder),
+              ),
+              child: Row(
+                children: [
+                  const Icon(Icons.info_outline, size: 16, color: _C.warning),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      'Tidak ada aset terdaftar yang terikat sebagai tanggung jawab Anda.',
+                      style: _m(size: 11, color: _C.warning),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+
+          // ── Dropdown Pemilihan Aset ──
+          InlineSearchableDropdown(
+            fieldKey: const Key('dropdown_select_asset'),
+            controller: _assetSelectController,
+            labelText: 'Pilih Aset Terdaftar *',
+            hintText: 'Pilih aset dari daftar master data',
+            items: assetOptions,
+            validator: (v) {
+              if (_selectedAssetId == null ||
+                  _selectedAssetId!.trim().isEmpty) {
+                return 'Silakan pilih aset terlebih dahulu.';
+              }
+              return null;
+            },
+            onChanged: (selectedStr) {
+              final match = assetMap[selectedStr];
+              if (match != null) {
+                setState(() {
+                  _selectedAssetId = match.id;
+                  _assetNameController.text = match.name;
+                  _assetCodeController.text =
+                      match.serialNumber?.isNotEmpty == true
+                      ? match.serialNumber!
+                      : match.assetCode;
+                  if (match.location.isNotEmpty) {
+                    _sourceLocationController.text = match.location;
+                  }
+                  if (match.pic.isNotEmpty) {
+                    _currentPicController.text = match.pic;
+                  }
+                });
+              }
+            },
+          ),
+
+          const SizedBox(height: 12),
 
           Row(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -729,8 +929,24 @@ class _PemohonCreateMutationScreenState
                   children: [
                     TextFormField(
                       controller: _assetNameController,
+                      readOnly: _selectedAssetId != null,
                       style: _inputTextStyle(),
-                      decoration: _inputDeco('Nama aset *'),
+                      decoration: _inputDeco('Nama aset *').copyWith(
+                        fillColor: _selectedAssetId != null
+                            ? const Color(0xFFF1F5F9)
+                            : null,
+                        filled: _selectedAssetId != null,
+                        suffixIcon: _selectedAssetId != null
+                            ? const Tooltip(
+                                message: 'Data aset terdaftar dari master data',
+                                child: Icon(
+                                  Icons.lock_outline,
+                                  size: 16,
+                                  color: _C.muted,
+                                ),
+                              )
+                            : null,
+                      ),
                       validator: (v) => (v == null || v.trim().isEmpty)
                           ? 'Wajib diisi'
                           : null,
@@ -740,14 +956,57 @@ class _PemohonCreateMutationScreenState
 
                     TextFormField(
                       controller: _assetCodeController,
+                      readOnly: _selectedAssetId != null,
                       style: _inputTextStyle(color: _C.muted),
-                      decoration: _inputDeco('Serial Number'),
+                      decoration: _inputDeco('Nomor Seri / Kode Aset').copyWith(
+                        fillColor: _selectedAssetId != null
+                            ? const Color(0xFFF1F5F9)
+                            : null,
+                        filled: _selectedAssetId != null,
+                        suffixIcon: _selectedAssetId != null
+                            ? const Tooltip(
+                                message: 'Data aset terdaftar dari master data',
+                                child: Icon(
+                                  Icons.lock_outline,
+                                  size: 16,
+                                  color: _C.muted,
+                                ),
+                              )
+                            : null,
+                      ),
                     ),
                   ],
                 ),
               ),
             ],
           ),
+
+          if (_selectedAssetId != null) ...[
+            const SizedBox(height: 8),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+              decoration: BoxDecoration(
+                color: const Color(0xFFECFDF5),
+                borderRadius: BorderRadius.circular(6),
+                border: Border.all(color: const Color(0xFFA7F3D0)),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Icon(Icons.check_circle, size: 14, color: _C.success),
+                  const SizedBox(width: 6),
+                  Text(
+                    'Aset terdaftar di SIMAK BMN / Master Data',
+                    style: _m(
+                      size: 11,
+                      weight: FontWeight.w600,
+                      color: _C.success,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
 
           const SizedBox(height: 12),
 
@@ -844,7 +1103,7 @@ class _PemohonCreateMutationScreenState
             'LOKASI ASAL (READ-ONLY)',
             style: _m(
               size: 11,
-              weight: FontWeight.w700,
+              weight: FontWeight.w600,
               color: _C.muted,
               letterSpacing: 0.6,
             ),
@@ -885,7 +1144,7 @@ class _PemohonCreateMutationScreenState
             'UNIT / CABANG PENUGASAN BARU',
             style: _m(
               size: 11,
-              weight: FontWeight.w700,
+              weight: FontWeight.w600,
               color: _C.muted,
               letterSpacing: 0.6,
             ),
@@ -927,7 +1186,7 @@ class _PemohonCreateMutationScreenState
             'RUANGAN / AREA PENEMPATAN',
             style: _m(
               size: 11,
-              weight: FontWeight.w700,
+              weight: FontWeight.w600,
               color: _C.muted,
               letterSpacing: 0.6,
             ),
@@ -954,7 +1213,7 @@ class _PemohonCreateMutationScreenState
             'ASET IKUT SAYA PINDAH? *',
             style: _m(
               size: 11,
-              weight: FontWeight.w700,
+              weight: FontWeight.w600,
               color: _C.muted,
               letterSpacing: 0.6,
             ),
@@ -1018,7 +1277,7 @@ class _PemohonCreateMutationScreenState
                       children: [
                         TextSpan(
                           text: 'Ketentuan Tata Kelola Inventaris:\n',
-                          style: _m(size: 12, weight: FontWeight.w700),
+                          style: _m(size: 12, weight: FontWeight.w600),
                         ),
                         TextSpan(
                           text: _bringAsset
@@ -1046,7 +1305,11 @@ class _PemohonCreateMutationScreenState
               ),
               child: Row(
                 children: [
-                  const Icon(Icons.person_pin_rounded, size: 22, color: _C.navy),
+                  const Icon(
+                    Icons.person_pin_rounded,
+                    size: 22,
+                    color: _C.navy,
+                  ),
                   const SizedBox(width: 10),
                   Expanded(
                     child: Column(
@@ -1054,21 +1317,33 @@ class _PemohonCreateMutationScreenState
                       children: [
                         Text(
                           'PIC TUJUAN (OTOMATIS PEMOHON)',
-                          style: _m(size: 10, weight: FontWeight.w700, color: _C.muted),
+                          style: _m(
+                            size: 10,
+                            weight: FontWeight.w600,
+                            color: _C.muted,
+                          ),
                         ),
                         const SizedBox(height: 2),
                         Text(
                           _picController.text.isNotEmpty
                               ? _picController.text
-                              : (ref.watch(authStateProvider).user?.name ?? 'Pemohon Sendiri'),
+                              : (ref.watch(authStateProvider).user?.name ??
+                                    'Pemohon Sendiri'),
                           key: const Key('text_pic_tujuan_otomatis'),
-                          style: _m(size: 13, weight: FontWeight.w600, color: _C.text),
+                          style: _m(
+                            size: 13,
+                            weight: FontWeight.w600,
+                            color: _C.text,
+                          ),
                         ),
                       ],
                     ),
                   ),
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 4,
+                    ),
                     decoration: BoxDecoration(
                       color: const Color(0xFFECFDF5),
                       borderRadius: BorderRadius.circular(6),
@@ -1076,7 +1351,11 @@ class _PemohonCreateMutationScreenState
                     ),
                     child: Text(
                       'Otomatis Pemohon',
-                      style: _m(size: 11, weight: FontWeight.w600, color: _C.teal),
+                      style: _m(
+                        size: 11,
+                        weight: FontWeight.w600,
+                        color: _C.teal,
+                      ),
                     ),
                   ),
                 ],
@@ -1095,7 +1374,11 @@ class _PemohonCreateMutationScreenState
               ),
               child: Row(
                 children: [
-                  const Icon(Icons.info_outline_rounded, size: 22, color: _C.muted),
+                  const Icon(
+                    Icons.info_outline_rounded,
+                    size: 22,
+                    color: _C.muted,
+                  ),
                   const SizedBox(width: 10),
                   Expanded(
                     child: Column(
@@ -1103,19 +1386,30 @@ class _PemohonCreateMutationScreenState
                       children: [
                         Text(
                           'PIC TUJUAN',
-                          style: _m(size: 10, weight: FontWeight.w700, color: _C.muted),
+                          style: _m(
+                            size: 10,
+                            weight: FontWeight.w600,
+                            color: _C.muted,
+                          ),
                         ),
                         const SizedBox(height: 2),
                         Text(
                           'Akan ditentukan oleh Bagian Aset',
                           key: const Key('text_pic_tujuan_ditinggalkan'),
-                          style: _m(size: 13, weight: FontWeight.w500, color: _C.muted),
+                          style: _m(
+                            size: 13,
+                            weight: FontWeight.w500,
+                            color: _C.muted,
+                          ),
                         ),
                       ],
                     ),
                   ),
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 4,
+                    ),
                     decoration: BoxDecoration(
                       color: const Color(0xFFF1F5F9),
                       borderRadius: BorderRadius.circular(6),
@@ -1123,7 +1417,11 @@ class _PemohonCreateMutationScreenState
                     ),
                     child: Text(
                       'Oleh Bagian Aset',
-                      style: _m(size: 11, weight: FontWeight.w600, color: _C.muted),
+                      style: _m(
+                        size: 11,
+                        weight: FontWeight.w600,
+                        color: _C.muted,
+                      ),
                     ),
                   ),
                 ],
@@ -1191,7 +1489,7 @@ class _PemohonCreateMutationScreenState
                         Expanded(
                           child: Text(
                             title,
-                            style: _m(size: 13, weight: FontWeight.w700),
+                            style: _m(size: 13, weight: FontWeight.w600),
                           ),
                         ),
 
@@ -1213,7 +1511,7 @@ class _PemohonCreateMutationScreenState
                             badge,
                             style: _m(
                               size: 10,
-                              weight: FontWeight.w700,
+                              weight: FontWeight.w600,
                               color: badgeGreen ? _C.success : _C.muted,
                             ),
                           ),
@@ -1307,7 +1605,7 @@ class _PemohonCreateMutationScreenState
             'SURAT KEPUTUSAN (SK) SDM *',
             style: _m(
               size: 11,
-              weight: FontWeight.w700,
+              weight: FontWeight.w600,
               color: _C.muted,
               letterSpacing: 0.5,
             ),
@@ -1317,11 +1615,7 @@ class _PemohonCreateMutationScreenState
 
           Text(
             'PDF wajib, maksimal 30 MB',
-            style: _m(
-              size: 11,
-              weight: FontWeight.w500,
-              color: _C.muted,
-            ),
+            style: _m(size: 11, weight: FontWeight.w500, color: _C.muted),
           ),
 
           const SizedBox(height: 8),
@@ -1373,7 +1667,11 @@ class _PemohonCreateMutationScreenState
 
                   IconButton(
                     tooltip: 'Lihat dokumen',
-                    icon: const Icon(Icons.visibility_outlined, size: 20, color: _C.navy),
+                    icon: const Icon(
+                      Icons.visibility_outlined,
+                      size: 20,
+                      color: _C.navy,
+                    ),
                     onPressed: _previewDocument,
                   ),
 
@@ -1490,7 +1788,7 @@ class _PemohonCreateMutationScreenState
                     icon: const Icon(Icons.bookmark_border, size: 18),
                     label: Text(
                       'Simpan Draf',
-                      style: _m(size: 13, weight: FontWeight.w700),
+                      style: _m(size: 13, weight: FontWeight.w600),
                     ),
                   ),
 
@@ -1524,7 +1822,7 @@ class _PemohonCreateMutationScreenState
                                   'Kirim Pengajuan Mutasi',
                                   style: _m(
                                     size: 13,
-                                    weight: FontWeight.w700,
+                                    weight: FontWeight.w600,
                                     color: Colors.white,
                                   ),
                                 ),
@@ -1548,7 +1846,7 @@ class _PemohonCreateMutationScreenState
 
                   Flexible(
                     child: Text(
-                      'Sesuai PRD MutasiKu • Tiket diterbitkan otomatis',
+                      'Sesuai Ketentuan MutasiKu • Tiket diterbitkan otomatis',
                       textAlign: TextAlign.center,
                       style: _m(
                         size: 10,
@@ -1611,8 +1909,8 @@ class _PemohonCreateMutationScreenState
     return InputDecoration(
       hintText: hint,
 
-      // Hint juga tidak bold.
-      hintStyle: _inputTextStyle(color: _C.muted, size: 12.5),
+      // Hint berukuran dan bergaya sama persis dengan input text (13sp w400)
+      hintStyle: _inputTextStyle(color: _C.muted, size: 13),
 
       filled: true,
       fillColor: _C.white,
@@ -1645,7 +1943,6 @@ class _PemohonCreateMutationScreenState
       ),
     );
   }
-
 }
 
 class _MinimalistPaperAirplane extends StatelessWidget {
@@ -1661,9 +1958,7 @@ class _MinimalistPaperAirplane extends StatelessWidget {
     return SizedBox(
       width: size,
       height: size,
-      child: CustomPaint(
-        painter: _MinimalistPaperAirplanePainter(color),
-      ),
+      child: CustomPaint(painter: _MinimalistPaperAirplanePainter(color)),
     );
   }
 }

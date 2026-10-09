@@ -61,8 +61,7 @@ class VerifyAndForwardMutationUseCase {
     if (needsPic && effectivePic.isEmpty) {
       return const Result.failure(
         ValidationFailure(
-          message:
-              'PIC baru wajib ditentukan oleh Bagian Aset sebelum meneruskan pengajuan.',
+          message: 'PIC baru wajib ditentukan oleh Bagian Aset sebelum meneruskan pengajuan.',
         ),
       );
     }
@@ -71,7 +70,9 @@ class VerifyAndForwardMutationUseCase {
     return repository.assetSectionForward(
       mutationId: mutationId,
       verifierName: verifierName,
-      newPic: effectivePic.isNotEmpty ? effectivePic : null,
+      newPic: (newPic != null && newPic.trim().isNotEmpty)
+          ? newPic.trim()
+          : null,
     );
   }
 }

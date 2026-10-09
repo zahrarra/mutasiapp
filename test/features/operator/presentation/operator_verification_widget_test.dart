@@ -1,3 +1,4 @@
+import 'package:mutasiku/core/errors/failures.dart';
 // test/features/operator/presentation/operator_verification_widget_test.dart
 //
 // Widget & presentation tests untuk screen Operator Verification.
@@ -47,16 +48,48 @@ class FakeAuthRepository implements AuthRepository {
 
   @override
   Future<void> logout() async {}
+    @override
+  Future<Result<User>> changePassword({
+    required String currentPassword,
+    required String newPassword,
+    required String confirmPassword,
+  }) async {
+    if (newPassword.length < 8) {
+      return Result.failure(
+        const ValidationFailure(message: 'Password baru minimal 8 karakter.'),
+      );
+    }
+    if (newPassword != confirmPassword) {
+      return Result.failure(
+        const ValidationFailure(message: 'Konfirmasi password baru tidak cocok.'),
+      );
+    }
+    if (newPassword == currentPassword) {
+      return Result.failure(
+        const ValidationFailure(
+          message: 'Password baru harus berbeda dengan password lama.',
+        ),
+      );
+    }
+    if (user != null) {
+      return Result.success(user!.copyWith(mustChangePassword: false));
+    }
+    return Result.failure(
+      const UnauthorizedFailure(message: 'Pengguna tidak ditemukan.'),
+    );
+  }
 }
 
 class FakeAuthNotifier extends AuthNotifier {
   FakeAuthNotifier(User user)
-      : super(
-          loginUseCase: LoginUseCase(repository: FakeAuthRepository(user: user)),
-          logoutUseCase: LogoutUseCase(repository: FakeAuthRepository(user: user)),
-          authRepository: FakeAuthRepository(user: user),
-          checkInitialStatus: false,
-        ) {
+    : super(
+        loginUseCase: LoginUseCase(repository: FakeAuthRepository(user: user)),
+        logoutUseCase: LogoutUseCase(
+          repository: FakeAuthRepository(user: user),
+        ),
+        authRepository: FakeAuthRepository(user: user),
+        checkInitialStatus: false,
+      ) {
     state = AuthState(isLoading: false, user: user);
   }
 }
@@ -79,21 +112,18 @@ void main() {
   Widget createTestWidget(Widget child) {
     return ProviderScope(
       overrides: [
-        authStateProvider.overrideWith(
-          (ref) => FakeAuthNotifier(operatorUser),
-        ),
+        authStateProvider.overrideWith((ref) => FakeAuthNotifier(operatorUser)),
         apiMutationRepositoryProvider.overrideWith(
           (ref) => ref.watch(mutationRepositoryProvider),
         ),
       ],
-      child: MaterialApp(
-        home: child,
-      ),
+      child: MaterialApp(home: child),
     );
   }
 
-  testWidgets('OperatorDashboardScreen displays greeting and stat cards',
-      (tester) async {
+  testWidgets('OperatorDashboardScreen displays greeting and stat cards', (
+    tester,
+  ) async {
     await tester.pumpWidget(createTestWidget(const OperatorDashboardScreen()));
     await tester.pumpAndSettle();
 
@@ -108,8 +138,9 @@ void main() {
     expect(find.byKey(const Key('btn_lihat_pengajuan')), findsOneWidget);
   });
 
-  testWidgets('OperatorMutationsScreen renders search bar and sort chips',
-      (tester) async {
+  testWidgets('OperatorMutationsScreen renders search bar and sort chips', (
+    tester,
+  ) async {
     await tester.pumpWidget(createTestWidget(const OperatorMutationsScreen()));
     await tester.pumpAndSettle();
 
@@ -120,15 +151,22 @@ void main() {
     expect(find.byKey(const Key('input_search_mutations')), findsOneWidget);
 
     // Verifikasi compact dropdown filters
-    expect(find.byKey(const Key('dropdown_filter_operator_status')), findsOneWidget);
-    expect(find.byKey(const Key('dropdown_filter_operator_sort')), findsOneWidget);
+    expect(
+      find.byKey(const Key('dropdown_filter_operator_status')),
+      findsOneWidget,
+    );
+    expect(
+      find.byKey(const Key('dropdown_filter_operator_sort')),
+      findsOneWidget,
+    );
 
     // Verifikasi card pengajuan masuk berstatus Diajukan tampil
     expect(find.text('Diajukan'), findsWidgets);
   });
 
-  testWidgets('OperatorMutationsScreen search filters results correctly',
-      (tester) async {
+  testWidgets('OperatorMutationsScreen search filters results correctly', (
+    tester,
+  ) async {
     await tester.pumpWidget(createTestWidget(const OperatorMutationsScreen()));
     await tester.pumpAndSettle();
 
@@ -138,15 +176,16 @@ void main() {
 
     // Filter dengan nama "Budi"
     await tester.enterText(
-        find.byKey(const Key('input_search_mutations')), 'Budi');
+      find.byKey(const Key('input_search_mutations')),
+      'Budi',
+    );
     await tester.pumpAndSettle();
 
     expect(find.text('Budi Santoso'), findsOneWidget);
     expect(find.text('Rina'), findsNothing);
 
     // Hapus search
-    await tester.enterText(
-        find.byKey(const Key('input_search_mutations')), '');
+    await tester.enterText(find.byKey(const Key('input_search_mutations')), '');
     await tester.pumpAndSettle();
 
     expect(find.text('Budi Santoso'), findsWidgets);
@@ -154,279 +193,44 @@ void main() {
   });
 
   testWidgets(
-      'OperatorVerificationDetailScreen displays submission data including Pemakai Lama',
-      (tester) async {
-    await tester.pumpWidget(createTestWidget(
-      const OperatorVerificationDetailScreen(mutationId: 'mut_001'),
-    ));
-    await tester.pumpAndSettle();
+    'OperatorVerificationDetailScreen displays submission data including Pemakai Lama',
+    (tester) async {
+      await tester.pumpWidget(
+        createTestWidget(
+          const OperatorVerificationDetailScreen(mutationId: 'mut_001'),
+        ),
+      );
+      await tester.pumpAndSettle();
 
-    // Ticket number
-    expect(find.text('ELEKTRONIK-2026-00124'), findsOneWidget);
-    // Pemohon
-    expect(find.text('Rina'), findsWidgets);
-    // Pemakai Lama (PIC Asal)
-    expect(find.text('Pemakai Lama (PIC Asal)'), findsOneWidget);
-    // PIC Baru (Tujuan)
-    expect(find.text('PIC Baru (Tujuan)'), findsOneWidget);
-    // Lokasi Asal & Lokasi Tujuan
-    expect(find.text('Kantor Pusat'), findsOneWidget);
-    expect(find.text('Cabang Surabaya'), findsOneWidget);
-    // Alasan Mutasi
-    expect(find.text('Perpindahan unit kerja ke Cabang Surabaya.'),
-        findsOneWidget);
+      // Ticket number
+      expect(find.text('ELEKTRONIK-2026-00124'), findsOneWidget);
+      // Pemohon
+      expect(find.text('Rina'), findsWidgets);
+      // Pemakai Lama (PIC Asal)
+      expect(find.text('Pemakai Lama (PIC Asal)'), findsOneWidget);
+      // PIC Baru (Tujuan)
+      expect(find.text('PIC Baru (Tujuan)'), findsOneWidget);
+      // Lokasi Asal & Lokasi Tujuan
+      expect(find.text('Kantor Pusat'), findsOneWidget);
+      expect(find.text('Cabang Surabaya'), findsOneWidget);
+      // Alasan Mutasi
+      expect(
+        find.text('Perpindahan unit kerja ke Cabang Surabaya.'),
+        findsOneWidget,
+      );
 
-    // Action buttons: Kembalikan & Verifikasi Valid
-    expect(find.byKey(const Key('btn_kembalikan_pengajuan')), findsOneWidget);
-    expect(find.byKey(const Key('btn_verifikasi_valid')), findsOneWidget);
-  });
+      // Action buttons: Kembalikan & Verifikasi Valid
+      expect(find.byKey(const Key('btn_kembalikan_pengajuan')), findsOneWidget);
+      expect(find.byKey(const Key('btn_verifikasi_valid')), findsOneWidget);
+    },
+  );
 
   testWidgets(
-      'Operator verify flow advances status to waitingAssetVerification and invalidates providers',
-      (tester) async {
-    late WidgetRef containerRef;
+    'Operator verify flow advances status to waitingAssetVerification and invalidates providers',
+    (tester) async {
+      late WidgetRef containerRef;
 
-    final testWidget = ProviderScope(
-      overrides: [
-        authStateProvider.overrideWith(
-          (ref) => FakeAuthNotifier(operatorUser),
-        ),
-        apiMutationRepositoryProvider.overrideWith(
-          (ref) => ref.watch(mutationRepositoryProvider),
-        ),
-      ],
-      child: Consumer(
-        builder: (context, ref, _) {
-          containerRef = ref;
-          return const MaterialApp(
-            home: OperatorVerificationDetailScreen(mutationId: 'mut_001'),
-          );
-        },
-      ),
-    );
-
-    await tester.pumpWidget(testWidget);
-    await tester.pumpAndSettle();
-
-    // Tap Verifikasi Valid
-    await tester.tap(find.byKey(const Key('btn_verifikasi_valid')));
-    await tester.pumpAndSettle();
-
-    // Modal Verifikasi Berhasil (Stitch) muncul langsung di atas detail
-    expect(find.text('Verifikasi Berhasil'), findsOneWidget);
-    expect(find.byKey(const Key('btn_operator_next_ticket')), findsOneWidget);
-
-    // Cek status mutasi telah terupdate ke waitingAssetVerification
-    final detail = await containerRef
-        .read(operatorMutationDetailProvider('mut_001').future);
-    expect(detail.status, MutationStatus.waitingAssetVerification);
-    expect(detail.verifiedBy, 'Siti Operator');
-  });
-
-  testWidgets(
-      'Operator return flow requires reason and sets status to returned',
-      (tester) async {
-    late WidgetRef containerRef;
-
-    final testWidget = ProviderScope(
-      overrides: [
-        authStateProvider.overrideWith(
-          (ref) => FakeAuthNotifier(operatorUser),
-        ),
-        apiMutationRepositoryProvider.overrideWith(
-          (ref) => ref.watch(mutationRepositoryProvider),
-        ),
-      ],
-      child: Consumer(
-        builder: (context, ref, _) {
-          containerRef = ref;
-          return const MaterialApp(
-            home: OperatorReturnFormScreen(mutationId: 'mut_002'),
-          );
-        },
-      ),
-    );
-
-    await tester.pumpWidget(testWidget);
-    await tester.pumpAndSettle();
-
-    // Verify card context
-    expect(find.text('KENDARAAN-2026-00042'), findsOneWidget);
-
-    // Try submitting without reason
-    await tester.tap(find.byKey(const Key('btn_submit_kembalikan')));
-    await tester.pumpAndSettle();
-
-    expect(find.text('Alasan pengembalian wajib diisi.'), findsOneWidget);
-
-    // Enter valid reason
-    await tester.enterText(
-      find.byKey(const Key('input_alasan_pengembalian')),
-      'Dokumen surat tugas operasional tidak memiliki cap basah.',
-    );
-    await tester.pumpAndSettle();
-
-    // Submit return
-    await tester.tap(find.byKey(const Key('btn_submit_kembalikan')));
-    await tester.pumpAndSettle();
-
-    // Cek status mutasi telah terupdate ke returned
-    final detail =
-        await containerRef.read(mutationDetailProvider('mut_002').future);
-    expect(detail.status.name, 'returned');
-    expect(detail.returnReason,
-        'Dokumen surat tugas operasional tidak memiliki cap basah.');
-  });
-
-  testWidgets(
-      'NotificationScreen marks as read and navigates to operator detail when item tapped',
-      (tester) async {
-    String? navigatedPath;
-
-    final router = GoRouter(
-      initialLocation: '/operator/notifications',
-      routes: [
-        GoRoute(
-          path: '/operator/notifications',
-          builder: (context, state) => const NotificationScreen(),
-        ),
-        GoRoute(
-          path: '/operator/mutations/:id',
-          builder: (context, state) {
-            navigatedPath = state.uri.toString();
-            return Scaffold(
-              body: Text('Detail Screen: ${state.pathParameters['id']}'),
-            );
-          },
-        ),
-      ],
-    );
-
-    await tester.pumpWidget(
-      ProviderScope(
-        overrides: [
-          authStateProvider.overrideWith(
-            (ref) => FakeAuthNotifier(operatorUser),
-          ),
-        ],
-        child: MaterialApp.router(
-          routerConfig: router,
-        ),
-      ),
-    );
-    await tester.pumpAndSettle();
-
-    // Verify NotificationScreen renders items
-    expect(find.text('Notifikasi'), findsWidgets);
-
-    // Tap first notification item (which has relatedMutationId: mut_004)
-    await tester.tap(find.textContaining('FURNITUR-2026-00018').first);
-    await tester.pumpAndSettle();
-
-    // Verify navigation reached operator mutation detail route
-    expect(navigatedPath, '/operator/mutations/mut_004');
-    expect(find.text('Detail Screen: mut_004'), findsOneWidget);
-  });
-
-  testWidgets(
-      'OperatorVerificationDetailScreen displays Data Aset Master and Snapshot when isUnregisteredAsset is false',
-      (tester) async {
-    await tester.pumpWidget(createTestWidget(
-      const OperatorVerificationDetailScreen(mutationId: 'mut_001'),
-    ));
-    await tester.pumpAndSettle();
-
-    // 1. Data Aset Master card appears automatically
-    expect(find.byKey(const Key('card_master_asset_data')), findsOneWidget);
-    expect(find.text('Data Aset Master'), findsOneWidget);
-    expect(find.text('Database SIMAK BMN'), findsOneWidget);
-
-    // 2. Tampilkan semua field master: nama, kode/inventory, serial number, kategori, lokasi, PIC
-    expect(find.byKey(const Key('master_asset_name')), findsOneWidget);
-    expect(find.text('Laptop Dell Latitude'), findsWidgets);
-
-    expect(find.byKey(const Key('master_asset_code')), findsOneWidget);
-    expect(find.text('AST-ELK-2024-0124'), findsOneWidget);
-
-    expect(find.byKey(const Key('master_asset_sn')), findsOneWidget);
-    expect(find.text('DL-7490-X1'), findsOneWidget);
-
-    expect(find.byKey(const Key('master_asset_category')), findsOneWidget);
-    expect(find.text('Elektronik & IT'), findsOneWidget);
-
-    expect(find.byKey(const Key('master_asset_location')), findsOneWidget);
-    expect(find.text('Kantor Pusat (SIMAK BMN)'), findsOneWidget);
-
-    expect(find.byKey(const Key('master_asset_pic')), findsOneWidget);
-
-    // 3. Snapshot Saat Pengajuan card appears
-    expect(find.text('Snapshot Saat Pengajuan'), findsOneWidget);
-
-    // 4. Match indicators appear when location and PIC match
-    expect(find.byKey(const Key('indicator_match_location')), findsOneWidget);
-    expect(find.byKey(const Key('indicator_match_pic')), findsOneWidget);
-  });
-
-  testWidgets(
-      'OperatorVerificationDetailScreen displays difference indicators when master location and PIC differ from snapshot',
-      (tester) async {
-    // mut_002 has master location 'Gedung A — Parkir Operasional' vs snapshot 'Kantor Pusat'
-    // and master pic 'Driver Operasional General Affair' vs snapshot 'Budi Santoso'
-    await tester.pumpWidget(createTestWidget(
-      const OperatorVerificationDetailScreen(mutationId: 'mut_002'),
-    ));
-    await tester.pumpAndSettle();
-
-    // Verifikasi master card ada
-    expect(find.byKey(const Key('card_master_asset_data')), findsOneWidget);
-
-    // Verifikasi indikator perbedaan lokasi dan PIC tampil
-    expect(find.byKey(const Key('indicator_diff_location')), findsOneWidget);
-    expect(
-      find.textContaining('⚠️ Berbeda dengan Master (Master: Gedung A — Parkir Operasional)'),
-      findsOneWidget,
-    );
-
-    expect(find.byKey(const Key('indicator_diff_pic')), findsOneWidget);
-    expect(
-      find.textContaining('⚠️ Berbeda dengan Master (Master: Driver Operasional General Affair)'),
-      findsOneWidget,
-    );
-  });
-
-  testWidgets(
-      'OperatorVerificationDetailScreen displays Aset Tidak Terdaftar warning and manual data when isUnregisteredAsset is true',
-      (tester) async {
-    final unregMutation = Mutation(
-      id: 'mut_unreg_test',
-      ticketNumber: 'OTH-2026-99999',
-      asset: const Asset(
-        id: '',
-        assetCode: 'SN-MANUAL-777',
-        name: 'Speaker Meeting Portable',
-        category: AssetCategory(id: 'cat_oth', code: 'OTH', name: 'Lainnya'),
-        location: 'Ruang Rapat Utama',
-        pic: 'Ahmad PIC',
-        status: AssetStatus.inMutation,
-        condition: 'Baik',
-        acquisitionYear: 2026,
-      ),
-      applicantId: 'u_opr_01',
-      applicantName: 'Siti Operator',
-      currentLocation: 'Ruang Rapat Utama',
-      targetLocation: 'Cabang Solo',
-      currentPic: 'Ahmad PIC',
-      targetPic: 'Joko Solo',
-      reason: 'Pinjam pakai audio meeting.',
-      status: MutationStatus.submitted,
-      isUnregisteredAsset: true,
-      customAssetName: 'Speaker Meeting Portable',
-      customSerialNumber: 'SN-MANUAL-777',
-      createdAt: DateTime.now(),
-    );
-
-    await tester.pumpWidget(
-      ProviderScope(
+      final testWidget = ProviderScope(
         overrides: [
           authStateProvider.overrideWith(
             (ref) => FakeAuthNotifier(operatorUser),
@@ -434,34 +238,294 @@ void main() {
           apiMutationRepositoryProvider.overrideWith(
             (ref) => ref.watch(mutationRepositoryProvider),
           ),
-          operatorMutationDetailProvider('mut_unreg_test').overrideWith(
-            (ref) => Future.value(unregMutation),
+        ],
+        child: Consumer(
+          builder: (context, ref, _) {
+            containerRef = ref;
+            return const MaterialApp(
+              home: OperatorVerificationDetailScreen(mutationId: 'mut_001'),
+            );
+          },
+        ),
+      );
+
+      await tester.pumpWidget(testWidget);
+      await tester.pumpAndSettle();
+
+      // Tap Verifikasi Valid
+      await tester.tap(find.byKey(const Key('btn_verifikasi_valid')));
+      await tester.pumpAndSettle();
+
+      // Modal Verifikasi Berhasil (Stitch) muncul langsung di atas detail
+      expect(find.text('Verifikasi Berhasil'), findsOneWidget);
+      expect(find.byKey(const Key('btn_operator_next_ticket')), findsOneWidget);
+
+      // Cek status mutasi telah terupdate ke waitingAssetVerification
+      final detail = await containerRef.read(
+        operatorMutationDetailProvider('mut_001').future,
+      );
+      expect(detail.status, MutationStatus.waitingAssetVerification);
+      expect(detail.verifiedBy, 'Siti Operator');
+    },
+  );
+
+  testWidgets(
+    'Operator return flow requires reason and sets status to returned',
+    (tester) async {
+      late WidgetRef containerRef;
+
+      final testWidget = ProviderScope(
+        overrides: [
+          authStateProvider.overrideWith(
+            (ref) => FakeAuthNotifier(operatorUser),
           ),
-          mutationDetailProvider('mut_unreg_test').overrideWith(
-            (ref) => Future.value(unregMutation),
+          apiMutationRepositoryProvider.overrideWith(
+            (ref) => ref.watch(mutationRepositoryProvider),
           ),
         ],
-        child: const MaterialApp(
-          home: OperatorVerificationDetailScreen(mutationId: 'mut_unreg_test'),
+        child: Consumer(
+          builder: (context, ref, _) {
+            containerRef = ref;
+            return const MaterialApp(
+              home: OperatorReturnFormScreen(mutationId: 'mut_002'),
+            );
+          },
         ),
-      ),
-    );
-    await tester.pumpAndSettle();
+      );
 
-    // Warning Aset Tidak Terdaftar wajib tampil
-    expect(find.byKey(const Key('banner_unregistered_asset')), findsOneWidget);
-    expect(find.text('Aset Tidak Terdaftar'), findsOneWidget);
+      await tester.pumpWidget(testWidget);
+      await tester.pumpAndSettle();
 
-    // Data Aset Master TIDAK boleh tampil
-    expect(find.byKey(const Key('card_master_asset_data')), findsNothing);
+      // Verify card context
+      expect(find.text('KENDARAAN-2026-00042'), findsOneWidget);
 
-    // Data manual pengajuan tampil
-    expect(find.text('Speaker Meeting Portable'), findsOneWidget);
-    expect(find.textContaining('SN-MANUAL-777'), findsOneWidget);
-  });
+      // Try submitting without reason
+      await tester.tap(find.byKey(const Key('btn_submit_kembalikan')));
+      await tester.pumpAndSettle();
 
-  testWidgets('PemohonCreateMutationScreen renders form fields',
-      (tester) async {
+      expect(find.text('Alasan pengembalian wajib diisi.'), findsOneWidget);
+
+      // Enter valid reason
+      await tester.enterText(
+        find.byKey(const Key('input_alasan_pengembalian')),
+        'Dokumen surat tugas operasional tidak memiliki cap basah.',
+      );
+      await tester.pumpAndSettle();
+
+      // Submit return
+      await tester.tap(find.byKey(const Key('btn_submit_kembalikan')));
+      await tester.pumpAndSettle();
+
+      // Cek status mutasi telah terupdate ke returned
+      final detail = await containerRef.read(
+        mutationDetailProvider('mut_002').future,
+      );
+      expect(detail.status.name, 'returned');
+      expect(
+        detail.returnReason,
+        'Dokumen surat tugas operasional tidak memiliki cap basah.',
+      );
+    },
+  );
+
+  testWidgets(
+    'NotificationScreen marks as read and navigates to operator detail when item tapped',
+    (tester) async {
+      String? navigatedPath;
+
+      final router = GoRouter(
+        initialLocation: '/operator/notifications',
+        routes: [
+          GoRoute(
+            path: '/operator/notifications',
+            builder: (context, state) => const NotificationScreen(),
+          ),
+          GoRoute(
+            path: '/operator/mutations/:id',
+            builder: (context, state) {
+              navigatedPath = state.uri.toString();
+              return Scaffold(
+                body: Text('Detail Screen: ${state.pathParameters['id']}'),
+              );
+            },
+          ),
+        ],
+      );
+
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            authStateProvider.overrideWith(
+              (ref) => FakeAuthNotifier(operatorUser),
+            ),
+          ],
+          child: MaterialApp.router(routerConfig: router),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      // Verify NotificationScreen renders items
+      expect(find.text('Notifikasi'), findsWidgets);
+
+      // Tap first notification item (which has relatedMutationId: mut_004)
+      await tester.tap(find.textContaining('FURNITUR-2026-00018').first);
+      await tester.pumpAndSettle();
+
+      // Verify navigation reached operator mutation detail route
+      expect(navigatedPath, '/operator/mutations/mut_004');
+      expect(find.text('Detail Screen: mut_004'), findsOneWidget);
+    },
+  );
+
+  testWidgets(
+    'OperatorVerificationDetailScreen displays Data Aset Master and Snapshot when isUnregisteredAsset is false',
+    (tester) async {
+      await tester.pumpWidget(
+        createTestWidget(
+          const OperatorVerificationDetailScreen(mutationId: 'mut_001'),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      // 1. Data Aset Master card appears automatically
+      expect(find.byKey(const Key('card_master_asset_data')), findsOneWidget);
+      expect(find.text('Data Aset Master'), findsOneWidget);
+      expect(find.text('Database SIMAK BMN'), findsOneWidget);
+
+      // 2. Tampilkan semua field master: nama, kode/inventory, serial number, kategori, lokasi, PIC
+      expect(find.byKey(const Key('master_asset_name')), findsOneWidget);
+      expect(find.text('Laptop Dell Latitude'), findsWidgets);
+
+      expect(find.byKey(const Key('master_asset_code')), findsOneWidget);
+      expect(find.text('AST-ELK-2024-0124'), findsOneWidget);
+
+      expect(find.byKey(const Key('master_asset_sn')), findsOneWidget);
+      expect(find.text('DL-7490-X1'), findsOneWidget);
+
+      expect(find.byKey(const Key('master_asset_category')), findsOneWidget);
+      expect(find.text('Elektronik & IT'), findsOneWidget);
+
+      expect(find.byKey(const Key('master_asset_location')), findsOneWidget);
+      expect(find.text('Kantor Pusat (SIMAK BMN)'), findsOneWidget);
+
+      expect(find.byKey(const Key('master_asset_pic')), findsOneWidget);
+
+      // 3. Snapshot Saat Pengajuan card appears
+      expect(find.text('Snapshot Saat Pengajuan'), findsOneWidget);
+
+      // 4. Match indicators appear when location and PIC match
+      expect(find.byKey(const Key('indicator_match_location')), findsOneWidget);
+      expect(find.byKey(const Key('indicator_match_pic')), findsOneWidget);
+    },
+  );
+
+  testWidgets(
+    'OperatorVerificationDetailScreen displays difference indicators when master location and PIC differ from snapshot',
+    (tester) async {
+      // mut_002 has master location 'Gedung A — Parkir Operasional' vs snapshot 'Kantor Pusat'
+      // and master pic 'Driver Operasional General Affair' vs snapshot 'Budi Santoso'
+      await tester.pumpWidget(
+        createTestWidget(
+          const OperatorVerificationDetailScreen(mutationId: 'mut_002'),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      // Verifikasi master card ada
+      expect(find.byKey(const Key('card_master_asset_data')), findsOneWidget);
+
+      // Verifikasi indikator perbedaan lokasi dan PIC tampil
+      expect(find.byKey(const Key('indicator_diff_location')), findsOneWidget);
+      expect(
+        find.textContaining(
+          '⚠️ Berbeda dengan Master (Master: Gedung A — Parkir Operasional)',
+        ),
+        findsOneWidget,
+      );
+
+      expect(find.byKey(const Key('indicator_diff_pic')), findsOneWidget);
+      expect(
+        find.textContaining(
+          '⚠️ Berbeda dengan Master (Master: Driver Operasional General Affair)',
+        ),
+        findsOneWidget,
+      );
+    },
+  );
+
+  testWidgets(
+    'OperatorVerificationDetailScreen displays Aset Tidak Terdaftar warning and manual data when isUnregisteredAsset is true',
+    (tester) async {
+      final unregMutation = Mutation(
+        id: 'mut_unreg_test',
+        ticketNumber: 'OTH-2026-99999',
+        asset: const Asset(
+          id: '',
+          assetCode: 'SN-MANUAL-777',
+          name: 'Speaker Meeting Portable',
+          category: AssetCategory(id: 'cat_oth', code: 'OTH', name: 'Lainnya'),
+          location: 'Ruang Rapat Utama',
+          pic: 'Ahmad PIC',
+          status: AssetStatus.inMutation,
+          condition: 'Baik',
+          acquisitionYear: 2026,
+        ),
+        applicantId: 'u_opr_01',
+        applicantName: 'Siti Operator',
+        currentLocation: 'Ruang Rapat Utama',
+        targetLocation: 'Cabang Solo',
+        currentPic: 'Ahmad PIC',
+        targetPic: 'Joko Solo',
+        reason: 'Pinjam pakai audio meeting.',
+        status: MutationStatus.submitted,
+        isUnregisteredAsset: true,
+        customAssetName: 'Speaker Meeting Portable',
+        customSerialNumber: 'SN-MANUAL-777',
+        createdAt: DateTime.now(),
+      );
+
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            authStateProvider.overrideWith(
+              (ref) => FakeAuthNotifier(operatorUser),
+            ),
+            apiMutationRepositoryProvider.overrideWith(
+              (ref) => ref.watch(mutationRepositoryProvider),
+            ),
+            operatorMutationDetailProvider('mut_unreg_test')
+                .overrideWith((ref) => Future.value(unregMutation)),
+            mutationDetailProvider('mut_unreg_test')
+                .overrideWith((ref) => Future.value(unregMutation)),
+          ],
+          child: const MaterialApp(
+            home: OperatorVerificationDetailScreen(
+              mutationId: 'mut_unreg_test',
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      // Warning Aset Tidak Terdaftar wajib tampil
+      expect(
+        find.byKey(const Key('banner_unregistered_asset')),
+        findsOneWidget,
+      );
+      expect(find.text('Aset Tidak Terdaftar'), findsOneWidget);
+
+      // Data Aset Master TIDAK boleh tampil
+      expect(find.byKey(const Key('card_master_asset_data')), findsNothing);
+
+      // Data manual pengajuan tampil
+      expect(find.text('Speaker Meeting Portable'), findsOneWidget);
+      expect(find.textContaining('SN-MANUAL-777'), findsOneWidget);
+    },
+  );
+
+  testWidgets('PemohonCreateMutationScreen renders form fields', (
+    tester,
+  ) async {
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
@@ -469,9 +533,7 @@ void main() {
             (ref) => FakeAuthNotifier(operatorUser),
           ),
         ],
-        child: const MaterialApp(
-          home: PemohonCreateMutationScreen(),
-        ),
+        child: const MaterialApp(home: PemohonCreateMutationScreen()),
       ),
     );
     await tester.pumpAndSettle();
@@ -480,87 +542,110 @@ void main() {
     expect(find.byType(Form), findsOneWidget);
   });
 
-  testWidgets('OperatorDashboardScreen does not show Lihat Detail or Filter Detail',
-      (tester) async {
-    await tester.pumpWidget(createTestWidget(const OperatorDashboardScreen()));
-    await tester.pumpAndSettle();
+  testWidgets(
+    'OperatorDashboardScreen does not show Lihat Detail or Filter Detail',
+    (tester) async {
+      await tester.pumpWidget(
+        createTestWidget(const OperatorDashboardScreen()),
+      );
+      await tester.pumpAndSettle();
 
-    expect(find.text('Lihat Detail'), findsNothing);
-    expect(find.text('Filter Detail'), findsNothing);
-  });
+      expect(find.text('Lihat Detail'), findsNothing);
+      expect(find.text('Filter Detail'), findsNothing);
+    },
+  );
 
-  testWidgets('OperatorMutationsScreen initialFilter sets active filter and tab correctly',
-      (tester) async {
-    // 1. Initial filter TI
-    await tester.pumpWidget(createTestWidget(
-      const OperatorMutationsScreen(initialFilter: 'ti'),
-    ));
-    await tester.pumpAndSettle();
-    expect(find.textContaining('Aset TI'), findsWidgets);
+  testWidgets(
+    'OperatorMutationsScreen initialFilter sets active filter and tab correctly',
+    (tester) async {
+      // 1. Initial filter TI
+      await tester.pumpWidget(
+        createTestWidget(const OperatorMutationsScreen(initialFilter: 'ti')),
+      );
+      await tester.pumpAndSettle();
+      expect(find.textContaining('Aset TI'), findsWidgets);
 
-    // 2. Initial filter Umum
-    await tester.pumpWidget(createTestWidget(
-      const OperatorMutationsScreen(initialFilter: 'umum'),
-    ));
-    await tester.pumpAndSettle();
-    expect(find.textContaining('Aset Umum'), findsWidgets);
+      // 2. Initial filter Umum
+      await tester.pumpWidget(
+        createTestWidget(const OperatorMutationsScreen(initialFilter: 'umum')),
+      );
+      await tester.pumpAndSettle();
+      expect(find.textContaining('Aset Umum'), findsWidgets);
 
-    // 3. Initial filter Returned
-    await tester.pumpWidget(createTestWidget(
-      const OperatorMutationsScreen(initialFilter: 'returned'),
-    ));
-    await tester.pumpAndSettle();
-    expect(find.textContaining('Dikembalikan'), findsWidgets);
+      // 3. Initial filter Returned
+      await tester.pumpWidget(
+        createTestWidget(
+          const OperatorMutationsScreen(initialFilter: 'returned'),
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(find.textContaining('Dikembalikan'), findsWidgets);
 
-    // 4. Initial filter Submitted
-    await tester.pumpWidget(createTestWidget(
-      const OperatorMutationsScreen(initialFilter: 'submitted'),
-    ));
-    await tester.pumpAndSettle();
-    expect(find.textContaining('Menunggu'), findsWidgets);
+      // 4. Initial filter Submitted
+      await tester.pumpWidget(
+        createTestWidget(
+          const OperatorMutationsScreen(initialFilter: 'submitted'),
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(find.textContaining('Menunggu'), findsWidgets);
 
-    // 5. Initial filter Allocated (Dialokasikan)
-    await tester.pumpWidget(createTestWidget(
-      const OperatorMutationsScreen(initialFilter: 'allocated'),
-    ));
-    await tester.pumpAndSettle();
-    expect(find.textContaining('Dialokasikan'), findsWidgets);
-  });
+      // 5. Initial filter Allocated (Dialokasikan)
+      await tester.pumpWidget(
+        createTestWidget(
+          const OperatorMutationsScreen(initialFilter: 'allocated'),
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(find.textContaining('Dialokasikan'), findsWidgets);
+    },
+  );
 
-  testWidgets('OperatorMutationsScreen filter status properly isolates returned and allocated items',
-      (tester) async {
-    // 1. Open screen with 'submitted' filter: returned and allocated items should not appear
-    await tester.pumpWidget(createTestWidget(
-      const OperatorMutationsScreen(initialFilter: 'submitted'),
-    ));
-    await tester.pumpAndSettle();
+  testWidgets(
+    'OperatorMutationsScreen filter status properly isolates returned and allocated items',
+    (tester) async {
+      // 1. Open screen with 'submitted' filter: returned and allocated items should not appear
+      await tester.pumpWidget(
+        createTestWidget(
+          const OperatorMutationsScreen(initialFilter: 'submitted'),
+        ),
+      );
+      await tester.pumpAndSettle();
 
-    // Rina (submitted) should be visible
-    expect(find.text('Rina'), findsWidgets);
-    // Andi Wijaya (returned), Meja Kerja Eksekutif (allocated), Server Rack (allocated) should NOT appear
-    expect(find.text('Andi Wijaya'), findsNothing);
-    expect(find.text('Meja Kerja Eksekutif'), findsNothing);
-    expect(find.text('Server Rack Enterprise Dell PowerEdge'), findsNothing);
+      // Rina (submitted) should be visible
+      expect(find.text('Rina'), findsWidgets);
+      // Andi Wijaya (returned), Meja Kerja Eksekutif (allocated), Server Rack (allocated) should NOT appear
+      expect(find.text('Andi Wijaya'), findsNothing);
+      expect(find.text('Meja Kerja Eksekutif'), findsNothing);
+      expect(find.text('Server Rack Enterprise Dell PowerEdge'), findsNothing);
 
-    // 2. Open screen with 'returned' filter (Dikembalikan)
-    await tester.pumpWidget(createTestWidget(
-      const OperatorMutationsScreen(initialFilter: 'returned'),
-    ));
-    await tester.pumpAndSettle();
+      // 2. Open screen with 'returned' filter (Dikembalikan)
+      await tester.pumpWidget(
+        createTestWidget(
+          const OperatorMutationsScreen(initialFilter: 'returned'),
+        ),
+      );
+      await tester.pumpAndSettle();
 
-    expect(find.text('Andi Wijaya'), findsOneWidget);
-    expect(find.text('Rina'), findsNothing);
-    expect(find.text('Server Rack Enterprise Dell PowerEdge'), findsNothing);
+      expect(find.text('Andi Wijaya'), findsOneWidget);
+      expect(find.text('Rina'), findsNothing);
+      expect(find.text('Server Rack Enterprise Dell PowerEdge'), findsNothing);
 
-    // 3. Open screen with 'allocated' filter (Dialokasikan)
-    await tester.pumpWidget(createTestWidget(
-      const OperatorMutationsScreen(initialFilter: 'allocated'),
-    ));
-    await tester.pumpAndSettle();
+      // 3. Open screen with 'allocated' filter (Dialokasikan)
+      await tester.pumpWidget(
+        createTestWidget(
+          const OperatorMutationsScreen(initialFilter: 'allocated'),
+        ),
+      );
+      await tester.pumpAndSettle();
 
-    expect(find.text('Meja Kerja Eksekutif'), findsWidgets);
-    expect(find.text('Server Rack Enterprise Dell PowerEdge'), findsOneWidget);
-    expect(find.text('Rina'), findsNothing);
-    expect(find.text('Andi Wijaya'), findsNothing);
-  });
+      expect(find.text('Meja Kerja Eksekutif'), findsWidgets);
+      expect(
+        find.text('Server Rack Enterprise Dell PowerEdge'),
+        findsOneWidget,
+      );
+      expect(find.text('Rina'), findsNothing);
+      expect(find.text('Andi Wijaya'), findsNothing);
+    },
+  );
 }

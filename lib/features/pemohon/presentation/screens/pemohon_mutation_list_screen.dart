@@ -17,7 +17,16 @@ import '../../../mutation/domain/entities/mutation.dart';
 import '../../../mutation/domain/entities/mutation_status.dart';
 import '../../../mutation/presentation/providers/mutation_provider.dart';
 
-enum _QuickFilter { all, progress, done, action }
+enum _QuickFilter {
+  all,
+  processing,
+  allocated,
+  returned,
+  completed,
+  rejected,
+  ti,
+  umum,
+}
 
 abstract final class _C {
   static const background = Color(0xFFF6F8FA);
@@ -36,10 +45,7 @@ abstract final class _C {
 class PemohonMutationListScreen extends ConsumerStatefulWidget {
   final String? initialFilter;
 
-  const PemohonMutationListScreen({
-    super.key,
-    this.initialFilter,
-  });
+  const PemohonMutationListScreen({super.key, this.initialFilter});
 
   @override
   ConsumerState<PemohonMutationListScreen> createState() =>
@@ -78,16 +84,54 @@ class _PemohonMutationListScreenState
   static _QuickFilter _parseFilter(String? value) {
     if (value == null) return _QuickFilter.all;
     final v = value.toLowerCase().trim();
-    if (v == 'progress' || v == 'dalam proses' || v == 'dalamproses') {
-      return _QuickFilter.progress;
+    if (v == 'allocated' || v == 'dialokasikan') {
+      return _QuickFilter.allocated;
     }
-    if (v == 'action' || v == 'perlu tindakan' || v == 'perlutindakan') {
-      return _QuickFilter.action;
+    if (v == 'returned' || v == 'dikembalikan') {
+      return _QuickFilter.returned;
+    }
+    if (v == 'progress' ||
+        v == 'dalam proses' ||
+        v == 'dalamproses' ||
+        v == 'diproses') {
+      return _QuickFilter.processing;
     }
     if (v == 'done' || v == 'selesai' || v == 'completed') {
-      return _QuickFilter.done;
+      return _QuickFilter.completed;
+    }
+    if (v == 'rejected' || v == 'ditolak') {
+      return _QuickFilter.rejected;
+    }
+    if (v == 'action' || v == 'perlu tindakan' || v == 'perlutindakan') {
+      return _QuickFilter.allocated;
+    }
+    if (v == 'ti' || v == 'it' || v == 'aset_ti' || v == 'asetti') {
+      return _QuickFilter.ti;
+    }
+    if (v == 'umum' || v == 'non_ti' || v == 'aset_umum' || v == 'asetumum') {
+      return _QuickFilter.umum;
     }
     return _QuickFilter.all;
+  }
+
+  static bool _isTiAsset(Mutation m) {
+    final cat = m.asset.category.name.toLowerCase();
+    final code = m.asset.category.code.toLowerCase();
+    final name = m.asset.name.toLowerCase();
+    final desc = (m.customAssetName ?? '').toLowerCase();
+    return cat.contains('ti') ||
+        cat.contains('it') ||
+        code.contains('ti') ||
+        code.contains('it') ||
+        code.contains('elk') ||
+        name.contains('laptop') ||
+        name.contains('pc') ||
+        name.contains('komputer') ||
+        name.contains('printer') ||
+        name.contains('server') ||
+        name.contains('macbook') ||
+        desc.contains('laptop') ||
+        desc.contains('pc');
   }
 
   @override
@@ -117,34 +161,51 @@ class _PemohonMutationListScreenState
     switch (_filter) {
       case _QuickFilter.all:
         break;
-      case _QuickFilter.progress:
+      case _QuickFilter.processing:
         result = result
             .where(
               (m) =>
-                  m.status == MutationStatus.submitted ||
-                  m.status == MutationStatus.waitingAssetVerification ||
-                  m.status == MutationStatus.verified ||
-                  m.status == MutationStatus.waitingDivisionHeadApproval ||
-                  m.status == MutationStatus.waitingKadivApproval ||
-                  m.status == MutationStatus.approved ||
-                  m.status == MutationStatus.waitingSync,
+                  m.status.historyCategory == MutationHistoryCategory.processing,
             )
             .toList();
         break;
-      case _QuickFilter.done:
-        result = result
-            .where((m) => m.status == MutationStatus.completed)
-            .toList();
-        break;
-      case _QuickFilter.action:
+      case _QuickFilter.allocated:
         result = result
             .where(
               (m) =>
-                  m.status == MutationStatus.waitingConfirmation ||
-                  m.status == MutationStatus.pendingConfirmation ||
-                  m.status == MutationStatus.returned,
+                  m.status.historyCategory == MutationHistoryCategory.allocated,
             )
             .toList();
+        break;
+      case _QuickFilter.returned:
+        result = result
+            .where(
+              (m) =>
+                  m.status.historyCategory == MutationHistoryCategory.returned,
+            )
+            .toList();
+        break;
+      case _QuickFilter.completed:
+        result = result
+            .where(
+              (m) =>
+                  m.status.historyCategory == MutationHistoryCategory.completed,
+            )
+            .toList();
+        break;
+      case _QuickFilter.rejected:
+        result = result
+            .where(
+              (m) =>
+                  m.status.historyCategory == MutationHistoryCategory.rejected,
+            )
+            .toList();
+        break;
+      case _QuickFilter.ti:
+        result = result.where((m) => _isTiAsset(m)).toList();
+        break;
+      case _QuickFilter.umum:
+        result = result.where((m) => !_isTiAsset(m)).toList();
         break;
     }
     if (_query.isNotEmpty) {
@@ -169,30 +230,45 @@ class _PemohonMutationListScreenState
     switch (f) {
       case _QuickFilter.all:
         return list.length;
-      case _QuickFilter.progress:
+      case _QuickFilter.processing:
         return list
             .where(
               (m) =>
-                  m.status == MutationStatus.submitted ||
-                  m.status == MutationStatus.waitingAssetVerification ||
-                  m.status == MutationStatus.verified ||
-                  m.status == MutationStatus.waitingDivisionHeadApproval ||
-                  m.status == MutationStatus.waitingKadivApproval ||
-                  m.status == MutationStatus.approved ||
-                  m.status == MutationStatus.waitingSync,
+                  m.status.historyCategory == MutationHistoryCategory.processing,
             )
             .length;
-      case _QuickFilter.done:
-        return list.where((m) => m.status == MutationStatus.completed).length;
-      case _QuickFilter.action:
+      case _QuickFilter.allocated:
         return list
             .where(
               (m) =>
-                  m.status == MutationStatus.waitingConfirmation ||
-                  m.status == MutationStatus.pendingConfirmation ||
-                  m.status == MutationStatus.returned,
+                  m.status.historyCategory == MutationHistoryCategory.allocated,
             )
             .length;
+      case _QuickFilter.returned:
+        return list
+            .where(
+              (m) =>
+                  m.status.historyCategory == MutationHistoryCategory.returned,
+            )
+            .length;
+      case _QuickFilter.completed:
+        return list
+            .where(
+              (m) =>
+                  m.status.historyCategory == MutationHistoryCategory.completed,
+            )
+            .length;
+      case _QuickFilter.rejected:
+        return list
+            .where(
+              (m) =>
+                  m.status.historyCategory == MutationHistoryCategory.rejected,
+            )
+            .length;
+      case _QuickFilter.ti:
+        return list.where((m) => _isTiAsset(m)).length;
+      case _QuickFilter.umum:
+        return list.where((m) => !_isTiAsset(m)).length;
     }
   }
 
@@ -238,9 +314,10 @@ class _PemohonMutationListScreenState
                           Padding(
                             padding: const EdgeInsets.all(24),
                             child: ErrorView(
-                              message: asyncList.error
-                                  .toString()
-                                  .replaceFirst('Exception: ', ''),
+                              message: asyncList.error.toString().replaceFirst(
+                                'Exception: ',
+                                '',
+                              ),
                               onRetry: () =>
                                   ref.invalidate(mutationListProvider),
                             ),
@@ -272,23 +349,16 @@ class _PemohonMutationListScreenState
       ),
       floatingActionButtonLocation: const _SnugEndFloatFabLocation(gap: 10.0),
       floatingActionButton: FloatingActionButton.extended(
-        onPressed: () =>
-            context.pushNamed(RouteNames.pemohonMutasiCreateName),
+        onPressed: () => context.pushNamed(RouteNames.pemohonMutasiCreateName),
         backgroundColor: _C.primary,
         foregroundColor: Colors.white,
         elevation: 6,
         highlightElevation: 8,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(999),
-        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(999)),
         icon: const Icon(Icons.add_rounded, size: 20, color: Colors.white),
         label: Text(
           'Ajukan Mutasi',
-          style: _inter(
-            size: 14,
-            weight: FontWeight.w700,
-            color: Colors.white,
-          ),
+          style: _inter(size: 14, weight: FontWeight.w700, color: Colors.white),
         ),
       ),
       bottomNavigationBar: CustomFloatingNavBar.scaffoldBottomBar(
@@ -422,84 +492,204 @@ class _PemohonMutationListScreenState
             child: SafeArea(
               top: false,
               child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Center(
-                  child: Container(
-                    width: 36,
-                    height: 4,
-                    margin: const EdgeInsets.only(bottom: 16),
-                    decoration: BoxDecoration(
-                      color: _C.border,
-                      borderRadius: BorderRadius.circular(8),
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Center(
+                    child: Container(
+                      width: 36,
+                      height: 4,
+                      margin: const EdgeInsets.only(bottom: 16),
+                      decoration: BoxDecoration(
+                        color: _C.border,
+                        borderRadius: BorderRadius.circular(8),
+                      ),
                     ),
                   ),
-                ),
-                Text(
-                  'Filter Mutasi Saya',
-                  style: _inter(
-                    size: 16,
-                    weight: FontWeight.w800,
-                    color: _C.textPrimary,
+                  Text(
+                    'Filter Mutasi Saya',
+                    style: _inter(
+                      size: 16,
+                      weight: FontWeight.w800,
+                      color: _C.textPrimary,
+                    ),
                   ),
-                ),
-                const SizedBox(height: 14),
-                ListTile(
-                  contentPadding: EdgeInsets.zero,
-                  leading: const Icon(Icons.apps_rounded, color: _C.primaryContainer),
-                  title: Text('Semua Pengajuan', style: _inter(size: 14, weight: FontWeight.w600)),
-                  trailing: _filter == _QuickFilter.all
-                      ? const Icon(Icons.check_circle_rounded, color: _C.secondary)
-                      : null,
-                  onTap: () {
-                    setState(() => _filter = _QuickFilter.all);
-                    Navigator.pop(sheetContext);
-                  },
-                ),
-                ListTile(
-                  contentPadding: EdgeInsets.zero,
-                  leading: const Icon(Icons.sync_rounded, color: Color(0xFF175CD3)),
-                  title: Text('Dalam Proses', style: _inter(size: 14, weight: FontWeight.w600)),
-                  trailing: _filter == _QuickFilter.progress
-                      ? const Icon(Icons.check_circle_rounded, color: _C.secondary)
-                      : null,
-                  onTap: () {
-                    setState(() => _filter = _QuickFilter.progress);
-                    Navigator.pop(sheetContext);
-                  },
-                ),
-                ListTile(
-                  contentPadding: EdgeInsets.zero,
-                  leading: const Icon(Icons.assignment_turned_in_rounded, color: _C.warning),
-                  title: Text('Perlu Tindakan (Konfirmasi & Revisi)', style: _inter(size: 14, weight: FontWeight.w600)),
-                  trailing: _filter == _QuickFilter.action
-                      ? const Icon(Icons.check_circle_rounded, color: _C.secondary)
-                      : null,
-                  onTap: () {
-                    setState(() => _filter = _QuickFilter.action);
-                    Navigator.pop(sheetContext);
-                  },
-                ),
-                ListTile(
-                  contentPadding: EdgeInsets.zero,
-                  leading: const Icon(Icons.verified_rounded, color: _C.success),
-                  title: Text('Selesai', style: _inter(size: 14, weight: FontWeight.w600)),
-                  trailing: _filter == _QuickFilter.done
-                      ? const Icon(Icons.check_circle_rounded, color: _C.secondary)
-                      : null,
-                  onTap: () {
-                    setState(() => _filter = _QuickFilter.done);
-                    Navigator.pop(sheetContext);
-                  },
-                ),
-              ],
+                  const SizedBox(height: 14),
+                  ListTile(
+                    contentPadding: EdgeInsets.zero,
+                    leading: const Icon(
+                      Icons.apps_rounded,
+                      color: _C.primaryContainer,
+                    ),
+                    title: Text(
+                      'Semua Pengajuan',
+                      style: _inter(size: 14, weight: FontWeight.w600),
+                    ),
+                    trailing: _filter == _QuickFilter.all
+                        ? const Icon(
+                            Icons.check_circle_rounded,
+                            color: _C.secondary,
+                          )
+                        : null,
+                    onTap: () {
+                      setState(() => _filter = _QuickFilter.all);
+                      Navigator.pop(sheetContext);
+                    },
+                  ),
+                  ListTile(
+                    contentPadding: EdgeInsets.zero,
+                    leading: const Icon(
+                      Icons.sync_rounded,
+                      color: Color(0xFF175CD3),
+                    ),
+                    title: Text(
+                      'Diproses',
+                      style: _inter(size: 14, weight: FontWeight.w600),
+                    ),
+                    trailing: _filter == _QuickFilter.processing
+                        ? const Icon(
+                            Icons.check_circle_rounded,
+                            color: _C.secondary,
+                          )
+                        : null,
+                    onTap: () {
+                      setState(() => _filter = _QuickFilter.processing);
+                      Navigator.pop(sheetContext);
+                    },
+                  ),
+                  ListTile(
+                    contentPadding: EdgeInsets.zero,
+                    leading: const Icon(
+                      Icons.schedule_send_rounded,
+                      color: _C.primaryContainer,
+                    ),
+                    title: Text(
+                      'Dialokasikan',
+                      style: _inter(size: 14, weight: FontWeight.w600),
+                    ),
+                    trailing: _filter == _QuickFilter.allocated
+                        ? const Icon(
+                            Icons.check_circle_rounded,
+                            color: _C.secondary,
+                          )
+                        : null,
+                    onTap: () {
+                      setState(() => _filter = _QuickFilter.allocated);
+                      Navigator.pop(sheetContext);
+                    },
+                  ),
+                  ListTile(
+                    contentPadding: EdgeInsets.zero,
+                    leading: const Icon(
+                      Icons.replay_rounded,
+                      color: _C.warning,
+                    ),
+                    title: Text(
+                      'Dikembalikan',
+                      style: _inter(size: 14, weight: FontWeight.w600),
+                    ),
+                    trailing: _filter == _QuickFilter.returned
+                        ? const Icon(
+                            Icons.check_circle_rounded,
+                            color: _C.secondary,
+                          )
+                        : null,
+                    onTap: () {
+                      setState(() => _filter = _QuickFilter.returned);
+                      Navigator.pop(sheetContext);
+                    },
+                  ),
+                  ListTile(
+                    contentPadding: EdgeInsets.zero,
+                    leading: const Icon(
+                      Icons.verified_rounded,
+                      color: _C.success,
+                    ),
+                    title: Text(
+                      'Selesai',
+                      style: _inter(size: 14, weight: FontWeight.w600),
+                    ),
+                    trailing: _filter == _QuickFilter.completed
+                        ? const Icon(
+                            Icons.check_circle_rounded,
+                            color: _C.secondary,
+                          )
+                        : null,
+                    onTap: () {
+                      setState(() => _filter = _QuickFilter.completed);
+                      Navigator.pop(sheetContext);
+                    },
+                  ),
+                  ListTile(
+                    contentPadding: EdgeInsets.zero,
+                    leading: const Icon(
+                      Icons.cancel_outlined,
+                      color: Color(0xFFEF4444),
+                    ),
+                    title: Text(
+                      'Ditolak',
+                      style: _inter(size: 14, weight: FontWeight.w600),
+                    ),
+                    trailing: _filter == _QuickFilter.rejected
+                        ? const Icon(
+                            Icons.check_circle_rounded,
+                            color: _C.secondary,
+                          )
+                        : null,
+                    onTap: () {
+                      setState(() => _filter = _QuickFilter.rejected);
+                      Navigator.pop(sheetContext);
+                    },
+                  ),
+                  ListTile(
+                    contentPadding: EdgeInsets.zero,
+                    leading: const Icon(
+                      Icons.devices_rounded,
+                      color: Color(0xFF006A63),
+                    ),
+                    title: Text(
+                      'Aset TI',
+                      style: _inter(size: 14, weight: FontWeight.w600),
+                    ),
+                    trailing: _filter == _QuickFilter.ti
+                        ? const Icon(
+                            Icons.check_circle_rounded,
+                            color: _C.secondary,
+                          )
+                        : null,
+                    onTap: () {
+                      setState(() => _filter = _QuickFilter.ti);
+                      Navigator.pop(sheetContext);
+                    },
+                  ),
+                  ListTile(
+                    contentPadding: EdgeInsets.zero,
+                    leading: const Icon(
+                      Icons.category_rounded,
+                      color: Color(0xFF52606D),
+                    ),
+                    title: Text(
+                      'Aset Umum',
+                      style: _inter(size: 14, weight: FontWeight.w600),
+                    ),
+                    trailing: _filter == _QuickFilter.umum
+                        ? const Icon(
+                            Icons.check_circle_rounded,
+                            color: _C.secondary,
+                          )
+                        : null,
+                    onTap: () {
+                      setState(() => _filter = _QuickFilter.umum);
+                      Navigator.pop(sheetContext);
+                    },
+                  ),
+                ],
+              ),
             ),
           ),
-        ),
-      );
-    },
-  );
+        );
+      },
+    );
   }
 
   Widget _buildChips(List<Mutation> all) {
@@ -539,8 +729,10 @@ class _PemohonMutationListScreenState
                 ),
                 const SizedBox(width: 6),
                 Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 6,
+                    vertical: 1,
+                  ),
                   decoration: BoxDecoration(
                     color: active
                         ? Colors.white.withValues(alpha: 0.25)
@@ -569,16 +761,23 @@ class _PemohonMutationListScreenState
         children: [
           chip('Semua', _QuickFilter.all),
           const SizedBox(width: 8),
-          chip('Dalam Proses', _QuickFilter.progress),
+          chip('Diproses', _QuickFilter.processing),
           const SizedBox(width: 8),
-          chip('Perlu Tindakan', _QuickFilter.action),
+          chip('Dialokasikan', _QuickFilter.allocated),
           const SizedBox(width: 8),
-          chip('Selesai', _QuickFilter.done),
+          chip('Dikembalikan', _QuickFilter.returned),
+          const SizedBox(width: 8),
+          chip('Selesai', _QuickFilter.completed),
+          const SizedBox(width: 8),
+          chip('Ditolak', _QuickFilter.rejected),
+          const SizedBox(width: 8),
+          chip('Aset TI', _QuickFilter.ti),
+          const SizedBox(width: 8),
+          chip('Aset Umum', _QuickFilter.umum),
         ],
       ),
     );
   }
-
 }
 
 class _MutationCard extends StatelessWidget {
@@ -822,7 +1021,11 @@ class _MutationCard extends StatelessWidget {
         _C.warning,
         'Disetujui',
       ),
-      MutationStatus.submitted => (_C.surfaceContainer, _C.primary, 'Diajukan'),
+      MutationStatus.submitted => (
+        _C.surfaceContainer,
+        _C.primary,
+        'Pemeriksaan Operator',
+      ),
       MutationStatus.verified => (
         _C.surfaceContainer,
         _C.primary,
@@ -913,7 +1116,7 @@ class _MutationCard extends StatelessWidget {
   String _stage(MutationStatus s) {
     switch (s) {
       case MutationStatus.submitted:
-        return 'Diajukan';
+        return 'Pemeriksaan Operator';
       case MutationStatus.returned:
         return 'Perlu Perbaikan';
       case MutationStatus.verified:

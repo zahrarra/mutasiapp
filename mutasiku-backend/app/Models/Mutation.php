@@ -20,13 +20,26 @@ class Mutation extends Model
         'is_asset_moves_with_applicant',
         'reason',
         'sk_document',
+        'sk_document_name',
         'status',
         'return_reason',
         'rejection_reason',
+        'discrepancy_reason',
+        'verified_at',
+        'verified_by',
+        'approved_at',
+        'approved_by',
+        'rejected_at',
+        'rejected_by',
+        'confirmed_at',
     ];
 
     protected $casts = [
         'is_asset_moves_with_applicant' => 'boolean',
+        'verified_at' => 'datetime',
+        'approved_at' => 'datetime',
+        'rejected_at' => 'datetime',
+        'confirmed_at' => 'datetime',
     ];
 
     public function asset(): BelongsTo
@@ -57,6 +70,21 @@ class Mutation extends Model
     public function targetPic(): BelongsTo
     {
         return $this->belongsTo(User::class, 'target_pic_id');
+    }
+
+    public function verifiedBy(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'verified_by');
+    }
+
+    public function approvedBy(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'approved_by');
+    }
+
+    public function rejectedBy(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'rejected_by');
     }
 
     public function histories(): HasMany

@@ -14,7 +14,11 @@ class _MockMutationRepository implements MutationRepository {
   @override
   Future<Result<Mutation>> submitMutation(SubmitMutationParams params) async {
     lastParams = params;
-    final cat = const AssetCategory(id: 'cat_1', code: 'ELK', name: 'Elektronik');
+    final cat = const AssetCategory(
+      id: 'cat_1',
+      code: 'ELK',
+      name: 'Elektronik',
+    );
     final asset = params.isUnregisteredAsset
         ? null
         : Asset(
@@ -102,7 +106,10 @@ void main() {
       final result = await useCase(params);
 
       expect(result.isFailure, isTrue);
-      expect(result.failureOrNull?.userMessage, contains('Surat Keputusan (SK) SDM wajib dilampirkan'));
+      expect(
+        result.failureOrNull?.userMessage,
+        contains('Surat Keputusan (SK) SDM wajib dilampirkan'),
+      );
     });
 
     test('fails when registered asset has null assetId', () async {
@@ -119,7 +126,10 @@ void main() {
       final result = await useCase(params);
 
       expect(result.isFailure, isTrue);
-      expect(result.failureOrNull?.userMessage, contains('Aset yang dimutasi harus merupakan aset terdaftar'));
+      expect(
+        result.failureOrNull?.userMessage,
+        contains('Aset yang dimutasi harus merupakan aset terdaftar'),
+      );
     });
 
     test('fails when registered asset has empty assetId', () async {
@@ -136,32 +146,41 @@ void main() {
       final result = await useCase(params);
 
       expect(result.isFailure, isTrue);
-      expect(result.failureOrNull?.userMessage, contains('Aset yang dimutasi harus merupakan aset terdaftar'));
+      expect(
+        result.failureOrNull?.userMessage,
+        contains('Aset yang dimutasi harus merupakan aset terdaftar'),
+      );
     });
   });
 
   group('SubmitMutationUseCase - Unregistered Asset Validation (PRD V1.1 §8 Rule 3)', () {
-    test('fails when isUnregisteredAsset is true (unregistered asset rejected)', () async {
-      final params = const SubmitMutationParams(
-        applicantId: 'usr_1',
-        applicantName: 'Budi',
-        assetId: null,
-        isUnregisteredAsset: true,
-        customAssetName: 'Printer Epson L3110 (Manual)',
-        customSerialNumber: 'SN-MANUAL-999',
-        sourceLocation: 'Gudang Lama',
-        targetLocation: 'Cabang Cirebon',
-        currentPic: 'Staff Lama',
-        targetPic: 'Staff Baru',
-        reason: 'Aset hibah kantor lama',
-        documentName: 'sk_sdm_unregistered.pdf',
-      );
+    test(
+      'fails when isUnregisteredAsset is true (unregistered asset rejected)',
+      () async {
+        final params = const SubmitMutationParams(
+          applicantId: 'usr_1',
+          applicantName: 'Budi',
+          assetId: null,
+          isUnregisteredAsset: true,
+          customAssetName: 'Printer Epson L3110 (Manual)',
+          customSerialNumber: 'SN-MANUAL-999',
+          sourceLocation: 'Gudang Lama',
+          targetLocation: 'Cabang Cirebon',
+          currentPic: 'Staff Lama',
+          targetPic: 'Staff Baru',
+          reason: 'Aset hibah kantor lama',
+          documentName: 'sk_sdm_unregistered.pdf',
+        );
 
-      final result = await useCase(params);
+        final result = await useCase(params);
 
-      expect(result.isFailure, isTrue);
-      expect(result.failureOrNull?.userMessage, contains('Aset yang dimutasi harus merupakan aset terdaftar'));
-    });
+        expect(result.isFailure, isTrue);
+        expect(
+          result.failureOrNull?.userMessage,
+          contains('Aset yang dimutasi harus merupakan aset terdaftar'),
+        );
+      },
+    );
 
     test('fails when unregistered asset has non-null assetId (unregistered asset rejected)', () async {
       final params = const SubmitMutationParams(
@@ -177,7 +196,10 @@ void main() {
       final result = await useCase(params);
 
       expect(result.isFailure, isTrue);
-      expect(result.failureOrNull?.userMessage, contains('Aset yang dimutasi harus merupakan aset terdaftar'));
+      expect(
+        result.failureOrNull?.userMessage,
+        contains('Aset yang dimutasi harus merupakan aset terdaftar'),
+      );
     });
   });
 }

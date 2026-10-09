@@ -1,4 +1,6 @@
+import 'package:mutasiku/core/errors/failures.dart';
 import 'dart:convert';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
@@ -16,6 +18,8 @@ import 'package:mutasiku/features/auth/presentation/providers/auth_provider.dart
 import 'package:mutasiku/features/bagian_aset/presentation/providers/bagian_aset_verification_provider.dart';
 import 'package:mutasiku/features/mutation/data/repositories/mutation_repository_impl.dart';
 import 'package:mutasiku/features/mutation/domain/entities/mutation_status.dart';
+import 'package:mutasiku/features/mutation/presentation/models/mutation_tracking_step.dart';
+import 'package:mutasiku/features/mutation/presentation/providers/mutation_provider.dart';
 
 class _FakeAuthRepository implements AuthRepository {
   final User? user;
@@ -25,21 +29,54 @@ class _FakeAuthRepository implements AuthRepository {
   Future<Result<User?>> getCurrentUser() async => Result.success(user);
 
   @override
-  Future<Result<User>> login({required String username, required String password}) async =>
-      throw UnimplementedError();
+  Future<Result<User>> login({
+    required String username,
+    required String password,
+  }) async => throw UnimplementedError();
 
   @override
   Future<Result<void>> logout() async => const Result.success(null);
+
+    @override
+  Future<Result<User>> changePassword({
+    required String currentPassword,
+    required String newPassword,
+    required String confirmPassword,
+  }) async {
+    if (newPassword.length < 8) {
+      return Result.failure(
+        const ValidationFailure(message: 'Password baru minimal 8 karakter.'),
+      );
+    }
+    if (newPassword != confirmPassword) {
+      return Result.failure(
+        const ValidationFailure(message: 'Konfirmasi password baru tidak cocok.'),
+      );
+    }
+    if (newPassword == currentPassword) {
+      return Result.failure(
+        const ValidationFailure(
+          message: 'Password baru harus berbeda dengan password lama.',
+        ),
+      );
+    }
+    if (user != null) {
+      return Result.success(user!.copyWith(mustChangePassword: false));
+    }
+    return Result.failure(
+      const UnauthorizedFailure(message: 'Pengguna tidak ditemukan.'),
+    );
+  }
 }
 
 class _TestAuthNotifier extends AuthNotifier {
   _TestAuthNotifier(User user)
-      : super(
-          loginUseCase: LoginUseCase(repository: _FakeAuthRepository(user)),
-          logoutUseCase: LogoutUseCase(repository: _FakeAuthRepository(user)),
-          authRepository: _FakeAuthRepository(user),
-          checkInitialStatus: false,
-        ) {
+    : super(
+        loginUseCase: LoginUseCase(repository: _FakeAuthRepository(user)),
+        logoutUseCase: LogoutUseCase(repository: _FakeAuthRepository(user)),
+        authRepository: _FakeAuthRepository(user),
+        checkInitialStatus: false,
+      ) {
     state = AuthState(isLoading: false, user: user);
   }
 }
@@ -70,7 +107,8 @@ void main() {
           return http.Response(
             jsonEncode({
               'success': true,
-              'message': 'Daftar pengajuan mutasi untuk Bagian Aset berhasil diambil.',
+              'message':
+                  'Daftar pengajuan mutasi untuk Bagian Aset berhasil diambil.',
               'data': [
                 {
                   'id': 301,
@@ -90,10 +128,7 @@ void main() {
                       'code': 'FUR',
                       'name': 'Furnitur & Peralatan',
                     },
-                    'location': {
-                      'id': 1,
-                      'name': 'Gedung A Lantai 1',
-                    },
+                    'location': {'id': 1, 'name': 'Gedung A Lantai 1'},
                   },
                   'status': 'menunggu_verifikasi_bagian_aset',
                   'origin_location': {'name': 'Gedung A Lantai 1'},
@@ -111,7 +146,10 @@ void main() {
         return http.Response(jsonEncode({'message': 'Not Found'}), 404);
       });
 
-      final apiClient = ApiClient(httpClient: mockClient, baseUrl: 'http://test.local');
+      final apiClient = ApiClient(
+        httpClient: mockClient,
+        baseUrl: 'http://test.local',
+      );
       apiClient.setAuthToken('test_sanctum_token_kabag');
 
       final container = ProviderContainer(
@@ -190,7 +228,10 @@ void main() {
         return http.Response(jsonEncode({'message': 'Not Found'}), 404);
       });
 
-      final apiClient = ApiClient(httpClient: mockClient, baseUrl: 'http://test.local');
+      final apiClient = ApiClient(
+        httpClient: mockClient,
+        baseUrl: 'http://test.local',
+      );
 
       final container = ProviderContainer(
         overrides: [
@@ -206,13 +247,17 @@ void main() {
       expect(stats.approvedCount, 1);
       expect(stats.rejectedCount, 1);
 
-      container.read(kabagStatusFilterProvider.notifier).state = KabagStatusFilter.waiting;
-      final waitingList = container.read(filteredKabagApprovalsProvider).value ?? [];
+      container.read(kabagStatusFilterProvider.notifier).state =
+          KabagStatusFilter.waiting;
+      final waitingList =
+          container.read(filteredKabagApprovalsProvider).value ?? [];
       expect(waitingList.length, 1);
       expect(waitingList.first.ticketNumber, 'KBG-001');
 
-      container.read(kabagStatusFilterProvider.notifier).state = KabagStatusFilter.all;
-      final allList = container.read(filteredKabagApprovalsProvider).value ?? [];
+      container.read(kabagStatusFilterProvider.notifier).state =
+          KabagStatusFilter.all;
+      final allList =
+          container.read(filteredKabagApprovalsProvider).value ?? [];
       expect(allList.length, 3);
     });
 
@@ -229,7 +274,10 @@ void main() {
         );
       });
 
-      final apiClient = ApiClient(httpClient: mockClient, baseUrl: 'http://test.local');
+      final apiClient = ApiClient(
+        httpClient: mockClient,
+        baseUrl: 'http://test.local',
+      );
 
       final container = ProviderContainer(
         overrides: [
@@ -259,7 +307,10 @@ void main() {
         );
       });
 
-      final apiClient = ApiClient(httpClient: mockClient, baseUrl: 'http://test.local');
+      final apiClient = ApiClient(
+        httpClient: mockClient,
+        baseUrl: 'http://test.local',
+      );
 
       final container = ProviderContainer(
         overrides: [
@@ -304,10 +355,7 @@ void main() {
                     'code': 'FUR',
                     'name': 'Furnitur & Peralatan',
                   },
-                  'location': {
-                    'id': 1,
-                    'name': 'Gedung A Lantai 1',
-                  },
+                  'location': {'id': 1, 'name': 'Gedung A Lantai 1'},
                 },
                 'status': 'menunggu_verifikasi_bagian_aset',
                 'origin_location': {'name': 'Gedung A Lantai 1'},
@@ -324,7 +372,10 @@ void main() {
         return http.Response(jsonEncode({'message': 'Not Found'}), 404);
       });
 
-      final apiClient = ApiClient(httpClient: mockClient, baseUrl: 'http://test.local');
+      final apiClient = ApiClient(
+        httpClient: mockClient,
+        baseUrl: 'http://test.local',
+      );
 
       final container = ProviderContainer(
         overrides: [
@@ -333,7 +384,9 @@ void main() {
         ],
       );
 
-      final detail = await container.read(kabagMutationDetailProvider('301').future);
+      final detail = await container.read(
+        kabagMutationDetailProvider('301').future,
+      );
 
       expect(detailEndpointCalled, true);
       expect(requestedPath, '/api/v1/mutations/301');
@@ -355,7 +408,10 @@ void main() {
         );
       });
 
-      final apiClient = ApiClient(httpClient: mockClient, baseUrl: 'http://test.local');
+      final apiClient = ApiClient(
+        httpClient: mockClient,
+        baseUrl: 'http://test.local',
+      );
 
       final container = ProviderContainer(
         overrides: [
@@ -365,7 +421,9 @@ void main() {
       );
 
       expect(
-        () => container.read(kabagMutationDetailProvider('non_existent_999').future),
+        () => container.read(
+          kabagMutationDetailProvider('non_existent_999').future,
+        ),
         throwsA(isA<Exception>()),
       );
     });
@@ -401,7 +459,10 @@ void main() {
         return http.Response(jsonEncode({'message': 'Not Found'}), 404);
       });
 
-      final apiClient = ApiClient(httpClient: mockClient, baseUrl: 'http://test.local');
+      final apiClient = ApiClient(
+        httpClient: mockClient,
+        baseUrl: 'http://test.local',
+      );
 
       final container = ProviderContainer(
         overrides: [
@@ -413,6 +474,367 @@ void main() {
       final list = await container.read(kabagAllMutationsProvider.future);
       expect(list.length, 1);
       expect(list.first.ticketNumber, 'TKT-SCOPED-01');
+    });
+
+    test('8. Bagian Aset Verify Action: POST /api/v1/mutations/{id}/verify-asset dengan action: verify -> status transition ke menunggu_approval_pemimpin_divisi dan tracking step diperbarui', () async {
+      String? verifyEndpoint;
+      Map<String, dynamic>? verifyBody;
+      var currentStatus = 'menunggu_verifikasi_bagian_aset';
+
+      final baseJson = {
+        'id': 301,
+        'ticket_number': 'KBG-2026-00301',
+        'applicant_id': 42,
+        'applicant': {'id': 42, 'name': 'Rina Pemohon'},
+        'asset': {
+          'id': 15,
+          'asset_code': 'AST-FUR-015',
+          'name': 'Meja Kerja Ergonomis',
+          'category': {'id': 2, 'code': 'FUR', 'name': 'Furnitur & Peralatan'},
+          'location': {'id': 1, 'name': 'Gedung A Lantai 1'},
+        },
+        'origin_location': {'name': 'Gedung A Lantai 1'},
+        'destination_location': {'name': 'Gedung B Lantai 3'},
+        'current_pic': {'id': 42, 'name': 'Rina Pemohon'},
+        'target_pic': {'id': 42, 'name': 'Rina Pemohon'},
+        'is_asset_moves_with_applicant': true,
+        'reason': 'Kebutuhan tim finance',
+        'created_at': '2026-10-07T08:30:00Z',
+      };
+
+      final mockClient = MockClient((request) async {
+        if (request.method == 'POST' &&
+            request.url.path == '/api/v1/mutations/301/verify-asset') {
+          verifyEndpoint = request.url.path;
+          verifyBody = jsonDecode(request.body) as Map<String, dynamic>;
+          currentStatus = 'menunggu_approval_pemimpin_divisi';
+          return http.Response(
+            jsonEncode({
+              'success': true,
+              'message': 'Pengajuan mutasi berhasil diverifikasi dan diteruskan ke Pemimpin Divisi.',
+              'data': {
+                ...baseJson,
+                'status': currentStatus,
+                'asset_verified_at': '2026-10-07T11:00:00Z',
+                'asset_verified_by': 'Yusuf Bagian Aset Asli',
+              },
+            }),
+            200,
+            headers: {'content-type': 'application/json'},
+          );
+        }
+        if (request.method == 'GET' &&
+            request.url.path == '/api/v1/mutations/301') {
+          return http.Response(
+            jsonEncode({
+              'success': true,
+              'data': {
+                ...baseJson,
+                'status': currentStatus,
+                if (currentStatus == 'menunggu_approval_pemimpin_divisi') ...{
+                  'asset_verified_at': '2026-10-07T11:00:00Z',
+                  'asset_verified_by': 'Yusuf Bagian Aset Asli',
+                },
+              },
+            }),
+            200,
+            headers: {'content-type': 'application/json'},
+          );
+        }
+        return http.Response('Not Found', 404);
+      });
+
+      final testApiClient = ApiClient(
+        httpClient: mockClient,
+        baseUrl: 'http://test.local',
+      );
+      final assetRepo = AssetRepositoryImpl();
+      final mutationRepo = MutationRepositoryImpl(
+        assetRepository: assetRepo,
+        apiClient: testApiClient,
+      );
+
+      final container = ProviderContainer(
+        overrides: [
+          apiClientProvider.overrideWithValue(testApiClient),
+          apiMutationRepositoryProvider.overrideWithValue(mutationRepo),
+          authStateProvider.overrideWith((ref) => _TestAuthNotifier(kabagUser)),
+        ],
+      );
+      addTearDown(container.dispose);
+
+      // Eksekusi aksi Bagian Aset verify & forward
+      final success = await container
+          .read(bagianAsetVerificationActionProvider.notifier)
+          .verifyAndForward(mutationId: '301');
+
+      expect(success, isTrue);
+      expect(verifyEndpoint, equals('/api/v1/mutations/301/verify-asset'));
+      expect(verifyBody, equals({'action': 'verify'}));
+
+      // Pemohon / sistem membaca detail yang telah diperbarui
+      final updatedDetail = await container.read(
+        apiMutationDetailProvider('301').future,
+      );
+
+      expect(
+        updatedDetail.status,
+        equals(MutationStatus.waitingDivisionHeadApproval),
+      );
+      expect(
+        updatedDetail.status.displayName,
+        equals('Menunggu Approval Pemimpin Divisi'),
+      );
+      expect(updatedDetail.assetVerifiedBy, equals('Yusuf Bagian Aset Asli'));
+
+      // Verifikasi timeline tracking
+      final steps = MutationTrackingHelper.getStepsForMutation(
+        updatedDetail.status,
+        mutation: updatedDetail,
+      );
+      expect(steps[0].isCompleted, isTrue); // Step 1: Pengajuan Selesai
+      expect(
+        steps[1].isCompleted,
+        isTrue,
+      ); // Step 2: Pemeriksaan Operator Selesai (Lengkap)
+      expect(steps[1].badgeText, equals('Lengkap'));
+      expect(
+        steps[2].isCompleted,
+        isTrue,
+      ); // Step 3: Verifikasi Bagian Aset Selesai (Valid)
+      expect(steps[2].badgeText, equals('Valid'));
+      expect(
+        steps[3].isCurrent,
+        isTrue,
+      ); // Step 4: Approval Pemimpin Divisi Aktif
+      expect(steps[3].badgeText, equals('Menunggu Approval'));
+      expect(
+        steps[4].isUpcoming,
+        isTrue,
+      ); // Step 5: Konfirmasi Pemohon Upcoming
+    });
+
+    test('9. Bagian Aset Return Action: POST /api/v1/mutations/{id}/verify-asset dengan action: return & reason -> status transition ke dikembalikan_ke_pemohon', () async {
+      String? returnEndpoint;
+      Map<String, dynamic>? returnBody;
+      var currentStatus = 'menunggu_verifikasi_bagian_aset';
+
+      const expectedReason =
+          'Lokasi penempatan Gedung B belum siap secara fisik';
+      final baseJson = {
+        'id': 301,
+        'ticket_number': 'KBG-2026-00301',
+        'applicant_id': 42,
+        'applicant': {'id': 42, 'name': 'Rina Pemohon'},
+        'asset': {
+          'id': 15,
+          'asset_code': 'AST-FUR-015',
+          'name': 'Meja Kerja Ergonomis',
+          'category': {'id': 2, 'code': 'FUR', 'name': 'Furnitur & Peralatan'},
+        },
+        'origin_location': {'name': 'Gedung A Lantai 1'},
+        'destination_location': {'name': 'Gedung B Lantai 3'},
+        'current_pic': {'id': 42, 'name': 'Rina Pemohon'},
+        'target_pic': {'id': 42, 'name': 'Rina Pemohon'},
+        'is_asset_moves_with_applicant': true,
+        'reason': 'Kebutuhan tim finance',
+        'created_at': '2026-10-07T08:30:00Z',
+      };
+
+      final mockClient = MockClient((request) async {
+        if (request.method == 'POST' &&
+            request.url.path == '/api/v1/mutations/301/verify-asset') {
+          returnEndpoint = request.url.path;
+          returnBody = jsonDecode(request.body) as Map<String, dynamic>;
+          currentStatus = 'dikembalikan_ke_pemohon';
+          return http.Response(
+            jsonEncode({
+              'success': true,
+              'message': 'Pengajuan mutasi berhasil dikembalikan ke Pemohon.',
+              'data': {
+                ...baseJson,
+                'status': currentStatus,
+                'return_reason': expectedReason,
+              },
+            }),
+            200,
+            headers: {'content-type': 'application/json'},
+          );
+        }
+        if (request.method == 'GET' &&
+            request.url.path == '/api/v1/mutations/301') {
+          return http.Response(
+            jsonEncode({
+              'success': true,
+              'data': {
+                ...baseJson,
+                'status': currentStatus,
+                if (currentStatus == 'dikembalikan_ke_pemohon') ...{
+                  'return_reason': expectedReason,
+                },
+              },
+            }),
+            200,
+            headers: {'content-type': 'application/json'},
+          );
+        }
+        return http.Response('Not Found', 404);
+      });
+
+      final testApiClient = ApiClient(
+        httpClient: mockClient,
+        baseUrl: 'http://test.local',
+      );
+      final assetRepo = AssetRepositoryImpl();
+      final mutationRepo = MutationRepositoryImpl(
+        assetRepository: assetRepo,
+        apiClient: testApiClient,
+      );
+
+      final container = ProviderContainer(
+        overrides: [
+          apiClientProvider.overrideWithValue(testApiClient),
+          apiMutationRepositoryProvider.overrideWithValue(mutationRepo),
+          authStateProvider.overrideWith((ref) => _TestAuthNotifier(kabagUser)),
+        ],
+      );
+      addTearDown(container.dispose);
+
+      // Eksekusi aksi Bagian Aset return
+      final success = await container
+          .read(bagianAsetVerificationActionProvider.notifier)
+          .returnToApplicant(mutationId: '301', reason: expectedReason);
+
+      expect(success, isTrue);
+      expect(returnEndpoint, equals('/api/v1/mutations/301/verify-asset'));
+      expect(
+        returnBody,
+        equals({'action': 'return', 'reason': expectedReason}),
+      );
+
+      // Pemohon membaca detail
+      final returnedDetail = await container.read(
+        apiMutationDetailProvider('301').future,
+      );
+
+      expect(returnedDetail.status, equals(MutationStatus.returned));
+      expect(returnedDetail.returnReason, equals(expectedReason));
+    });
+
+    test('10. Kasus Pemohon Konfirmasi Fisik Tidak Sesuai: Mutasi kembali berstatus menunggu_verifikasi_bagian_aset dengan return_reason, muncul di queue dan terbaca di detail Bagian Aset', () async {
+      var queueCalled = false;
+      var detailCalled = false;
+      const discrepancyReason = 'Serial number fisik berbeda dengan label sistem (SN fisik: SN-XYZ-999)';
+
+      final mockClient = MockClient((request) async {
+        if (request.method == 'GET' && request.url.path == '/api/v1/mutations') {
+          queueCalled = true;
+          return http.Response(
+            jsonEncode({
+              'success': true,
+              'message': 'Daftar pengajuan mutasi untuk Bagian Aset berhasil diambil.',
+              'data': [
+                {
+                  'id': 7,
+                  'ticket_number': 'TI-2026-0007',
+                  'applicant_id': 2,
+                  'applicant': {'id': 2, 'name': 'Dirly Pemohon'},
+                  'asset': {
+                    'id': 1,
+                    'asset_code': 'AST-ELK-2024-001',
+                    'name': 'Laptop Lenovo ThinkPad T14',
+                    'category': {'id': 1, 'code': 'ELK', 'name': 'Elektronik'},
+                    'location': {'id': 1, 'name': 'Kantor Pusat'},
+                  },
+                  'status': 'menunggu_verifikasi_bagian_aset',
+                  'return_reason': discrepancyReason,
+                  'origin_location': {'name': 'Kantor Pusat'},
+                  'destination_location': {'name': 'Gedung A'},
+                  'is_asset_moves_with_applicant': true,
+                  'reason': 'Rotasi unit kerja',
+                  'created_at': '2026-10-08T03:00:00Z',
+                },
+              ],
+            }),
+            200,
+            headers: {'content-type': 'application/json'},
+          );
+        }
+
+        if (request.method == 'GET' && request.url.path == '/api/v1/mutations/7') {
+          detailCalled = true;
+          return http.Response(
+            jsonEncode({
+              'success': true,
+              'message': 'Detail mutasi berhasil diambil.',
+              'data': {
+                'id': 7,
+                'ticket_number': 'TI-2026-0007',
+                'applicant_id': 2,
+                'applicant': {'id': 2, 'name': 'Dirly Pemohon'},
+                'asset': {
+                  'id': 1,
+                  'asset_code': 'AST-ELK-2024-001',
+                  'name': 'Laptop Lenovo ThinkPad T14',
+                  'category': {'id': 1, 'code': 'ELK', 'name': 'Elektronik'},
+                  'location': {'id': 1, 'name': 'Kantor Pusat'},
+                },
+                'status': 'menunggu_verifikasi_bagian_aset',
+                'return_reason': discrepancyReason,
+                'origin_location': {'name': 'Kantor Pusat'},
+                'destination_location': {'name': 'Gedung A'},
+                'current_pic': {'id': 2, 'name': 'Dirly Pemohon'},
+                'target_pic': {'id': 2, 'name': 'Dirly Pemohon'},
+                'is_asset_moves_with_applicant': true,
+                'reason': 'Rotasi unit kerja',
+                'created_at': '2026-10-08T03:00:00Z',
+              },
+            }),
+            200,
+            headers: {'content-type': 'application/json'},
+          );
+        }
+
+        return http.Response('Not Found', 404);
+      });
+
+      final testApiClient = ApiClient(
+        httpClient: mockClient,
+        baseUrl: 'http://test.local',
+      );
+      final assetRepo = AssetRepositoryImpl();
+      final mutationRepo = MutationRepositoryImpl(
+        assetRepository: assetRepo,
+        apiClient: testApiClient,
+      );
+
+      final container = ProviderContainer(
+        overrides: [
+          apiClientProvider.overrideWithValue(testApiClient),
+          apiMutationRepositoryProvider.overrideWithValue(mutationRepo),
+          authStateProvider.overrideWith((ref) => _TestAuthNotifier(kabagUser)),
+        ],
+      );
+      addTearDown(container.dispose);
+
+      // 1. Ambil antrean Bagian Aset
+      final queue = await container.read(bagianAsetAllMutationsProvider.future);
+      expect(queueCalled, isTrue);
+      expect(queue.length, 1);
+      final item = queue.first;
+      expect(item.id, equals('7'));
+      expect(item.status, equals(MutationStatus.waitingAssetVerification));
+      expect(item.returnReason, equals(discrepancyReason));
+
+      // 2. Ambil detail Bagian Aset
+      final detail = await container.read(
+        bagianAsetMutationDetailProvider('7').future,
+      );
+      expect(detailCalled, isTrue);
+      expect(detail.id, equals('7'));
+      expect(detail.status, equals(MutationStatus.waitingAssetVerification));
+      expect(detail.returnReason, equals(discrepancyReason));
+      expect(detail.applicantName, equals('Dirly Pemohon'));
     });
   });
 }

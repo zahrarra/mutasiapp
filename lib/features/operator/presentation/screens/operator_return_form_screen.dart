@@ -6,6 +6,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+
 import '../../../../app/router/route_names.dart';
 import '../../../../app/theme/app_colors.dart';
 import '../../../../app/theme/app_spacing.dart';
@@ -20,10 +21,7 @@ import '../../../../core/widgets/mutasiku_page_header.dart';
 class OperatorReturnFormScreen extends ConsumerStatefulWidget {
   final String mutationId;
 
-  const OperatorReturnFormScreen({
-    super.key,
-    required this.mutationId,
-  });
+  const OperatorReturnFormScreen({super.key, required this.mutationId});
 
   @override
   ConsumerState<OperatorReturnFormScreen> createState() =>
@@ -67,200 +65,210 @@ class _OperatorReturnFormScreenState
           ),
           Expanded(
             child: asyncMutation.when(
-        data: (mutation) => Padding(
-          padding: const EdgeInsets.all(AppSpacing.md),
-          child: Form(
-            key: _formKey,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Expanded(
-                  child: SingleChildScrollView(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        // Ticket & Asset Context Card
-                        Container(
-                          width: double.infinity,
-                          padding: const EdgeInsets.all(AppSpacing.md),
-                          decoration: BoxDecoration(
-                            color: AppColors.surface,
-                            borderRadius:
-                                BorderRadius.circular(AppRadius.card),
-                            border: Border.all(color: AppColors.border),
-                          ),
+              data: (mutation) => Padding(
+                padding: const EdgeInsets.all(AppSpacing.md),
+                child: Form(
+                  key: _formKey,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Expanded(
+                        child: SingleChildScrollView(
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Text(
-                                mutation.ticketNumber,
-                                style: const TextStyle(
+                              // Ticket & Asset Context Card
+                              Container(
+                                width: double.infinity,
+                                padding: const EdgeInsets.all(AppSpacing.md),
+                                decoration: BoxDecoration(
+                                  color: AppColors.surface,
+                                  borderRadius: BorderRadius.circular(
+                                    AppRadius.card,
+                                  ),
+                                  border: Border.all(color: AppColors.border),
+                                ),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      mutation.ticketNumber,
+                                      style: const TextStyle(
+                                        fontSize: 14,
+                                        fontWeight: FontWeight.bold,
+                                        color: AppColors.primary,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 2),
+                                    Text(
+                                      '${mutation.asset.name} (${mutation.asset.id})',
+                                      style: const TextStyle(
+                                        fontSize: 13,
+                                        fontWeight: FontWeight.w500,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 2),
+                                    Text(
+                                      'Pemohon: ${mutation.applicantName}',
+                                      style: const TextStyle(
+                                        fontSize: 12,
+                                        color: AppColors.textSecondary,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              const SizedBox(height: AppSpacing.lg),
+
+                              // Form Header
+                              const Text(
+                                'Alasan Pengembalian',
+                                style: TextStyle(
                                   fontSize: 14,
                                   fontWeight: FontWeight.bold,
-                                  color: AppColors.primary,
+                                  color: AppColors.textPrimary,
                                 ),
                               ),
-                              const SizedBox(height: 2),
-                              Text(
-                                '${mutation.asset.name} (${mutation.asset.id})',
-                                style: const TextStyle(
-                                  fontSize: 13,
-                                  fontWeight: FontWeight.w500,
-                                ),
-                              ),
-                              const SizedBox(height: 2),
-                              Text(
-                                'Pemohon: ${mutation.applicantName}',
-                                style: const TextStyle(
+                              const SizedBox(height: AppSpacing.xs),
+                              const Text(
+                                'Jelaskan kekurangan data atau dokumen agar pemohon dapat memperbaikinya.',
+                                style: TextStyle(
                                   fontSize: 12,
                                   color: AppColors.textSecondary,
                                 ),
                               ),
+                              const SizedBox(height: AppSpacing.md),
+
+                              // Reason TextFormField
+                              TextFormField(
+                                key: const Key('input_alasan_pengembalian'),
+                                controller: _reasonController,
+                                maxLines: 5,
+                                decoration: InputDecoration(
+                                  hintText: 'Contoh: "Dokumen pendukung SK Mutasi belum dilampirkan atau tidak terbaca."',
+                                  hintStyle: const TextStyle(
+                                    fontSize: 13,
+                                    color: AppColors.textSecondary,
+                                  ),
+                                  filled: true,
+                                  fillColor: Colors.white,
+                                  border: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(
+                                      AppSpacing.radiusMd,
+                                    ),
+                                    borderSide: const BorderSide(
+                                      color: AppColors.border,
+                                    ),
+                                  ),
+                                  enabledBorder: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(
+                                      AppSpacing.radiusMd,
+                                    ),
+                                    borderSide: const BorderSide(
+                                      color: AppColors.border,
+                                    ),
+                                  ),
+                                  errorBorder: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(
+                                      AppSpacing.radiusMd,
+                                    ),
+                                    borderSide: const BorderSide(
+                                      color: AppColors.error,
+                                    ),
+                                  ),
+                                ),
+                                validator: (value) {
+                                  if (value == null || value.trim().isEmpty) {
+                                    return 'Alasan pengembalian wajib diisi.';
+                                  }
+                                  if (value.trim().length < 5) {
+                                    return 'Alasan pengembalian terlalu pendek (minimal 5 karakter).';
+                                  }
+                                  return null;
+                                },
+                              ),
                             ],
                           ),
                         ),
-                        const SizedBox(height: AppSpacing.lg),
-
-                        // Form Header
-                        const Text(
-                          'Alasan Pengembalian',
-                          style: TextStyle(
-                            fontSize: 14,
-                            fontWeight: FontWeight.bold,
-                            color: AppColors.textPrimary,
-                          ),
-                        ),
-                        const SizedBox(height: AppSpacing.xs),
-                        const Text(
-                          'Jelaskan kekurangan data atau dokumen agar pemohon dapat memperbaikinya.',
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: AppColors.textSecondary,
-                          ),
-                        ),
-                        const SizedBox(height: AppSpacing.md),
-
-                        // Reason TextFormField
-                        TextFormField(
-                          key: const Key('input_alasan_pengembalian'),
-                          controller: _reasonController,
-                          maxLines: 5,
-                          decoration: InputDecoration(
-                            hintText: 'Contoh: "Dokumen pendukung SK Mutasi belum dilampirkan atau tidak terbaca."',
-                            hintStyle: const TextStyle(
-                              fontSize: 13,
-                              color: AppColors.textSecondary,
-                            ),
-                            filled: true,
-                            fillColor: Colors.white,
-                            border: OutlineInputBorder(
-                              borderRadius:
-                                  BorderRadius.circular(AppSpacing.radiusMd),
-                              borderSide:
-                                  const BorderSide(color: AppColors.border),
-                            ),
-                            enabledBorder: OutlineInputBorder(
-                              borderRadius:
-                                  BorderRadius.circular(AppSpacing.radiusMd),
-                              borderSide:
-                                  const BorderSide(color: AppColors.border),
-                            ),
-                            errorBorder: OutlineInputBorder(
-                              borderRadius:
-                                  BorderRadius.circular(AppSpacing.radiusMd),
-                              borderSide:
-                                  const BorderSide(color: AppColors.error),
-                            ),
-                          ),
-                          validator: (value) {
-                            if (value == null || value.trim().isEmpty) {
-                              return 'Alasan pengembalian wajib diisi.';
-                            }
-                            if (value.trim().length < 5) {
-                              return 'Alasan pengembalian terlalu pendek (minimal 5 karakter).';
-                            }
-                            return null;
-                          },
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-
-                // Bottom Buttons: [ Batal ] & [ Kembalikan Pengajuan ]
-                SafeArea(
-                  child: Row(
-                    children: [
-                      Expanded(
-                        child: OutlinedButton(
-                          key: const Key('btn_batal_kembalikan'),
-                          onPressed: actionState.isLoading
-                              ? null
-                              : () => context.pop(),
-                          style: OutlinedButton.styleFrom(
-                            padding: const EdgeInsets.symmetric(
-                                vertical: AppSpacing.md),
-                            shape: RoundedRectangleBorder(
-                              borderRadius:
-                                  BorderRadius.circular(AppRadius.button),
-                            ),
-                          ),
-                          child: const Text('Batal'),
-                        ),
                       ),
-                      const SizedBox(width: AppSpacing.md),
-                      Expanded(
-                        flex: 2,
-                        child: ElevatedButton(
-                          key: const Key('btn_submit_kembalikan'),
-                          onPressed: actionState.isLoading
-                              ? null
-                              : () => _submitReturn(context),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: AppColors.error,
-                            foregroundColor: Colors.white,
-                            padding: const EdgeInsets.symmetric(
-                                vertical: AppSpacing.md),
-                            shape: RoundedRectangleBorder(
-                              borderRadius:
-                                  BorderRadius.circular(AppRadius.button),
-                            ),
-                          ),
-                          child: actionState.isLoading
-                              ? const SizedBox(
-                                  height: 20,
-                                  width: 20,
-                                  child: CircularProgressIndicator(
-                                    strokeWidth: 2,
-                                    color: Colors.white,
+
+                      // Bottom Buttons: [ Batal ] & [ Kembalikan Pengajuan ]
+                      SafeArea(
+                        child: Row(
+                          children: [
+                            Expanded(
+                              child: OutlinedButton(
+                                key: const Key('btn_batal_kembalikan'),
+                                onPressed: actionState.isLoading
+                                    ? null
+                                    : () => context.pop(),
+                                style: OutlinedButton.styleFrom(
+                                  padding: const EdgeInsets.symmetric(
+                                    vertical: AppSpacing.md,
                                   ),
-                                )
-                              : const Text(
-                                  'Kembalikan Pengajuan',
-                                  style: TextStyle(
-                                    fontWeight: FontWeight.bold,
-                                    fontSize: 14,
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(
+                                      AppRadius.button,
+                                    ),
                                   ),
                                 ),
+                                child: const Text('Batal'),
+                              ),
+                            ),
+                            const SizedBox(width: AppSpacing.md),
+                            Expanded(
+                              flex: 2,
+                              child: ElevatedButton(
+                                key: const Key('btn_submit_kembalikan'),
+                                onPressed: actionState.isLoading
+                                    ? null
+                                    : () => _submitReturn(context),
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: AppColors.error,
+                                  foregroundColor: Colors.white,
+                                  padding: const EdgeInsets.symmetric(
+                                    vertical: AppSpacing.md,
+                                  ),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(
+                                      AppRadius.button,
+                                    ),
+                                  ),
+                                ),
+                                child: actionState.isLoading
+                                    ? const SizedBox(
+                                        height: 20,
+                                        width: 20,
+                                        child: CircularProgressIndicator(
+                                          strokeWidth: 2,
+                                          color: Colors.white,
+                                        ),
+                                      )
+                                    : const Text(
+                                        'Kembalikan Pengajuan',
+                                        style: TextStyle(
+                                          fontWeight: FontWeight.bold,
+                                          fontSize: 14,
+                                        ),
+                                      ),
+                              ),
+                            ),
+                          ],
                         ),
                       ),
                     ],
                   ),
                 ),
-              ],
+              ),
+              loading: () => const Center(child: CircularProgressIndicator()),
+              error: (err, _) =>
+                  Center(child: Text('Gagal memuat pengajuan: $err')),
             ),
           ),
-        ),
-        loading: () => const Center(child: CircularProgressIndicator()),
-        error: (err, _) => Center(
-          child: Text('Gagal memuat pengajuan: $err'),
-        ),
+        ],
       ),
-    ),
-  ],
-),
-);
-}
+    );
+  }
 
   Future<void> _submitReturn(BuildContext context) async {
     if (!_formKey.currentState!.validate()) {
@@ -275,7 +283,9 @@ class _OperatorReturnFormScreenState
     if (context.mounted) {
       if (success) {
         final currentMutation = ref.read(verificationActionProvider).result;
-        ref.read(notificationProvider.notifier).notifyUser(
+        ref
+            .read(notificationProvider.notifier)
+            .notifyUser(
               targetUserId: currentMutation?.applicantId ?? 'usr_pemohon',
               targetRole: UserRole.pemohon,
               title: 'Pengajuan Dikembalikan Operator',
@@ -307,10 +317,7 @@ class _OperatorReturnFormScreenState
         }
       } else {
         final err = ref.read(verificationActionProvider).error;
-        AppFeedback.showError(
-          context,
-          err ?? 'Gagal mengembalikan pengajuan.',
-        );
+        AppFeedback.showError(context, err ?? 'Gagal mengembalikan pengajuan.');
       }
     }
   }

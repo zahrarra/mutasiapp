@@ -23,7 +23,11 @@ void main() {
       id: isUnregistered ? '' : 'AST-001',
       assetCode: isUnregistered ? '' : 'AST-001',
       name: isUnregistered ? 'Printer Rusak' : 'Laptop Dell XPS',
-      category: const AssetCategory(id: 'cat_1', code: 'ELK', name: 'Elektronik'),
+      category: const AssetCategory(
+        id: 'cat_1',
+        code: 'ELK',
+        name: 'Elektronik',
+      ),
       location: 'Ruang IT',
       pic: 'Ahmad Pemohon',
       status: AssetStatus.inMutation,
@@ -54,101 +58,107 @@ void main() {
     );
   }
 
-  Widget createWidget({
-    required MutationStatus status,
-    Mutation? mutation,
-  }) {
+  Widget createWidget({required MutationStatus status, Mutation? mutation}) {
     return MaterialApp(
       home: Scaffold(
-        body: MutationStatusStepper(
-          status: status,
-          mutation: mutation,
-        ),
+        body: MutationStatusStepper(status: status, mutation: mutation),
       ),
     );
   }
 
   group('MutationStatusStepper — PRD V1.1 Workflow (6 steps)', () {
     testWidgets('renders all 6 workflow steps', (tester) async {
-      final mutation = createDummyMutation(
-        status: MutationStatus.submitted,
+      final mutation = createDummyMutation(status: MutationStatus.submitted);
+      await tester.pumpWidget(
+        createWidget(status: MutationStatus.submitted, mutation: mutation),
       );
-      await tester.pumpWidget(createWidget(
-        status: MutationStatus.submitted,
-        mutation: mutation,
-      ));
 
       expect(find.text('Pengajuan'), findsOneWidget);
-      expect(find.text('Kelengkapan'), findsOneWidget);
+      expect(find.text('Pemeriksaan Operator'), findsOneWidget);
       expect(find.text('Verifikasi Aset'), findsOneWidget);
       expect(find.text('Approval Final'), findsOneWidget);
       expect(find.text('Konfirmasi'), findsOneWidget);
       expect(find.text('Selesai'), findsOneWidget);
     });
 
-    testWidgets('submitted: step 1 current, no checkmarks on subsequent steps', (tester) async {
-      final mutation = createDummyMutation(
-        status: MutationStatus.submitted,
-      );
-      await tester.pumpWidget(createWidget(
-        status: MutationStatus.submitted,
-        mutation: mutation,
-      ));
+    testWidgets(
+      'submitted: step 1 completed, step 2 current (waiting operator)',
+      (tester) async {
+        final mutation = createDummyMutation(status: MutationStatus.submitted);
+        await tester.pumpWidget(
+          createWidget(status: MutationStatus.submitted, mutation: mutation),
+        );
 
-      final steps = MutationTrackingHelper.getStepsForMutation(
-        MutationStatus.submitted,
-        mutation: mutation,
-      );
-      expect(steps.length, 6);
-      expect(steps[1].state, TrackingStepState.current);
-      expect(steps[2].state, TrackingStepState.upcoming);
-    });
+        final steps = MutationTrackingHelper.getStepsForMutation(
+          MutationStatus.submitted,
+          mutation: mutation,
+        );
+        expect(steps.length, 6);
+        expect(steps[0].state, TrackingStepState.completed);
+        expect(steps[1].state, TrackingStepState.current);
+        expect(steps[2].state, TrackingStepState.upcoming);
+      },
+    );
 
-    testWidgets('waitingAssetVerification: step 1 and 2 completed, step 3 current', (tester) async {
-      final mutation = createDummyMutation(
-        status: MutationStatus.waitingAssetVerification,
-      );
-      await tester.pumpWidget(createWidget(
-        status: MutationStatus.waitingAssetVerification,
-        mutation: mutation,
-      ));
+    testWidgets(
+      'waitingAssetVerification: step 1 and 2 completed, step 3 current',
+      (tester) async {
+        final mutation = createDummyMutation(
+          status: MutationStatus.waitingAssetVerification,
+        );
+        await tester.pumpWidget(
+          createWidget(
+            status: MutationStatus.waitingAssetVerification,
+            mutation: mutation,
+          ),
+        );
 
-      final steps = MutationTrackingHelper.getStepsForMutation(
-        MutationStatus.waitingAssetVerification,
-        mutation: mutation,
-      );
-      expect(steps[0].state, TrackingStepState.completed);
-      expect(steps[1].state, TrackingStepState.completed);
-      expect(steps[2].state, TrackingStepState.current);
-    });
+        final steps = MutationTrackingHelper.getStepsForMutation(
+          MutationStatus.waitingAssetVerification,
+          mutation: mutation,
+        );
+        expect(steps[0].state, TrackingStepState.completed);
+        expect(steps[1].state, TrackingStepState.completed);
+        expect(steps[2].state, TrackingStepState.current);
+      },
+    );
 
-    testWidgets('waitingDivisionHeadApproval: step 1-3 completed, step 4 current', (tester) async {
-      final mutation = createDummyMutation(
-        status: MutationStatus.waitingDivisionHeadApproval,
-      );
-      await tester.pumpWidget(createWidget(
-        status: MutationStatus.waitingDivisionHeadApproval,
-        mutation: mutation,
-      ));
+    testWidgets(
+      'waitingDivisionHeadApproval: step 1-3 completed, step 4 current',
+      (tester) async {
+        final mutation = createDummyMutation(
+          status: MutationStatus.waitingDivisionHeadApproval,
+        );
+        await tester.pumpWidget(
+          createWidget(
+            status: MutationStatus.waitingDivisionHeadApproval,
+            mutation: mutation,
+          ),
+        );
 
-      final steps = MutationTrackingHelper.getStepsForMutation(
-        MutationStatus.waitingDivisionHeadApproval,
-        mutation: mutation,
-      );
-      expect(steps[0].state, TrackingStepState.completed);
-      expect(steps[1].state, TrackingStepState.completed);
-      expect(steps[2].state, TrackingStepState.completed);
-      expect(steps[3].state, TrackingStepState.current);
-    });
+        final steps = MutationTrackingHelper.getStepsForMutation(
+          MutationStatus.waitingDivisionHeadApproval,
+          mutation: mutation,
+        );
+        expect(steps[0].state, TrackingStepState.completed);
+        expect(steps[1].state, TrackingStepState.completed);
+        expect(steps[2].state, TrackingStepState.completed);
+        expect(steps[3].state, TrackingStepState.current);
+      },
+    );
 
-    testWidgets('waitingConfirmation: step 1-4 completed, step 5 current', (tester) async {
+    testWidgets('waitingConfirmation: step 1-4 completed, step 5 current', (
+      tester,
+    ) async {
       final mutation = createDummyMutation(
         status: MutationStatus.waitingConfirmation,
       );
-      await tester.pumpWidget(createWidget(
-        status: MutationStatus.waitingConfirmation,
-        mutation: mutation,
-      ));
+      await tester.pumpWidget(
+        createWidget(
+          status: MutationStatus.waitingConfirmation,
+          mutation: mutation,
+        ),
+      );
 
       final steps = MutationTrackingHelper.getStepsForMutation(
         MutationStatus.waitingConfirmation,
@@ -162,19 +172,19 @@ void main() {
     });
 
     testWidgets('completed: all 6 steps completed', (tester) async {
-      final mutation = createDummyMutation(
-        status: MutationStatus.completed,
+      final mutation = createDummyMutation(status: MutationStatus.completed);
+      await tester.pumpWidget(
+        createWidget(status: MutationStatus.completed, mutation: mutation),
       );
-      await tester.pumpWidget(createWidget(
-        status: MutationStatus.completed,
-        mutation: mutation,
-      ));
 
       final steps = MutationTrackingHelper.getStepsForMutation(
         MutationStatus.completed,
         mutation: mutation,
       );
-      expect(steps.every((s) => s.state == TrackingStepState.completed), isTrue);
+      expect(
+        steps.every((s) => s.state == TrackingStepState.completed),
+        isTrue,
+      );
     });
 
     testWidgets('returned by Operator: shows alert on step 2', (tester) async {
@@ -182,10 +192,9 @@ void main() {
         status: MutationStatus.returned,
         returnReason: 'Dokumen SK belum lengkap',
       );
-      await tester.pumpWidget(createWidget(
-        status: MutationStatus.returned,
-        mutation: mutation,
-      ));
+      await tester.pumpWidget(
+        createWidget(status: MutationStatus.returned, mutation: mutation),
+      );
 
       final steps = MutationTrackingHelper.getStepsForMutation(
         MutationStatus.returned,
@@ -195,15 +204,16 @@ void main() {
       expect(steps[1].subtitle, contains('Dokumen SK belum lengkap'));
     });
 
-    testWidgets('returned by Bagian Aset: shows alert on step 3', (tester) async {
+    testWidgets('returned by Bagian Aset: shows alert on step 3', (
+      tester,
+    ) async {
       final mutation = createDummyMutation(
         status: MutationStatus.returned,
         assetReturnReason: 'Aset tidak berada di lokasi asal',
       );
-      await tester.pumpWidget(createWidget(
-        status: MutationStatus.returned,
-        mutation: mutation,
-      ));
+      await tester.pumpWidget(
+        createWidget(status: MutationStatus.returned, mutation: mutation),
+      );
 
       final steps = MutationTrackingHelper.getStepsForMutation(
         MutationStatus.returned,
@@ -213,22 +223,26 @@ void main() {
       expect(steps[2].subtitle, contains('Aset tidak berada di lokasi asal'));
     });
 
-    testWidgets('rejected by Pemimpin Divisi: shows alert on step 4', (tester) async {
+    testWidgets('rejected by Pemimpin Divisi: shows alert on step 4', (
+      tester,
+    ) async {
       final mutation = createDummyMutation(
         status: MutationStatus.rejected,
         kadivRejectionReason: 'Pengajuan ditolak oleh Pemimpin Divisi',
       );
-      await tester.pumpWidget(createWidget(
-        status: MutationStatus.rejected,
-        mutation: mutation,
-      ));
+      await tester.pumpWidget(
+        createWidget(status: MutationStatus.rejected, mutation: mutation),
+      );
 
       final steps = MutationTrackingHelper.getStepsForMutation(
         MutationStatus.rejected,
         mutation: mutation,
       );
       expect(steps[3].state, TrackingStepState.alert);
-      expect(steps[3].subtitle, contains('Pengajuan ditolak oleh Pemimpin Divisi'));
+      expect(
+        steps[3].subtitle,
+        contains('Pengajuan ditolak oleh Pemimpin Divisi'),
+      );
     });
   });
 
@@ -237,7 +251,7 @@ void main() {
       final subSteps = MutationTrackingHelper.buildTrackingSteps(
         status: MutationStatus.submitted,
       );
-      expect(MutationTrackingHelper.getActiveStageNumber(subSteps), 1);
+      expect(MutationTrackingHelper.getActiveStageNumber(subSteps), 2);
 
       final assetSteps = MutationTrackingHelper.buildTrackingSteps(
         status: MutationStatus.waitingAssetVerification,
@@ -270,13 +284,21 @@ void main() {
         isUnregistered: true,
       );
 
-      final regSteps = MutationTrackingHelper.getStepsForMutation(registered.status, mutation: registered);
-      final unregSteps = MutationTrackingHelper.getStepsForMutation(unreg.status, mutation: unreg);
+      final regSteps = MutationTrackingHelper.getStepsForMutation(
+        registered.status,
+        mutation: registered,
+      );
+      final unregSteps = MutationTrackingHelper.getStepsForMutation(
+        unreg.status,
+        mutation: unreg,
+      );
 
       expect(regSteps.length, 6);
       expect(unregSteps.length, 6);
-      expect(regSteps[0].state, TrackingStepState.current);
-      expect(unregSteps[0].state, TrackingStepState.current);
+      expect(regSteps[0].state, TrackingStepState.completed);
+      expect(unregSteps[0].state, TrackingStepState.completed);
+      expect(regSteps[1].state, TrackingStepState.current);
+      expect(unregSteps[1].state, TrackingStepState.current);
     });
   });
 }

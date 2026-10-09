@@ -190,7 +190,10 @@ class _OperatorDashboardScreenState
                 const Divider(height: 1),
                 const SizedBox(height: 8),
                 ListTile(
-                  leading: const Icon(Icons.fact_check_outlined, color: _C.navy),
+                  leading: const Icon(
+                    Icons.fact_check_outlined,
+                    color: _C.navy,
+                  ),
                   title: Text('Pengajuan Masuk', style: _font(size: 14)),
                   onTap: () {
                     Navigator.pop(sheetContext);
@@ -198,7 +201,10 @@ class _OperatorDashboardScreenState
                   },
                 ),
                 ListTile(
-                  leading: const Icon(Icons.notifications_none_rounded, color: _C.navy),
+                  leading: const Icon(
+                    Icons.notifications_none_rounded,
+                    color: _C.navy,
+                  ),
                   title: Text('Notifikasi', style: _font(size: 14)),
                   onTap: () {
                     Navigator.pop(sheetContext);
@@ -206,7 +212,10 @@ class _OperatorDashboardScreenState
                   },
                 ),
                 ListTile(
-                  leading: const Icon(Icons.person_outline_rounded, color: _C.navy),
+                  leading: const Icon(
+                    Icons.person_outline_rounded,
+                    color: _C.navy,
+                  ),
                   title: Text('Profil Pengguna', style: _font(size: 14)),
                   onTap: () {
                     Navigator.pop(sheetContext);
@@ -303,9 +312,7 @@ class _OperatorDashboardScreenState
       width: double.infinity,
       decoration: BoxDecoration(
         color: _C.navy,
-        borderRadius: const BorderRadius.vertical(
-          bottom: Radius.circular(36),
-        ),
+        borderRadius: const BorderRadius.vertical(bottom: Radius.circular(36)),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withValues(alpha: 0.15),
@@ -385,7 +392,9 @@ class _OperatorDashboardScreenState
                         Material(
                           color: Colors.transparent,
                           child: InkWell(
-                            onTap: () => context.push(RouteNames.operatorNotificationsPath),
+                            onTap: () => context.push(
+                              RouteNames.operatorNotificationsPath,
+                            ),
                             borderRadius: BorderRadius.circular(999),
                             child: Container(
                               width: 38,
@@ -722,7 +731,8 @@ class _OperatorDashboardScreenState
                         children: [
                           ElevatedButton(
                             key: const Key('btn_lihat_pengajuan'),
-                            onPressed: () => context.push(RouteNames.operatorMutationsPath),
+                            onPressed: () =>
+                                context.push(RouteNames.operatorMutationsPath),
                             style: ElevatedButton.styleFrom(
                               backgroundColor: Colors.white,
                               foregroundColor: _C.navy,
@@ -805,10 +815,10 @@ class _OperatorDashboardScreenState
                       ),
                       const SizedBox(height: 2),
                       Text(
-                        'SLA 18M',
+                        'JAM KERJA',
                         style: _font(
                           size: 9,
-                          weight: FontWeight.w800,
+                          weight: FontWeight.w600,
                           color: const Color(0xFFCCFBF1),
                           letterSpacing: 0.5,
                         ),
@@ -1024,7 +1034,9 @@ class _OperatorDashboardScreenState
               ],
             ),
             GestureDetector(
-              onTap: () => context.push('${RouteNames.operatorMutationsPath}?filter=all'),
+              onTap: () => context.push(
+                '${RouteNames.operatorMutationsPath}?filter=all',
+              ),
               child: Row(
                 children: [
                   Text(
@@ -1052,10 +1064,7 @@ class _OperatorDashboardScreenState
           loading: () => const Padding(
             padding: EdgeInsets.all(32),
             child: Center(
-              child: CircularProgressIndicator(
-                strokeWidth: 2,
-                color: _C.teal,
-              ),
+              child: CircularProgressIndicator(strokeWidth: 2, color: _C.teal),
             ),
           ),
           error: (e, _) => Container(
@@ -1184,14 +1193,10 @@ class _OperatorDashboardScreenState
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    const Icon(
-                      Icons.circle,
-                      size: 6,
-                      color: Color(0xFFF59E0B),
-                    ),
+                    const Icon(Icons.circle, size: 6, color: Color(0xFFF59E0B)),
                     const SizedBox(width: 4),
                     Text(
-                      m.status.displayName,
+                      m.status.displayNameForRole('operator'),
                       style: _font(
                         size: 10,
                         weight: FontWeight.w600,
@@ -1359,7 +1364,8 @@ class _OperatorDashboardScreenState
             children: [
               _buildDocumentBadge(
                 label: 'SK SDM Terlampir',
-                isAttached: m.documentName != null && m.documentName!.isNotEmpty,
+                isAttached:
+                    m.documentName != null && m.documentName!.isNotEmpty,
               ),
               _buildDocumentBadge(
                 label: 'Form Mutasi Terlampir',
@@ -1375,8 +1381,10 @@ class _OperatorDashboardScreenState
             child: ElevatedButton(
               onPressed: () {
                 context.push(
-                  RouteNames.operatorVerificationDetailPath
-                      .replaceFirst(':id', m.id),
+                  RouteNames.operatorVerificationDetailPath.replaceFirst(
+                    ':id',
+                    m.id,
+                  ),
                 );
               },
               style: ElevatedButton.styleFrom(
@@ -1420,7 +1428,9 @@ class _OperatorDashboardScreenState
   }) {
     final fg = isAttached ? const Color(0xFF047857) : const Color(0xFF64748B);
     final bg = isAttached ? const Color(0xFFECFDF5) : const Color(0xFFF1F5F9);
-    final border = isAttached ? const Color(0xFFA7F3D0) : const Color(0xFFE2E8F0);
+    final border = isAttached
+        ? const Color(0xFFA7F3D0)
+        : const Color(0xFFE2E8F0);
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
@@ -1433,18 +1443,16 @@ class _OperatorDashboardScreenState
         mainAxisSize: MainAxisSize.min,
         children: [
           Icon(
-            isAttached ? Icons.check_circle_rounded : Icons.info_outline_rounded,
+            isAttached
+                ? Icons.check_circle_rounded
+                : Icons.info_outline_rounded,
             size: 12,
             color: fg,
           ),
           const SizedBox(width: 4),
           Text(
             label,
-            style: _font(
-              size: 10,
-              weight: FontWeight.w600,
-              color: fg,
-            ),
+            style: _font(size: 10, weight: FontWeight.w600, color: fg),
           ),
         ],
       ),

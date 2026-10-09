@@ -43,8 +43,7 @@ class SubmitMutationUseCase {
         params.assetId!.trim().isEmpty) {
       return const Result.failure(
         ValidationFailure(
-          message:
-              'Aset yang dimutasi harus merupakan aset terdaftar. Input aset bebas/manual tidak didukung.',
+          message: 'Aset yang dimutasi harus merupakan aset terdaftar. Input aset bebas/manual tidak didukung.',
         ),
       );
     }
@@ -68,7 +67,9 @@ class SubmitMutationUseCase {
     // Jika aset ditinggalkan -> PIC dikosongkan untuk ditentukan oleh Bagian Aset.
     if (params.isAssetMovingWithApplicant && params.targetPic.trim().isEmpty) {
       return const Result.failure(
-        ValidationFailure(message: 'Penanggung jawab baru wajib dipilih jika aset ikut pindah.'),
+        ValidationFailure(
+          message: 'Penanggung jawab baru wajib dipilih jika aset ikut pindah.',
+        ),
       );
     }
 
@@ -82,7 +83,9 @@ class SubmitMutationUseCase {
     // Validasi SK SDM (PRD V1.1 §6.2, Aturan Bisnis 7: SK SDM wajib dilampirkan).
     if (params.documentName == null || params.documentName!.trim().isEmpty) {
       return const Result.failure(
-        ValidationFailure(message: 'Surat Keputusan (SK) SDM wajib dilampirkan.'),
+        ValidationFailure(
+          message: 'Surat Keputusan (SK) SDM wajib dilampirkan.',
+        ),
       );
     }
 

@@ -6,6 +6,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+
 import '../../../../app/router/route_names.dart';
 import '../../../../app/theme/app_colors.dart';
 import '../../../../app/theme/app_spacing.dart';
@@ -14,6 +15,8 @@ import '../../../mutation/domain/entities/mutation_status.dart';
 import '../../../mutation/presentation/providers/mutation_provider.dart';
 import '../../../../core/widgets/app_feedback.dart';
 import '../../../../core/widgets/document_preview_dialog.dart';
+import '../../../../core/widgets/sla_live_badge.dart';
+import '../../../../core/providers/core_providers.dart';
 import '../../../auth/presentation/providers/auth_provider.dart';
 import '../providers/kadiv_approval_provider.dart';
 import '../../../../core/widgets/mutasiku_page_header.dart';
@@ -21,10 +24,7 @@ import '../../../../core/widgets/mutasiku_page_header.dart';
 class KadivApprovalDetailScreen extends ConsumerWidget {
   final String mutationId;
 
-  const KadivApprovalDetailScreen({
-    super.key,
-    required this.mutationId,
-  });
+  const KadivApprovalDetailScreen({super.key, required this.mutationId});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -46,13 +46,18 @@ class KadivApprovalDetailScreen extends ConsumerWidget {
           ),
           Expanded(
             child: asyncMutation.when(
-              data: (mutation) => _buildBody(context, ref, mutation, actionState),
+              data: (mutation) =>
+                  _buildBody(context, ref, mutation, actionState),
               loading: () => const Center(child: CircularProgressIndicator()),
               error: (err, _) => Center(
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    const Icon(Icons.error_outline, size: 48, color: AppColors.error),
+                    const Icon(
+                      Icons.error_outline,
+                      size: 48,
+                      color: AppColors.error,
+                    ),
                     const SizedBox(height: AppSpacing.md),
                     Text(
                       'Gagal memuat detail approval: $err',
@@ -61,8 +66,9 @@ class KadivApprovalDetailScreen extends ConsumerWidget {
                     ),
                     const SizedBox(height: AppSpacing.md),
                     ElevatedButton(
-                      onPressed: () =>
-                          ref.invalidate(kadivMutationDetailProvider(mutationId)),
+                      onPressed: () => ref.invalidate(
+                        kadivMutationDetailProvider(mutationId),
+                      ),
                       child: const Text('Coba Lagi'),
                     ),
                   ],
@@ -81,8 +87,7 @@ class KadivApprovalDetailScreen extends ConsumerWidget {
     Mutation mutation,
     KadivApprovalActionState actionState,
   ) {
-    final isWaitingApproval =
-        mutation.status.isWaitingDivisionApproval;
+    final isWaitingApproval = mutation.status.isWaitingDivisionApproval;
 
     return Column(
       children: [
@@ -127,20 +132,35 @@ class KadivApprovalDetailScreen extends ConsumerWidget {
                         ),
                       ),
                       const SizedBox(width: 8),
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 10, vertical: 4),
-                        decoration: BoxDecoration(
-                          color: mutation.status.backgroundColor,
-                          borderRadius: BorderRadius.circular(AppRadius.pill),
-                        ),
-                        child: Text(
-                          mutation.status.displayName,
-                          style: TextStyle(
-                            fontSize: 12,
-                            fontWeight: FontWeight.w600,
-                            color: mutation.status.color,
-                          ),
+                      Flexible(
+                        child: Wrap(
+                          spacing: 6,
+                          runSpacing: 4,
+                          alignment: WrapAlignment.end,
+                          crossAxisAlignment: WrapCrossAlignment.center,
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 10,
+                                vertical: 4,
+                              ),
+                              decoration: BoxDecoration(
+                                color: mutation.status.backgroundColor,
+                                borderRadius: BorderRadius.circular(AppRadius.pill),
+                              ),
+                              child: Text(
+                                mutation.status.displayName,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w600,
+                                  color: mutation.status.color,
+                                ),
+                              ),
+                            ),
+                            SlaLiveBadge(mutation: mutation),
+                          ],
                         ),
                       ),
                     ],
@@ -165,8 +185,11 @@ class KadivApprovalDetailScreen extends ConsumerWidget {
                       children: [
                         Row(
                           children: [
-                            const Icon(Icons.cancel_outlined,
-                                color: AppColors.error, size: 20),
+                            const Icon(
+                              Icons.cancel_outlined,
+                              color: AppColors.error,
+                              size: 20,
+                            ),
                             const SizedBox(width: AppSpacing.xs),
                             Text(
                               mutation.kadivRejectedBy != null
@@ -230,7 +253,9 @@ class KadivApprovalDetailScreen extends ConsumerWidget {
                   _buildDetailRow('Alasan Mutasi', mutation.reason),
                   if (mutation.verifiedBy != null) ...[
                     const Divider(
-                        height: AppSpacing.md, color: AppColors.border),
+                      height: AppSpacing.md,
+                      color: AppColors.border,
+                    ),
                     _buildDetailRow(
                       'Verifikasi Operator',
                       'Diverifikasi oleh ${mutation.verifiedBy}',
@@ -239,9 +264,12 @@ class KadivApprovalDetailScreen extends ConsumerWidget {
                           : null,
                     ),
                   ],
-                  if (mutation.documentName != null) ...[
+                  if (mutation.documentName != null &&
+                      mutation.documentName!.trim().isNotEmpty) ...[
                     const Divider(
-                        height: AppSpacing.md, color: AppColors.border),
+                      height: AppSpacing.md,
+                      color: AppColors.border,
+                    ),
                     _buildDocumentRow(mutation, context, ref),
                   ],
                 ]),
@@ -279,28 +307,31 @@ class KadivApprovalDetailScreen extends ConsumerWidget {
                     subtitle: mutation.assetVerifiedBy != null
                         ? 'Diverifikasi oleh ${mutation.assetVerifiedBy}'
                         : (mutation.approvedBy != null
-                            ? 'Diverifikasi oleh ${mutation.approvedBy}'
-                            : 'Telah diverifikasi valid oleh Bagian Aset'),
+                              ? 'Diverifikasi oleh ${mutation.approvedBy}'
+                              : 'Telah diverifikasi valid oleh Bagian Aset'),
                     isCompleted: true,
                     isCurrent: false,
                   ),
                   _buildTimelineLine(),
                   _buildTimelineItem(
                     title: 'Approval Kadiv',
-                    subtitle: mutation.kadivApprovedBy != null ||
+                    subtitle:
+                        mutation.kadivApprovedBy != null ||
                             (mutation.status == MutationStatus.approved &&
                                 mutation.kadivApprovedAt != null)
                         ? 'Disetujui oleh ${mutation.kadivApprovedBy ?? "Pemimpin Divisi"}'
                         : mutation.status == MutationStatus.rejected &&
-                                mutation.kadivRejectedBy != null
-                            ? 'Ditolak oleh ${mutation.kadivRejectedBy}'
-                            : isWaitingApproval
-                                ? 'Menunggu keputusan Pemimpin Divisi'
-                                : 'Selesai',
-                    isCompleted: mutation.status == MutationStatus.approved ||
+                              mutation.kadivRejectedBy != null
+                        ? 'Ditolak oleh ${mutation.kadivRejectedBy}'
+                        : isWaitingApproval
+                        ? 'Menunggu keputusan Pemimpin Divisi'
+                        : 'Selesai',
+                    isCompleted:
+                        mutation.status == MutationStatus.approved ||
                         mutation.status == MutationStatus.rejected,
                     isCurrent: isWaitingApproval,
-                    isRejected: mutation.status == MutationStatus.rejected &&
+                    isRejected:
+                        mutation.status == MutationStatus.rejected &&
                         mutation.kadivRejectedBy != null,
                   ),
                 ]),
@@ -328,13 +359,15 @@ class KadivApprovalDetailScreen extends ConsumerWidget {
                           ? null
                           : () {
                               context.push(
-                                  '/kadiv/approvals/${mutation.id}/reject');
+                                '/kadiv/approvals/${mutation.id}/reject',
+                              );
                             },
                       style: OutlinedButton.styleFrom(
                         foregroundColor: AppColors.error,
                         side: const BorderSide(color: AppColors.error),
                         padding: const EdgeInsets.symmetric(
-                            vertical: AppSpacing.md),
+                          vertical: AppSpacing.md,
+                        ),
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(AppRadius.button),
                         ),
@@ -355,12 +388,16 @@ class KadivApprovalDetailScreen extends ConsumerWidget {
                       onPressed: actionState.isLoading
                           ? null
                           : () => _showApproveConfirmDialog(
-                              context, ref, mutation),
+                              context,
+                              ref,
+                              mutation,
+                            ),
                       style: ElevatedButton.styleFrom(
                         backgroundColor: AppColors.primary,
                         foregroundColor: Colors.white,
                         padding: const EdgeInsets.symmetric(
-                            vertical: AppSpacing.md),
+                          vertical: AppSpacing.md,
+                        ),
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(AppRadius.button),
                         ),
@@ -446,15 +483,20 @@ class KadivApprovalDetailScreen extends ConsumerWidget {
           const SizedBox(height: AppSpacing.sm),
           Row(
             children: [
-              const Icon(Icons.person_outline,
-                  size: 16, color: AppColors.textSecondary),
+              const Icon(
+                Icons.person_outline,
+                size: 16,
+                color: AppColors.textSecondary,
+              ),
               const SizedBox(width: 6),
               const Text(
                 'Diverifikasi Oleh: ',
                 style: TextStyle(fontSize: 12, color: AppColors.textSecondary),
               ),
               Text(
-                mutation.assetVerifiedBy ?? mutation.approvedBy ?? 'Bagian Aset',
+                mutation.assetVerifiedBy ??
+                    mutation.approvedBy ??
+                    'Bagian Aset',
                 style: const TextStyle(
                   fontSize: 12,
                   fontWeight: FontWeight.bold,
@@ -466,8 +508,11 @@ class KadivApprovalDetailScreen extends ConsumerWidget {
           const SizedBox(height: 4),
           Row(
             children: [
-              const Icon(Icons.schedule,
-                  size: 16, color: AppColors.textSecondary),
+              const Icon(
+                Icons.schedule,
+                size: 16,
+                color: AppColors.textSecondary,
+              ),
               const SizedBox(width: 6),
               const Text(
                 'Tanggal Verifikasi: ',
@@ -477,8 +522,8 @@ class KadivApprovalDetailScreen extends ConsumerWidget {
                 mutation.assetVerifiedAt != null
                     ? _formatDate(mutation.assetVerifiedAt!)
                     : (mutation.approvedAt != null
-                        ? _formatDate(mutation.approvedAt!)
-                        : 'Telah diverifikasi'),
+                          ? _formatDate(mutation.approvedAt!)
+                          : 'Telah diverifikasi'),
                 style: const TextStyle(
                   fontSize: 12,
                   fontWeight: FontWeight.w500,
@@ -595,7 +640,8 @@ class KadivApprovalDetailScreen extends ConsumerWidget {
                   color: AppColors.infoContainer.withValues(alpha: 0.3),
                   borderRadius: BorderRadius.circular(AppRadius.button),
                   border: Border.all(
-                      color: AppColors.info.withValues(alpha: 0.3)),
+                    color: AppColors.info.withValues(alpha: 0.3),
+                  ),
                 ),
                 child: Text(
                   to,
@@ -614,58 +660,77 @@ class KadivApprovalDetailScreen extends ConsumerWidget {
   }
 
   Widget _buildDocumentRow(
-      Mutation mutation, BuildContext context, WidgetRef ref) {
+    Mutation mutation,
+    BuildContext context,
+    WidgetRef ref,
+  ) {
     final docName = mutation.documentName ?? 'Dokumen';
     final isPdf = docName.toLowerCase().endsWith('.pdf');
-    final isImage = ['png', 'jpg', 'jpeg', 'webp'].any((ext) => docName.toLowerCase().endsWith(ext));
+    final isImage = [
+      'png',
+      'jpg',
+      'jpeg',
+      'webp',
+    ].any((ext) => docName.toLowerCase().endsWith(ext));
 
-    return InkWell(
-      onTap: () {
-        DocumentPreviewDialog.show(
-          context,
-          mutation: mutation,
-          currentUser: ref.read(authStateProvider).user,
-        );
-      },
-      borderRadius: BorderRadius.circular(8),
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-        decoration: BoxDecoration(
-          color: AppColors.primaryContainer.withValues(alpha: 0.3),
-          borderRadius: BorderRadius.circular(8),
-          border: Border.all(color: AppColors.primary.withValues(alpha: 0.2)),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text(
+          'Dokumen',
+          style: TextStyle(fontSize: 12, color: AppColors.textSecondary),
         ),
-        child: Row(
-          children: [
-            Icon(
-              isPdf
-                  ? Icons.picture_as_pdf_outlined
-                  : isImage
+        const SizedBox(height: 4),
+        InkWell(
+          onTap: () {
+            DocumentPreviewDialog.show(
+              context,
+              mutation: mutation,
+              currentUser: ref.read(authStateProvider).user,
+              apiClient: ref.read(apiClientProvider),
+            );
+          },
+          borderRadius: BorderRadius.circular(8),
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+            decoration: BoxDecoration(
+              color: AppColors.primaryContainer.withValues(alpha: 0.3),
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: AppColors.primary.withValues(alpha: 0.2)),
+            ),
+            child: Row(
+              children: [
+                Icon(
+                  isPdf
+                      ? Icons.picture_as_pdf_outlined
+                      : isImage
                       ? Icons.image_outlined
                       : Icons.description_outlined,
-              size: 18,
-              color: isPdf
-                  ? AppColors.error
-                  : isImage
+                  size: 18,
+                  color: isPdf
+                      ? AppColors.error
+                      : isImage
                       ? AppColors.primary
                       : AppColors.textSecondary,
-            ),
-            const SizedBox(width: AppSpacing.xs),
-            Expanded(
-              child: Text(
-                docName,
-                style: const TextStyle(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w600,
-                  color: AppColors.primary,
                 ),
-              ),
+                const SizedBox(width: AppSpacing.xs),
+                Expanded(
+                  child: Text(
+                    docName,
+                    style: const TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                      color: AppColors.primary,
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                const Icon(Icons.open_in_new, size: 15, color: AppColors.primary),
+              ],
             ),
-            const SizedBox(width: 8),
-            const Icon(Icons.open_in_new, size: 15, color: AppColors.primary),
-          ],
+          ),
         ),
-      ),
+      ],
     );
   }
 
@@ -706,13 +771,14 @@ class KadivApprovalDetailScreen extends ConsumerWidget {
                 title,
                 style: TextStyle(
                   fontSize: 12,
-                  fontWeight:
-                      isCurrent || isCompleted ? FontWeight.bold : FontWeight.normal,
+                  fontWeight: isCurrent || isCompleted
+                      ? FontWeight.bold
+                      : FontWeight.normal,
                   color: isCurrent
                       ? AppColors.primary
                       : isRejected
-                          ? AppColors.error
-                          : AppColors.textPrimary,
+                      ? AppColors.error
+                      : AppColors.textPrimary,
                 ),
               ),
               const SizedBox(height: 2),
@@ -864,4 +930,3 @@ class KadivApprovalDetailScreen extends ConsumerWidget {
 
 // ─── Pemimpin Divisi Detail Screen Alias ──────────────────────────────────────
 typedef PemimpinDivisiApprovalDetailScreen = KadivApprovalDetailScreen;
-

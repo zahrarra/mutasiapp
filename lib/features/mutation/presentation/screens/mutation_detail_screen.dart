@@ -11,10 +11,12 @@ import 'package:go_router/go_router.dart';
 
 import '../../../../app/router/route_names.dart';
 import '../../../../app/theme/app_colors.dart';
+import '../../../../core/utils/sla_wita_helper.dart';
 import '../../../../core/widgets/document_preview_dialog.dart';
 import '../../../../core/widgets/error_view.dart';
 import '../../../../core/widgets/loading_indicator.dart';
 import '../../../../core/widgets/mutasiku_page_header.dart';
+import '../../../../core/widgets/sla_live_badge.dart';
 import '../../../auth/domain/entities/user_role.dart';
 import '../../../auth/presentation/providers/auth_provider.dart';
 import '../../domain/entities/mutation.dart';
@@ -64,7 +66,8 @@ class MutationDetailScreen extends ConsumerWidget {
               loading: () => const LoadingIndicator(),
               error: (err, _) => ErrorView(
                 message: 'Gagal memuat detail pengajuan.\n$err',
-                onRetry: () => ref.invalidate(mutationDetailProvider(mutationId)),
+                onRetry: () =>
+                    ref.invalidate(mutationDetailProvider(mutationId)),
               ),
             ),
           ),
@@ -80,7 +83,8 @@ class MutationDetailScreen extends ConsumerWidget {
   ) {
     final auth = ref.watch(authStateProvider);
     final user = auth.user;
-    final isApplicantOwner = user == null ||
+    final isApplicantOwner =
+        user == null ||
         user.role != UserRole.pemohon ||
         (mutation.applicantId == user.id ||
             ((user.id == 'usr_pemohon' ||
@@ -209,11 +213,7 @@ class MutationDetailScreen extends ConsumerWidget {
         gradient: const LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
-          colors: [
-            Color(0xFF00273A),
-            Color(0xFF00344D),
-            Color(0xFF0A4866),
-          ],
+          colors: [Color(0xFF00273A), Color(0xFF00344D), Color(0xFF0A4866)],
         ),
         borderRadius: BorderRadius.circular(20),
         border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
@@ -300,9 +300,7 @@ class MutationDetailScreen extends ConsumerWidget {
             padding: const EdgeInsets.only(top: 12),
             decoration: BoxDecoration(
               border: Border(
-                top: BorderSide(
-                  color: Colors.white.withValues(alpha: 0.12),
-                ),
+                top: BorderSide(color: Colors.white.withValues(alpha: 0.12)),
               ),
             ),
             child: Row(
@@ -330,7 +328,7 @@ class MutationDetailScreen extends ConsumerWidget {
                           const SizedBox(width: 4),
                           Expanded(
                             child: Text(
-                              _formatDateShort(mutation.createdAt),
+                              SlaWitaHelper.formatDateTimeWita(mutation.createdAt),
                               style: const TextStyle(
                                 fontSize: 11,
                                 fontWeight: FontWeight.w500,
@@ -348,32 +346,52 @@ class MutationDetailScreen extends ConsumerWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(
-                        'TARGET SLA SELESAI',
-                        style: TextStyle(
-                          fontSize: 10,
-                          fontWeight: FontWeight.w600,
-                          color: const Color(0xFFA5F3FC).withValues(alpha: 0.7),
-                        ),
-                      ),
-                      const SizedBox(height: 3),
-                      const Row(
-                        children: [
-                          Icon(
-                            Icons.timer_outlined,
-                            size: 13,
-                            color: Color(0xFFFDE047),
-                          ),
-                          SizedBox(width: 4),
-                          Text(
-                            '1x24 Jam (Sisa 18 Jam)',
-                            style: TextStyle(
-                              fontSize: 11,
-                              fontWeight: FontWeight.w500,
-                              color: Colors.white,
-                            ),
-                          ),
-                        ],
+                      SlaLiveBuilder(
+                        mutation: mutation,
+                        builder: (context, sla) {
+                          final isOverdue = sla.isOverdue;
+                          return Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'SLA',
+                                style: TextStyle(
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.w600,
+                                  color: const Color(0xFFA5F3FC).withValues(alpha: 0.7),
+                                ),
+                              ),
+                              const SizedBox(height: 3),
+                              Row(
+                                children: [
+                                  Icon(
+                                    isOverdue
+                                        ? Icons.warning_amber_rounded
+                                        : Icons.timer_outlined,
+                                    size: 13,
+                                    color: isOverdue
+                                        ? const Color(0xFFF87171)
+                                        : const Color(0xFFFDE047),
+                                  ),
+                                  const SizedBox(width: 4),
+                                  Expanded(
+                                    child: Text(
+                                      sla.label,
+                                      style: TextStyle(
+                                        fontSize: 11,
+                                        fontWeight: FontWeight.w500,
+                                        color: isOverdue
+                                            ? const Color(0xFFFECACA)
+                                            : Colors.white,
+                                      ),
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ],
+                          );
+                        },
                       ),
                     ],
                   ),
@@ -400,8 +418,8 @@ class MutationDetailScreen extends ConsumerWidget {
                       children: [
                         CircleAvatar(
                           radius: 17,
-                          backgroundColor:
-                              const Color(0xFF06B6D4).withValues(alpha: 0.3),
+                          backgroundColor: const Color(0xFF06B6D4)
+                              .withValues(alpha: 0.3),
                           child: const Icon(
                             Icons.person,
                             size: 18,
@@ -436,8 +454,8 @@ class MutationDetailScreen extends ConsumerWidget {
                             fontSize: 9,
                             fontWeight: FontWeight.w600,
                             letterSpacing: 0.5,
-                            color:
-                                const Color(0xFFA5F3FC).withValues(alpha: 0.8),
+                            color: const Color(0xFFA5F3FC)
+                                .withValues(alpha: 0.8),
                           ),
                         ),
                         Text(
@@ -471,17 +489,23 @@ class MutationDetailScreen extends ConsumerWidget {
                       color: const Color(0xFFFBBF24).withValues(alpha: 0.3),
                     ),
                   ),
-                  child: const Row(
+                  child: Row(
                     children: [
                       Icon(
-                        Icons.hourglass_top,
+                        mutation.status == MutationStatus.returned
+                            ? Icons.assignment_return_outlined
+                            : Icons.hourglass_top,
                         size: 12,
-                        color: Color(0xFFFDE047),
+                        color: const Color(0xFFFDE047),
                       ),
-                      SizedBox(width: 4),
+                      const SizedBox(width: 4),
                       Text(
-                        'Meninjau',
-                        style: TextStyle(
+                        mutation.status == MutationStatus.returned
+                            ? 'Perlu Perbaikan'
+                            : (mutation.status == MutationStatus.submitted
+                                  ? 'Pemeriksaan Operator'
+                                  : 'Meninjau'),
+                        style: const TextStyle(
                           fontSize: 10,
                           fontWeight: FontWeight.bold,
                           color: Color(0xFFFDE047),
@@ -549,10 +573,7 @@ class MutationDetailScreen extends ConsumerWidget {
           Container(
             width: 6,
             height: 6,
-            decoration: BoxDecoration(
-              color: text,
-              shape: BoxShape.circle,
-            ),
+            decoration: BoxDecoration(color: text, shape: BoxShape.circle),
           ),
           const SizedBox(width: 5),
           Text(
@@ -1512,31 +1533,35 @@ class MutationDetailScreen extends ConsumerWidget {
         borderRadius: BorderRadius.circular(12),
         border: Border.all(color: const Color(0xFFBFDBFE)),
       ),
-      child: const Row(
+      child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(
+          const Icon(
             Icons.notifications_active,
             size: 20,
             color: Color(0xFF2563EB),
           ),
-          SizedBox(width: 10),
+          const SizedBox(width: 10),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'Menunggu Peninjauan Selesai',
-                  style: TextStyle(
+                  mutation.status == MutationStatus.submitted
+                      ? 'Menunggu Pemeriksaan Operator'
+                      : 'Menunggu Peninjauan Selesai',
+                  style: const TextStyle(
                     fontSize: 13,
                     fontWeight: FontWeight.bold,
                     color: Color(0xFF1E3A8A),
                   ),
                 ),
-                SizedBox(height: 3),
+                const SizedBox(height: 3),
                 Text(
-                  'Pengajuan sedang diproses sesuai alur kerja. Anda akan menerima notifikasi otomatis begitu status disetujui atau memerlukan konfirmasi.',
-                  style: TextStyle(
+                  mutation.status == MutationStatus.submitted
+                      ? 'Pengajuan Anda telah berhasil dikirim dan sedang menunggu pemeriksaan kelengkapan oleh Operator.'
+                      : 'Pengajuan sedang diproses sesuai alur kerja. Anda akan menerima notifikasi otomatis begitu status disetujui atau memerlukan konfirmasi.',
+                  style: const TextStyle(
                     fontSize: 11,
                     color: Color(0xFF3B82F6),
                     height: 1.4,
@@ -1551,6 +1576,17 @@ class MutationDetailScreen extends ConsumerWidget {
   }
 
   Widget _buildReturnedAlertBanner(Mutation mutation) {
+    final isAssetReturn =
+        mutation.assetReturnReason != null &&
+        mutation.assetReturnReason!.trim().isNotEmpty;
+    final actorLabel = isAssetReturn ? 'Bagian Aset' : 'Operator';
+    final reasonText = isAssetReturn
+        ? mutation.assetReturnReason!.trim()
+        : ((mutation.returnReason != null &&
+                  mutation.returnReason!.trim().isNotEmpty)
+              ? mutation.returnReason!.trim()
+              : 'Harap periksa catatan pengembalian dari Operator dan ajukan ulang.');
+
     return Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
@@ -1571,18 +1607,40 @@ class MutationDetailScreen extends ConsumerWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text(
-                  'Pengajuan Dikembalikan untuk Diperbaiki',
-                  style: TextStyle(
-                    fontSize: 13,
-                    fontWeight: FontWeight.bold,
-                    color: Color(0xFF9A3412),
-                  ),
+                Row(
+                  children: [
+                    const Text(
+                      'Pengajuan Dikembalikan untuk Diperbaiki',
+                      style: TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.bold,
+                        color: Color(0xFF9A3412),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 6,
+                        vertical: 2,
+                      ),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFEA580C).withValues(alpha: 0.15),
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                      child: Text(
+                        'Oleh: $actorLabel',
+                        style: const TextStyle(
+                          fontSize: 10,
+                          fontWeight: FontWeight.w600,
+                          color: Color(0xFFEA580C),
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  mutation.returnReason ??
-                      'Harap periksa catatan pengembalian dari Operator dan ajukan ulang.',
+                  reasonText,
                   style: const TextStyle(
                     fontSize: 12,
                     color: Color(0xFFC2410C),
@@ -1607,11 +1665,7 @@ class MutationDetailScreen extends ConsumerWidget {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Icon(
-            Icons.cancel_outlined,
-            size: 22,
-            color: Color(0xFFDC2626),
-          ),
+          const Icon(Icons.cancel_outlined, size: 22, color: Color(0xFFDC2626)),
           const SizedBox(width: 10),
           Expanded(
             child: Column(
@@ -1649,43 +1703,49 @@ class MutationDetailScreen extends ConsumerWidget {
   String _getReviewerName(Mutation mutation) {
     return switch (mutation.status) {
       MutationStatus.submitted ||
+      MutationStatus.waitingSync => mutation.verifiedBy ?? 'Operator',
       MutationStatus.returned =>
-        mutation.verifiedBy ?? 'Siti Rahma',
+        (mutation.assetReturnReason != null &&
+                mutation.assetReturnReason!.isNotEmpty)
+            ? (mutation.approvedBy ?? 'Bagian Aset')
+            : (mutation.verifiedBy ?? 'Operator'),
       MutationStatus.waitingAssetVerification ||
-      MutationStatus.verified =>
-        mutation.approvedBy ?? 'Hendra Setiawan',
-      MutationStatus.waitingKadivApproval ||
-      MutationStatus.waitingDivisionHeadApproval =>
-        'Drs. Hendra',
-      MutationStatus.approved => mutation.staffUpdatedBy ?? 'Agus Pratama',
+      MutationStatus.verified => mutation.approvedBy ?? 'Bagian Aset',
+      MutationStatus.waitingDivisionHeadApproval ||
+      MutationStatus.waitingKadivApproval =>
+        mutation.kadivApprovedBy ?? 'Pemimpin Divisi',
+      MutationStatus.approved => mutation.staffUpdatedBy ?? 'Bagian Aset',
       MutationStatus.pendingConfirmation ||
       MutationStatus.waitingConfirmation =>
-        mutation.applicantName,
-      MutationStatus.completed => 'Sistem Terverifikasi',
-      MutationStatus.waitingSync => 'Antrean Sinkronisasi',
+        mutation.applicantName.isNotEmpty ? mutation.applicantName : 'Pemohon',
+      MutationStatus.completed => 'Sistem MutasiKu',
       MutationStatus.rejected =>
-        mutation.kadivRejectionReason != null ? 'Drs. Hendra' : 'Bpk. Budi Santoso',
+        mutation.kadivRejectedBy ??
+            (mutation.rejectedBy ??
+                (mutation.kadivRejectionReason != null
+                    ? 'Pemimpin Divisi'
+                    : 'Peninjau Mutasi')),
     };
   }
 
   String _getReviewerRole(Mutation mutation) {
     return switch (mutation.status) {
       MutationStatus.submitted ||
+      MutationStatus.waitingSync => 'Pemeriksaan Kelengkapan',
       MutationStatus.returned =>
-        'Operator Aset & Logistik',
+        (mutation.assetReturnReason != null &&
+                mutation.assetReturnReason!.isNotEmpty)
+            ? 'Pengembalian oleh Bagian Aset'
+            : 'Pengembalian oleh Operator',
       MutationStatus.waitingAssetVerification ||
-      MutationStatus.verified =>
-        'Bagian Aset',
-      MutationStatus.waitingKadivApproval ||
-      MutationStatus.waitingDivisionHeadApproval =>
-        'Pemimpin Divisi',
-      MutationStatus.approved => 'Bagian Aset',
+      MutationStatus.verified => 'Verifikasi Bagian Aset',
+      MutationStatus.waitingDivisionHeadApproval ||
+      MutationStatus.waitingKadivApproval => 'Approval Pemimpin Divisi',
+      MutationStatus.approved => 'Update Sistem Aset',
       MutationStatus.pendingConfirmation ||
-      MutationStatus.waitingConfirmation =>
-        'Pemohon (Konfirmasi Akhir)',
+      MutationStatus.waitingConfirmation => 'Konfirmasi Pemohon',
       MutationStatus.completed => 'Siklus Mutasi Selesai',
-      MutationStatus.waitingSync => 'Penyimpanan Offline',
-      MutationStatus.rejected => 'Peninjau Mutasi',
+      MutationStatus.rejected => 'Pengajuan Ditolak',
     };
   }
 

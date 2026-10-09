@@ -51,20 +51,22 @@ class _BagianAsetVerificationsScreenState
 
   @override
   Widget build(BuildContext context) {
-    final asyncVerifications =
-        ref.watch(filteredBagianAsetVerificationsProvider);
+    final asyncVerifications = ref.watch(
+      filteredBagianAsetVerificationsProvider,
+    );
     final sortOrder = ref.watch(bagianAsetSortOrderProvider);
     final statusFilter = ref.watch(bagianAsetStatusFilterProvider);
     final role = ref.watch(authStateProvider).user?.role ?? UserRole.bagianAset;
 
     final title = switch (statusFilter) {
+      BagianAsetStatusFilter.processing => 'Diproses',
+      BagianAsetStatusFilter.allocated => 'Dialokasikan',
+      BagianAsetStatusFilter.returned => 'Dikembalikan',
+      BagianAsetStatusFilter.completed => 'Selesai',
+      BagianAsetStatusFilter.rejected => 'Ditolak',
       BagianAsetStatusFilter.waiting => 'Menunggu Verifikasi',
       BagianAsetStatusFilter.verified ||
-      BagianAsetStatusFilter.approved =>
-        'Lolos Verifikasi',
-      BagianAsetStatusFilter.returned ||
-      BagianAsetStatusFilter.rejected =>
-        'Dikembalikan',
+      BagianAsetStatusFilter.approved => 'Lolos Verifikasi',
       BagianAsetStatusFilter.all => 'Semua Pengajuan',
     };
 
@@ -119,30 +121,48 @@ class _BagianAsetVerificationsScreenState
                       child: _DropdownFilter(
                         child: DropdownButtonHideUnderline(
                           child: DropdownButton<BagianAsetStatusFilter>(
-                            key: const Key('dropdown_filter_bagian_aset_status'),
+                            key: const Key(
+                              'dropdown_filter_bagian_aset_status',
+                            ),
                             value: statusFilter,
                             isDense: true,
                             isExpanded: true,
-                            icon: const Icon(Icons.filter_list_rounded,
-                                size: 16, color: _C.success),
+                            icon: const Icon(
+                              Icons.filter_list_rounded,
+                              size: 16,
+                              color: _C.success,
+                            ),
                             style: const TextStyle(
-                                fontSize: 12,
-                                fontWeight: FontWeight.w500,
-                                color: _C.textPrimary),
-                            items: [
-                              BagianAsetStatusFilter.waiting,
-                              BagianAsetStatusFilter.verified,
-                              BagianAsetStatusFilter.returned,
-                              BagianAsetStatusFilter.all,
-                            ]
-                                .map((s) => DropdownMenuItem(
-                                    value: s, child: Text(s.displayName)))
-                                .toList(),
+                              fontSize: 12,
+                              fontWeight: FontWeight.w500,
+                              color: _C.textPrimary,
+                            ),
+                            items:
+                                [
+                                      BagianAsetStatusFilter.all,
+                                      BagianAsetStatusFilter.processing,
+                                      BagianAsetStatusFilter.allocated,
+                                      BagianAsetStatusFilter.returned,
+                                      BagianAsetStatusFilter.completed,
+                                      BagianAsetStatusFilter.rejected,
+                                      BagianAsetStatusFilter.waiting,
+                                    ]
+                                    .map(
+                                      (s) => DropdownMenuItem(
+                                        value: s,
+                                        child: Text(s.displayName),
+                                      ),
+                                    )
+                                    .toList(),
                             onChanged: (val) {
                               if (val != null) {
                                 ref
-                                    .read(bagianAsetStatusFilterProvider.notifier)
-                                    .state = val;
+                                        .read(
+                                          bagianAsetStatusFilterProvider
+                                              .notifier,
+                                        )
+                                        .state =
+                                    val;
                               }
                             },
                           ),
@@ -156,21 +176,32 @@ class _BagianAsetVerificationsScreenState
                           key: const Key('dropdown_filter_bagian_aset_sort'),
                           value: sortOrder,
                           isDense: true,
-                          icon: const Icon(Icons.sort_rounded,
-                              size: 16, color: _C.textSecondary),
+                          icon: const Icon(
+                            Icons.sort_rounded,
+                            size: 16,
+                            color: _C.textSecondary,
+                          ),
                           style: const TextStyle(
-                              fontSize: 12,
-                              fontWeight: FontWeight.w500,
-                              color: _C.textPrimary),
+                            fontSize: 12,
+                            fontWeight: FontWeight.w500,
+                            color: _C.textPrimary,
+                          ),
                           items: BagianAsetSortOrder.values
-                              .map((s) => DropdownMenuItem(
-                                  value: s, child: Text(s.displayName)))
+                              .map(
+                                (s) => DropdownMenuItem(
+                                  value: s,
+                                  child: Text(s.displayName),
+                                ),
+                              )
                               .toList(),
                           onChanged: (val) {
                             if (val != null) {
                               ref
-                                  .read(bagianAsetSortOrderProvider.notifier)
-                                  .state = val;
+                                      .read(
+                                        bagianAsetSortOrderProvider.notifier,
+                                      )
+                                      .state =
+                                  val;
                             }
                           },
                         ),
@@ -193,22 +224,27 @@ class _BagianAsetVerificationsScreenState
                     hasQuery: _searchController.text.isNotEmpty,
                   );
                 }
-                return ListView.separated(
-                  padding: const EdgeInsets.fromLTRB(16, 12, 16, 100),
-                  itemCount: list.length,
-                  separatorBuilder: (_, _) => const SizedBox(height: 10),
-                  itemBuilder: (ctx, i) {
-                    return _VerificationCard(
-                      key: Key('approval_card_${list[i].id}'),
-                      mutation: list[i],
-                      onTap: () {
-                        context.push(
-                          RouteNames.bagianAsetVerificationDetailPath
-                              .replaceFirst(':id', list[i].id),
-                        );
-                      },
-                    );
-                  },
+                return RefreshIndicator(
+                  color: _C.navy,
+                  onRefresh: () async =>
+                      ref.invalidate(bagianAsetAllMutationsProvider),
+                  child: ListView.separated(
+                    padding: const EdgeInsets.fromLTRB(16, 12, 16, 100),
+                    itemCount: list.length,
+                    separatorBuilder: (_, _) => const SizedBox(height: 10),
+                    itemBuilder: (ctx, i) {
+                      return _VerificationCard(
+                        key: Key('approval_card_${list[i].id}'),
+                        mutation: list[i],
+                        onTap: () {
+                          context.push(
+                            RouteNames.bagianAsetVerificationDetailPath
+                                .replaceFirst(':id', list[i].id),
+                          );
+                        },
+                      );
+                    },
+                  ),
                 );
               },
               loading: () => const Center(
@@ -218,12 +254,18 @@ class _BagianAsetVerificationsScreenState
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    const Icon(Icons.error_outline_rounded,
-                        size: 40, color: _C.error),
+                    const Icon(
+                      Icons.error_outline_rounded,
+                      size: 40,
+                      color: _C.error,
+                    ),
                     const SizedBox(height: 8),
                     Text(
                       'Gagal memuat data: $err',
-                      style: const TextStyle(color: _C.textSecondary, fontSize: 13),
+                      style: const TextStyle(
+                        color: _C.textSecondary,
+                        fontSize: 13,
+                      ),
                       textAlign: TextAlign.center,
                     ),
                     const SizedBox(height: 12),
@@ -285,13 +327,19 @@ class _SearchField extends StatelessWidget {
         decoration: InputDecoration(
           hintText: hintText,
           hintStyle: const TextStyle(fontSize: 12, color: _C.textSecondary),
-          prefixIcon:
-              const Icon(Icons.search_rounded, size: 18, color: _C.textSecondary),
+          prefixIcon: const Icon(
+            Icons.search_rounded,
+            size: 18,
+            color: _C.textSecondary,
+          ),
           suffixIcon: controller.text.isNotEmpty
               ? GestureDetector(
                   onTap: onClear,
-                  child: const Icon(Icons.close_rounded,
-                      size: 16, color: _C.textSecondary),
+                  child: const Icon(
+                    Icons.close_rounded,
+                    size: 16,
+                    color: _C.textSecondary,
+                  ),
                 )
               : null,
           border: InputBorder.none,
@@ -321,14 +369,14 @@ class _VerificationCard extends StatelessWidget {
     final badgeColor = isWaiting
         ? _C.warning
         : status == MutationStatus.returned || status == MutationStatus.rejected
-            ? _C.error
-            : _C.success;
+        ? _C.error
+        : _C.success;
 
     final badgeBg = isWaiting
         ? _C.warningLight
         : status == MutationStatus.returned || status == MutationStatus.rejected
-            ? _C.errorLight
-            : _C.successLight;
+        ? _C.errorLight
+        : _C.successLight;
 
     return Container(
       decoration: BoxDecoration(
@@ -370,21 +418,51 @@ class _VerificationCard extends StatelessWidget {
                         letterSpacing: 0.3,
                       ),
                     ),
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 8, vertical: 3),
-                      decoration: BoxDecoration(
-                        color: badgeBg,
-                        borderRadius: BorderRadius.circular(6),
-                      ),
-                      child: Text(
-                        status.displayName,
-                        style: TextStyle(
-                          fontSize: 10,
-                          fontWeight: FontWeight.w700,
-                          color: badgeColor,
+                    Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        if (isWaiting &&
+                            mutation.returnReason != null &&
+                            mutation.returnReason!.trim().isNotEmpty) ...[
+                          Container(
+                            margin: const EdgeInsets.only(right: 6),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 6,
+                              vertical: 3,
+                            ),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFFFF3CD),
+                              borderRadius: BorderRadius.circular(6),
+                            ),
+                            child: const Text(
+                              'Fisik Tidak Sesuai',
+                              style: TextStyle(
+                                fontSize: 10,
+                                fontWeight: FontWeight.w700,
+                                color: Color(0xFF856404),
+                              ),
+                            ),
+                          ),
+                        ],
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 8,
+                            vertical: 3,
+                          ),
+                          decoration: BoxDecoration(
+                            color: badgeBg,
+                            borderRadius: BorderRadius.circular(6),
+                          ),
+                          child: Text(
+                            status.displayName,
+                            style: TextStyle(
+                              fontSize: 10,
+                              fontWeight: FontWeight.w700,
+                              color: badgeColor,
+                            ),
+                          ),
                         ),
-                      ),
+                      ],
                     ),
                   ],
                 ),
@@ -408,7 +486,9 @@ class _VerificationCard extends StatelessWidget {
                     const SizedBox(width: 6),
                     Container(
                       padding: const EdgeInsets.symmetric(
-                          horizontal: 6, vertical: 2),
+                        horizontal: 6,
+                        vertical: 2,
+                      ),
                       decoration: BoxDecoration(
                         color: _C.background,
                         borderRadius: BorderRadius.circular(4),
@@ -430,17 +510,25 @@ class _VerificationCard extends StatelessWidget {
                 // Row 3: Pemohon & Lokasi
                 Row(
                   children: [
-                    const Icon(Icons.person_outline_rounded,
-                        size: 13, color: _C.textSecondary),
+                    const Icon(
+                      Icons.person_outline_rounded,
+                      size: 13,
+                      color: _C.textSecondary,
+                    ),
                     const SizedBox(width: 4),
                     Text(
                       mutation.applicantName,
                       style: const TextStyle(
-                          fontSize: 11, color: _C.textSecondary),
+                        fontSize: 11,
+                        color: _C.textSecondary,
+                      ),
                     ),
                     const SizedBox(width: 12),
-                    const Icon(Icons.arrow_forward_rounded,
-                        size: 12, color: _C.textSecondary),
+                    const Icon(
+                      Icons.arrow_forward_rounded,
+                      size: 12,
+                      color: _C.textSecondary,
+                    ),
                     const SizedBox(width: 4),
                     Expanded(
                       child: Text(
@@ -501,8 +589,11 @@ class _VerificationCard extends StatelessWidget {
                           ),
                         ),
                         const SizedBox(width: 2),
-                        const Icon(Icons.chevron_right_rounded,
-                            size: 14, color: _C.navy),
+                        const Icon(
+                          Icons.chevron_right_rounded,
+                          size: 14,
+                          color: _C.navy,
+                        ),
                       ],
                     ),
                   ],
@@ -541,35 +632,40 @@ class _EmptyState extends StatelessWidget {
   final BagianAsetStatusFilter statusFilter;
   final bool hasQuery;
 
-  const _EmptyState({
-    required this.statusFilter,
-    required this.hasQuery,
-  });
+  const _EmptyState({required this.statusFilter, required this.hasQuery});
 
   @override
   Widget build(BuildContext context) {
     final title = switch (statusFilter) {
+      BagianAsetStatusFilter.processing => 'Tidak Ada Pengajuan Diproses',
+      BagianAsetStatusFilter.allocated => 'Tidak Ada Pengajuan Dialokasikan',
+      BagianAsetStatusFilter.returned => 'Belum Ada Pengajuan Dikembalikan',
+      BagianAsetStatusFilter.completed => 'Belum Ada Pengajuan Selesai',
+      BagianAsetStatusFilter.rejected => 'Belum Ada Pengajuan Ditolak',
       BagianAsetStatusFilter.waiting => 'Tidak Ada Pengajuan Menunggu',
       BagianAsetStatusFilter.verified ||
-      BagianAsetStatusFilter.approved =>
-        'Belum Ada Pengajuan Diverifikasi',
-      BagianAsetStatusFilter.returned ||
-      BagianAsetStatusFilter.rejected =>
-        'Belum Ada Pengajuan Dikembalikan',
+      BagianAsetStatusFilter.approved => 'Belum Ada Pengajuan Diverifikasi',
       BagianAsetStatusFilter.all => 'Tidak Ada Pengajuan Ditemukan',
     };
 
     final subtitle = hasQuery
         ? 'Tidak ada data yang sesuai kriteria pencarian.'
         : switch (statusFilter) {
+            BagianAsetStatusFilter.processing =>
+              'Pengajuan yang sedang diproses akan muncul di sini.',
+            BagianAsetStatusFilter.allocated =>
+              'Pengajuan yang sedang dialokasikan akan muncul di sini.',
+            BagianAsetStatusFilter.returned =>
+              'Pengajuan yang dikembalikan akan muncul di sini.',
+            BagianAsetStatusFilter.completed =>
+              'Pengajuan yang telah selesai akan muncul di sini.',
+            BagianAsetStatusFilter.rejected =>
+              'Pengajuan yang ditolak akan muncul di sini.',
             BagianAsetStatusFilter.waiting =>
               'Seluruh pengajuan mutasi telah selesai diverifikasi.',
             BagianAsetStatusFilter.verified ||
             BagianAsetStatusFilter.approved =>
               'Pengajuan yang lolos verifikasi akan muncul di sini.',
-            BagianAsetStatusFilter.returned ||
-            BagianAsetStatusFilter.rejected =>
-              'Pengajuan yang dikembalikan akan muncul di sini.',
             BagianAsetStatusFilter.all =>
               'Tidak ada data yang sesuai kriteria pencarian.',
           };
@@ -587,24 +683,27 @@ class _EmptyState extends StatelessWidget {
                 color: _C.successLight,
                 borderRadius: BorderRadius.circular(20),
               ),
-              child: const Icon(Icons.task_alt_rounded,
-                  size: 36, color: _C.success),
+              child: const Icon(
+                Icons.task_alt_rounded,
+                size: 36,
+                color: _C.success,
+              ),
             ),
             const SizedBox(height: 16),
             Text(
               title,
               textAlign: TextAlign.center,
               style: const TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w700,
-                  color: _C.textPrimary),
+                fontSize: 16,
+                fontWeight: FontWeight.w700,
+                color: _C.textPrimary,
+              ),
             ),
             const SizedBox(height: 6),
             Text(
               subtitle,
               textAlign: TextAlign.center,
-              style: const TextStyle(
-                  fontSize: 13, color: _C.textSecondary),
+              style: const TextStyle(fontSize: 13, color: _C.textSecondary),
             ),
           ],
         ),
@@ -612,4 +711,3 @@ class _EmptyState extends StatelessWidget {
     );
   }
 }
-

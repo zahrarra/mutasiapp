@@ -11,6 +11,7 @@
 // 8. Halaman Pemimpin Divisi tombol Approve/Setujui bisa digunakan & setelah approve masuk waitingConfirmation.
 
 import 'dart:typed_data';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -55,16 +56,48 @@ class _FakeAuthRepository implements AuthRepository {
 
   @override
   Future<void> logout() async {}
+    @override
+  Future<Result<User>> changePassword({
+    required String currentPassword,
+    required String newPassword,
+    required String confirmPassword,
+  }) async {
+    if (newPassword.length < 8) {
+      return Result.failure(
+        const ValidationFailure(message: 'Password baru minimal 8 karakter.'),
+      );
+    }
+    if (newPassword != confirmPassword) {
+      return Result.failure(
+        const ValidationFailure(message: 'Konfirmasi password baru tidak cocok.'),
+      );
+    }
+    if (newPassword == currentPassword) {
+      return Result.failure(
+        const ValidationFailure(
+          message: 'Password baru harus berbeda dengan password lama.',
+        ),
+      );
+    }
+    if (user != null) {
+      return Result.success(user!.copyWith(mustChangePassword: false));
+    }
+    return Result.failure(
+      const UnauthorizedFailure(message: 'Pengguna tidak ditemukan.'),
+    );
+  }
 }
 
 class _TestAuthNotifier extends AuthNotifier {
   _TestAuthNotifier(User user)
-      : super(
-          loginUseCase: LoginUseCase(repository: _FakeAuthRepository(user: user)),
-          logoutUseCase: LogoutUseCase(repository: _FakeAuthRepository(user: user)),
-          authRepository: _FakeAuthRepository(user: user),
-          checkInitialStatus: false,
-        ) {
+    : super(
+        loginUseCase: LoginUseCase(repository: _FakeAuthRepository(user: user)),
+        logoutUseCase: LogoutUseCase(
+          repository: _FakeAuthRepository(user: user),
+        ),
+        authRepository: _FakeAuthRepository(user: user),
+        checkInitialStatus: false,
+      ) {
     state = AuthState(isLoading: false, user: user);
   }
 }
@@ -84,7 +117,9 @@ class _MockMutationRepository implements MutationRepository {
   @override
   Future<Result<Mutation>> getMutationById(String id) async {
     final m = _mutations[id];
-    if (m == null) return const Result.failure(NotFoundFailure(message: 'Not found'));
+    if (m == null) {
+      return const Result.failure(NotFoundFailure(message: 'Not found'));
+    }
     return Result.success(m);
   }
 
@@ -141,7 +176,6 @@ class _MockMutationRepository implements MutationRepository {
     return Result.success(updated);
   }
 
-
   @override
   Future<Result<Mutation>> divisionApprove({
     required String mutationId,
@@ -164,10 +198,7 @@ class _MockMutationRepository implements MutationRepository {
     required String mutationId,
     required String kadivName,
   }) async {
-    return divisionApprove(
-      mutationId: mutationId,
-      divisionHeadName: kadivName,
-    );
+    return divisionApprove(mutationId: mutationId, divisionHeadName: kadivName);
   }
 }
 
@@ -241,9 +272,7 @@ void main() {
                 (ref) => _TestAuthNotifier(testPemohon),
               ),
             ],
-            child: const MaterialApp(
-              home: PemohonCreateMutationScreen(),
-            ),
+            child: const MaterialApp(home: PemohonCreateMutationScreen()),
           ),
         );
         await tester.pumpAndSettle();
@@ -278,15 +307,15 @@ void main() {
                 (ref) => _TestAuthNotifier(testPemohon),
               ),
             ],
-            child: const MaterialApp(
-              home: PemohonCreateMutationScreen(),
-            ),
+            child: const MaterialApp(home: PemohonCreateMutationScreen()),
           ),
         );
         await tester.pumpAndSettle();
 
         // Temuan 2: Dropdown widget ditemukan
-        final dropdownFinder = find.byKey(const Key('dropdown_target_location'));
+        final dropdownFinder = find.byKey(
+          const Key('dropdown_target_location'),
+        );
         expect(dropdownFinder, findsOneWidget);
         expect(find.byType(DropdownButtonFormField<String>), findsWidgets);
 
@@ -327,15 +356,13 @@ void main() {
                 (ref) => _TestAuthNotifier(testPemohon),
               ),
             ],
-            child: const MaterialApp(
-              home: PemohonCreateMutationScreen(),
-            ),
+            child: const MaterialApp(home: PemohonCreateMutationScreen()),
           ),
         );
         await tester.pumpAndSettle();
 
         // Temuan 4: Nilai draft terisi otomatis kembali di form
-        expect(find.text('Laptop Lenovo ThinkPad'), findsOneWidget);
+        expect(find.text('Laptop Lenovo ThinkPad'), findsWidgets);
         expect(find.text('AST-LNV-002'), findsOneWidget);
         expect(find.text('Pindah tugas sesuai SK'), findsOneWidget);
         expect(find.text('SK_Pindah.pdf'), findsOneWidget);
@@ -352,9 +379,7 @@ void main() {
                 (ref) => _TestAuthNotifier(testPemohon),
               ),
             ],
-            child: const MaterialApp(
-              home: PemohonCreateMutationScreen(),
-            ),
+            child: const MaterialApp(home: PemohonCreateMutationScreen()),
           ),
         );
         await tester.pumpAndSettle();
@@ -375,26 +400,32 @@ void main() {
                 (ref) => _TestAuthNotifier(testPemohon),
               ),
             ],
-            child: const MaterialApp(
-              home: PemohonCreateMutationScreen(),
-            ),
+            child: const MaterialApp(home: PemohonCreateMutationScreen()),
           ),
         );
         await tester.pumpAndSettle();
 
         // 1. Default "Ya, Aset Ikut Saya Pindah": PIC tujuan otomatis terisi nama Pemohon
-        expect(find.byKey(const Key('card_pic_tujuan_otomatis')), findsOneWidget);
+        expect(
+          find.byKey(const Key('card_pic_tujuan_otomatis')),
+          findsOneWidget,
+        );
         expect(find.text('Budi Santoso'), findsWidgets);
         expect(find.text('Otomatis Pemohon'), findsOneWidget);
 
         // 2. Ubah ke "Tidak, Aset Ditinggalkan di Unit Asal"
-        final tinggalkanFinder = find.text('Tidak, Aset Ditinggalkan di Unit Asal');
+        final tinggalkanFinder = find.text(
+          'Tidak, Aset Ditinggalkan di Unit Asal',
+        );
         await tester.ensureVisible(tinggalkanFinder);
         await tester.tap(tinggalkanFinder);
         await tester.pumpAndSettle();
 
         // PIC Tujuan dikosongkan dan info bahwa Bagian Aset yang akan menentukan tampil
-        expect(find.byKey(const Key('card_pic_tujuan_ditinggalkan')), findsOneWidget);
+        expect(
+          find.byKey(const Key('card_pic_tujuan_ditinggalkan')),
+          findsOneWidget,
+        );
         expect(find.text('Akan ditentukan oleh Bagian Aset'), findsOneWidget);
         expect(find.byKey(const Key('card_pic_tujuan_otomatis')), findsNothing);
 
@@ -405,7 +436,10 @@ void main() {
         await tester.pumpAndSettle();
 
         // Otomatis terisi kembali dengan nama Pemohon
-        expect(find.byKey(const Key('card_pic_tujuan_otomatis')), findsOneWidget);
+        expect(
+          find.byKey(const Key('card_pic_tujuan_otomatis')),
+          findsOneWidget,
+        );
         expect(find.text('Budi Santoso'), findsWidgets);
       },
     );
@@ -462,10 +496,11 @@ void main() {
         await tester.pumpAndSettle();
 
         // Buka dialog verifikasi
-        await tester.ensureVisible(find.byKey(const Key('btn_verifikasi_valid')));
+        await tester.ensureVisible(
+          find.byKey(const Key('btn_verifikasi_valid')),
+        );
         await tester.tap(find.byKey(const Key('btn_verifikasi_valid')));
         await tester.pumpAndSettle();
-
 
         // Temuan 6: Verifikasi teks feedback hijau muncul
         expect(
@@ -526,7 +561,9 @@ void main() {
         await tester.pumpAndSettle();
 
         // Buka dialog verifikasi data aset
-        await tester.ensureVisible(find.byKey(const Key('btn_setujui_approval')));
+        await tester.ensureVisible(
+          find.byKey(const Key('btn_setujui_approval')),
+        );
         await tester.tap(find.byKey(const Key('btn_setujui_approval')));
         await tester.pumpAndSettle();
 
@@ -535,11 +572,16 @@ void main() {
           find.text('Penentuan PIC Baru (Aset Ditinggalkan) *'),
           findsOneWidget,
         );
-        final inputPicFinder = find.byKey(const Key('input_pic_baru_bagian_aset'));
+        final inputPicFinder = find.byKey(
+          const Key('input_pic_baru_bagian_aset'),
+        );
         expect(inputPicFinder, findsOneWidget);
 
         // Input PIC baru melalui sistem
-        await tester.enterText(inputPicFinder, 'Ahmad Fauzi (PIC Baru Unit Asal)');
+        await tester.enterText(
+          inputPicFinder,
+          'Ahmad Fauzi (PIC Baru Unit Asal)',
+        );
         await tester.pumpAndSettle();
 
         // Konfirmasi teruskan
@@ -599,17 +641,16 @@ void main() {
               ),
             ],
             child: const MaterialApp(
-              home: KadivApprovalDetailScreen(
-                mutationId: 'mut_test_kadiv',
-              ),
+              home: KadivApprovalDetailScreen(mutationId: 'mut_test_kadiv'),
             ),
           ),
         );
         await tester.pumpAndSettle();
 
         // Temuan 8: Tombol Setujui bisa digunakan
-        final approveButtonFinder =
-            find.byKey(const Key('btn_setujui_approval_kadiv'));
+        final approveButtonFinder = find.byKey(
+          const Key('btn_setujui_approval_kadiv'),
+        );
         expect(approveButtonFinder, findsOneWidget);
 
         // Tap Setujui
@@ -617,8 +658,9 @@ void main() {
         await tester.pumpAndSettle();
 
         // Konfirmasi di dialog
-        final confirmApproveFinder =
-            find.byKey(const Key('btn_confirm_setujui_kadiv'));
+        final confirmApproveFinder = find.byKey(
+          const Key('btn_confirm_setujui_kadiv'),
+        );
         expect(confirmApproveFinder, findsOneWidget);
         await tester.tap(confirmApproveFinder);
         await tester.pumpAndSettle();

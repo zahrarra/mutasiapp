@@ -21,7 +21,7 @@ const List<FilterStatusItem> mutationFilterOptions = [
   FilterStatusItem(status: null, label: 'Semua Status'),
   FilterStatusItem(
     status: MutationStatus.submitted,
-    label: 'Diajukan',
+    label: 'Pemeriksaan Operator',
   ),
   FilterStatusItem(
     status: MutationStatus.returned,
@@ -31,22 +31,13 @@ const List<FilterStatusItem> mutationFilterOptions = [
     status: MutationStatus.waitingAssetVerification,
     label: 'Menunggu Verifikasi Bagian Aset',
   ),
-  FilterStatusItem(
-    status: MutationStatus.approved,
-    label: 'Disetujui',
-  ),
-  FilterStatusItem(
-    status: MutationStatus.rejected,
-    label: 'Ditolak',
-  ),
+  FilterStatusItem(status: MutationStatus.approved, label: 'Disetujui'),
+  FilterStatusItem(status: MutationStatus.rejected, label: 'Ditolak'),
   FilterStatusItem(
     status: MutationStatus.pendingConfirmation,
     label: 'Menunggu Konfirmasi',
   ),
-  FilterStatusItem(
-    status: MutationStatus.completed,
-    label: 'Selesai',
-  ),
+  FilterStatusItem(status: MutationStatus.completed, label: 'Selesai'),
 ];
 
 /// Menampilkan bottom sheet filter status mutasi
@@ -132,7 +123,8 @@ Future<MutationStatus?> showMutationFilterBottomSheet({
                     vertical: AppSpacing.sm,
                   ),
                   itemCount: mutationFilterOptions.length,
-                  separatorBuilder: (_, _) => const Divider(height: 1, indent: 40),
+                  separatorBuilder: (_, _) =>
+                      const Divider(height: 1, indent: 40),
                   itemBuilder: (context, index) {
                     final item = mutationFilterOptions[index];
                     final isSelected = currentStatus == item.status;
@@ -187,7 +179,9 @@ Future<MutationStatus?> showMutationFilterBottomSheet({
                                 ),
                                 decoration: BoxDecoration(
                                   color: isSelected
-                                      ? AppColors.primary.withValues(alpha: 0.15)
+                                      ? AppColors.primary.withValues(
+                                          alpha: 0.15,
+                                        )
                                       : AppColors.background,
                                   borderRadius: BorderRadius.circular(12),
                                 ),

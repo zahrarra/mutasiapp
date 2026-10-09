@@ -43,4 +43,16 @@ class ResubmitMutationRequest extends FormRequest
 
         return null;
     }
+
+    /**
+     * Helper to get original file name of uploaded SK document if present.
+     */
+    public function getSkDocumentOriginalName(): ?string
+    {
+        if ($this->hasFile('sk_document')) {
+            return $this->file('sk_document')->getClientOriginalName();
+        }
+
+        return null;
+    }
 }

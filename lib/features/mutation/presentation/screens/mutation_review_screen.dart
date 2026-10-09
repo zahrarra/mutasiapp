@@ -45,100 +45,108 @@ class MutationReviewScreen extends ConsumerWidget {
           Expanded(
             child: SingleChildScrollView(
               padding: const EdgeInsets.all(AppSpacing.md),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const _SectionTitle('Data Aset'),
-            const SizedBox(height: AppSpacing.sm),
-
-            _InfoCard(
-              children: [
-                _InfoRow(label: 'Nama Aset', value: formState.assetName),
-                _InfoRow(label: 'Kode / Nomor Aset', value: formState.assetId),
-                _InfoRow(
-                  label: 'Lokasi Asal',
-                  value: formState.sourceLocation,
-                  isLast: true,
-                ),
-              ],
-            ),
-
-            const SizedBox(height: AppSpacing.lg),
-
-            const _SectionTitle('Detail Mutasi'),
-            const SizedBox(height: AppSpacing.sm),
-
-            _InfoCard(
-              children: [
-                _InfoRow(
-                  label: 'Lokasi Tujuan',
-                  value: formState.targetLocation,
-                ),
-                _InfoRow(label: 'PIC Baru', value: formState.targetPic),
-                _InfoRow(label: 'Alasan Mutasi', value: formState.reason),
-                _InfoRow(
-                  label: 'Dokumen Pendukung',
-                  value: formState.documentName ?? 'Tidak ada',
-                  isLast: true,
-                ),
-              ],
-            ),
-
-            const SizedBox(height: AppSpacing.xl),
-
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.all(AppSpacing.md),
-              decoration: BoxDecoration(
-                color: AppColors.surface,
-                borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
-                border: Border.all(color: AppColors.border),
-              ),
-              child: Row(
+              child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Icon(Icons.info_outline, color: AppColors.primary),
-                  const SizedBox(width: AppSpacing.sm),
-                  Expanded(
-                    child: Text(
-                      'Pastikan seluruh data pengajuan sudah benar '
-                      'sebelum dikirim.',
-                      style: TextStyle(
-                        color: AppColors.textSecondary,
-                        fontSize: 13,
-                        height: 1.4,
+                  const _SectionTitle('Data Aset'),
+                  const SizedBox(height: AppSpacing.sm),
+
+                  _InfoCard(
+                    children: [
+                      _InfoRow(label: 'Nama Aset', value: formState.assetName),
+                      _InfoRow(
+                        label: 'Kode / Nomor Aset',
+                        value: formState.assetId,
                       ),
+                      _InfoRow(
+                        label: 'Lokasi Asal',
+                        value: formState.sourceLocation,
+                        isLast: true,
+                      ),
+                    ],
+                  ),
+
+                  const SizedBox(height: AppSpacing.lg),
+
+                  const _SectionTitle('Detail Mutasi'),
+                  const SizedBox(height: AppSpacing.sm),
+
+                  _InfoCard(
+                    children: [
+                      _InfoRow(
+                        label: 'Lokasi Tujuan',
+                        value: formState.targetLocation,
+                      ),
+                      _InfoRow(label: 'PIC Baru', value: formState.targetPic),
+                      _InfoRow(label: 'Alasan Mutasi', value: formState.reason),
+                      _InfoRow(
+                        label: 'Dokumen Pendukung',
+                        value: formState.documentName ?? 'Tidak ada',
+                        isLast: true,
+                      ),
+                    ],
+                  ),
+
+                  const SizedBox(height: AppSpacing.xl),
+
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(AppSpacing.md),
+                    decoration: BoxDecoration(
+                      color: AppColors.surface,
+                      borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
+                      border: Border.all(color: AppColors.border),
+                    ),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Icon(
+                          Icons.info_outline,
+                          color: AppColors.primary,
+                        ),
+                        const SizedBox(width: AppSpacing.sm),
+                        Expanded(
+                          child: Text(
+                            'Pastikan seluruh data pengajuan sudah benar '
+                            'sebelum dikirim.',
+                            style: TextStyle(
+                              color: AppColors.textSecondary,
+                              fontSize: 13,
+                              height: 1.4,
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
                   ),
+
+                  const SizedBox(height: AppSpacing.xl),
+
+                  CustomButton(
+                    label: 'Kirim Pengajuan',
+                    width: double.infinity,
+                    isLoading: submitState.isLoading,
+                    onPressed: submitState.isLoading
+                        ? null
+                        : () => _onSubmit(context, ref, formState),
+                  ),
+
+                  const SizedBox(height: AppSpacing.md),
+
+                  SizedBox(
+                    width: double.infinity,
+                    child: OutlinedButton(
+                      onPressed: submitState.isLoading
+                          ? null
+                          : () => context.pop(),
+                      child: const Text('Kembali'),
+                    ),
+                  ),
+
+                  const SizedBox(height: AppSpacing.lg),
                 ],
               ),
             ),
-
-            const SizedBox(height: AppSpacing.xl),
-
-            CustomButton(
-              label: 'Kirim Pengajuan',
-              width: double.infinity,
-              isLoading: submitState.isLoading,
-              onPressed: submitState.isLoading
-                  ? null
-                  : () => _onSubmit(context, ref, formState),
-            ),
-
-            const SizedBox(height: AppSpacing.md),
-
-            SizedBox(
-              width: double.infinity,
-              child: OutlinedButton(
-                onPressed: submitState.isLoading ? null : () => context.pop(),
-                child: const Text('Kembali'),
-              ),
-            ),
-
-            const SizedBox(height: AppSpacing.lg),
-          ],
-        ),
-      ),
           ),
         ],
       ),

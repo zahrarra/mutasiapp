@@ -4,6 +4,7 @@
 // Sumber: ROLE-FLOW.md §1, TECHNICAL-DESIGN.md.
 
 import 'package:flutter/material.dart';
+
 import '../../../../app/theme/app_colors.dart';
 
 /// Enum status workflow mutasi aset.
@@ -49,61 +50,68 @@ enum MutationStatus {
 
   /// Label tampilan bahasa Indonesia sesuai PRD V1.1 §7.
   String get displayName => switch (this) {
-        MutationStatus.submitted => 'Diajukan',
-        MutationStatus.waitingAssetVerification =>
-          'Menunggu Verifikasi Bagian Aset',
-        MutationStatus.returned => 'Dikembalikan ke Pemohon',
-        MutationStatus.waitingDivisionHeadApproval =>
-          'Menunggu Approval Pemimpin Divisi',
-        MutationStatus.rejected => 'Ditolak',
-        MutationStatus.waitingConfirmation => 'Menunggu Konfirmasi Pemohon',
-        MutationStatus.completed => 'Selesai',
-        MutationStatus.waitingSync => 'Menunggu Sinkronisasi',
+    MutationStatus.submitted => 'Menunggu Pemeriksaan Operator',
+    MutationStatus.waitingAssetVerification =>
+      'Menunggu Verifikasi Bagian Aset',
+    MutationStatus.returned => 'Dikembalikan ke Pemohon',
+    MutationStatus.waitingDivisionHeadApproval =>
+      'Menunggu Approval Pemimpin Divisi',
+    MutationStatus.rejected => 'Ditolak',
+    MutationStatus.waitingConfirmation => 'Menunggu Konfirmasi Pemohon',
+    MutationStatus.completed => 'Selesai',
+    MutationStatus.waitingSync => 'Menunggu Sinkronisasi',
 
-        // Legacy compatibility
-        MutationStatus.waitingKadivApproval =>
-          'Menunggu Approval Pemimpin Divisi',
-        MutationStatus.verified => 'Terverifikasi',
-        MutationStatus.approved => 'Disetujui',
-        MutationStatus.pendingConfirmation => 'Menunggu Konfirmasi Pemohon',
-      };
+    // Legacy compatibility
+    MutationStatus.waitingKadivApproval => 'Menunggu Approval Pemimpin Divisi',
+    MutationStatus.verified => 'Terverifikasi',
+    MutationStatus.approved => 'Disetujui',
+    MutationStatus.pendingConfirmation => 'Menunggu Konfirmasi Pemohon',
+  };
+
+  /// Label konteks per-role jika diperlukan (misal: antrean masuk bagi Operator).
+  String displayNameForRole([dynamic role]) {
+    final roleStr = role?.toString().toLowerCase() ?? '';
+    if (roleStr.contains('operator') && this == MutationStatus.submitted) {
+      return 'Diajukan';
+    }
+    return displayName;
+  }
 
   /// Warna teks badge.
   Color get color => switch (this) {
-        MutationStatus.submitted => AppColors.info,
-        MutationStatus.waitingAssetVerification => AppColors.warning,
-        MutationStatus.returned => AppColors.warning,
-        MutationStatus.waitingDivisionHeadApproval => AppColors.warning,
-        MutationStatus.rejected => AppColors.error,
-        MutationStatus.waitingConfirmation => AppColors.warning,
-        MutationStatus.completed => AppColors.success,
-        MutationStatus.waitingSync => AppColors.textSecondary,
+    MutationStatus.submitted => AppColors.info,
+    MutationStatus.waitingAssetVerification => AppColors.warning,
+    MutationStatus.returned => AppColors.warning,
+    MutationStatus.waitingDivisionHeadApproval => AppColors.warning,
+    MutationStatus.rejected => AppColors.error,
+    MutationStatus.waitingConfirmation => AppColors.warning,
+    MutationStatus.completed => AppColors.success,
+    MutationStatus.waitingSync => AppColors.textSecondary,
 
-        // Legacy
-        MutationStatus.waitingKadivApproval => AppColors.warning,
-        MutationStatus.verified => AppColors.info,
-        MutationStatus.approved => AppColors.success,
-        MutationStatus.pendingConfirmation => AppColors.warning,
-      };
+    // Legacy
+    MutationStatus.waitingKadivApproval => AppColors.warning,
+    MutationStatus.verified => AppColors.info,
+    MutationStatus.approved => AppColors.success,
+    MutationStatus.pendingConfirmation => AppColors.warning,
+  };
 
   /// Warna container badge.
   Color get backgroundColor => switch (this) {
-        MutationStatus.submitted => AppColors.infoContainer,
-        MutationStatus.waitingAssetVerification => AppColors.warningContainer,
-        MutationStatus.returned => AppColors.warningContainer,
-        MutationStatus.waitingDivisionHeadApproval =>
-          AppColors.warningContainer,
-        MutationStatus.rejected => AppColors.errorContainer,
-        MutationStatus.waitingConfirmation => AppColors.warningContainer,
-        MutationStatus.completed => AppColors.successContainer,
-        MutationStatus.waitingSync => AppColors.surface,
+    MutationStatus.submitted => AppColors.infoContainer,
+    MutationStatus.waitingAssetVerification => AppColors.warningContainer,
+    MutationStatus.returned => AppColors.warningContainer,
+    MutationStatus.waitingDivisionHeadApproval => AppColors.warningContainer,
+    MutationStatus.rejected => AppColors.errorContainer,
+    MutationStatus.waitingConfirmation => AppColors.warningContainer,
+    MutationStatus.completed => AppColors.successContainer,
+    MutationStatus.waitingSync => AppColors.surface,
 
-        // Legacy
-        MutationStatus.waitingKadivApproval => AppColors.warningContainer,
-        MutationStatus.verified => AppColors.infoContainer,
-        MutationStatus.approved => AppColors.successContainer,
-        MutationStatus.pendingConfirmation => AppColors.warningContainer,
-      };
+    // Legacy
+    MutationStatus.waitingKadivApproval => AppColors.warningContainer,
+    MutationStatus.verified => AppColors.infoContainer,
+    MutationStatus.approved => AppColors.successContainer,
+    MutationStatus.pendingConfirmation => AppColors.warningContainer,
+  };
 
   /// Helper untuk mengecek status verifikasi bagian aset.
   bool get isWaitingAssetVerification =>
@@ -119,6 +127,26 @@ enum MutationStatus {
       this == MutationStatus.waitingConfirmation ||
       this == MutationStatus.pendingConfirmation ||
       this == MutationStatus.approved;
+
+  /// Memetakan status aktual pengajuan ke kategori tab History tunggal (Single Source of Truth).
+  MutationHistoryCategory get historyCategory => switch (this) {
+    MutationStatus.submitted ||
+    MutationStatus.waitingSync => MutationHistoryCategory.processing,
+
+    MutationStatus.waitingAssetVerification ||
+    MutationStatus.verified ||
+    MutationStatus.waitingDivisionHeadApproval ||
+    MutationStatus.waitingKadivApproval ||
+    MutationStatus.waitingConfirmation ||
+    MutationStatus.approved ||
+    MutationStatus.pendingConfirmation => MutationHistoryCategory.allocated,
+
+    MutationStatus.returned => MutationHistoryCategory.returned,
+
+    MutationStatus.completed => MutationHistoryCategory.completed,
+
+    MutationStatus.rejected => MutationHistoryCategory.rejected,
+  };
 
   /// Mengonversi nilai string status dari API backend Laravel ke enum [MutationStatus].
   ///
@@ -160,21 +188,59 @@ enum MutationStatus {
 
   /// Nilai status untuk komunikasi dengan API backend.
   String get apiValue => switch (this) {
-        MutationStatus.submitted => 'diajukan',
-        MutationStatus.waitingAssetVerification =>
-          'menunggu_verifikasi_bagian_aset',
-        MutationStatus.returned => 'dikembalikan_ke_pemohon',
-        MutationStatus.waitingDivisionHeadApproval =>
-          'menunggu_approval_pemimpin_divisi',
-        MutationStatus.rejected => 'ditolak',
-        MutationStatus.waitingConfirmation => 'menunggu_konfirmasi_pemohon',
-        MutationStatus.completed => 'selesai',
-        MutationStatus.waitingSync => 'diajukan',
-        MutationStatus.waitingKadivApproval =>
-          'menunggu_approval_pemimpin_divisi',
-        MutationStatus.verified => 'menunggu_verifikasi_bagian_aset',
-        MutationStatus.approved => 'menunggu_konfirmasi_pemohon',
-        MutationStatus.pendingConfirmation => 'menunggu_konfirmasi_pemohon',
-      };
+    MutationStatus.submitted => 'diajukan',
+    MutationStatus.waitingAssetVerification =>
+      'menunggu_verifikasi_bagian_aset',
+    MutationStatus.returned => 'dikembalikan_ke_pemohon',
+    MutationStatus.waitingDivisionHeadApproval =>
+      'menunggu_approval_pemimpin_divisi',
+    MutationStatus.rejected => 'ditolak',
+    MutationStatus.waitingConfirmation => 'menunggu_konfirmasi_pemohon',
+    MutationStatus.completed => 'selesai',
+    MutationStatus.waitingSync => 'diajukan',
+    MutationStatus.waitingKadivApproval => 'menunggu_approval_pemimpin_divisi',
+    MutationStatus.verified => 'menunggu_verifikasi_bagian_aset',
+    MutationStatus.approved => 'menunggu_konfirmasi_pemohon',
+    MutationStatus.pendingConfirmation => 'menunggu_konfirmasi_pemohon',
+  };
+}
+
+/// Kategori tab History Pengajuan universal untuk SEMUA ROLE.
+/// Menjadi Single Source of Truth penentuan tab History berdasarkan status aktual pengajuan.
+enum MutationHistoryCategory {
+  /// Semua pengajuan tanpa filter status.
+  all,
+
+  /// Pengajuan baru masuk / menunggu antrean awal (status: submitted, waitingSync).
+  processing,
+
+  /// Pengajuan dialokasikan / diproses verifikasi & otorisasi
+  /// (status: waitingAssetVerification, verified, waitingDivisionHeadApproval, waitingKadivApproval, waitingConfirmation, approved, pendingConfirmation).
+  allocated,
+
+  /// Pengajuan dikembalikan ke pemohon untuk revisi (status: returned).
+  returned,
+
+  /// Pengajuan selesai setelah konfirmasi akhir (status: completed).
+  completed,
+
+  /// Pengajuan ditolak (status: rejected).
+  rejected;
+
+  /// Label resmi yang ditampilkan pada tab UI.
+  String get displayName => switch (this) {
+    MutationHistoryCategory.all => 'Semua',
+    MutationHistoryCategory.processing => 'Diproses',
+    MutationHistoryCategory.allocated => 'Dialokasikan',
+    MutationHistoryCategory.returned => 'Dikembalikan',
+    MutationHistoryCategory.completed => 'Selesai',
+    MutationHistoryCategory.rejected => 'Ditolak',
+  };
+
+  /// Memeriksa apakah status [status] termasuk ke dalam tab ini.
+  bool matches(MutationStatus status) {
+    if (this == MutationHistoryCategory.all) return true;
+    return status.historyCategory == this;
+  }
 }
 

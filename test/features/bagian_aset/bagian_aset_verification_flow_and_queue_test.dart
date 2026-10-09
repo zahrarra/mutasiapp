@@ -1,3 +1,4 @@
+import 'package:mutasiku/core/errors/failures.dart';
 // test/features/bagian_aset/bagian_aset_verification_flow_and_queue_test.dart
 //
 // Tests for Bagian Aset Verification flow & queue wiring (PRD V1.1 §6.4):
@@ -31,19 +32,51 @@ class _FakeAuthRepository implements AuthRepository {
   @override
   Future<Result<User?>> getCurrentUser() async => Result.success(user);
   @override
-  Future<Result<User>> login({required String username, required String password}) async =>
-      throw UnimplementedError();
+  Future<Result<User>> login({
+    required String username,
+    required String password,
+  }) async => throw UnimplementedError();
   @override
   Future<void> logout() async {}
+    @override
+  Future<Result<User>> changePassword({
+    required String currentPassword,
+    required String newPassword,
+    required String confirmPassword,
+  }) async {
+    if (newPassword.length < 8) {
+      return Result.failure(
+        const ValidationFailure(message: 'Password baru minimal 8 karakter.'),
+      );
+    }
+    if (newPassword != confirmPassword) {
+      return Result.failure(
+        const ValidationFailure(message: 'Konfirmasi password baru tidak cocok.'),
+      );
+    }
+    if (newPassword == currentPassword) {
+      return Result.failure(
+        const ValidationFailure(
+          message: 'Password baru harus berbeda dengan password lama.',
+        ),
+      );
+    }
+    if (user != null) {
+      return Result.success(user!.copyWith(mustChangePassword: false));
+    }
+    return Result.failure(
+      const UnauthorizedFailure(message: 'Pengguna tidak ditemukan.'),
+    );
+  }
 }
 
 class _FakeAuthNotifier extends AuthNotifier {
   _FakeAuthNotifier(User user)
-      : super(
-          loginUseCase: LoginUseCase(repository: _FakeAuthRepository(user)),
-          logoutUseCase: LogoutUseCase(repository: _FakeAuthRepository(user)),
-          authRepository: _FakeAuthRepository(user),
-        ) {
+    : super(
+        loginUseCase: LoginUseCase(repository: _FakeAuthRepository(user)),
+        logoutUseCase: LogoutUseCase(repository: _FakeAuthRepository(user)),
+        authRepository: _FakeAuthRepository(user),
+      ) {
     state = AuthState(isLoading: false, user: user);
   }
 }
@@ -75,7 +108,9 @@ void main() {
     test('End to end flow without Kadiv', () async {
       final element = ProviderContainer(
         overrides: [
-          authStateProvider.overrideWith((ref) => _FakeAuthNotifier(bagianAsetTestUser)),
+          authStateProvider.overrideWith(
+            (ref) => _FakeAuthNotifier(bagianAsetTestUser),
+          ),
           apiMutationRepositoryProvider.overrideWith(
             (ref) => ref.watch(mutationRepositoryProvider),
           ),
@@ -97,38 +132,53 @@ void main() {
 
       // 2. Invalidate and check Bagian Aset queues
       element.invalidate(bagianAsetAllMutationsProvider);
-      final bagianAsetAll = await element.read(bagianAsetAllMutationsProvider.future);
-      expect(bagianAsetAll.any((m) => m.id == 'mut_001' && m.status.isWaitingAssetVerification), true);
+      final bagianAsetAll = await element.read(
+        bagianAsetAllMutationsProvider.future,
+      );
+      expect(
+        bagianAsetAll.any(
+          (m) => m.id == 'mut_001' && m.status.isWaitingAssetVerification,
+        ),
+        true,
+      );
 
       // Check stats: mut_001 is counted in waitingVerificationCount
       final statsBefore = element.read(bagianAsetStatsProvider);
       expect(statsBefore.waitingVerificationCount >= 1, true);
 
       // Check "Menunggu Verifikasi" filter
-      element.read(bagianAsetStatusFilterProvider.notifier).state = BagianAsetStatusFilter.waiting;
-      final waitingList = element.read(filteredBagianAsetVerificationsProvider).value ?? [];
+      element.read(bagianAsetStatusFilterProvider.notifier).state =
+          BagianAsetStatusFilter.waiting;
+      final waitingList =
+          element.read(filteredBagianAsetVerificationsProvider).value ?? [];
       expect(waitingList.any((m) => m.id == 'mut_001'), true);
 
       // Check "Semua" filter
-      element.read(bagianAsetStatusFilterProvider.notifier).state = BagianAsetStatusFilter.all;
-      final allList = element.read(filteredBagianAsetVerificationsProvider).value ?? [];
+      element.read(bagianAsetStatusFilterProvider.notifier).state =
+          BagianAsetStatusFilter.all;
+      final allList =
+          element.read(filteredBagianAsetVerificationsProvider).value ?? [];
       expect(allList.any((m) => m.id == 'mut_001'), true);
 
       // 3. Bagian Aset verifies and forwards
-      final verifySuccess = await element.read(bagianAsetVerificationActionProvider.notifier).verifyAndForward(
-            mutationId: 'mut_001',
-          );
+      final verifySuccess = await element
+          .read(bagianAsetVerificationActionProvider.notifier)
+          .verifyAndForward(mutationId: 'mut_001');
       expect(verifySuccess, true);
 
       // 4. Verify post-verification state
-      final detailAfter = await element.read(mutationDetailProvider('mut_001').future);
+      final detailAfter = await element.read(
+        mutationDetailProvider('mut_001').future,
+      );
       expect(detailAfter.status.isWaitingDivisionApproval, true);
       expect(detailAfter.assetVerifiedBy, 'H. M. Yusuf (Bagian Aset)');
 
       // Verify removed from "Menunggu Verifikasi" queue
       await element.read(bagianAsetAllMutationsProvider.future);
-      element.read(bagianAsetStatusFilterProvider.notifier).state = BagianAsetStatusFilter.waiting;
-      final waitingAfter = element.read(filteredBagianAsetVerificationsProvider).value ?? [];
+      element.read(bagianAsetStatusFilterProvider.notifier).state =
+          BagianAsetStatusFilter.waiting;
+      final waitingAfter =
+          element.read(filteredBagianAsetVerificationsProvider).value ?? [];
       expect(waitingAfter.any((m) => m.id == 'mut_001'), false);
     });
   });
@@ -137,7 +187,9 @@ void main() {
     test('End to end flow with Kadiv', () async {
       final element = ProviderContainer(
         overrides: [
-          authStateProvider.overrideWith((ref) => _FakeAuthNotifier(bagianAsetTestUser)),
+          authStateProvider.overrideWith(
+            (ref) => _FakeAuthNotifier(bagianAsetTestUser),
+          ),
           apiMutationRepositoryProvider.overrideWith(
             (ref) => ref.watch(mutationRepositoryProvider),
           ),
@@ -160,25 +212,31 @@ void main() {
       // 2. Bagian Aset queue check
       element.invalidate(bagianAsetAllMutationsProvider);
       await element.read(bagianAsetAllMutationsProvider.future);
-      element.read(bagianAsetStatusFilterProvider.notifier).state = BagianAsetStatusFilter.waiting;
-      final waitingList = element.read(filteredBagianAsetVerificationsProvider).value ?? [];
+      element.read(bagianAsetStatusFilterProvider.notifier).state =
+          BagianAsetStatusFilter.waiting;
+      final waitingList =
+          element.read(filteredBagianAsetVerificationsProvider).value ?? [];
       expect(waitingList.any((m) => m.id == 'mut_002'), true);
 
       // 3. Bagian Aset verifies and forwards (requires Kadiv)
-      final forwardSuccess = await element.read(bagianAsetVerificationActionProvider.notifier).verifyAndForward(
-            mutationId: 'mut_002',
-          );
+      final forwardSuccess = await element
+          .read(bagianAsetVerificationActionProvider.notifier)
+          .verifyAndForward(mutationId: 'mut_002');
       expect(forwardSuccess, true);
 
       // 4. Verify post-verification state -> waitingDivisionApproval
-      final detailAfter = await element.read(mutationDetailProvider('mut_002').future);
+      final detailAfter = await element.read(
+        mutationDetailProvider('mut_002').future,
+      );
       expect(detailAfter.status.isWaitingDivisionApproval, true);
       expect(detailAfter.assetVerifiedBy, 'H. M. Yusuf (Bagian Aset)');
 
       // Verify removed from Bagian Aset "Menunggu Verifikasi" queue
       await element.read(bagianAsetAllMutationsProvider.future);
-      element.read(bagianAsetStatusFilterProvider.notifier).state = BagianAsetStatusFilter.waiting;
-      final waitingAfter = element.read(filteredBagianAsetVerificationsProvider).value ?? [];
+      element.read(bagianAsetStatusFilterProvider.notifier).state =
+          BagianAsetStatusFilter.waiting;
+      final waitingAfter =
+          element.read(filteredBagianAsetVerificationsProvider).value ?? [];
       expect(waitingAfter.any((m) => m.id == 'mut_002'), false);
 
       // Verify visible in Kadiv queue
@@ -188,36 +246,53 @@ void main() {
   });
 
   group('Bagian Aset Return action with preserved return reason', () {
-    test('Returns waitingAssetVerification and preserves return reason', () async {
-      final element = ProviderContainer(
-        overrides: [
-          authStateProvider.overrideWith((ref) => _FakeAuthNotifier(bagianAsetTestUser)),
-          apiMutationRepositoryProvider.overrideWith(
-            (ref) => ref.watch(mutationRepositoryProvider),
-          ),
-        ],
-      );
+    test(
+      'Returns waitingAssetVerification and preserves return reason',
+      () async {
+        final element = ProviderContainer(
+          overrides: [
+            authStateProvider.overrideWith(
+              (ref) => _FakeAuthNotifier(bagianAsetTestUser),
+            ),
+            apiMutationRepositoryProvider.overrideWith(
+              (ref) => ref.watch(mutationRepositoryProvider),
+            ),
+          ],
+        );
 
-      final returnSuccess = await element.read(bagianAsetVerificationActionProvider.notifier).returnToApplicant(
-            mutationId: 'mut_004',
-            reason: 'Alokasi anggaran belum tersedia untuk relokasi aset ini.',
-          );
-      expect(returnSuccess, true);
+        final returnSuccess = await element
+            .read(bagianAsetVerificationActionProvider.notifier)
+            .returnToApplicant(
+              mutationId: 'mut_004',
+              reason:
+                  'Alokasi anggaran belum tersedia untuk relokasi aset ini.',
+            );
+        expect(returnSuccess, true);
 
-      final detailAfter = await element.read(mutationDetailProvider('mut_004').future);
-      expect(detailAfter.status, MutationStatus.returned);
-      expect(detailAfter.returnReason, 'Alokasi anggaran belum tersedia untuk relokasi aset ini.');
+        final detailAfter = await element.read(
+          mutationDetailProvider('mut_004').future,
+        );
+        expect(detailAfter.status, MutationStatus.returned);
+        expect(
+          detailAfter.returnReason,
+          'Alokasi anggaran belum tersedia untuk relokasi aset ini.',
+        );
 
-      // Removed from "Menunggu Verifikasi"
-      await element.read(bagianAsetAllMutationsProvider.future);
-      element.read(bagianAsetStatusFilterProvider.notifier).state = BagianAsetStatusFilter.waiting;
-      final waitingAfter = element.read(filteredBagianAsetVerificationsProvider).value ?? [];
-      expect(waitingAfter.any((m) => m.id == 'mut_004'), false);
+        // Removed from "Menunggu Verifikasi"
+        await element.read(bagianAsetAllMutationsProvider.future);
+        element.read(bagianAsetStatusFilterProvider.notifier).state =
+            BagianAsetStatusFilter.waiting;
+        final waitingAfter =
+            element.read(filteredBagianAsetVerificationsProvider).value ?? [];
+        expect(waitingAfter.any((m) => m.id == 'mut_004'), false);
 
-      // Present in "Dikembalikan" and "Semua"
-      element.read(bagianAsetStatusFilterProvider.notifier).state = BagianAsetStatusFilter.returned;
-      final returnedAfter = element.read(filteredBagianAsetVerificationsProvider).value ?? [];
-      expect(returnedAfter.any((m) => m.id == 'mut_004'), true);
-    });
+        // Present in "Dikembalikan" and "Semua"
+        element.read(bagianAsetStatusFilterProvider.notifier).state =
+            BagianAsetStatusFilter.returned;
+        final returnedAfter =
+            element.read(filteredBagianAsetVerificationsProvider).value ?? [];
+        expect(returnedAfter.any((m) => m.id == 'mut_004'), true);
+      },
+    );
   });
 }

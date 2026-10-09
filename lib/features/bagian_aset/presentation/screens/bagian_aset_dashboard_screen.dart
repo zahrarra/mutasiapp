@@ -42,7 +42,8 @@ class BagianAsetDashboardScreen extends ConsumerStatefulWidget {
       _BagianAsetDashboardScreenState();
 }
 
-class _BagianAsetDashboardScreenState extends ConsumerState<BagianAsetDashboardScreen> {
+class _BagianAsetDashboardScreenState
+    extends ConsumerState<BagianAsetDashboardScreen> {
   final _searchController = TextEditingController();
   String _query = '';
   String? _selectedCategoryFilter; // null, 'lolos', 'pic', 'ti', 'umum'
@@ -123,10 +124,12 @@ class _BagianAsetDashboardScreenState extends ConsumerState<BagianAsetDashboardS
     if (_selectedCategoryFilter != null) {
       switch (_selectedCategoryFilter) {
         case 'pic':
-          list = list.where((m) =>
-              !m.isAssetMovingWithApplicant ||
-              m.targetPic.trim().isEmpty ||
-              m.targetPic.trim() == '-');
+          list = list.where(
+            (m) =>
+                !m.isAssetMovingWithApplicant ||
+                m.targetPic.trim().isEmpty ||
+                m.targetPic.trim() == '-',
+          );
           break;
         case 'ti':
           list = list.where(_isITAsset);
@@ -237,10 +240,14 @@ class _BagianAsetDashboardScreenState extends ConsumerState<BagianAsetDashboardS
                 const SizedBox(height: 16),
                 const Divider(height: 1),
                 ListTile(
-                  leading: const Icon(Icons.person_outline_rounded,
-                      color: _C.navy),
-                  title: Text('Profil Akun',
-                      style: _font(size: 14, weight: FontWeight.w600)),
+                  leading: const Icon(
+                    Icons.person_outline_rounded,
+                    color: _C.navy,
+                  ),
+                  title: Text(
+                    'Profil Akun',
+                    style: _font(size: 14, weight: FontWeight.w600),
+                  ),
                   trailing: const Icon(Icons.chevron_right, size: 18),
                   onTap: () {
                     Navigator.pop(sheetContext);
@@ -248,10 +255,14 @@ class _BagianAsetDashboardScreenState extends ConsumerState<BagianAsetDashboardS
                   },
                 ),
                 ListTile(
-                  leading: const Icon(Icons.assignment_turned_in_outlined,
-                      color: _C.navy),
-                  title: Text('Antrean Verifikasi Aset',
-                      style: _font(size: 14, weight: FontWeight.w600)),
+                  leading: const Icon(
+                    Icons.assignment_turned_in_outlined,
+                    color: _C.navy,
+                  ),
+                  title: Text(
+                    'Antrean Verifikasi Aset',
+                    style: _font(size: 14, weight: FontWeight.w600),
+                  ),
                   trailing: const Icon(Icons.chevron_right, size: 18),
                   onTap: () {
                     Navigator.pop(sheetContext);
@@ -259,10 +270,14 @@ class _BagianAsetDashboardScreenState extends ConsumerState<BagianAsetDashboardS
                   },
                 ),
                 ListTile(
-                  leading: const Icon(Icons.notifications_none_rounded,
-                      color: _C.navy),
-                  title: Text('Notifikasi',
-                      style: _font(size: 14, weight: FontWeight.w600)),
+                  leading: const Icon(
+                    Icons.notifications_none_rounded,
+                    color: _C.navy,
+                  ),
+                  title: Text(
+                    'Notifikasi',
+                    style: _font(size: 14, weight: FontWeight.w600),
+                  ),
                   trailing: const Icon(Icons.chevron_right, size: 18),
                   onTap: () {
                     Navigator.pop(sheetContext);
@@ -297,8 +312,9 @@ class _BagianAsetDashboardScreenState extends ConsumerState<BagianAsetDashboardS
 
             return Material(
               color: Colors.white,
-              borderRadius:
-                  const BorderRadius.vertical(top: Radius.circular(24)),
+              borderRadius: const BorderRadius.vertical(
+                top: Radius.circular(24),
+              ),
               child: Padding(
                 padding: EdgeInsets.fromLTRB(20, 16, 20, 24 + bottomInset),
                 child: Form(
@@ -342,19 +358,24 @@ class _BagianAsetDashboardScreenState extends ConsumerState<BagianAsetDashboardS
                                   Text(
                                     'Penetapan PIC Baru',
                                     style: _font(
-                                        size: 16, weight: FontWeight.w700),
+                                      size: 16,
+                                      weight: FontWeight.w700,
+                                    ),
                                   ),
                                   Text(
                                     'Tiket: ${mutation.ticketNumber}',
                                     style: _font(
-                                        size: 11, color: _C.textSecondary),
+                                      size: 11,
+                                      color: _C.textSecondary,
+                                    ),
                                   ),
                                 ],
                               ),
                             ),
                             IconButton(
                               icon: const Icon(Icons.close, size: 20),
-                              onPressed: () => Navigator.pop(bottomSheetContext),
+                              onPressed: () =>
+                                  Navigator.pop(bottomSheetContext),
                             ),
                           ],
                         ),
@@ -374,33 +395,37 @@ class _BagianAsetDashboardScreenState extends ConsumerState<BagianAsetDashboardS
                               Text(
                                 mutation.asset.name,
                                 style: _font(
-                                    size: 13,
-                                    weight: FontWeight.w700,
-                                    color: _C.navy),
+                                  size: 13,
+                                  weight: FontWeight.w700,
+                                  color: _C.navy,
+                                ),
                               ),
                               const SizedBox(height: 2),
                               Text(
                                 'SN: ${mutation.displaySerialNumber} • Pemohon: ${mutation.applicantName}',
-                                style:
-                                    _font(size: 11, color: _C.textSecondary),
+                                style: _font(size: 11, color: _C.textSecondary),
                               ),
                               const SizedBox(height: 6),
                               Container(
                                 padding: const EdgeInsets.symmetric(
-                                    horizontal: 8, vertical: 4),
+                                  horizontal: 8,
+                                  vertical: 4,
+                                ),
                                 decoration: BoxDecoration(
                                   color: const Color(0xFFFFFBEB),
                                   borderRadius: BorderRadius.circular(6),
                                   border: Border.all(
-                                      color: const Color(0xFFFDE68A)),
+                                    color: const Color(0xFFFDE68A),
+                                  ),
                                 ),
                                 child: Text(
                                   'Aset fisik ditinggalkan / masuk pool unit asal. Tentukan penanggung jawab baru sebelum diteruskan ke Pemimpin Divisi.',
                                   style: _font(
-                                      size: 10.5,
-                                      color: const Color(0xFF92400E),
-                                      weight: FontWeight.w500,
-                                      height: 1.3),
+                                    size: 10.5,
+                                    color: const Color(0xFF92400E),
+                                    weight: FontWeight.w500,
+                                    height: 1.3,
+                                  ),
                                 ),
                               ),
                             ],
@@ -412,9 +437,10 @@ class _BagianAsetDashboardScreenState extends ConsumerState<BagianAsetDashboardS
                         Text(
                           'Pilih PIC Baru dari Master Data *',
                           style: _font(
-                              size: 12,
-                              weight: FontWeight.w700,
-                              color: _C.textPrimary),
+                            size: 12,
+                            weight: FontWeight.w700,
+                            color: _C.textPrimary,
+                          ),
                         ),
                         const SizedBox(height: 6),
                         InlineSearchableDropdown(
@@ -444,17 +470,23 @@ class _BagianAsetDashboardScreenState extends ConsumerState<BagianAsetDashboardS
                                     if (!formKey.currentState!.validate()) {
                                       return;
                                     }
-                                    final selectedPic =
-                                        picController.text.trim();
+                                    final selectedPic = picController.text
+                                        .trim();
                                     if (selectedPic.isEmpty) return;
 
                                     setModalState(() => isSubmitting = true);
-                                    final messenger = ScaffoldMessenger.of(context);
-                                    final nav = Navigator.of(bottomSheetContext);
+                                    final messenger = ScaffoldMessenger.of(
+                                      context,
+                                    );
+                                    final nav = Navigator.of(
+                                      bottomSheetContext,
+                                    );
 
                                     final success = await ref
-                                        .read(bagianAsetVerificationActionProvider
-                                            .notifier)
+                                        .read(
+                                          bagianAsetVerificationActionProvider
+                                              .notifier,
+                                        )
                                         .verifyAndForward(
                                           mutationId: mutation.id,
                                           newPic: selectedPic,
@@ -470,21 +502,31 @@ class _BagianAsetDashboardScreenState extends ConsumerState<BagianAsetDashboardS
                                           content: Text(
                                             'PIC Baru ($selectedPic) berhasil ditetapkan & diteruskan ke Pemimpin Divisi.',
                                             style: _font(
-                                                size: 13,
-                                                color: Colors.white,
-                                                weight: FontWeight.w500),
+                                              size: 13,
+                                              color: Colors.white,
+                                              weight: FontWeight.w500,
+                                            ),
                                           ),
                                         ),
                                       );
                                     } else {
+                                      final err = ref
+                                          .read(
+                                            bagianAsetVerificationActionProvider,
+                                          )
+                                          .error;
                                       messenger.showSnackBar(
                                         SnackBar(
-                                          backgroundColor:
-                                              const Color(0xFFEF4444),
+                                          backgroundColor: const Color(
+                                            0xFFEF4444,
+                                          ),
                                           content: Text(
-                                            'Gagal memverifikasi pengajuan.',
+                                            err ??
+                                                'Gagal memverifikasi pengajuan.',
                                             style: _font(
-                                                size: 13, color: Colors.white),
+                                              size: 13,
+                                              color: Colors.white,
+                                            ),
                                           ),
                                         ),
                                       );
@@ -499,16 +541,19 @@ class _BagianAsetDashboardScreenState extends ConsumerState<BagianAsetDashboardS
                                       color: Colors.white,
                                     ),
                                   )
-                                : const Icon(Icons.check_circle_outline,
-                                    size: 18),
+                                : const Icon(
+                                    Icons.check_circle_outline,
+                                    size: 18,
+                                  ),
                             label: Text(
                               isSubmitting
                                   ? 'Memproses...'
                                   : 'Tetapkan PIC & Teruskan ke Kadiv',
                               style: _font(
-                                  size: 13,
-                                  weight: FontWeight.w700,
-                                  color: Colors.white),
+                                size: 13,
+                                weight: FontWeight.w700,
+                                color: Colors.white,
+                              ),
                             ),
                             style: ElevatedButton.styleFrom(
                               backgroundColor: _C.navy,
@@ -590,16 +635,20 @@ class _BagianAsetDashboardScreenState extends ConsumerState<BagianAsetDashboardS
                     ),
                     child: Row(
                       children: [
-                        const Icon(Icons.badge_outlined,
-                            size: 16, color: _C.teal),
+                        const Icon(
+                          Icons.badge_outlined,
+                          size: 16,
+                          color: _C.teal,
+                        ),
                         const SizedBox(width: 6),
                         Expanded(
                           child: Text(
                             'Status PIC: Bawa Sendiri (${mutation.applicantName})',
                             style: _font(
-                                size: 11,
-                                weight: FontWeight.w600,
-                                color: _C.navy),
+                              size: 11,
+                              weight: FontWeight.w600,
+                              color: _C.navy,
+                            ),
                           ),
                         ),
                       ],
@@ -627,7 +676,9 @@ class _BagianAsetDashboardScreenState extends ConsumerState<BagianAsetDashboardS
                           final nav = Navigator.of(dialogContext);
 
                           final success = await ref
-                              .read(bagianAsetVerificationActionProvider.notifier)
+                              .read(
+                                bagianAsetVerificationActionProvider.notifier,
+                              )
                               .verifyAndForward(mutationId: mutation.id);
 
                           if (!mounted) return;
@@ -640,20 +691,25 @@ class _BagianAsetDashboardScreenState extends ConsumerState<BagianAsetDashboardS
                                 content: Text(
                                   'Aset ${mutation.ticketNumber} diverifikasi dan diteruskan ke Pemimpin Divisi.',
                                   style: _font(
-                                      size: 13,
-                                      color: Colors.white,
-                                      weight: FontWeight.w500),
+                                    size: 13,
+                                    color: Colors.white,
+                                    weight: FontWeight.w500,
+                                  ),
                                 ),
                               ),
                             );
                           } else {
+                            final err = ref
+                                .read(
+                                  bagianAsetVerificationActionProvider,
+                                )
+                                .error;
                             messenger.showSnackBar(
                               SnackBar(
                                 backgroundColor: const Color(0xFFEF4444),
                                 content: Text(
-                                  'Gagal memverifikasi pengajuan.',
-                                  style:
-                                      _font(size: 13, color: Colors.white),
+                                  err ?? 'Gagal memverifikasi pengajuan.',
+                                  style: _font(size: 13, color: Colors.white),
                                 ),
                               ),
                             );
@@ -680,9 +736,10 @@ class _BagianAsetDashboardScreenState extends ConsumerState<BagianAsetDashboardS
                       : Text(
                           'Verifikasi & Teruskan',
                           style: _font(
-                              size: 13,
-                              weight: FontWeight.w700,
-                              color: Colors.white),
+                            size: 13,
+                            weight: FontWeight.w700,
+                            color: Colors.white,
+                          ),
                         ),
                 ),
               ],
@@ -774,9 +831,7 @@ class _BagianAsetDashboardScreenState extends ConsumerState<BagianAsetDashboardS
       width: double.infinity,
       decoration: BoxDecoration(
         color: _C.navy,
-        borderRadius: const BorderRadius.vertical(
-          bottom: Radius.circular(36),
-        ),
+        borderRadius: const BorderRadius.vertical(bottom: Radius.circular(36)),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withValues(alpha: 0.18),
@@ -857,7 +912,8 @@ class _BagianAsetDashboardScreenState extends ConsumerState<BagianAsetDashboardS
                           color: Colors.transparent,
                           child: InkWell(
                             onTap: () => context.push(
-                                RouteNames.bagianAsetNotificationsPath),
+                              RouteNames.bagianAsetNotificationsPath,
+                            ),
                             borderRadius: BorderRadius.circular(999),
                             child: Container(
                               width: 36,
@@ -1056,7 +1112,8 @@ class _BagianAsetDashboardScreenState extends ConsumerState<BagianAsetDashboardS
                               disabledBorder: InputBorder.none,
                               errorBorder: InputBorder.none,
                               focusedErrorBorder: InputBorder.none,
-                              hintText: 'Cari nomor tiket, kode aset, lokasi...',
+                              hintText:
+                                  'Cari nomor tiket, kode aset, lokasi...',
                               hintStyle: _font(
                                 size: 13,
                                 color: Colors.white.withValues(alpha: 0.65),
@@ -1131,13 +1188,15 @@ class _BagianAsetDashboardScreenState extends ConsumerState<BagianAsetDashboardS
                   children: [
                     Container(
                       padding: const EdgeInsets.symmetric(
-                          horizontal: 10, vertical: 2.5),
+                        horizontal: 10,
+                        vertical: 2.5,
+                      ),
                       decoration: BoxDecoration(
                         color: const Color(0xFF0F766E).withValues(alpha: 0.40),
                         borderRadius: BorderRadius.circular(999),
                         border: Border.all(
-                          color:
-                              const Color(0xFF00E5C9).withValues(alpha: 0.30),
+                          color: const Color(0xFF00E5C9)
+                              .withValues(alpha: 0.30),
                         ),
                       ),
                       child: Text(
@@ -1195,9 +1254,7 @@ class _BagianAsetDashboardScreenState extends ConsumerState<BagianAsetDashboardS
             padding: const EdgeInsets.only(top: 12),
             decoration: BoxDecoration(
               border: Border(
-                top: BorderSide(
-                  color: Colors.white.withValues(alpha: 0.10),
-                ),
+                top: BorderSide(color: Colors.white.withValues(alpha: 0.10)),
               ),
             ),
             child: Row(
@@ -1217,7 +1274,9 @@ class _BagianAsetDashboardScreenState extends ConsumerState<BagianAsetDashboardS
                     minimumSize: Size.zero,
                     tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                     padding: const EdgeInsets.symmetric(
-                        horizontal: 14, vertical: 8),
+                      horizontal: 14,
+                      vertical: 8,
+                    ),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(12),
                     ),
@@ -1304,10 +1363,12 @@ class _BagianAsetDashboardScreenState extends ConsumerState<BagianAsetDashboardS
 
     final countLolos = list.length;
     final countNeedsPic = list
-        .where((m) =>
-            !m.isAssetMovingWithApplicant ||
-            m.targetPic.trim().isEmpty ||
-            m.targetPic.trim() == '-')
+        .where(
+          (m) =>
+              !m.isAssetMovingWithApplicant ||
+              m.targetPic.trim().isEmpty ||
+              m.targetPic.trim() == '-',
+        )
         .length;
     final countTI = list.where(_isITAsset).length;
     final countUmum = list.where((m) => !_isITAsset(m)).length;
@@ -1335,8 +1396,9 @@ class _BagianAsetDashboardScreenState extends ConsumerState<BagianAsetDashboardS
                 isSelected: _selectedCategoryFilter == 'lolos',
                 onTap: () {
                   setState(() {
-                    _selectedCategoryFilter =
-                        _selectedCategoryFilter == 'lolos' ? null : 'lolos';
+                    _selectedCategoryFilter = _selectedCategoryFilter == 'lolos'
+                        ? null
+                        : 'lolos';
                   });
                 },
               ),
@@ -1361,8 +1423,9 @@ class _BagianAsetDashboardScreenState extends ConsumerState<BagianAsetDashboardS
                 isSelected: _selectedCategoryFilter == 'pic',
                 onTap: () {
                   setState(() {
-                    _selectedCategoryFilter =
-                        _selectedCategoryFilter == 'pic' ? null : 'pic';
+                    _selectedCategoryFilter = _selectedCategoryFilter == 'pic'
+                        ? null
+                        : 'pic';
                   });
                 },
               ),
@@ -1391,8 +1454,9 @@ class _BagianAsetDashboardScreenState extends ConsumerState<BagianAsetDashboardS
                 isSelected: _selectedCategoryFilter == 'ti',
                 onTap: () {
                   setState(() {
-                    _selectedCategoryFilter =
-                        _selectedCategoryFilter == 'ti' ? null : 'ti';
+                    _selectedCategoryFilter = _selectedCategoryFilter == 'ti'
+                        ? null
+                        : 'ti';
                   });
                 },
               ),
@@ -1417,8 +1481,9 @@ class _BagianAsetDashboardScreenState extends ConsumerState<BagianAsetDashboardS
                 isSelected: _selectedCategoryFilter == 'umum',
                 onTap: () {
                   setState(() {
-                    _selectedCategoryFilter =
-                        _selectedCategoryFilter == 'umum' ? null : 'umum';
+                    _selectedCategoryFilter = _selectedCategoryFilter == 'umum'
+                        ? null
+                        : 'umum';
                   });
                 },
               ),
@@ -1490,14 +1555,13 @@ class _BagianAsetDashboardScreenState extends ConsumerState<BagianAsetDashboardS
                   ),
                   Container(
                     padding: const EdgeInsets.symmetric(
-                        horizontal: 8, vertical: 2),
+                      horizontal: 8,
+                      vertical: 2,
+                    ),
                     decoration: BoxDecoration(
                       color: badgeBg,
                       borderRadius: BorderRadius.circular(999),
-                      border: Border.all(
-                        color: badgeBorderColor,
-                        width: 1.0,
-                      ),
+                      border: Border.all(color: badgeBorderColor, width: 1.0),
                     ),
                     child: Text(
                       badgeText,
@@ -1552,10 +1616,7 @@ class _BagianAsetDashboardScreenState extends ConsumerState<BagianAsetDashboardS
               const SizedBox(height: 1),
               Text(
                 subtitle,
-                style: _font(
-                  size: 10,
-                  color: const Color(0xFF52606D),
-                ),
+                style: _font(size: 10, color: const Color(0xFF52606D)),
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
               ),
@@ -1614,17 +1675,9 @@ class _BagianAsetDashboardScreenState extends ConsumerState<BagianAsetDashboardS
             children: [
               Text(
                 'Lihat Semua ($count)',
-                style: _font(
-                  size: 11,
-                  weight: FontWeight.w600,
-                  color: _C.teal,
-                ),
+                style: _font(size: 11, weight: FontWeight.w600, color: _C.teal),
               ),
-              const Icon(
-                Icons.chevron_right_rounded,
-                size: 14,
-                color: _C.teal,
-              ),
+              const Icon(Icons.chevron_right_rounded, size: 14, color: _C.teal),
             ],
           ),
         ),
@@ -1658,10 +1711,7 @@ class _BagianAsetDashboardScreenState extends ConsumerState<BagianAsetDashboardS
       loading: () => const Center(
         child: Padding(
           padding: EdgeInsets.all(32),
-          child: CircularProgressIndicator(
-            strokeWidth: 2,
-            color: _C.teal,
-          ),
+          child: CircularProgressIndicator(strokeWidth: 2, color: _C.teal),
         ),
       ),
       error: (err, _) => Container(
@@ -1680,7 +1730,11 @@ class _BagianAsetDashboardScreenState extends ConsumerState<BagianAsetDashboardS
             const SizedBox(height: 8),
             TextButton.icon(
               onPressed: () => ref.invalidate(kabagAllMutationsProvider),
-              icon: const Icon(Icons.refresh, size: 16, color: Color(0xFFEF4444)),
+              icon: const Icon(
+                Icons.refresh,
+                size: 16,
+                color: Color(0xFFEF4444),
+              ),
               label: const Text(
                 'Coba Lagi',
                 style: TextStyle(color: Color(0xFFEF4444)),
@@ -1695,7 +1749,8 @@ class _BagianAsetDashboardScreenState extends ConsumerState<BagianAsetDashboardS
   Widget _buildTicketCard(Mutation mutation) {
     final isMovingWithApplicant = mutation.isAssetMovingWithApplicant;
     final isIT = _isITAsset(mutation);
-    final needsPic = !isMovingWithApplicant ||
+    final needsPic =
+        !isMovingWithApplicant ||
         mutation.targetPic.trim().isEmpty ||
         mutation.targetPic.trim() == '-';
 
@@ -1718,8 +1773,10 @@ class _BagianAsetDashboardScreenState extends ConsumerState<BagianAsetDashboardS
           borderRadius: BorderRadius.circular(16),
           onTap: () {
             context.push(
-              RouteNames.bagianAsetVerificationDetailPath
-                  .replaceFirst(':id', mutation.id),
+              RouteNames.bagianAsetVerificationDetailPath.replaceFirst(
+                ':id',
+                mutation.id,
+              ),
             );
           },
           child: Padding(
@@ -1751,10 +1808,36 @@ class _BagianAsetDashboardScreenState extends ConsumerState<BagianAsetDashboardS
                       ],
                     ),
                     // Status Badge
-                    if (isMovingWithApplicant)
+                    if (mutation.returnReason != null &&
+                        mutation.returnReason!.trim().isNotEmpty)
                       Container(
                         padding: const EdgeInsets.symmetric(
-                            horizontal: 8, vertical: 3),
+                          horizontal: 8,
+                          vertical: 3,
+                        ),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFFFFBEB),
+                          borderRadius: BorderRadius.circular(999),
+                          border: Border.all(
+                            color: const Color(0xFFFDE68A),
+                            width: 1,
+                          ),
+                        ),
+                        child: Text(
+                          '⚠️ Konfirmasi Fisik Tidak Sesuai',
+                          style: _font(
+                            size: 9.5,
+                            weight: FontWeight.w600,
+                            color: const Color(0xFF92400E),
+                          ),
+                        ),
+                      )
+                    else if (isMovingWithApplicant)
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 3,
+                        ),
                         decoration: BoxDecoration(
                           color: const Color(0xFFF0FDFA),
                           borderRadius: BorderRadius.circular(999),
@@ -1775,7 +1858,9 @@ class _BagianAsetDashboardScreenState extends ConsumerState<BagianAsetDashboardS
                     else
                       Container(
                         padding: const EdgeInsets.symmetric(
-                            horizontal: 8, vertical: 3),
+                          horizontal: 8,
+                          vertical: 3,
+                        ),
                         decoration: BoxDecoration(
                           color: const Color(0xFFFFFBEB),
                           borderRadius: BorderRadius.circular(999),
@@ -1828,9 +1913,7 @@ class _BagianAsetDashboardScreenState extends ConsumerState<BagianAsetDashboardS
                         borderRadius: BorderRadius.circular(12),
                       ),
                       child: Icon(
-                        isIT
-                            ? Icons.laptop_mac_rounded
-                            : Icons.chair_rounded,
+                        isIT ? Icons.laptop_mac_rounded : Icons.chair_rounded,
                         size: 22,
                         color: isIT
                             ? const Color(0xFF1D4ED8)
@@ -1846,7 +1929,9 @@ class _BagianAsetDashboardScreenState extends ConsumerState<BagianAsetDashboardS
                             children: [
                               Container(
                                 padding: const EdgeInsets.symmetric(
-                                    horizontal: 6, vertical: 2),
+                                  horizontal: 6,
+                                  vertical: 2,
+                                ),
                                 decoration: BoxDecoration(
                                   color: isIT
                                       ? const Color(0xFFEFF6FF)
@@ -1867,8 +1952,7 @@ class _BagianAsetDashboardScreenState extends ConsumerState<BagianAsetDashboardS
                               const SizedBox(width: 6),
                               Text(
                                 'SN: ${mutation.displaySerialNumber}',
-                                style: _font(
-                                    size: 11, color: _C.textSecondary),
+                                style: _font(size: 11, color: _C.textSecondary),
                               ),
                             ],
                           ),
@@ -1888,10 +1972,7 @@ class _BagianAsetDashboardScreenState extends ConsumerState<BagianAsetDashboardS
                             isMovingWithApplicant
                                 ? '${mutation.applicantName} • ${mutation.currentLocation} → ${mutation.targetLocation}'
                                 : '${mutation.applicantName} • Eks ${mutation.currentLocation}',
-                            style: _font(
-                              size: 11,
-                              color: _C.textSecondary,
-                            ),
+                            style: _font(size: 11, color: _C.textSecondary),
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                           ),
@@ -1906,7 +1987,9 @@ class _BagianAsetDashboardScreenState extends ConsumerState<BagianAsetDashboardS
                 if (isMovingWithApplicant)
                   Container(
                     padding: const EdgeInsets.symmetric(
-                        horizontal: 12, vertical: 8),
+                      horizontal: 12,
+                      vertical: 8,
+                    ),
                     decoration: BoxDecoration(
                       color: const Color(0xFFF8FAFC),
                       borderRadius: BorderRadius.circular(12),
@@ -1925,8 +2008,7 @@ class _BagianAsetDashboardScreenState extends ConsumerState<BagianAsetDashboardS
                             const SizedBox(width: 6),
                             Text(
                               'Status PIC: ',
-                              style: _font(
-                                  size: 11, color: _C.textSecondary),
+                              style: _font(size: 11, color: _C.textSecondary),
                             ),
                             Text(
                               'Bawa Sendiri',
@@ -1940,7 +2022,9 @@ class _BagianAsetDashboardScreenState extends ConsumerState<BagianAsetDashboardS
                         ),
                         Container(
                           padding: const EdgeInsets.symmetric(
-                              horizontal: 8, vertical: 3),
+                            horizontal: 8,
+                            vertical: 3,
+                          ),
                           decoration: BoxDecoration(
                             color: const Color(0xFFF0FDFA),
                             borderRadius: BorderRadius.circular(6),
@@ -1960,13 +2044,14 @@ class _BagianAsetDashboardScreenState extends ConsumerState<BagianAsetDashboardS
                 else
                   Container(
                     padding: const EdgeInsets.symmetric(
-                        horizontal: 12, vertical: 8),
+                      horizontal: 12,
+                      vertical: 8,
+                    ),
                     decoration: BoxDecoration(
                       color: const Color(0xFFFFFBEB).withValues(alpha: 0.60),
                       borderRadius: BorderRadius.circular(12),
                       border: Border.all(
-                        color:
-                            const Color(0xFFFDE68A).withValues(alpha: 0.60),
+                        color: const Color(0xFFFDE68A).withValues(alpha: 0.60),
                       ),
                     ),
                     child: Row(
@@ -1982,8 +2067,7 @@ class _BagianAsetDashboardScreenState extends ConsumerState<BagianAsetDashboardS
                             const SizedBox(width: 6),
                             Text(
                               'Status PIC: ',
-                              style: _font(
-                                  size: 11, color: _C.textSecondary),
+                              style: _font(size: 11, color: _C.textSecondary),
                             ),
                             Text(
                               'Ditinggal / Masuk Pool',
@@ -1998,7 +2082,9 @@ class _BagianAsetDashboardScreenState extends ConsumerState<BagianAsetDashboardS
                         if (needsPic)
                           Container(
                             padding: const EdgeInsets.symmetric(
-                                horizontal: 8, vertical: 3),
+                              horizontal: 8,
+                              vertical: 3,
+                            ),
                             decoration: BoxDecoration(
                               color: Colors.white,
                               borderRadius: BorderRadius.circular(6),
@@ -2018,7 +2104,9 @@ class _BagianAsetDashboardScreenState extends ConsumerState<BagianAsetDashboardS
                         else
                           Container(
                             padding: const EdgeInsets.symmetric(
-                                horizontal: 8, vertical: 3),
+                              horizontal: 8,
+                              vertical: 3,
+                            ),
                             decoration: BoxDecoration(
                               color: const Color(0xFFF0FDFA),
                               borderRadius: BorderRadius.circular(6),
@@ -2120,11 +2208,7 @@ class _BagianAsetDashboardScreenState extends ConsumerState<BagianAsetDashboardS
           const SizedBox(height: 12),
           Text(
             'Semua Aset Telah Diverifikasi',
-            style: _font(
-              size: 14,
-              weight: FontWeight.w700,
-              color: _C.navy,
-            ),
+            style: _font(size: 14, weight: FontWeight.w700, color: _C.navy),
           ),
           const SizedBox(height: 4),
           Text(
@@ -2132,11 +2216,7 @@ class _BagianAsetDashboardScreenState extends ConsumerState<BagianAsetDashboardS
                 ? 'Tidak ada pengajuan mutasi yang cocok dengan filter aktif.'
                 : 'Tidak ada pengajuan yang memerlukan verifikasi Bagian Aset saat ini.',
             textAlign: TextAlign.center,
-            style: _font(
-              size: 12,
-              color: _C.textSecondary,
-              height: 1.35,
-            ),
+            style: _font(size: 12, color: _C.textSecondary, height: 1.35),
           ),
           if (_query.isNotEmpty || _selectedCategoryFilter != null) ...[
             const SizedBox(height: 12),

@@ -161,37 +161,45 @@ class MutationModel extends Mutation {
   factory MutationModel.fromJson(Map<String, dynamic> json) {
     // 1. Ekstraksi nested Applicant
     final applicantMap = json['applicant'] as Map<String, dynamic>?;
-    final applicantId = applicantMap?['id']?.toString() ??
+    final applicantId =
+        applicantMap?['id']?.toString() ??
         json['applicant_id']?.toString() ??
         json['applicantId']?.toString();
-    final applicantName = applicantMap?['name']?.toString() ??
+    final applicantName =
+        applicantMap?['name']?.toString() ??
         json['applicant_name']?.toString() ??
         json['applicantName']?.toString() ??
         'Pemohon';
 
     // 2. Ekstraksi nested Location (.name)
     final originLocMap = json['origin_location'] as Map<String, dynamic>?;
-    final currentLocation = originLocMap?['name']?.toString() ??
+    final currentLocation =
+        originLocMap?['name']?.toString() ??
         json['current_location']?.toString() ??
         json['currentLocation']?.toString() ??
         'Lokasi Asal';
 
     final destLocMap = json['destination_location'] as Map<String, dynamic>?;
-    final targetLocation = destLocMap?['name']?.toString() ??
+    final targetLocation =
+        destLocMap?['name']?.toString() ??
         json['target_location']?.toString() ??
         json['targetLocation']?.toString() ??
         'Lokasi Tujuan';
 
     // 3. Ekstraksi nested PIC (.name)
     final currentPicMap = json['current_pic'] as Map<String, dynamic>?;
-    final currentPic = currentPicMap?['name']?.toString() ??
+    final currentPic =
+        currentPicMap?['name']?.toString() ??
         json['current_pic_name']?.toString() ??
-        (json['current_pic'] is String ? json['current_pic'] as String : null) ??
+        (json['current_pic'] is String
+            ? json['current_pic'] as String
+            : null) ??
         json['currentPic']?.toString() ??
         '-';
 
     final targetPicMap = json['target_pic'] as Map<String, dynamic>?;
-    final targetPic = targetPicMap?['name']?.toString() ??
+    final targetPic =
+        targetPicMap?['name']?.toString() ??
         json['target_pic_name']?.toString() ??
         (json['target_pic'] is String ? json['target_pic'] as String : null) ??
         json['targetPic']?.toString() ??
@@ -209,29 +217,37 @@ class MutationModel extends Mutation {
       );
 
       final locMap = assetMap['location'] as Map<String, dynamic>?;
-      final assetLocation = locMap?['name']?.toString() ??
-          (assetMap['location'] is String ? assetMap['location'] as String : null) ??
+      final assetLocation =
+          locMap?['name']?.toString() ??
+          (assetMap['location'] is String
+              ? assetMap['location'] as String
+              : null) ??
           currentLocation;
 
       final picObj = assetMap['pic'] as Map<String, dynamic>?;
-      final assetPic = picObj?['name']?.toString() ??
+      final assetPic =
+          picObj?['name']?.toString() ??
           (assetMap['pic'] is String ? assetMap['pic'] as String : null) ??
           currentPic;
 
-      final acqYear = int.tryParse(
-              assetMap['acquisition_year']?.toString() ??
-                  assetMap['acquisitionYear']?.toString() ??
-                  '') ??
+      final acqYear =
+          int.tryParse(
+            assetMap['acquisition_year']?.toString() ??
+                assetMap['acquisitionYear']?.toString() ??
+                '',
+          ) ??
           DateTime.now().year;
 
       final estValue = double.tryParse(
-          assetMap['estimated_value']?.toString() ??
-              assetMap['estimatedValue']?.toString() ??
-              '');
+        assetMap['estimated_value']?.toString() ??
+            assetMap['estimatedValue']?.toString() ??
+            '',
+      );
 
       assetEntity = Asset(
         id: assetMap['id']?.toString() ?? '',
-        assetCode: assetMap['asset_code']?.toString() ??
+        assetCode:
+            assetMap['asset_code']?.toString() ??
             assetMap['assetCode']?.toString() ??
             '-',
         name: assetMap['name']?.toString() ?? 'Aset',
@@ -240,103 +256,136 @@ class MutationModel extends Mutation {
         pic: assetPic,
         status: AssetStatus.inMutation,
         condition: assetMap['condition']?.toString() ?? 'Baik',
-        serialNumber: assetMap['serial_number']?.toString() ??
+        serialNumber:
+            assetMap['serial_number']?.toString() ??
             assetMap['serialNumber']?.toString(),
         acquisitionYear: acqYear,
         estimatedValue: estValue,
-        hasActiveMutation: json['status'] != 'selesai' && json['status'] != 'ditolak',
+        hasActiveMutation:
+            json['status'] != 'selesai' && json['status'] != 'ditolak',
         activeMutationTicket: json['ticket_number']?.toString(),
       );
     }
 
     // 5. Ekstraksi Dokumen SK
-    final skDoc = json['sk_document']?.toString() ?? json['skDocument']?.toString();
-    final docPath = json['document_path']?.toString() ??
+    final skDoc =
+        json['sk_document']?.toString() ?? json['skDocument']?.toString();
+    final docPath =
+        json['document_path']?.toString() ??
         json['documentPath']?.toString() ??
         skDoc;
-    final docName = json['document_name']?.toString() ??
+    final docName =
+        json['sk_document_name']?.toString() ??
+        json['skDocumentName']?.toString() ??
+        json['document_name']?.toString() ??
         json['documentName']?.toString() ??
         docPath?.split(RegExp(r'[\\/]')).last;
 
     // 6. Boolean is_asset_moves_with_applicant
-    final isMovingRaw = json['is_asset_moves_with_applicant'] ??
+    final isMovingRaw =
+        json['is_asset_moves_with_applicant'] ??
         json['isAssetMovingWithApplicant'];
     bool isMoving = true;
     if (isMovingRaw is bool) {
       isMoving = isMovingRaw;
     } else if (isMovingRaw != null) {
-      isMoving = isMovingRaw == 1 ||
-          isMovingRaw == '1' ||
-          isMovingRaw == 'true';
+      isMoving =
+          isMovingRaw == 1 || isMovingRaw == '1' || isMovingRaw == 'true';
     }
 
     // 7. Status mapping
     final status = MutationStatus.fromApiValue(json['status']?.toString());
 
     // 8. Reasons
-    final returnReason = json['return_reason']?.toString() ??
-        json['returnReason']?.toString();
-    final rejectionReason = json['rejection_reason']?.toString() ??
+    final returnReason =
+        json['return_reason']?.toString() ?? json['returnReason']?.toString();
+    final rejectionReason =
+        json['rejection_reason']?.toString() ??
         json['rejectionReason']?.toString();
-    final confirmationReason = json['confirmation_reason']?.toString() ??
+    final confirmationReason =
+        json['confirmation_reason']?.toString() ??
         json['confirmationReason']?.toString();
 
     // 9. Timestamps & Audit
-    final createdAt = _parseDateTime(json['created_at'] ?? json['createdAt']) ??
+    final createdAt =
+        _parseDateTime(json['created_at'] ?? json['createdAt']) ??
         DateTime.now();
 
-    final verifiedAt = _parseDateTime(json['verified_at'] ?? json['verifiedAt']);
-    final verifiedBy = json['verified_by']?.toString() ?? json['verifiedBy']?.toString();
+    final verifiedAt = _parseDateTime(
+      json['verified_at'] ?? json['verifiedAt'],
+    );
+    final verifiedBy =
+        json['verified_by']?.toString() ?? json['verifiedBy']?.toString();
 
-    final assetVerifiedAt =
-        _parseDateTime(json['asset_verified_at'] ?? json['assetVerifiedAt']);
-    final assetVerifiedBy = json['asset_verified_by']?.toString() ??
+    final assetVerifiedAt = _parseDateTime(
+      json['asset_verified_at'] ?? json['assetVerifiedAt'],
+    );
+    final assetVerifiedBy =
+        json['asset_verified_by']?.toString() ??
         json['assetVerifiedBy']?.toString();
-    final assetReturnReason = json['asset_return_reason']?.toString() ??
-        json['assetReturnReason']?.toString() ??
-        returnReason;
+    final assetReturnReason =
+        json['asset_return_reason']?.toString() ??
+        json['assetReturnReason']?.toString();
 
-    final approvedAt = _parseDateTime(json['approved_at'] ?? json['approvedAt']);
-    final approvedBy = json['approved_by']?.toString() ?? json['approvedBy']?.toString();
+    final approvedAt = _parseDateTime(
+      json['approved_at'] ?? json['approvedAt'],
+    );
+    final approvedBy =
+        json['approved_by']?.toString() ?? json['approvedBy']?.toString();
 
-    final rejectedAt = _parseDateTime(json['rejected_at'] ?? json['rejectedAt']);
-    final rejectedBy = json['rejected_by']?.toString() ?? json['rejectedBy']?.toString();
+    final rejectedAt = _parseDateTime(
+      json['rejected_at'] ?? json['rejectedAt'],
+    );
+    final rejectedBy =
+        json['rejected_by']?.toString() ?? json['rejectedBy']?.toString();
 
-    final kadivApprovedAt =
-        _parseDateTime(json['kadiv_approved_at'] ?? json['kadivApprovedAt']);
-    final kadivApprovedBy = json['kadiv_approved_by']?.toString() ??
+    final kadivApprovedAt = _parseDateTime(
+      json['kadiv_approved_at'] ?? json['kadivApprovedAt'],
+    );
+    final kadivApprovedBy =
+        json['kadiv_approved_by']?.toString() ??
         json['kadivApprovedBy']?.toString();
 
-    final kadivRejectedAt =
-        _parseDateTime(json['kadiv_rejected_at'] ?? json['kadivRejectedAt']);
-    final kadivRejectedBy = json['kadiv_rejected_by']?.toString() ??
+    final kadivRejectedAt = _parseDateTime(
+      json['kadiv_rejected_at'] ?? json['kadivRejectedAt'],
+    );
+    final kadivRejectedBy =
+        json['kadiv_rejected_by']?.toString() ??
         json['kadivRejectedBy']?.toString();
-    final kadivRejectionReason = json['kadiv_rejection_reason']?.toString() ??
+    final kadivRejectionReason =
+        json['kadiv_rejection_reason']?.toString() ??
         json['kadivRejectionReason']?.toString() ??
         rejectionReason;
 
-    final staffUpdatedAt =
-        _parseDateTime(json['staff_updated_at'] ?? json['staffUpdatedAt']);
-    final staffUpdatedBy = json['staff_updated_by']?.toString() ??
+    final staffUpdatedAt = _parseDateTime(
+      json['staff_updated_at'] ?? json['staffUpdatedAt'],
+    );
+    final staffUpdatedBy =
+        json['staff_updated_by']?.toString() ??
         json['staffUpdatedBy']?.toString();
 
-    final requiresKadivApproval = json['requires_kadiv_approval'] as bool? ??
+    final requiresKadivApproval =
+        json['requires_kadiv_approval'] as bool? ??
         json['requiresKadivApproval'] as bool? ??
         false;
 
     return MutationModel(
       id: json['id']?.toString() ?? '',
-      ticketNumber: json['ticket_number']?.toString() ??
+      ticketNumber:
+          json['ticket_number']?.toString() ??
           json['ticketNumber']?.toString() ??
           '',
       assetId: json['asset_id']?.toString() ?? json['assetId']?.toString(),
       asset: assetEntity,
-      isUnregisteredAsset: json['is_unregistered_asset'] as bool? ??
+      isUnregisteredAsset:
+          json['is_unregistered_asset'] as bool? ??
           json['isUnregisteredAsset'] as bool? ??
           false,
-      customAssetName: json['custom_asset_name']?.toString() ??
+      customAssetName:
+          json['custom_asset_name']?.toString() ??
           json['customAssetName']?.toString(),
-      customSerialNumber: json['custom_serial_number']?.toString() ??
+      customSerialNumber:
+          json['custom_serial_number']?.toString() ??
           json['customSerialNumber']?.toString(),
       applicantId: applicantId,
       applicantName: applicantName,
@@ -424,6 +473,8 @@ class MutationModel extends Mutation {
       'target_pic': targetPic,
       'reason': reason,
       'sk_document': documentPath,
+      'sk_document_name': documentName,
+      'document_name': documentName,
       'status': status.apiValue,
       'is_asset_moves_with_applicant': isAssetMovingWithApplicant,
       'return_reason': returnReason,

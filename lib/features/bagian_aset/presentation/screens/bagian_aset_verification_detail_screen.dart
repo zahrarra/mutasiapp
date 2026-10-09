@@ -12,15 +12,19 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+
 import '../../../../app/router/route_names.dart';
 import '../../../../app/theme/app_colors.dart';
 import '../../../../app/theme/app_spacing.dart';
 import '../../../auth/domain/entities/user_role.dart';
 import '../../../auth/presentation/providers/auth_provider.dart';
+import '../../../../core/utils/sla_wita_helper.dart';
 import '../../../../core/widgets/app_feedback.dart';
 import '../../../../core/widgets/document_preview_dialog.dart';
+import '../../../../core/providers/core_providers.dart';
 import '../../../../core/widgets/inline_searchable_dropdown.dart';
 import '../../../../core/widgets/mutasiku_page_header.dart';
+import '../../../../core/widgets/sla_live_badge.dart';
 import '../../../mutation/domain/entities/mutation.dart';
 import '../../../mutation/domain/entities/mutation_status.dart';
 import '../../../mutation/presentation/models/mutation_tracking_step.dart';
@@ -41,8 +45,9 @@ class BagianAsetVerificationDetailScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final asyncMutation =
-        ref.watch(bagianAsetMutationDetailProvider(mutationId));
+    final asyncMutation = ref.watch(
+      bagianAsetMutationDetailProvider(mutationId),
+    );
     final actionState = ref.watch(bagianAsetVerificationActionProvider);
 
     return Scaffold(
@@ -60,13 +65,18 @@ class BagianAsetVerificationDetailScreen extends ConsumerWidget {
           ),
           Expanded(
             child: asyncMutation.when(
-              data: (mutation) => _buildBody(context, ref, mutation, actionState),
+              data: (mutation) =>
+                  _buildBody(context, ref, mutation, actionState),
               loading: () => const Center(child: CircularProgressIndicator()),
               error: (err, _) => Center(
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    const Icon(Icons.error_outline, size: 48, color: AppColors.error),
+                    const Icon(
+                      Icons.error_outline,
+                      size: 48,
+                      color: AppColors.error,
+                    ),
                     const SizedBox(height: AppSpacing.md),
                     Text(
                       'Gagal memuat detail pengajuan: $err',
@@ -76,7 +86,8 @@ class BagianAsetVerificationDetailScreen extends ConsumerWidget {
                     const SizedBox(height: AppSpacing.md),
                     ElevatedButton(
                       onPressed: () => ref.invalidate(
-                          bagianAsetMutationDetailProvider(mutationId)),
+                        bagianAsetMutationDetailProvider(mutationId),
+                      ),
                       child: const Text('Coba Lagi'),
                     ),
                   ],
@@ -141,24 +152,34 @@ class BagianAsetVerificationDetailScreen extends ConsumerWidget {
                       ),
                       const SizedBox(width: 8),
                       Flexible(
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 10, vertical: 4),
-                          decoration: BoxDecoration(
-                            color: mutation.status.backgroundColor,
-                            borderRadius:
-                                BorderRadius.circular(AppRadius.pill),
-                          ),
-                          child: Text(
-                            mutation.status.displayName,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: TextStyle(
-                              fontSize: 12,
-                              fontWeight: FontWeight.w600,
-                              color: mutation.status.color,
+                        child: Wrap(
+                          spacing: 6,
+                          runSpacing: 4,
+                          alignment: WrapAlignment.end,
+                          crossAxisAlignment: WrapCrossAlignment.center,
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 10,
+                                vertical: 4,
+                              ),
+                              decoration: BoxDecoration(
+                                color: mutation.status.backgroundColor,
+                                borderRadius: BorderRadius.circular(AppRadius.pill),
+                              ),
+                              child: Text(
+                                mutation.status.displayName,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w600,
+                                  color: mutation.status.color,
+                                ),
+                              ),
                             ),
-                          ),
+                            SlaLiveBadge(mutation: mutation),
+                          ],
                         ),
                       ),
                     ],
@@ -168,7 +189,8 @@ class BagianAsetVerificationDetailScreen extends ConsumerWidget {
 
                 // Note jika berstatus dikembalikan atau ditolak
                 if (mutation.status == MutationStatus.returned &&
-                    (mutation.returnReason != null || mutation.assetReturnReason != null)) ...[
+                    (mutation.returnReason != null ||
+                        mutation.assetReturnReason != null)) ...[
                   Container(
                     width: double.infinity,
                     padding: const EdgeInsets.all(AppSpacing.md),
@@ -182,7 +204,11 @@ class BagianAsetVerificationDetailScreen extends ConsumerWidget {
                       children: [
                         const Row(
                           children: [
-                            Icon(Icons.info_outline, color: AppColors.error, size: 18),
+                            Icon(
+                              Icons.info_outline,
+                              color: AppColors.error,
+                              size: 18,
+                            ),
                             SizedBox(width: AppSpacing.xs),
                             Text(
                               'Alasan Pengembalian:',
@@ -196,10 +222,60 @@ class BagianAsetVerificationDetailScreen extends ConsumerWidget {
                         ),
                         const SizedBox(height: 6),
                         Text(
-                          mutation.assetReturnReason ?? mutation.returnReason ?? '-',
+                          mutation.assetReturnReason ??
+                              mutation.returnReason ??
+                              '-',
                           style: const TextStyle(
                             fontSize: 13,
                             color: AppColors.textPrimary,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: AppSpacing.md),
+                ],
+
+                // Note jika berstatus menunggu verifikasi TETAPI memiliki catatan ketidaksesuaian fisik dari Pemohon
+                if (mutation.status.isWaitingAssetVerification &&
+                    mutation.returnReason != null &&
+                    mutation.returnReason!.trim().isNotEmpty) ...[
+                  Container(
+                    key: const Key('banner_konfirmasi_tidak_sesuai'),
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(AppSpacing.md),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFFFF3CD),
+                      borderRadius: BorderRadius.circular(AppRadius.card),
+                      border: Border.all(color: const Color(0xFFFFC107)),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Row(
+                          children: [
+                            Icon(
+                              Icons.warning_amber_rounded,
+                              color: Color(0xFF856404),
+                              size: 18,
+                            ),
+                            SizedBox(width: AppSpacing.xs),
+                            Text(
+                              'Catatan Konfirmasi Fisik Tidak Sesuai (Pemohon):',
+                              style: TextStyle(
+                                fontWeight: FontWeight.bold,
+                                color: Color(0xFF856404),
+                                fontSize: 13,
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 6),
+                        Text(
+                          mutation.returnReason!,
+                          style: const TextStyle(
+                            fontSize: 13,
+                            color: Color(0xFF856404),
                           ),
                         ),
                       ],
@@ -247,9 +323,13 @@ class BagianAsetVerificationDetailScreen extends ConsumerWidget {
                       Flexible(
                         child: Container(
                           padding: const EdgeInsets.symmetric(
-                              horizontal: 8, vertical: 2),
+                            horizontal: 8,
+                            vertical: 2,
+                          ),
                           decoration: BoxDecoration(
-                            color: AppColors.primaryContainer.withValues(alpha: 0.5),
+                            color: AppColors.primaryContainer.withValues(
+                              alpha: 0.5,
+                            ),
                             borderRadius: BorderRadius.circular(AppRadius.pill),
                           ),
                           child: Text(
@@ -273,10 +353,7 @@ class BagianAsetVerificationDetailScreen extends ConsumerWidget {
                   const SizedBox(height: AppSpacing.sm),
                   _buildDetailRow('Kode Aset', mutation.asset.assetCode),
                   const SizedBox(height: AppSpacing.sm),
-                  _buildDetailRow(
-                    'Nomor Seri',
-                    mutation.displaySerialNumber,
-                  ),
+                  _buildDetailRow('Nomor Seri', mutation.displaySerialNumber),
                   const SizedBox(height: AppSpacing.sm),
                   _buildDetailRow('Kondisi Aset', mutation.asset.condition),
                   const SizedBox(height: AppSpacing.sm),
@@ -314,8 +391,8 @@ class BagianAsetVerificationDetailScreen extends ConsumerWidget {
                     to: mutation.targetPic.isNotEmpty
                         ? mutation.targetPic
                         : (mutation.isAssetMovingWithApplicant
-                            ? mutation.applicantName
-                            : 'Belum Ditentukan (Wajib Ditentukan Bagian Aset)'),
+                              ? mutation.applicantName
+                              : 'Belum Ditentukan (Wajib Ditentukan Bagian Aset)'),
                   ),
                   const SizedBox(height: AppSpacing.sm),
                   _buildDetailRow('Alasan Mutasi', mutation.reason),
@@ -389,10 +466,10 @@ class BagianAsetVerificationDetailScreen extends ConsumerWidget {
                         foregroundColor: AppColors.error,
                         side: const BorderSide(color: AppColors.error),
                         padding: const EdgeInsets.symmetric(
-                            vertical: AppSpacing.md),
+                          vertical: AppSpacing.md,
+                        ),
                         shape: RoundedRectangleBorder(
-                          borderRadius:
-                              BorderRadius.circular(AppRadius.button),
+                          borderRadius: BorderRadius.circular(AppRadius.button),
                         ),
                       ),
                       child: const Text(
@@ -411,15 +488,18 @@ class BagianAsetVerificationDetailScreen extends ConsumerWidget {
                       onPressed: actionState.isLoading
                           ? null
                           : () => _showVerifyConfirmDialog(
-                              context, ref, mutation),
+                              context,
+                              ref,
+                              mutation,
+                            ),
                       style: ElevatedButton.styleFrom(
                         backgroundColor: AppColors.primary,
                         foregroundColor: Colors.white,
                         padding: const EdgeInsets.symmetric(
-                            vertical: AppSpacing.md),
+                          vertical: AppSpacing.md,
+                        ),
                         shape: RoundedRectangleBorder(
-                          borderRadius:
-                              BorderRadius.circular(AppRadius.button),
+                          borderRadius: BorderRadius.circular(AppRadius.button),
                         ),
                       ),
                       child: actionState.isLoading
@@ -434,7 +514,9 @@ class BagianAsetVerificationDetailScreen extends ConsumerWidget {
                           : const Text(
                               'Verifikasi & Teruskan',
                               style: TextStyle(
-                                  fontWeight: FontWeight.bold, fontSize: 14),
+                                fontWeight: FontWeight.bold,
+                                fontSize: 14,
+                              ),
                             ),
                     ),
                   ),
@@ -507,10 +589,7 @@ class BagianAsetVerificationDetailScreen extends ConsumerWidget {
       children: [
         Text(
           label,
-          style: const TextStyle(
-            fontSize: 12,
-            color: AppColors.textSecondary,
-          ),
+          style: const TextStyle(fontSize: 12, color: AppColors.textSecondary),
         ),
         const SizedBox(height: 2),
         Text(
@@ -545,10 +624,7 @@ class BagianAsetVerificationDetailScreen extends ConsumerWidget {
       children: [
         Text(
           label,
-          style: const TextStyle(
-            fontSize: 12,
-            color: AppColors.textSecondary,
-          ),
+          style: const TextStyle(fontSize: 12, color: AppColors.textSecondary),
         ),
         const SizedBox(height: 4),
         Row(
@@ -564,8 +640,11 @@ class BagianAsetVerificationDetailScreen extends ConsumerWidget {
             ),
             const Padding(
               padding: EdgeInsets.symmetric(horizontal: AppSpacing.xs),
-              child: Icon(Icons.arrow_forward_rounded,
-                  size: 16, color: AppColors.primary),
+              child: Icon(
+                Icons.arrow_forward_rounded,
+                size: 16,
+                color: AppColors.primary,
+              ),
             ),
             Expanded(
               child: Text(
@@ -593,18 +672,18 @@ class BagianAsetVerificationDetailScreen extends ConsumerWidget {
     final Color iconColor = isRejected
         ? AppColors.error
         : isCompleted
-            ? AppColors.success
-            : isCurrent
-                ? AppColors.warning
-                : AppColors.border;
+        ? AppColors.success
+        : isCurrent
+        ? AppColors.warning
+        : AppColors.border;
 
     final IconData icon = isRejected
         ? Icons.cancel
         : isCompleted
-            ? Icons.check_circle
-            : isCurrent
-                ? Icons.radio_button_checked
-                : Icons.radio_button_unchecked;
+        ? Icons.check_circle
+        : isCurrent
+        ? Icons.radio_button_checked
+        : Icons.radio_button_unchecked;
 
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -650,34 +729,32 @@ class BagianAsetVerificationDetailScreen extends ConsumerWidget {
   }
 
   String _formatDateTime(DateTime dt) {
-    const months = [
-      'Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun',
-      'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'
-    ];
-    final day = dt.day.toString().padLeft(2, '0');
-    final month = months[dt.month - 1];
-    final year = dt.year;
-    final hour = dt.hour.toString().padLeft(2, '0');
-    final minute = dt.minute.toString().padLeft(2, '0');
-    return '$day $month $year $hour:$minute';
+    return SlaWitaHelper.formatDateTimeWita(dt);
   }
 
   Widget _buildDocumentRow(
-      Mutation mutation, BuildContext context, WidgetRef ref) {
+    Mutation mutation,
+    BuildContext context,
+    WidgetRef ref,
+  ) {
     final documentName = mutation.documentName;
-    final isPdf = documentName != null && documentName.toLowerCase().endsWith('.pdf');
-    final isImage = documentName != null &&
-        ['png', 'jpg', 'jpeg', 'webp'].any((ext) => documentName.toLowerCase().endsWith(ext));
+    final isPdf =
+        documentName != null && documentName.toLowerCase().endsWith('.pdf');
+    final isImage =
+        documentName != null &&
+        [
+          'png',
+          'jpg',
+          'jpeg',
+          'webp',
+        ].any((ext) => documentName.toLowerCase().endsWith(ext));
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         const Text(
           'Dokumen',
-          style: TextStyle(
-            fontSize: 12,
-            color: AppColors.textSecondary,
-          ),
+          style: TextStyle(fontSize: 12, color: AppColors.textSecondary),
         ),
         const SizedBox(height: 4),
         if (documentName != null && documentName.isNotEmpty)
@@ -687,6 +764,7 @@ class BagianAsetVerificationDetailScreen extends ConsumerWidget {
                 context,
                 mutation: mutation,
                 currentUser: ref.read(authStateProvider).user,
+                apiClient: ref.read(apiClientProvider),
               );
             },
             borderRadius: BorderRadius.circular(8),
@@ -695,8 +773,9 @@ class BagianAsetVerificationDetailScreen extends ConsumerWidget {
               decoration: BoxDecoration(
                 color: AppColors.primaryContainer.withValues(alpha: 0.3),
                 borderRadius: BorderRadius.circular(8),
-                border:
-                    Border.all(color: AppColors.primary.withValues(alpha: 0.2)),
+                border: Border.all(
+                  color: AppColors.primary.withValues(alpha: 0.2),
+                ),
               ),
               child: Row(
                 children: [
@@ -704,14 +783,14 @@ class BagianAsetVerificationDetailScreen extends ConsumerWidget {
                     isPdf
                         ? Icons.picture_as_pdf_outlined
                         : isImage
-                            ? Icons.image_outlined
-                            : Icons.description_outlined,
+                        ? Icons.image_outlined
+                        : Icons.description_outlined,
                     size: 20,
                     color: isPdf
                         ? AppColors.error
                         : isImage
-                            ? AppColors.primary
-                            : AppColors.textSecondary,
+                        ? AppColors.primary
+                        : AppColors.textSecondary,
                   ),
                   const SizedBox(width: AppSpacing.xs),
                   Expanded(
@@ -725,8 +804,11 @@ class BagianAsetVerificationDetailScreen extends ConsumerWidget {
                     ),
                   ),
                   const SizedBox(width: 8),
-                  const Icon(Icons.open_in_new,
-                      size: 16, color: AppColors.primary),
+                  const Icon(
+                    Icons.open_in_new,
+                    size: 16,
+                    color: AppColors.primary,
+                  ),
                 ],
               ),
             ),
@@ -832,7 +914,7 @@ class BagianAsetVerificationDetailScreen extends ConsumerWidget {
                         SizedBox(width: 8),
                         Expanded(
                           child: Text(
-                            'Alur PRD V1.1: Pengajuan yang valid akan langsung diteruskan ke antrean Approval Pemimpin Divisi.',
+                            'Alur Mutasi: Pengajuan yang valid akan langsung diteruskan ke antrean Approval Pemimpin Divisi.',
                             style: TextStyle(
                               fontSize: 12,
                               fontWeight: FontWeight.w600,
@@ -875,7 +957,9 @@ class BagianAsetVerificationDetailScreen extends ConsumerWidget {
                   );
                   _safePop(context, ref);
                 } else {
-                  final err = ref.read(bagianAsetVerificationActionProvider).error;
+                  final err = ref
+                      .read(bagianAsetVerificationActionProvider)
+                      .error;
                   AppFeedback.showError(
                     context,
                     err ?? 'Gagal memverifikasi pengajuan.',
@@ -909,7 +993,9 @@ class BagianAsetVerificationDetailScreen extends ConsumerWidget {
 
         if (context.mounted) {
           if (success) {
-            ref.read(notificationProvider.notifier).notifyUser(
+            ref
+                .read(notificationProvider.notifier)
+                .notifyUser(
                   targetUserId: mutation.applicantId ?? 'usr_pemohon',
                   targetRole: UserRole.pemohon,
                   title: 'Pengajuan Dikembalikan Bagian Aset',
@@ -919,10 +1005,7 @@ class BagianAsetVerificationDetailScreen extends ConsumerWidget {
                   relatedMutationId: mutation.id,
                 );
             ref.invalidate(mutationDetailProvider(mutation.id));
-            AppFeedback.showReturned(
-              context,
-              'Pengajuan dikembalikan',
-            );
+            AppFeedback.showReturned(context, 'Pengajuan dikembalikan');
             return true;
           } else {
             final err = ref.read(bagianAsetVerificationActionProvider).error;

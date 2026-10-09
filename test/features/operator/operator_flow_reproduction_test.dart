@@ -50,9 +50,7 @@ void main() {
   test('Trace end-to-end: Registered asset submit -> Operator list -> Operator detail', () async {
     final container = ProviderContainer(
       overrides: [
-        authStateProvider.overrideWith(
-          (ref) => FakeAuthNotifier(pemohonUser),
-        ),
+        authStateProvider.overrideWith((ref) => FakeAuthNotifier(pemohonUser)),
         apiMutationRepositoryProvider.overrideWith(
           (ref) => ref.watch(mutationRepositoryProvider),
         ),
@@ -61,8 +59,9 @@ void main() {
     addTearDown(container.dispose);
 
     // 1. Operator accesses all mutations prior to new submission (caches provider)
-    final initialOperatorMutations =
-        await container.read(operatorAllMutationsProvider.future);
+    final initialOperatorMutations = await container.read(
+      operatorAllMutationsProvider.future,
+    );
     expect(initialOperatorMutations, isNotEmpty);
     final initialCount = initialOperatorMutations.length;
 
@@ -81,8 +80,9 @@ void main() {
       documentName: 'SK-SDM-2026-001.pdf',
     );
 
-    final newMutation =
-        await container.read(submitMutationProvider.notifier).submit(params);
+    final newMutation = await container
+        .read(submitMutationProvider.notifier)
+        .submit(params);
 
     // Verify properties of submitted mutation
     expect(newMutation, isNotNull);
@@ -93,12 +93,14 @@ void main() {
     expect(newMutation.isUnregisteredAsset, isFalse);
 
     // 3. Operator checks operatorAllMutationsProvider and filteredIncomingMutationsProvider
-    final updatedOperatorMutations =
-        await container.read(operatorAllMutationsProvider.future);
+    final updatedOperatorMutations = await container.read(
+      operatorAllMutationsProvider.future,
+    );
 
     // Check if new mutation is present in Operator list
-    final foundInAll =
-        updatedOperatorMutations.any((m) => m.id == newMutation.id);
+    final foundInAll = updatedOperatorMutations.any(
+      (m) => m.id == newMutation.id,
+    );
     expect(
       foundInAll,
       isTrue,
@@ -116,8 +118,9 @@ void main() {
     );
 
     // 4. Operator detail access
-    final detailMutation =
-        await container.read(mutationDetailProvider(newMutation.id).future);
+    final detailMutation = await container.read(
+      mutationDetailProvider(newMutation.id).future,
+    );
     expect(detailMutation.id, equals(newMutation.id));
     expect(detailMutation.status, equals(MutationStatus.submitted));
     expect(detailMutation.applicantId, equals('usr_pemohon'));
@@ -128,9 +131,7 @@ void main() {
   test('Trace end-to-end: Unregistered asset submit -> Operator list (search & filter) -> Operator detail', () async {
     final container = ProviderContainer(
       overrides: [
-        authStateProvider.overrideWith(
-          (ref) => FakeAuthNotifier(pemohonUser),
-        ),
+        authStateProvider.overrideWith((ref) => FakeAuthNotifier(pemohonUser)),
         apiMutationRepositoryProvider.overrideWith(
           (ref) => ref.watch(mutationRepositoryProvider),
         ),
@@ -158,98 +159,103 @@ void main() {
       documentName: 'SK-SDM-2026-001.pdf',
     );
 
-    final unregMutation =
-        await container.read(submitMutationProvider.notifier).submit(params);
+    final unregMutation = await container
+        .read(submitMutationProvider.notifier)
+        .submit(params);
 
     expect(unregMutation, isNull);
   });
 
-  testWidgets('Widget regression: Operator sees new Pemohon mutation in Dashboard and Mutations screen', (tester) async {
-    final container = ProviderContainer(
-      overrides: [
-        authStateProvider.overrideWith(
-          (ref) => FakeAuthNotifier(operatorUser),
+  testWidgets(
+    'Widget regression: Operator sees new Pemohon mutation in Dashboard and Mutations screen',
+    (tester) async {
+      final container = ProviderContainer(
+        overrides: [
+          authStateProvider.overrideWith(
+            (ref) => FakeAuthNotifier(operatorUser),
+          ),
+          apiMutationRepositoryProvider.overrideWith(
+            (ref) => ref.watch(mutationRepositoryProvider),
+          ),
+          connectivityStatusProvider.overrideWith(
+            (ref) => Stream.value(ConnectivityStatus.online),
+          ),
+        ],
+      );
+      addTearDown(container.dispose);
+
+      // Pre-cache operator dashboard
+      await tester.pumpWidget(
+        UncontrolledProviderScope(
+          container: container,
+          child: const MaterialApp(home: OperatorDashboardScreen()),
         ),
-        apiMutationRepositoryProvider.overrideWith(
-          (ref) => ref.watch(mutationRepositoryProvider),
+      );
+      await tester.pumpAndSettle();
+
+      final initialPendingText = find.text('Menunggu Verifikasi');
+      expect(initialPendingText, findsOneWidget);
+      final initialPendingCount = container
+          .read(verificationStatsProvider)
+          .pendingCount;
+
+      // Pemohon submits new mutation
+      final params = SubmitMutationParams(
+        applicantId: 'usr_pemohon',
+        applicantName: 'Budi Pemohon',
+        assetId: 'ast_101',
+        assetName: 'Laptop Dell Latitude',
+        isUnregisteredAsset: false,
+        sourceLocation: 'Lantai 2 - Marketing',
+        targetLocation: 'Lantai 4 - HRD',
+        currentPic: 'Ahmad PIC',
+        targetPic: 'Rudi HRD',
+        reason: 'Mutasi karyawan baru.',
+        documentName: 'SK-SDM-2026-001.pdf',
+      );
+
+      // Submit using the same container / repository
+      late Mutation? submitted;
+      await tester.runAsync(() async {
+        submitted = await container
+            .read(submitMutationProvider.notifier)
+            .submit(params);
+        await container.read(operatorAllMutationsProvider.future);
+      });
+      expect(submitted, isNotNull);
+
+      // Re-pump Dashboard: stats must update reactively
+      await tester.pumpAndSettle();
+      final updatedPendingCount = container
+          .read(verificationStatsProvider)
+          .pendingCount;
+      expect(updatedPendingCount, equals(initialPendingCount + 1));
+
+      // Open OperatorMutationsScreen: card must appear
+      await tester.pumpWidget(
+        UncontrolledProviderScope(
+          container: container,
+          child: const MaterialApp(home: OperatorMutationsScreen()),
         ),
-        connectivityStatusProvider.overrideWith(
-          (ref) => Stream.value(ConnectivityStatus.online),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.byKey(Key('card_mutation_${submitted!.id}')), findsOneWidget);
+      expect(find.text(submitted!.ticketNumber), findsOneWidget);
+
+      // Open Operator detail screen directly
+      await tester.pumpWidget(
+        UncontrolledProviderScope(
+          container: container,
+          child: MaterialApp(
+            home: OperatorVerificationDetailScreen(mutationId: submitted!.id),
+          ),
         ),
-      ],
-    );
-    addTearDown(container.dispose);
+      );
+      await tester.pumpAndSettle();
 
-    // Pre-cache operator dashboard
-    await tester.pumpWidget(
-      UncontrolledProviderScope(
-        container: container,
-        child: const MaterialApp(
-          home: OperatorDashboardScreen(),
-        ),
-      ),
-    );
-    await tester.pumpAndSettle();
-
-    final initialPendingText = find.text('Menunggu Verifikasi');
-    expect(initialPendingText, findsOneWidget);
-    final initialPendingCount = container.read(verificationStatsProvider).pendingCount;
-
-    // Pemohon submits new mutation
-    final params = SubmitMutationParams(
-      applicantId: 'usr_pemohon',
-      applicantName: 'Budi Pemohon',
-      assetId: 'ast_101',
-      assetName: 'Laptop Dell Latitude',
-      isUnregisteredAsset: false,
-      sourceLocation: 'Lantai 2 - Marketing',
-      targetLocation: 'Lantai 4 - HRD',
-      currentPic: 'Ahmad PIC',
-      targetPic: 'Rudi HRD',
-      reason: 'Mutasi karyawan baru.',
-      documentName: 'SK-SDM-2026-001.pdf',
-    );
-
-    // Submit using the same container / repository
-    late Mutation? submitted;
-    await tester.runAsync(() async {
-      submitted =
-          await container.read(submitMutationProvider.notifier).submit(params);
-      await container.read(operatorAllMutationsProvider.future);
-    });
-    expect(submitted, isNotNull);
-
-    // Re-pump Dashboard: stats must update reactively
-    await tester.pumpAndSettle();
-    final updatedPendingCount = container.read(verificationStatsProvider).pendingCount;
-    expect(updatedPendingCount, equals(initialPendingCount + 1));
-
-    // Open OperatorMutationsScreen: card must appear
-    await tester.pumpWidget(
-      UncontrolledProviderScope(
-        container: container,
-        child: const MaterialApp(
-          home: OperatorMutationsScreen(),
-        ),
-      ),
-    );
-    await tester.pumpAndSettle();
-
-    expect(find.byKey(Key('card_mutation_${submitted!.id}')), findsOneWidget);
-    expect(find.text(submitted!.ticketNumber), findsOneWidget);
-
-    // Open Operator detail screen directly
-    await tester.pumpWidget(
-      UncontrolledProviderScope(
-        container: container,
-        child: MaterialApp(
-          home: OperatorVerificationDetailScreen(mutationId: submitted!.id),
-        ),
-      ),
-    );
-    await tester.pumpAndSettle();
-
-    expect(find.text(submitted!.ticketNumber), findsOneWidget);
-    expect(find.text('Diajukan'), findsWidgets);
-  });
+      expect(find.text(submitted!.ticketNumber), findsOneWidget);
+      expect(find.text('Diajukan'), findsWidgets);
+    },
+  );
 }

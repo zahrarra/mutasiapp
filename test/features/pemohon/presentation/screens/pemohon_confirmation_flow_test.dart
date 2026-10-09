@@ -124,7 +124,9 @@ class _FakeMutationRepository implements MutationRepository {
 
   @override
   Future<Result<List<Mutation>>> getMutationsByUser(String userId) async {
-    return Result.success(_mutations.values.where((m) => m.applicantId == userId).toList());
+    return Result.success(
+      _mutations.values.where((m) => m.applicantId == userId).toList(),
+    );
   }
 
   @override
@@ -151,15 +153,44 @@ class _FakePemohonAuthRepository implements AuthRepository {
 
   @override
   Future<void> logout() async {}
+    @override
+  Future<Result<User>> changePassword({
+    required String currentPassword,
+    required String newPassword,
+    required String confirmPassword,
+  }) async {
+    if (newPassword.length < 8) {
+      return Result.failure(
+        const ValidationFailure(message: 'Password baru minimal 8 karakter.'),
+      );
+    }
+    if (newPassword != confirmPassword) {
+      return Result.failure(
+        const ValidationFailure(message: 'Konfirmasi password baru tidak cocok.'),
+      );
+    }
+    if (newPassword == currentPassword) {
+      return Result.failure(
+        const ValidationFailure(
+          message: 'Password baru harus berbeda dengan password lama.',
+        ),
+      );
+    }
+    return Result.success(user.copyWith(mustChangePassword: false));
+  }
 }
 
 class _FakeAuthNotifier extends AuthNotifier {
   _FakeAuthNotifier(User user)
-      : super(
-          loginUseCase: LoginUseCase(repository: _FakePemohonAuthRepository(user)),
-          logoutUseCase: LogoutUseCase(repository: _FakePemohonAuthRepository(user)),
-          authRepository: _FakePemohonAuthRepository(user),
-        ) {
+    : super(
+        loginUseCase: LoginUseCase(
+          repository: _FakePemohonAuthRepository(user),
+        ),
+        logoutUseCase: LogoutUseCase(
+          repository: _FakePemohonAuthRepository(user),
+        ),
+        authRepository: _FakePemohonAuthRepository(user),
+      ) {
     state = AuthState(isLoading: false, user: user);
   }
 }
@@ -221,235 +252,302 @@ void main() {
   );
 
   group('Fitur Konfirmasi Pemohon Tests', () {
-    testWidgets('1. Displays latest asset, location, PIC, and Bagian Aset info', (tester) async {
-      final mutation = _createTestMutation(
-        id: 'mut_conf_1',
-        applicantId: pemohonUser.id,
-        applicantName: pemohonUser.name,
-        status: MutationStatus.pendingConfirmation,
-        staffUpdatedBy: 'Ahmad Bagian Aset',
-        staffUpdatedAt: DateTime(2026, 9, 24, 10, 30),
-      );
-      final repo = _FakeMutationRepository([mutation]);
+    testWidgets(
+      '1. Displays latest asset, location, PIC, and Bagian Aset info',
+      (tester) async {
+        final mutation = _createTestMutation(
+          id: 'mut_conf_1',
+          applicantId: pemohonUser.id,
+          applicantName: pemohonUser.name,
+          status: MutationStatus.pendingConfirmation,
+          staffUpdatedBy: 'Ahmad Bagian Aset',
+          staffUpdatedAt: DateTime(2026, 9, 24, 10, 30),
+        );
+        final repo = _FakeMutationRepository([mutation]);
 
-      await tester.pumpWidget(
-        ProviderScope(
-          overrides: [
-            mutationRepositoryProvider.overrideWithValue(repo),
-            authStateProvider.overrideWith((ref) => _FakeAuthNotifier(pemohonUser)),
-          ],
-          child: const MaterialApp(
-            home: PemohonConfirmationScreen(mutationId: 'mut_conf_1'),
-          ),
-        ),
-      );
-      await tester.pumpAndSettle();
-
-      // Check header and status
-      expect(find.text('ELK-2026-00001'), findsOneWidget);
-      expect(find.textContaining('Menunggu Konfirmasi'), findsAtLeastNWidgets(1));
-
-      // Check asset card displays updated asset information
-      expect(find.text('MacBook Pro M3 Max'), findsOneWidget);
-      expect(find.text('AST-ELK-2026-0001'), findsOneWidget);
-
-      // Check Bagian Aset update banner and route
-      expect(find.textContaining('Ahmad Bagian Aset'), findsOneWidget);
-      expect(find.text('Kantor Pusat'), findsOneWidget);
-      expect(find.text('Cabang Bandung'), findsAtLeastNWidgets(1));
-      expect(find.text('Budi Santoso'), findsOneWidget);
-      expect(find.text('Rudi Hermawan'), findsAtLeastNWidgets(1));
-
-      // Verify no manual refresh button exists
-      expect(find.byIcon(Icons.refresh), findsNothing);
-      expect(find.textContaining('Refresh'), findsNothing);
-    });
-
-    testWidgets('2. Access control: Pemohon cannot view another user\'s mutation', (tester) async {
-      final mutation = _createTestMutation(
-        id: 'mut_conf_other',
-        applicantId: otherUser.id,
-        applicantName: otherUser.name,
-        status: MutationStatus.pendingConfirmation,
-      );
-      final repo = _FakeMutationRepository([mutation]);
-
-      await tester.pumpWidget(
-        ProviderScope(
-          overrides: [
-            mutationRepositoryProvider.overrideWithValue(repo),
-            authStateProvider.overrideWith((ref) => _FakeAuthNotifier(pemohonUser)),
-          ],
-          child: const MaterialApp(
-            home: PemohonConfirmationScreen(mutationId: 'mut_conf_other'),
-          ),
-        ),
-      );
-      await tester.pumpAndSettle();
-
-      // Should show Access Denied
-      expect(find.text('Akses Ditolak'), findsOneWidget);
-      expect(find.text('Anda hanya dapat melihat dan mengonfirmasi pengajuan mutasi milik Anda sendiri.'), findsOneWidget);
-      expect(find.text('✓ Sesuai'), findsNothing);
-      expect(find.text('Tidak Sesuai'), findsNothing);
-    });
-
-    testWidgets('3. Only pendingConfirmation can be confirmed (non-pending shows warning banner)', (tester) async {
-      final mutation = _createTestMutation(
-        id: 'mut_conf_submitted',
-        applicantId: pemohonUser.id,
-        applicantName: pemohonUser.name,
-        status: MutationStatus.submitted,
-      );
-      final repo = _FakeMutationRepository([mutation]);
-
-      await tester.pumpWidget(
-        ProviderScope(
-          overrides: [
-            mutationRepositoryProvider.overrideWithValue(repo),
-            authStateProvider.overrideWith((ref) => _FakeAuthNotifier(pemohonUser)),
-          ],
-          child: const MaterialApp(
-            home: PemohonConfirmationScreen(mutationId: 'mut_conf_submitted'),
-          ),
-        ),
-      );
-      await tester.pumpAndSettle();
-
-      // Header shows Diajukan
-      expect(find.text('Diajukan'), findsAtLeastNWidgets(1));
-
-      // Shows warning banner
-      expect(find.textContaining('Pengajuan ini berstatus "Diajukan"'), findsOneWidget);
-
-      // Buttons Sesuai and Tidak Sesuai are NOT rendered
-      expect(find.byKey(const Key('btn_sesuai_konfirmasi')), findsNothing);
-      expect(find.byKey(const Key('btn_tidak_sesuai_konfirmasi')), findsNothing);
-    });
-
-    testWidgets('4. Sesuai flow: confirms, becomes completed, updates UI & notifications without refresh', (tester) async {
-      final mutation = _createTestMutation(
-        id: 'mut_conf_sesuai',
-        applicantId: pemohonUser.id,
-        applicantName: pemohonUser.name,
-        status: MutationStatus.pendingConfirmation,
-        staffUpdatedBy: 'Ahmad Bagian Aset',
-      );
-      final repo = _FakeMutationRepository([mutation]);
-
-      tester.view.physicalSize = const Size(1080, 2400);
-      tester.view.devicePixelRatio = 1.0;
-      addTearDown(tester.view.resetPhysicalSize);
-
-      await tester.pumpWidget(
-        ProviderScope(
-          overrides: [
-            mutationRepositoryProvider.overrideWithValue(repo),
-            authStateProvider.overrideWith((ref) => _FakeAuthNotifier(pemohonUser)),
-          ],
-          child: const MaterialApp(
-            home: PemohonConfirmationScreen(mutationId: 'mut_conf_sesuai'),
-          ),
-        ),
-      );
-      await tester.pumpAndSettle();
-
-      // Tap Sesuai button
-      final sesuaiBtn = find.byKey(const Key('btn_sesuai_konfirmasi'));
-      expect(sesuaiBtn, findsOneWidget);
-      await tester.tap(sesuaiBtn);
-      await tester.pumpAndSettle();
-
-      // Dialog confirmation
-      expect(find.widgetWithText(AlertDialog, 'Konfirmasi Mutasi'), findsOneWidget);
-      expect(find.text('Ya, Konfirmasi'), findsOneWidget);
-
-      await tester.tap(find.text('Ya, Konfirmasi'));
-      await tester.pumpAndSettle();
-
-      // Verify mutation in repo became completed
-      final checkRepo = await repo.getMutationById('mut_conf_sesuai');
-      expect(checkRepo.dataOrNull!.status, MutationStatus.completed);
-      expect(checkRepo.dataOrNull!.asset.status, AssetStatus.available);
-
-      // Verify UI immediately displays completed state
-      expect(find.text('Selesai'), findsAtLeastNWidgets(1));
-      expect(find.text('Konfirmasi telah diberikan. Mutasi aset telah selesai.'), findsOneWidget);
-
-      // Action bar should now be gone
-      expect(find.byKey(const Key('btn_sesuai_konfirmasi')), findsNothing);
-      expect(find.byKey(const Key('btn_tidak_sesuai_konfirmasi')), findsNothing);
-    });
-
-    testWidgets('5. Tidak Sesuai flow: requires reason, saves returnReason, returns to returned status', (tester) async {
-      final mutation = _createTestMutation(
-        id: 'mut_conf_tidak_sesuai',
-        applicantId: pemohonUser.id,
-        applicantName: pemohonUser.name,
-        status: MutationStatus.pendingConfirmation,
-        staffUpdatedBy: 'Ahmad Bagian Aset',
-      );
-      final repo = _FakeMutationRepository([mutation]);
-
-      final router = GoRouter(
-        initialLocation: '/confirm/mut_conf_tidak_sesuai',
-        routes: [
-          GoRoute(
-            path: '/confirm/:id',
-            builder: (context, state) => PemohonConfirmationScreen(
-              mutationId: state.pathParameters['id']!,
+        await tester.pumpWidget(
+          ProviderScope(
+            overrides: [
+              mutationRepositoryProvider.overrideWithValue(repo),
+              apiMutationRepositoryProvider.overrideWithValue(repo),
+              authStateProvider.overrideWith(
+                (ref) => _FakeAuthNotifier(pemohonUser),
+              ),
+            ],
+            child: const MaterialApp(
+              home: PemohonConfirmationScreen(mutationId: 'mut_conf_1'),
             ),
           ),
-          GoRoute(
-            path: '/pemohon/mutasi/:id/edit',
-            builder: (context, state) => const Scaffold(body: Text('Halaman Edit Pengajuan')),
+        );
+        await tester.pumpAndSettle();
+
+        // Check header and status
+        expect(find.text('ELK-2026-00001'), findsOneWidget);
+        expect(
+          find.textContaining('Menunggu Konfirmasi'),
+          findsAtLeastNWidgets(1),
+        );
+
+        // Check asset card displays updated asset information
+        expect(find.text('MacBook Pro M3 Max'), findsOneWidget);
+        expect(find.text('AST-ELK-2026-0001'), findsOneWidget);
+
+        // Check Bagian Aset update banner and route
+        expect(find.textContaining('Ahmad Bagian Aset'), findsOneWidget);
+        expect(find.text('Kantor Pusat'), findsOneWidget);
+        expect(find.text('Cabang Bandung'), findsAtLeastNWidgets(1));
+        expect(find.text('Budi Santoso'), findsOneWidget);
+        expect(find.text('Rudi Hermawan'), findsAtLeastNWidgets(1));
+
+        // Verify no manual refresh button exists
+        expect(find.byIcon(Icons.refresh), findsNothing);
+        expect(find.textContaining('Refresh'), findsNothing);
+      },
+    );
+
+    testWidgets(
+      '2. Access control: Pemohon cannot view another user\'s mutation',
+      (tester) async {
+        final mutation = _createTestMutation(
+          id: 'mut_conf_other',
+          applicantId: otherUser.id,
+          applicantName: otherUser.name,
+          status: MutationStatus.pendingConfirmation,
+        );
+        final repo = _FakeMutationRepository([mutation]);
+
+        await tester.pumpWidget(
+          ProviderScope(
+            overrides: [
+              mutationRepositoryProvider.overrideWithValue(repo),
+              apiMutationRepositoryProvider.overrideWithValue(repo),
+              authStateProvider.overrideWith(
+                (ref) => _FakeAuthNotifier(pemohonUser),
+              ),
+            ],
+            child: const MaterialApp(
+              home: PemohonConfirmationScreen(mutationId: 'mut_conf_other'),
+            ),
           ),
-        ],
-      );
+        );
+        await tester.pumpAndSettle();
 
-      tester.view.physicalSize = const Size(1080, 2400);
-      tester.view.devicePixelRatio = 1.0;
+        // Should show Access Denied
+        expect(find.text('Akses Ditolak'), findsOneWidget);
+        expect(
+          find.text(
+            'Anda hanya dapat melihat dan mengonfirmasi pengajuan mutasi milik Anda sendiri.',
+          ),
+          findsOneWidget,
+        );
+        expect(find.text('✓ Sesuai'), findsNothing);
+        expect(find.text('Tidak Sesuai'), findsNothing);
+      },
+    );
 
-      await tester.pumpWidget(
-        ProviderScope(
-          overrides: [
-            mutationRepositoryProvider.overrideWithValue(repo),
-            authStateProvider.overrideWith((ref) => _FakeAuthNotifier(pemohonUser)),
+    testWidgets(
+      '3. Only pendingConfirmation can be confirmed (non-pending shows warning banner)',
+      (tester) async {
+        final mutation = _createTestMutation(
+          id: 'mut_conf_submitted',
+          applicantId: pemohonUser.id,
+          applicantName: pemohonUser.name,
+          status: MutationStatus.submitted,
+        );
+        final repo = _FakeMutationRepository([mutation]);
+
+        await tester.pumpWidget(
+          ProviderScope(
+            overrides: [
+              mutationRepositoryProvider.overrideWithValue(repo),
+              apiMutationRepositoryProvider.overrideWithValue(repo),
+              authStateProvider.overrideWith(
+                (ref) => _FakeAuthNotifier(pemohonUser),
+              ),
+            ],
+            child: const MaterialApp(
+              home: PemohonConfirmationScreen(mutationId: 'mut_conf_submitted'),
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        // Header shows Menunggu Pemeriksaan Operator
+        expect(
+          find.text('Menunggu Pemeriksaan Operator'),
+          findsAtLeastNWidgets(1),
+        );
+
+        // Shows warning banner
+        expect(
+          find.textContaining(
+            'Pengajuan ini berstatus "Menunggu Pemeriksaan Operator"',
+          ),
+          findsOneWidget,
+        );
+
+        // Buttons Sesuai and Tidak Sesuai are NOT rendered
+        expect(find.byKey(const Key('btn_sesuai_konfirmasi')), findsNothing);
+        expect(
+          find.byKey(const Key('btn_tidak_sesuai_konfirmasi')),
+          findsNothing,
+        );
+      },
+    );
+
+    testWidgets(
+      '4. Sesuai flow: confirms, becomes completed, updates UI & notifications without refresh',
+      (tester) async {
+        final mutation = _createTestMutation(
+          id: 'mut_conf_sesuai',
+          applicantId: pemohonUser.id,
+          applicantName: pemohonUser.name,
+          status: MutationStatus.pendingConfirmation,
+          staffUpdatedBy: 'Ahmad Bagian Aset',
+        );
+        final repo = _FakeMutationRepository([mutation]);
+
+        tester.view.physicalSize = const Size(1080, 2400);
+        tester.view.devicePixelRatio = 1.0;
+        addTearDown(tester.view.resetPhysicalSize);
+
+        await tester.pumpWidget(
+          ProviderScope(
+            overrides: [
+              mutationRepositoryProvider.overrideWithValue(repo),
+              apiMutationRepositoryProvider.overrideWithValue(repo),
+              authStateProvider.overrideWith(
+                (ref) => _FakeAuthNotifier(pemohonUser),
+              ),
+            ],
+            child: const MaterialApp(
+              home: PemohonConfirmationScreen(mutationId: 'mut_conf_sesuai'),
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        // Tap Sesuai button
+        final sesuaiBtn = find.byKey(const Key('btn_sesuai_konfirmasi'));
+        expect(sesuaiBtn, findsOneWidget);
+        await tester.tap(sesuaiBtn);
+        await tester.pumpAndSettle();
+
+        // Dialog confirmation
+        expect(
+          find.widgetWithText(AlertDialog, 'Konfirmasi Mutasi'),
+          findsOneWidget,
+        );
+        expect(find.text('Ya, Konfirmasi'), findsOneWidget);
+
+        await tester.tap(find.text('Ya, Konfirmasi'));
+        await tester.pumpAndSettle();
+
+        // Verify mutation in repo became completed
+        final checkRepo = await repo.getMutationById('mut_conf_sesuai');
+        expect(checkRepo.dataOrNull!.status, MutationStatus.completed);
+        expect(checkRepo.dataOrNull!.asset.status, AssetStatus.available);
+
+        // Verify UI immediately displays completed state
+        expect(find.text('Selesai'), findsAtLeastNWidgets(1));
+        expect(
+          find.text('Konfirmasi telah diberikan. Mutasi aset telah selesai.'),
+          findsOneWidget,
+        );
+
+        // Action bar should now be gone
+        expect(find.byKey(const Key('btn_sesuai_konfirmasi')), findsNothing);
+        expect(
+          find.byKey(const Key('btn_tidak_sesuai_konfirmasi')),
+          findsNothing,
+        );
+      },
+    );
+
+    testWidgets(
+      '5. Tidak Sesuai flow: requires reason, saves returnReason, returns to returned status',
+      (tester) async {
+        final mutation = _createTestMutation(
+          id: 'mut_conf_tidak_sesuai',
+          applicantId: pemohonUser.id,
+          applicantName: pemohonUser.name,
+          status: MutationStatus.pendingConfirmation,
+          staffUpdatedBy: 'Ahmad Bagian Aset',
+        );
+        final repo = _FakeMutationRepository([mutation]);
+
+        final router = GoRouter(
+          initialLocation: '/confirm/mut_conf_tidak_sesuai',
+          routes: [
+            GoRoute(
+              path: '/confirm/:id',
+              builder: (context, state) => PemohonConfirmationScreen(
+                mutationId: state.pathParameters['id']!,
+              ),
+            ),
+            GoRoute(
+              path: '/pemohon/mutasi/:id/edit',
+              builder: (context, state) =>
+                  const Scaffold(body: Text('Halaman Edit Pengajuan')),
+            ),
           ],
-          child: MaterialApp.router(routerConfig: router),
-        ),
-      );
-      await tester.pumpAndSettle();
+        );
 
-      // Click Tidak Sesuai
-      final tidakSesuaiBtn = find.byKey(const Key('btn_tidak_sesuai_konfirmasi'));
-      expect(tidakSesuaiBtn, findsOneWidget);
-      await tester.tap(tidakSesuaiBtn);
-      await tester.pumpAndSettle();
+        tester.view.physicalSize = const Size(1080, 2400);
+        tester.view.devicePixelRatio = 1.0;
 
-      // Dialog opens
-      expect(find.text('Mutasi Tidak Sesuai'), findsOneWidget);
+        await tester.pumpWidget(
+          ProviderScope(
+            overrides: [
+              mutationRepositoryProvider.overrideWithValue(repo),
+              apiMutationRepositoryProvider.overrideWithValue(repo),
+              authStateProvider.overrideWith(
+                (ref) => _FakeAuthNotifier(pemohonUser),
+              ),
+            ],
+            child: MaterialApp.router(routerConfig: router),
+          ),
+        );
+        await tester.pumpAndSettle();
 
-      // Try submitting without reason (validation test)
-      await tester.tap(find.text('Kirim Laporan'));
-      await tester.pumpAndSettle();
-      expect(find.text('Alasan ketidaksesuaian wajib diisi'), findsOneWidget);
+        // Click Tidak Sesuai
+        final tidakSesuaiBtn = find.byKey(
+          const Key('btn_tidak_sesuai_konfirmasi'),
+        );
+        expect(tidakSesuaiBtn, findsOneWidget);
+        await tester.tap(tidakSesuaiBtn);
+        await tester.pumpAndSettle();
 
-      // Fill in real reason
-      await tester.enterText(
-        find.widgetWithText(TextFormField, 'Alasan / Keterangan *'),
-        'Barang yang diterima tipe berbeda dari pengajuan',
-      );
-      await tester.pumpAndSettle();
+        // Dialog opens
+        expect(find.text('Mutasi Tidak Sesuai'), findsOneWidget);
 
-      // Submit
-      await tester.tap(find.text('Kirim Laporan'));
-      await tester.pumpAndSettle();
+        // Try submitting without reason (validation test)
+        await tester.tap(find.text('Kirim Laporan'));
+        await tester.pumpAndSettle();
+        expect(find.text('Alasan ketidaksesuaian wajib diisi'), findsOneWidget);
 
-      // Verify repository updated with waitingAssetVerification status and real confirmationReason (PRD V1.1 §6.6)
-      final checkRepo = await repo.getMutationById('mut_conf_tidak_sesuai');
-      expect(checkRepo.dataOrNull!.status, MutationStatus.waitingAssetVerification);
-      expect(checkRepo.dataOrNull!.confirmationReason, 'Barang yang diterima tipe berbeda dari pengajuan');
-    });
+        // Fill in real reason
+        await tester.enterText(
+          find.widgetWithText(TextFormField, 'Alasan / Keterangan *'),
+          'Barang yang diterima tipe berbeda dari pengajuan',
+        );
+        await tester.pumpAndSettle();
+
+        // Submit
+        await tester.tap(find.text('Kirim Laporan'));
+        await tester.pumpAndSettle();
+
+        // Verify repository updated with waitingAssetVerification status and real confirmationReason (PRD V1.1 §6.6)
+        final checkRepo = await repo.getMutationById('mut_conf_tidak_sesuai');
+        expect(
+          checkRepo.dataOrNull!.status,
+          MutationStatus.waitingAssetVerification,
+        );
+        expect(
+          checkRepo.dataOrNull!.confirmationReason,
+          'Barang yang diterima tipe berbeda dari pengajuan',
+        );
+      },
+    );
   });
 }

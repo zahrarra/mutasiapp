@@ -53,8 +53,7 @@ class ConfirmMutationUseCase {
     if (!mutation.status.isWaitingConfirmation) {
       return const Result.failure(
         ValidationFailure(
-          message:
-              'Konfirmasi hanya dapat dilakukan pada pengajuan berstatus "Menunggu Konfirmasi".',
+          message: 'Konfirmasi hanya dapat dilakukan pada pengajuan berstatus "Menunggu Konfirmasi".',
         ),
       );
     }
@@ -64,7 +63,8 @@ class ConfirmMutationUseCase {
         (params.reason == null || params.reason!.trim().isEmpty)) {
       return const Result.failure(
         ValidationFailure(
-          message: 'Alasan ketidaksesuaian wajib diisi jika mutasi tidak sesuai.',
+          message:
+              'Alasan ketidaksesuaian wajib diisi jika mutasi tidak sesuai.',
         ),
       );
     }
@@ -72,8 +72,11 @@ class ConfirmMutationUseCase {
     // Validasi kepemilikan jika userId disertakan
     if (params.userId != null) {
       final uid = params.userId!;
-      final isOwner = mutation.applicantId == uid ||
-          ((uid == 'usr_pemohon' || uid == 'usr_101' || uid == 'user_pemohon') &&
+      final isOwner =
+          mutation.applicantId == uid ||
+          ((uid == 'usr_pemohon' ||
+                  uid == 'usr_101' ||
+                  uid == 'user_pemohon') &&
               (mutation.applicantId == 'usr_pemohon' ||
                   mutation.applicantId == 'usr_101' ||
                   mutation.applicantId == 'user_pemohon')) ||

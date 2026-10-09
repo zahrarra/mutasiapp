@@ -47,8 +47,7 @@ class _FakeMutationRepository implements MutationRepository {
     if (current.status != MutationStatus.returned) {
       return const Result.failure(
         ConflictFailure(
-          message:
-              'Pengajuan ini tidak dapat diedit karena bukan berstatus "Dikembalikan ke Pemohon".',
+          message: 'Pengajuan ini tidak dapat diedit karena bukan berstatus "Dikembalikan ke Pemohon".',
         ),
       );
     }
@@ -246,51 +245,57 @@ void main() {
       expect(result.failureOrNull, isA<NotFoundFailure>());
     });
 
-    test('returns ConflictFailure when mutation is not in returned status', () async {
-      final all = await repository.getAllMutations();
-      final submitted = all.dataOrNull!.firstWhere(
-        (m) => m.status == MutationStatus.submitted,
-      );
+    test(
+      'returns ConflictFailure when mutation is not in returned status',
+      () async {
+        final all = await repository.getAllMutations();
+        final submitted = all.dataOrNull!.firstWhere(
+          (m) => m.status == MutationStatus.submitted,
+        );
 
-      final result = await repository.updateMutation(
-        mutationId: submitted.id,
-        targetLocation: 'Lantai 3',
-        targetPic: 'PIC Baru',
-        reason: 'Alasan baru',
-      );
+        final result = await repository.updateMutation(
+          mutationId: submitted.id,
+          targetLocation: 'Lantai 3',
+          targetPic: 'PIC Baru',
+          reason: 'Alasan baru',
+        );
 
-      expect(result.isFailure, true);
-      expect(result.failureOrNull, isA<ConflictFailure>());
-    });
+        expect(result.isFailure, true);
+        expect(result.failureOrNull, isA<ConflictFailure>());
+      },
+    );
 
-    test('successfully updates returned mutation in MutationRepositoryImpl', () async {
-      // Return a mutation first so it has returned status
-      final all = await repository.getAllMutations();
-      final submitted = all.dataOrNull!.firstWhere(
-        (m) => m.status == MutationStatus.submitted,
-      );
+    test(
+      'successfully updates returned mutation in MutationRepositoryImpl',
+      () async {
+        // Return a mutation first so it has returned status
+        final all = await repository.getAllMutations();
+        final submitted = all.dataOrNull!.firstWhere(
+          (m) => m.status == MutationStatus.submitted,
+        );
 
-      await repository.returnMutation(
-        mutationId: submitted.id,
-        reason: 'Dokumen belum lengkap',
-        operatorName: 'Operator Test',
-      );
+        await repository.returnMutation(
+          mutationId: submitted.id,
+          reason: 'Dokumen belum lengkap',
+          operatorName: 'Operator Test',
+        );
 
-      final result = await repository.updateMutation(
-        mutationId: submitted.id,
-        targetLocation: 'Lantai 5 - Direksi',
-        targetPic: 'Bambang Sudiro',
-        reason: 'Kebutuhan mendesak direksi',
-        documentName: 'revisi_dokumen.pdf',
-      );
+        final result = await repository.updateMutation(
+          mutationId: submitted.id,
+          targetLocation: 'Lantai 5 - Direksi',
+          targetPic: 'Bambang Sudiro',
+          reason: 'Kebutuhan mendesak direksi',
+          documentName: 'revisi_dokumen.pdf',
+        );
 
-      expect(result.isSuccess, true);
-      final updated = result.dataOrNull!;
-      expect(updated.status, MutationStatus.submitted);
-      expect(updated.targetLocation, 'Lantai 5 - Direksi');
-      expect(updated.targetPic, 'Bambang Sudiro');
-      expect(updated.reason, 'Kebutuhan mendesak direksi');
-      expect(updated.documentName, 'revisi_dokumen.pdf');
-    });
+        expect(result.isSuccess, true);
+        final updated = result.dataOrNull!;
+        expect(updated.status, MutationStatus.submitted);
+        expect(updated.targetLocation, 'Lantai 5 - Direksi');
+        expect(updated.targetPic, 'Bambang Sudiro');
+        expect(updated.reason, 'Kebutuhan mendesak direksi');
+        expect(updated.documentName, 'revisi_dokumen.pdf');
+      },
+    );
   });
 }

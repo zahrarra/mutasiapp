@@ -15,8 +15,6 @@ import '../../../mutation/domain/usecases/get_pending_verifications_usecase.dart
 import '../../../mutation/domain/usecases/return_mutation_usecase.dart';
 import '../../../mutation/domain/usecases/verify_mutation_usecase.dart';
 import '../../../mutation/presentation/providers/mutation_provider.dart';
-import '../../../bagian_aset/presentation/providers/bagian_aset_verification_provider.dart';
-import '../../../kadiv/presentation/providers/kadiv_approval_provider.dart';
 
 // ─── Use Case Providers ───────────────────────────────────────────────────────
 
@@ -39,7 +37,6 @@ final getPendingVerificationsUseCaseProvider =
 /// Provider detail satu mutasi untuk Operator via API Laravel.
 final operatorMutationDetailProvider = apiMutationDetailProvider;
 
-
 /// Otomatis load asset dari AssetRepository berdasarkan assetId (SIMAK BMN).
 final operatorMasterAssetProvider = FutureProvider.family<Asset?, String>((
   ref,
@@ -47,18 +44,23 @@ final operatorMasterAssetProvider = FutureProvider.family<Asset?, String>((
 ) async {
   final cleanId = assetId.trim();
   if (cleanId.isEmpty) return null;
-  final assetRepo = ref.watch(assetRepositoryProvider);
-  final result = await assetRepo.getAssetById(cleanId);
-  if (result is Success<Asset>) {
-    return result.data;
-  }
-  final listResult = await assetRepo.getAssets(query: cleanId);
-  if (listResult is Success<List<Asset>> && listResult.data.isNotEmpty) {
-    return listResult.data.firstWhere(
-      (a) => a.id == cleanId || a.assetCode == cleanId,
-      orElse: () => listResult.data.first,
-    );
-  }
+
+  try {
+    final apiRepo = ref.watch(apiAssetRepositoryProvider);
+    final result = await apiRepo.getAssetById(cleanId);
+    if (result is Success<Asset>) {
+      return result.data;
+    }
+  } catch (_) {}
+
+  try {
+    final localRepo = ref.watch(assetRepositoryProvider);
+    final localResult = await localRepo.getAssetById(cleanId);
+    if (localResult is Success<Asset>) {
+      return localResult.data;
+    }
+  } catch (_) {}
+
   return null;
 });
 
@@ -78,13 +80,17 @@ enum OperatorStatusFilter {
   all,
   submitted,
   allocated,
-  returned;
+  returned,
+  completed,
+  rejected;
 
   String get displayName => switch (this) {
     OperatorStatusFilter.all => 'Semua Status',
     OperatorStatusFilter.submitted => 'Menunggu Verifikasi',
     OperatorStatusFilter.allocated => 'Dialokasikan',
     OperatorStatusFilter.returned => 'Dikembalikan',
+    OperatorStatusFilter.completed => 'Selesai',
+    OperatorStatusFilter.rejected => 'Ditolak',
   };
 }
 
@@ -229,17 +235,16 @@ final filteredIncomingMutationsProvider = Provider<AsyncValue<List<Mutation>>>((
     // 1. Filter status
     var list = mutations.where((m) {
       return switch (statusFilter) {
-        OperatorStatusFilter.submitted => m.status == MutationStatus.submitted,
+        OperatorStatusFilter.submitted =>
+          m.status.historyCategory == MutationHistoryCategory.processing,
         OperatorStatusFilter.allocated =>
-          m.status == MutationStatus.waitingAssetVerification ||
-              m.status == MutationStatus.verified ||
-              m.status == MutationStatus.waitingDivisionHeadApproval ||
-              m.status == MutationStatus.waitingKadivApproval ||
-              m.status == MutationStatus.waitingConfirmation ||
-              m.status == MutationStatus.approved ||
-              m.status == MutationStatus.pendingConfirmation ||
-              m.status == MutationStatus.completed,
-        OperatorStatusFilter.returned => m.status == MutationStatus.returned,
+          m.status.historyCategory == MutationHistoryCategory.allocated,
+        OperatorStatusFilter.returned =>
+          m.status.historyCategory == MutationHistoryCategory.returned,
+        OperatorStatusFilter.completed =>
+          m.status.historyCategory == MutationHistoryCategory.completed,
+        OperatorStatusFilter.rejected =>
+          m.status.historyCategory == MutationHistoryCategory.rejected,
         OperatorStatusFilter.all => true,
       };
     }).toList();
@@ -359,13 +364,7 @@ class VerificationActionNotifier
       );
       // Invalidate list agar ter-refresh
 
-      ref.invalidate(operatorMutationDetailProvider(mutationId));
-      ref.invalidate(apiMutationDetailProvider(mutationId));
-      ref.invalidate(mutationDetailProvider(mutationId));
-      ref.invalidate(mutationListProvider);
-      ref.invalidate(operatorAllMutationsProvider);
-      ref.invalidate(bagianAsetAllMutationsProvider);
-      ref.invalidate(kadivAllMutationsProvider);
+      invalidateAllRoleMutationProviders(ref, mutationId);
       return true;
     } else if (result is AppFailure<Mutation>) {
       state = VerificationActionState(
@@ -409,12 +408,7 @@ class VerificationActionNotifier
         result: result.data,
       );
 
-      ref.invalidate(operatorMutationDetailProvider(mutationId));
-      ref.invalidate(apiMutationDetailProvider(mutationId));
-      ref.invalidate(mutationDetailProvider(mutationId));
-      ref.invalidate(mutationListProvider);
-      ref.invalidate(operatorAllMutationsProvider);
-      ref.invalidate(bagianAsetAllMutationsProvider);
+      invalidateAllRoleMutationProviders(ref, mutationId);
       return true;
     } else if (result is AppFailure<Mutation>) {
       state = VerificationActionState(

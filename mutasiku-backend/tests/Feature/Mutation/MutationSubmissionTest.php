@@ -598,4 +598,76 @@ class MutationSubmissionTest extends TestCase
             $response->assertStatus(403);
         }
     }
+
+    public function test_submission_and_resubmit_preserves_original_pdf_filename(): void
+    {
+        $pemohon = $this->createUser('pemohon');
+        $token = $pemohon->createToken('test')->plainTextToken;
+        $asset = $this->createAsset($pemohon);
+        $destLocation = $this->createLocation('Kantor Cabang Baru', 'KCB');
+        $originalFileName = 'sk_mutasi_asli_2026.pdf';
+        $file = $this->createFakePdf($originalFileName, 200);
+
+        $payload = [
+            'asset_id' => $asset->id,
+            'destination_location_id' => $destLocation->id,
+            'reason' => 'Perpindahan tugas resmi',
+            'sk_document' => $file,
+            'asset_moves_with_applicant' => 1,
+        ];
+
+        // 1. Submit mutasi
+        $submitResponse = $this->postMutation($token, $payload);
+        $submitResponse->assertStatus(201);
+        $mutationId = $submitResponse->json('data.id');
+
+        $this->assertEquals($originalFileName, $submitResponse->json('data.sk_document_name'));
+        $this->assertEquals($originalFileName, $submitResponse->json('data.document_name'));
+
+        // Path penyimpanan fisik tetap acak/unik di folder documents/sk_sdm/
+        $storedPath = $submitResponse->json('data.sk_document');
+        $this->assertNotEquals($originalFileName, basename($storedPath));
+        $this->assertStringStartsWith('documents/sk_sdm/', $storedPath);
+
+        // Verifikasi di database
+        $this->assertDatabaseHas('mutations', [
+            'id' => $mutationId,
+            'sk_document' => $storedPath,
+            'sk_document_name' => $originalFileName,
+        ]);
+
+        // 2. Ambil detail mutasi (GET /mutations/{id})
+        $detailResponse = $this->withHeader('Authorization', "Bearer {$token}")
+            ->getJson("/api/v1/mutations/{$mutationId}");
+        $detailResponse->assertStatus(200);
+        $this->assertEquals($originalFileName, $detailResponse->json('data.sk_document_name'));
+        $this->assertEquals($originalFileName, $detailResponse->json('data.document_name'));
+
+        // 3. Simulasikan mutasi dikembalikan lalu di-resubmit dengan PDF baru
+        $mutation = Mutation::find($mutationId);
+        $mutation->status = 'dikembalikan_ke_pemohon';
+        $mutation->save();
+
+        $newFileName = 'sk_revisi_final_v2.pdf';
+        $newFile = $this->createFakePdf($newFileName, 300);
+
+        $resubmitResponse = $this->withHeader('Authorization', "Bearer {$token}")
+            ->post("/api/v1/mutations/{$mutationId}/resubmit", [
+                'destination_location_id' => $destLocation->id,
+                'reason' => 'Perbaikan lampiran dokumen',
+                'sk_document' => $newFile,
+            ]);
+
+        $resubmitResponse->assertStatus(200);
+        $this->assertEquals($newFileName, $resubmitResponse->json('data.sk_document_name'));
+        $this->assertEquals($newFileName, $resubmitResponse->json('data.document_name'));
+
+        $newStoredPath = $resubmitResponse->json('data.sk_document');
+        $this->assertNotEquals($storedPath, $newStoredPath);
+        $this->assertDatabaseHas('mutations', [
+            'id' => $mutationId,
+            'sk_document' => $newStoredPath,
+            'sk_document_name' => $newFileName,
+        ]);
+    }
 }

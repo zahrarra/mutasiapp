@@ -5,6 +5,7 @@
 // Font: Montserrat. Desain compact, proporsional, dan adaptif di HP.
 
 import 'dart:ui';
+
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
@@ -18,7 +19,8 @@ Future<void> showOperatorVerificationSuccessDialog(
     context: context,
     barrierDismissible: false,
     barrierLabel: 'Verifikasi Berhasil',
-    barrierColor: const Color(0xFF0F172A).withValues(alpha: 0.50), // bg-slate-900/50
+    barrierColor: const Color(0xFF0F172A)
+        .withValues(alpha: 0.50), // bg-slate-900/50
     transitionDuration: const Duration(milliseconds: 250),
     pageBuilder: (dialogCtx, anim1, anim2) => OperatorVerificationSuccessDialog(
       onNextTicket: onNextTicket,
@@ -123,7 +125,8 @@ class OperatorVerificationSuccessDialog extends StatelessWidget {
                     color: const Color(0xFFECFDF5), // bg-emerald-50
                     shape: BoxShape.circle,
                     border: Border.all(
-                      color: const Color(0xFFD1FAE5).withValues(alpha: 0.85), // border-emerald-100/80
+                      color: const Color(0xFFD1FAE5)
+                          .withValues(alpha: 0.85), // border-emerald-100/80
                       width: 1.5,
                     ),
                     boxShadow: [

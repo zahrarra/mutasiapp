@@ -17,7 +17,7 @@ class DivisionApproveMutationRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'action' => ['required', 'string', 'in:approve,reject'],
+            'action' => ['nullable', 'string', 'in:approve,reject'],
             'reason' => ['nullable', 'string', 'max:1000'],
         ];
     }

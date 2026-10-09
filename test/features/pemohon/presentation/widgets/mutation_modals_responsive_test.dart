@@ -11,45 +11,50 @@ void main() {
 
   group('MutationSubmitSuccessDialog (Stitch HTML Terbaru)', () {
     final viewports = [
-      const Size(320, 640),  // Small Mobile
-      const Size(360, 780),  // Standard Mobile
-      const Size(390, 844),  // iPhone 12/13/14
+      const Size(320, 640), // Small Mobile
+      const Size(360, 780), // Standard Mobile
+      const Size(390, 844), // iPhone 12/13/14
       const Size(768, 1024), // Tablet
       const Size(1280, 800), // Desktop
     ];
 
     for (final size in viewports) {
-      testWidgets('Renders properly without overflow on ${size.width}x${size.height}', (tester) async {
-        tester.view.physicalSize = size;
-        tester.view.devicePixelRatio = 1.0;
-        addTearDown(() => tester.view.resetPhysicalSize());
+      testWidgets(
+        'Renders properly without overflow on ${size.width}x${size.height}',
+        (tester) async {
+          tester.view.physicalSize = size;
+          tester.view.devicePixelRatio = 1.0;
+          addTearDown(() => tester.view.resetPhysicalSize());
 
-        await tester.pumpWidget(
-          const ProviderScope(
-            child: MaterialApp(
-              home: Scaffold(
-                body: MutationSubmitSuccessDialog(
-                  ticketNumber: 'TI-2026-00126',
-                  mutationId: 'mut_test_123',
+          await tester.pumpWidget(
+            const ProviderScope(
+              child: MaterialApp(
+                home: Scaffold(
+                  body: MutationSubmitSuccessDialog(
+                    ticketNumber: 'TI-2026-00126',
+                    mutationId: 'mut_test_123',
+                  ),
                 ),
               ),
             ),
-          ),
-        );
-        await tester.pumpAndSettle();
+          );
+          await tester.pumpAndSettle();
 
-        expect(tester.takeException(), isNull);
-        expect(find.text('Pengajuan Berhasil Dikirim'), findsOneWidget);
-        expect(
-          find.text('Pengajuan perpindahan aset Anda telah berhasil dicatat dan siap diproses.'),
-          findsOneWidget,
-        );
-        expect(find.text('NOMOR TIKET'), findsOneWidget);
-        expect(find.text('TI-2026-00126'), findsOneWidget);
-        expect(find.text('Salin'), findsOneWidget);
-        expect(find.text('Lihat Status Tracking'), findsOneWidget);
-        expect(find.text('Kembali ke Beranda'), findsOneWidget);
-      });
+          expect(tester.takeException(), isNull);
+          expect(find.text('Pengajuan Berhasil Dikirim'), findsOneWidget);
+          expect(
+            find.text(
+              'Pengajuan perpindahan aset Anda telah berhasil dicatat dan siap diproses.',
+            ),
+            findsOneWidget,
+          );
+          expect(find.text('NOMOR TIKET'), findsOneWidget);
+          expect(find.text('TI-2026-00126'), findsOneWidget);
+          expect(find.text('Salin'), findsOneWidget);
+          expect(find.text('Lihat Status Tracking'), findsOneWidget);
+          expect(find.text('Kembali ke Beranda'), findsOneWidget);
+        },
+      );
     }
   });
 }

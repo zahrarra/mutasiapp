@@ -1,3 +1,4 @@
+import 'package:mutasiku/core/errors/failures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -26,20 +27,47 @@ class _FakeAuthRepo implements AuthRepository {
   Future<Result<User?>> getCurrentUser() async => Result.success(user);
 
   @override
-  Future<Result<User>> login({required String username, required String password}) async =>
-      throw UnimplementedError();
+  Future<Result<User>> login({
+    required String username,
+    required String password,
+  }) async => throw UnimplementedError();
 
   @override
   Future<void> logout() async {}
+    @override
+  Future<Result<User>> changePassword({
+    required String currentPassword,
+    required String newPassword,
+    required String confirmPassword,
+  }) async {
+    if (newPassword.length < 8) {
+      return Result.failure(
+        const ValidationFailure(message: 'Password baru minimal 8 karakter.'),
+      );
+    }
+    if (newPassword != confirmPassword) {
+      return Result.failure(
+        const ValidationFailure(message: 'Konfirmasi password baru tidak cocok.'),
+      );
+    }
+    if (newPassword == currentPassword) {
+      return Result.failure(
+        const ValidationFailure(
+          message: 'Password baru harus berbeda dengan password lama.',
+        ),
+      );
+    }
+    return Result.success(user.copyWith(mustChangePassword: false));
+  }
 }
 
 class _FakeAuthNotifier extends AuthNotifier {
   _FakeAuthNotifier(User user)
-      : super(
-          loginUseCase: LoginUseCase(repository: _FakeAuthRepo(user)),
-          logoutUseCase: LogoutUseCase(repository: _FakeAuthRepo(user)),
-          authRepository: _FakeAuthRepo(user),
-        ) {
+    : super(
+        loginUseCase: LoginUseCase(repository: _FakeAuthRepo(user)),
+        logoutUseCase: LogoutUseCase(repository: _FakeAuthRepo(user)),
+        authRepository: _FakeAuthRepo(user),
+      ) {
     state = AuthState(isLoading: false, user: user);
   }
 }
@@ -52,95 +80,105 @@ class _FakeRepo implements MutationRepository {
   dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
 
   @override
-  Future<Result<List<Mutation>>> getAllMutations() async => Result.success(mutations);
+  Future<Result<List<Mutation>>> getAllMutations() async =>
+      Result.success(mutations);
+
+  @override
+  Future<Result<List<Mutation>>> getMutationsByUser(String userId) async =>
+      Result.success(mutations);
 }
 
 void main() {
-  testWidgets('Floating button "+ Ajukan Mutasi" sits snugly above navigation bar with 8-12dp gap and matches design spec', (tester) async {
-    tester.view.physicalSize = const Size(390, 844);
-    tester.view.devicePixelRatio = 1.0;
-    addTearDown(() {
-      tester.view.resetPhysicalSize();
-      tester.view.resetDevicePixelRatio();
-    });
+  testWidgets(
+    'Floating button "+ Ajukan Mutasi" sits snugly above navigation bar with 8-12dp gap and matches design spec',
+    (tester) async {
+      tester.view.physicalSize = const Size(390, 844);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(() {
+        tester.view.resetPhysicalSize();
+        tester.view.resetDevicePixelRatio();
+      });
 
-    const testUser = User(
-      id: 'usr_pemohon',
-      name: 'Pemohon Test',
-      username: 'pemohon_test',
-      email: 'pemohon@mutasiku.id',
-      role: UserRole.pemohon,
-      department: 'Finance',
-    );
+      const testUser = User(
+        id: 'usr_pemohon',
+        name: 'Pemohon Test',
+        username: 'pemohon_test',
+        email: 'pemohon@mutasiku.id',
+        role: UserRole.pemohon,
+        department: 'Finance',
+      );
 
-    final testMutation = Mutation(
-      id: 'mut_1',
-      ticketNumber: 'MUT-001',
-      asset: const Asset(
-        id: 'AST-1',
-        assetCode: 'AST-ELK-1',
-        name: 'MacBook Pro M2',
-        category: AssetCategory(id: 'c1', code: 'ELK', name: 'Elektronik'),
-        location: 'Kantor Pusat',
-        pic: 'Pemohon User',
-        status: AssetStatus.inMutation,
-        condition: 'Baik',
-        acquisitionYear: 2024,
-      ),
-      applicantId: 'usr_pemohon',
-      applicantName: 'Pemohon Test',
-      currentLocation: 'Kantor Pusat',
-      targetLocation: 'Cabang Surabaya',
-      currentPic: 'Pemohon Test',
-      targetPic: 'Budi Santoso',
-      reason: 'Mutasi dinas',
-      status: MutationStatus.submitted,
-      createdAt: DateTime.now(),
-    );
-
-    await tester.pumpWidget(
-      ProviderScope(
-        overrides: [
-          mutationRepositoryProvider.overrideWithValue(_FakeRepo([testMutation])),
-          authStateProvider.overrideWith((ref) => _FakeAuthNotifier(testUser)),
-        ],
-        child: const MaterialApp(
-          home: PemohonMutationListScreen(),
+      final testMutation = Mutation(
+        id: 'mut_1',
+        ticketNumber: 'MUT-001',
+        asset: const Asset(
+          id: 'AST-1',
+          assetCode: 'AST-ELK-1',
+          name: 'MacBook Pro M2',
+          category: AssetCategory(id: 'c1', code: 'ELK', name: 'Elektronik'),
+          location: 'Kantor Pusat',
+          pic: 'Pemohon User',
+          status: AssetStatus.inMutation,
+          condition: 'Baik',
+          acquisitionYear: 2024,
         ),
-      ),
-    );
+        applicantId: 'usr_pemohon',
+        applicantName: 'Pemohon Test',
+        currentLocation: 'Kantor Pusat',
+        targetLocation: 'Cabang Surabaya',
+        currentPic: 'Pemohon Test',
+        targetPic: 'Budi Santoso',
+        reason: 'Mutasi dinas',
+        status: MutationStatus.submitted,
+        createdAt: DateTime.now(),
+      );
 
-    await tester.pumpAndSettle();
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            mutationRepositoryProvider.overrideWithValue(
+              _FakeRepo([testMutation]),
+            ),
+            authStateProvider.overrideWith(
+              (ref) => _FakeAuthNotifier(testUser),
+            ),
+          ],
+          child: const MaterialApp(home: PemohonMutationListScreen()),
+        ),
+      );
 
-    // Verify FAB presence and text
-    final fabFinder = find.byType(FloatingActionButton);
-    expect(fabFinder, findsOneWidget);
-    expect(find.text('Ajukan Mutasi'), findsOneWidget);
-    expect(find.byIcon(Icons.add_rounded), findsOneWidget);
+      await tester.pumpAndSettle();
 
-    final fab = tester.widget<FloatingActionButton>(fabFinder);
-    expect(fab.backgroundColor, const Color(0xFF00273A));
-    expect(fab.foregroundColor, Colors.white);
-    expect(fab.shape, isA<RoundedRectangleBorder>());
+      // Verify FAB presence and text
+      final fabFinder = find.byType(FloatingActionButton);
+      expect(fabFinder, findsOneWidget);
+      expect(find.text('Ajukan Mutasi'), findsOneWidget);
+      expect(find.byIcon(Icons.add_rounded), findsOneWidget);
 
-    // Verify layout positions
-    final fabRect = tester.getRect(fabFinder);
-    final navBarFinder = find.byType(CustomFloatingNavBar);
-    expect(navBarFinder, findsOneWidget);
-    final navBarRect = tester.getRect(navBarFinder);
+      final fab = tester.widget<FloatingActionButton>(fabFinder);
+      expect(fab.backgroundColor, const Color(0xFF00273A));
+      expect(fab.foregroundColor, Colors.white);
+      expect(fab.shape, isA<RoundedRectangleBorder>());
 
-    // Calculate vertical gap between bottom of FAB and top of navigation bar
-    final verticalGap = navBarRect.top - fabRect.bottom;
+      // Verify layout positions
+      final fabRect = tester.getRect(fabFinder);
+      final navBarFinder = find.byType(CustomFloatingNavBar);
+      expect(navBarFinder, findsOneWidget);
+      final navBarRect = tester.getRect(navBarFinder);
 
-    // Check gap is around 8-12 dp (precisely 10 dp)
-    expect(verticalGap, inInclusiveRange(8.0, 12.0));
+      // Calculate vertical gap between bottom of FAB and top of navigation bar
+      final verticalGap = navBarRect.top - fabRect.bottom;
 
-    // Confirm no overlap
-    expect(fabRect.bottom < navBarRect.top, isTrue);
+      // Check gap is around 8-12 dp (precisely 10 dp)
+      expect(verticalGap, inInclusiveRange(8.0, 12.0));
 
-    // Confirm horizontal alignment anchored to bottom-right corner
-    const screenWidth = 390.0;
-    final rightMargin = screenWidth - fabRect.right;
-    expect(rightMargin, equals(16.0));
-  });
+      // Confirm no overlap
+      expect(fabRect.bottom < navBarRect.top, isTrue);
+
+      // Confirm horizontal alignment anchored to bottom-right corner
+      const screenWidth = 390.0;
+      final rightMargin = screenWidth - fabRect.right;
+      expect(rightMargin, equals(16.0));
+    },
+  );
 }

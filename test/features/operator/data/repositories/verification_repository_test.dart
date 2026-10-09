@@ -31,8 +31,9 @@ void main() {
     test('verifyMutation updates status to waitingAssetVerification', () async {
       // Ambil mutasi pertama (mut_001 berstatus submitted)
       final all = await repository.getAllMutations();
-      final target =
-          all.dataOrNull!.firstWhere((m) => m.status == MutationStatus.submitted);
+      final target = all.dataOrNull!.firstWhere(
+        (m) => m.status == MutationStatus.submitted,
+      );
 
       final result = await repository.verifyMutation(
         mutationId: target.id,
@@ -48,8 +49,9 @@ void main() {
 
     test('returnMutation updates status to returned with reason', () async {
       final all = await repository.getAllMutations();
-      final target =
-          all.dataOrNull!.firstWhere((m) => m.status == MutationStatus.submitted);
+      final target = all.dataOrNull!.firstWhere(
+        (m) => m.status == MutationStatus.submitted,
+      );
 
       const returnReason = 'Data lokasi tujuan tidak valid';
       final result = await repository.returnMutation(
@@ -65,27 +67,31 @@ void main() {
       expect(updated.verifiedBy, 'Operator Test');
     });
 
-    test('verifyMutation returns NotFoundFailure for unknown mutation id',
-        () async {
-      final result = await repository.verifyMutation(
-        mutationId: 'unknown_id_9999',
-        operatorName: 'Operator Test',
-      );
+    test(
+      'verifyMutation returns NotFoundFailure for unknown mutation id',
+      () async {
+        final result = await repository.verifyMutation(
+          mutationId: 'unknown_id_9999',
+          operatorName: 'Operator Test',
+        );
 
-      expect(result.isFailure, true);
-      expect(result.failureOrNull, isA<NotFoundFailure>());
-    });
+        expect(result.isFailure, true);
+        expect(result.failureOrNull, isA<NotFoundFailure>());
+      },
+    );
 
-    test('returnMutation returns NotFoundFailure for unknown mutation id',
-        () async {
-      final result = await repository.returnMutation(
-        mutationId: 'unknown_id_9999',
-        reason: 'Alasan',
-        operatorName: 'Operator Test',
-      );
+    test(
+      'returnMutation returns NotFoundFailure for unknown mutation id',
+      () async {
+        final result = await repository.returnMutation(
+          mutationId: 'unknown_id_9999',
+          reason: 'Alasan',
+          operatorName: 'Operator Test',
+        );
 
-      expect(result.isFailure, true);
-      expect(result.failureOrNull, isA<NotFoundFailure>());
-    });
+        expect(result.isFailure, true);
+        expect(result.failureOrNull, isA<NotFoundFailure>());
+      },
+    );
   });
 }

@@ -137,9 +137,11 @@ class _KadivDashboardScreenState extends ConsumerState<KadivDashboardScreen> {
           list = list.where(isWaitingKadivApproval);
           break;
         case 'cabang':
-          list = list.where((m) =>
-              m.currentLocation.trim().toLowerCase() !=
-              m.targetLocation.trim().toLowerCase());
+          list = list.where(
+            (m) =>
+                m.currentLocation.trim().toLowerCase() !=
+                m.targetLocation.trim().toLowerCase(),
+          );
           break;
       }
     }
@@ -389,9 +391,7 @@ class _KadivDashboardScreenState extends ConsumerState<KadivDashboardScreen> {
       width: double.infinity,
       decoration: BoxDecoration(
         color: _C.navy,
-        borderRadius: const BorderRadius.vertical(
-          bottom: Radius.circular(36),
-        ),
+        borderRadius: const BorderRadius.vertical(bottom: Radius.circular(36)),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withValues(alpha: 0.15),
@@ -688,10 +688,7 @@ class _KadivDashboardScreenState extends ConsumerState<KadivDashboardScreen> {
       decoration: BoxDecoration(
         color: _C.darkNavy,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(
-          color: _C.teal.withValues(alpha: 0.40),
-          width: 1.0,
-        ),
+        border: Border.all(color: _C.teal.withValues(alpha: 0.40), width: 1.0),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withValues(alpha: 0.20),
@@ -779,10 +776,7 @@ class _KadivDashboardScreenState extends ConsumerState<KadivDashboardScreen> {
                           fontWeight: FontWeight.w700,
                         ),
                       ),
-                      label: const Icon(
-                        Icons.arrow_forward_rounded,
-                        size: 15,
-                      ),
+                      label: const Icon(Icons.arrow_forward_rounded, size: 15),
                       style: ElevatedButton.styleFrom(
                         backgroundColor: Colors.white,
                         foregroundColor: _C.navy,
@@ -799,17 +793,13 @@ class _KadivDashboardScreenState extends ConsumerState<KadivDashboardScreen> {
                   ],
                 ),
               ),
-              const Expanded(
-                flex: 6,
-                child: SizedBox.shrink(),
-              ),
+              const Expanded(flex: 6, child: SizedBox.shrink()),
             ],
           ),
         ],
       ),
     );
   }
-
 
   // ──────────────────────────────────────────────────────────────────────────
   // KATEGORI ASET (Grid 2x2 — Stitch 1:1)
@@ -839,8 +829,9 @@ class _KadivDashboardScreenState extends ConsumerState<KadivDashboardScreen> {
                 isSelected: _selectedCategoryFilter == 'ti',
                 onTap: () {
                   setState(() {
-                    _selectedCategoryFilter =
-                        _selectedCategoryFilter == 'ti' ? null : 'ti';
+                    _selectedCategoryFilter = _selectedCategoryFilter == 'ti'
+                        ? null
+                        : 'ti';
                   });
                 },
               ),
@@ -856,8 +847,9 @@ class _KadivDashboardScreenState extends ConsumerState<KadivDashboardScreen> {
                 isSelected: _selectedCategoryFilter == 'umum',
                 onTap: () {
                   setState(() {
-                    _selectedCategoryFilter =
-                        _selectedCategoryFilter == 'umum' ? null : 'umum';
+                    _selectedCategoryFilter = _selectedCategoryFilter == 'umum'
+                        ? null
+                        : 'umum';
                   });
                 },
               ),
@@ -879,8 +871,8 @@ class _KadivDashboardScreenState extends ConsumerState<KadivDashboardScreen> {
                   setState(() {
                     _selectedCategoryFilter =
                         _selectedCategoryFilter == 'prioritas'
-                            ? null
-                            : 'prioritas';
+                        ? null
+                        : 'prioritas';
                   });
                 },
               ),
@@ -1017,18 +1009,10 @@ class _KadivDashboardScreenState extends ConsumerState<KadivDashboardScreen> {
             children: [
               Text(
                 'Lihat Antrean',
-                style: _font(
-                  size: 12,
-                  weight: FontWeight.w600,
-                  color: _C.navy,
-                ),
+                style: _font(size: 12, weight: FontWeight.w600, color: _C.navy),
               ),
               const SizedBox(width: 2),
-              const Icon(
-                Icons.chevron_right_rounded,
-                size: 16,
-                color: _C.navy,
-              ),
+              const Icon(Icons.chevron_right_rounded, size: 16, color: _C.navy),
             ],
           ),
         ),
@@ -1063,10 +1047,7 @@ class _KadivDashboardScreenState extends ConsumerState<KadivDashboardScreen> {
       loading: () => const Center(
         child: Padding(
           padding: EdgeInsets.all(32),
-          child: CircularProgressIndicator(
-            strokeWidth: 2,
-            color: _C.teal,
-          ),
+          child: CircularProgressIndicator(strokeWidth: 2, color: _C.teal),
         ),
       ),
       error: (err, _) => Container(
@@ -1128,10 +1109,7 @@ class _KadivDashboardScreenState extends ConsumerState<KadivDashboardScreen> {
             ],
           ),
           const SizedBox(height: 10),
-          Divider(
-            color: _C.border.withValues(alpha: 0.6),
-            height: 1,
-          ),
+          Divider(color: _C.border.withValues(alpha: 0.6), height: 1),
           const SizedBox(height: 12),
 
           // Asset Row: Thumbnail + Info
@@ -1218,9 +1196,7 @@ class _KadivDashboardScreenState extends ConsumerState<KadivDashboardScreen> {
             decoration: BoxDecoration(
               color: const Color(0xFFF6F8FA),
               borderRadius: BorderRadius.circular(12),
-              border: Border.all(
-                color: _C.border.withValues(alpha: 0.70),
-              ),
+              border: Border.all(color: _C.border.withValues(alpha: 0.70)),
             ),
             child: Row(
               children: [
@@ -1250,11 +1226,7 @@ class _KadivDashboardScreenState extends ConsumerState<KadivDashboardScreen> {
                     color: _C.teal,
                   ),
                 ),
-                const Icon(
-                  Icons.cell_tower_rounded,
-                  size: 14,
-                  color: _C.navy,
-                ),
+                const Icon(Icons.cell_tower_rounded, size: 14, color: _C.navy),
                 const SizedBox(width: 5),
                 Expanded(
                   child: Text(
@@ -1324,11 +1296,7 @@ class _KadivDashboardScreenState extends ConsumerState<KadivDashboardScreen> {
       ),
       child: Column(
         children: [
-          const Icon(
-            Icons.check_circle_outline,
-            size: 44,
-            color: _C.success,
-          ),
+          const Icon(Icons.check_circle_outline, size: 44, color: _C.success),
           const SizedBox(height: 12),
           Text(
             'Tidak Ada Antrean Approval',
@@ -1344,17 +1312,13 @@ class _KadivDashboardScreenState extends ConsumerState<KadivDashboardScreen> {
                 ? 'Tidak ada hasil yang cocok dengan pencarian "$_query".'
                 : 'Seluruh mutasi telah diproses oleh Pemimpin Divisi.',
             textAlign: TextAlign.center,
-            style: _font(
-              size: 12,
-              color: _C.textSecondary,
-            ),
+            style: _font(size: 12, color: _C.textSecondary),
           ),
         ],
       ),
     );
   }
 }
-
 
 // ────────────────────────────────────────────────────────────────────────────
 // ISOMETRIC 3D GRAPHIC PAINTER (Stitch 1:1)
@@ -1523,4 +1487,3 @@ class _IsometricGraphicPainter extends CustomPainter {
 
 // ─── Pemimpin Divisi Dashboard Screen Alias ───────────────────────────────────
 typedef PemimpinDivisiDashboardScreen = KadivDashboardScreen;
-

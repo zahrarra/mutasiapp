@@ -17,8 +17,12 @@ class AssetVerifyMutationRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'action' => ['required', 'string', 'in:verify,return'],
-            'target_pic_id' => ['nullable', 'integer', 'exists:users,id'],
+            'action' => ['nullable', 'string', 'in:verify,return'],
+            'target_pic_id' => [
+                'nullable',
+                'integer',
+                \Illuminate\Validation\Rule::exists('users', 'id')->where('is_active', true),
+            ],
             'reason' => ['nullable', 'string', 'max:1000'],
         ];
     }

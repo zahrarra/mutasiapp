@@ -36,9 +36,7 @@ class MutationListScreen extends ConsumerWidget {
         foregroundColor: Colors.white,
         elevation: 6,
         highlightElevation: 8,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(999),
-        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(999)),
         icon: const Icon(Icons.add_rounded, size: 20, color: Colors.white),
         label: const Text(
           'Ajukan Mutasi',
@@ -206,12 +204,19 @@ class _MutationListItem extends StatelessWidget {
               const SizedBox(height: AppSpacing.xxs),
               Row(
                 children: [
-                  const Icon(Icons.arrow_forward, size: 13, color: AppColors.textSecondary),
+                  const Icon(
+                    Icons.arrow_forward,
+                    size: 13,
+                    color: AppColors.textSecondary,
+                  ),
                   const SizedBox(width: AppSpacing.xxs),
                   Expanded(
                     child: Text(
                       mutation.targetLocation,
-                      style: const TextStyle(fontSize: 12, color: AppColors.textSecondary),
+                      style: const TextStyle(
+                        fontSize: 12,
+                        color: AppColors.textSecondary,
+                      ),
                       overflow: TextOverflow.ellipsis,
                     ),
                   ),
@@ -231,7 +236,11 @@ class _MutationListItem extends StatelessWidget {
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      const Icon(Icons.edit_note, size: 14, color: AppColors.warning),
+                      const Icon(
+                        Icons.edit_note,
+                        size: 14,
+                        color: AppColors.warning,
+                      ),
                       const SizedBox(width: 4),
                       const Text(
                         'Perlu diperbaiki — ketuk untuk mengedit',
@@ -259,7 +268,11 @@ class _MutationListItem extends StatelessWidget {
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      const Icon(Icons.touch_app_outlined, size: 14, color: AppColors.info),
+                      const Icon(
+                        Icons.touch_app_outlined,
+                        size: 14,
+                        color: AppColors.info,
+                      ),
                       const SizedBox(width: 4),
                       const Text(
                         'Menunggu konfirmasi Anda',
@@ -289,14 +302,21 @@ class _StatusChip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm, vertical: 4),
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.sm,
+        vertical: 4,
+      ),
       decoration: BoxDecoration(
         color: status.backgroundColor,
         borderRadius: BorderRadius.circular(AppRadius.pill),
       ),
       child: Text(
         status.displayName,
-        style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: status.color),
+        style: TextStyle(
+          fontSize: 11,
+          fontWeight: FontWeight.w600,
+          color: status.color,
+        ),
       ),
     );
   }

@@ -27,7 +27,8 @@ class PemohonSubmitSuccessScreen extends StatelessWidget {
             bottom: false,
             child: MutasiKuPageHeader(
               title: 'Pengajuan Terkirim',
-              subtitle: 'Tiket berhasil dibuat dan dalam proses',
+              subtitle:
+                  'Tiket berhasil dibuat dan menunggu pemeriksaan Operator',
               onBack: () => context.go(RouteNames.pemohonDashboardPath),
             ),
           ),
@@ -55,7 +56,7 @@ class PemohonSubmitSuccessScreen extends StatelessWidget {
                   ),
                   const SizedBox(height: AppSpacing.sm),
                   const Text(
-                    'Pengajuan mutasi aset Anda telah dikirim untuk diverifikasi Operator.',
+                    'Pengajuan mutasi aset Anda telah dikirim dan menunggu pemeriksaan Operator.',
                     textAlign: TextAlign.center,
                     style: TextStyle(color: AppColors.textSecondary),
                   ),

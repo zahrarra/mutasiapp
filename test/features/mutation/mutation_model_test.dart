@@ -34,11 +34,7 @@ void main() {
           'asset_code': 'AST-2026-0015',
           'name': 'MacBook Pro 16 M3',
           'asset_category_id': 1,
-          'category': {
-            'id': 1,
-            'name': 'Elektronik & IT',
-            'code': 'ELK',
-          },
+          'category': {'id': 1, 'name': 'Elektronik & IT', 'code': 'ELK'},
           'location_id': 1,
           'location': {
             'id': 1,
@@ -143,12 +139,19 @@ void main() {
 
       for (final entry in statusMap.entries) {
         final parsed = MutationStatus.fromApiValue(entry.key);
-        expect(parsed, equals(entry.value),
-            reason: 'Backend status "${entry.key}" gagal dipetakan');
+        expect(
+          parsed,
+          equals(entry.value),
+          reason: 'Backend status "${entry.key}" gagal dipetakan',
+        );
 
         // Pastikan apiValue round-trip konsisten
-        expect(parsed.apiValue, equals(entry.key),
-            reason: 'apiValue dari ${entry.value} tidak sesuai dengan ${entry.key}');
+        expect(
+          parsed.apiValue,
+          equals(entry.key),
+          reason:
+              'apiValue dari ${entry.value} tidak sesuai dengan ${entry.key}',
+        );
 
         // Test melalui MutationModel.fromJson
         final model = MutationModel.fromJson({
@@ -161,9 +164,14 @@ void main() {
       }
 
       // Status unknown atau null aman -> fallback ke submitted
-      expect(MutationStatus.fromApiValue(null), equals(MutationStatus.submitted));
-      expect(MutationStatus.fromApiValue('unknown_status_xyz'),
-          equals(MutationStatus.submitted));
+      expect(
+        MutationStatus.fromApiValue(null),
+        equals(MutationStatus.submitted),
+      );
+      expect(
+        MutationStatus.fromApiValue('unknown_status_xyz'),
+        equals(MutationStatus.submitted),
+      );
       expect(MutationStatus.fromApiValue(''), equals(MutationStatus.submitted));
     });
 
@@ -194,10 +202,7 @@ void main() {
           'name': 'Citra Dewi',
           'email': 'citra@test.com',
         },
-        'applicant': {
-          'id': 4,
-          'name': 'Budi Santoso',
-        },
+        'applicant': {'id': 4, 'name': 'Budi Santoso'},
       };
 
       final model = MutationModel.fromJson(json);
@@ -241,10 +246,7 @@ void main() {
 
     // ─── 5. Field Nullable Tidak Menyebabkan Crash ─────────────────────────
     test('5. Seluruh field opsional / nullable ditoleransi tanpa crash', () {
-      final minimalJson = {
-        'id': 401,
-        'ticket_number': 'T-401',
-      };
+      final minimalJson = {'id': 401, 'ticket_number': 'T-401'};
 
       final model = MutationModel.fromJson(minimalJson);
 
@@ -340,7 +342,10 @@ void main() {
       // Test PaginatedMutationResponse.fromJson
       final paginated = PaginatedMutationResponse.fromJson(paginatedPayload);
       expect(paginated.success, isTrue);
-      expect(paginated.message, equals('Daftar pengajuan mutasi berhasil diambil.'));
+      expect(
+        paginated.message,
+        equals('Daftar pengajuan mutasi berhasil diambil.'),
+      );
       expect(paginated.data.length, equals(2));
       expect(paginated.meta.currentPage, equals(1));
       expect(paginated.meta.lastPage, equals(5));
@@ -355,6 +360,51 @@ void main() {
       expect(MutationModel.listFromJson(null), isEmpty);
       expect(MutationModel.listFromJson({}), isEmpty);
       expect(MutationModel.listFromJson([]), isEmpty);
+    });
+
+    // ─── 8. Preservasi Nama Berkas Asli PDF (sk_document_name & document_name) ───
+    test('8. Nama berkas asli PDF dipertahankan dari sk_document_name meskipun path fisik di server ter-hash', () {
+      const hashedServerPath = 'documents/sk_sdm/a8f09d7c6b5e4321fedcba.pdf';
+      const originalFileName = 'sk_mutasi_resmi_divisi_ti.pdf';
+
+      final jsonWithOriginalDocName = {
+        'id': 202,
+        'ticket_number': 'MUT-2026-00202',
+        'status': 'diajukan',
+        'reason': 'Pindah unit',
+        'sk_document': hashedServerPath,
+        'sk_document_name': originalFileName,
+        'document_name': originalFileName,
+      };
+
+      final model = MutationModel.fromJson(jsonWithOriginalDocName);
+
+      // Pastikan documentPath menyimpan path server untuk download/streaming
+      expect(model.documentPath, equals(hashedServerPath));
+
+      // Pastikan documentName menyimpan NAMA ASLI untuk tampilan UI, BUKAN hash server
+      expect(model.documentName, equals(originalFileName));
+      expect(model.documentName, isNot(equals('a8f09d7c6b5e4321fedcba.pdf')));
+
+      // Verifikasi serialisasi toJson mempertahankan nama asli
+      final serialized = model.toJson();
+      expect(serialized['sk_document_name'], equals(originalFileName));
+      expect(serialized['document_name'], equals(originalFileName));
+    });
+
+    test('9. Fallback aman ekstraksi nama dokumen jika backend hanya mengirim sk_document tanpa metadata nama', () {
+      const legacyPath = 'documents/sk_sdm/dokumen_legacy.pdf';
+      final jsonLegacy = {
+        'id': 203,
+        'ticket_number': 'MUT-2026-00203',
+        'status': 'diajukan',
+        'reason': 'Tes fallback',
+        'sk_document': legacyPath,
+      };
+
+      final model = MutationModel.fromJson(jsonLegacy);
+      expect(model.documentPath, equals(legacyPath));
+      expect(model.documentName, equals('dokumen_legacy.pdf'));
     });
   });
 }

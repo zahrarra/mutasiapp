@@ -12,10 +12,12 @@ import 'package:go_router/go_router.dart';
 import '../../../../app/router/route_names.dart';
 import '../../../../app/theme/app_colors.dart';
 import '../../../../app/theme/app_spacing.dart';
+import '../../../../core/utils/sla_wita_helper.dart';
 import '../../../../core/widgets/document_preview_dialog.dart';
 import '../../../../core/widgets/error_view.dart';
 import '../../../../core/widgets/loading_indicator.dart';
 import '../../../../core/widgets/mutasiku_page_header.dart';
+import '../../../../core/widgets/sla_live_badge.dart';
 import '../../../auth/domain/entities/user.dart';
 import '../../../auth/domain/entities/user_role.dart';
 import '../../../auth/presentation/providers/auth_provider.dart';
@@ -74,182 +76,191 @@ class PemohonMutationDetailScreen extends ConsumerWidget {
           ),
           Expanded(
             child: asyncDetail.when(
-        loading: () => const LoadingIndicator(),
-        error: (e, _) => ErrorView(
-          message: e.toString(),
-          onRetry: () => ref.invalidate(pemohonMutationDetailProvider(mutationId)),
-        ),
-        data: (m) {
-          // Ownership guard
-          if (!_isMutationOwnedBy(m, authState.user)) {
-            return Center(
-              child: Padding(
-                padding: const EdgeInsets.all(AppSpacing.xl),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    const Icon(
-                      Icons.lock_outline,
-                      size: 64,
-                      color: AppColors.error,
-                    ),
-                    const SizedBox(height: AppSpacing.md),
-                    const Text(
-                      'Akses Ditolak',
-                      style: TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                        color: AppColors.textPrimary,
-                      ),
-                    ),
-                    const SizedBox(height: AppSpacing.sm),
-                    const Text(
-                      'Anda hanya dapat melihat pengajuan mutasi milik Anda sendiri.',
-                      textAlign: TextAlign.center,
-                      style: TextStyle(
-                        fontSize: 14,
-                        color: AppColors.textSecondary,
-                      ),
-                    ),
-                    const SizedBox(height: AppSpacing.lg),
-                    OutlinedButton.icon(
-                      onPressed: () {
-                        if (Navigator.of(context).canPop()) {
-                          Navigator.of(context).pop();
-                        } else {
-                          try {
-                            context.go(RouteNames.pemohonMutasiPath);
-                          } catch (_) {}
-                        }
-                      },
-                      icon: const Icon(Icons.arrow_back),
-                      label: const Text('Kembali'),
-                    ),
-                  ],
-                ),
+              loading: () => const LoadingIndicator(),
+              error: (e, _) => ErrorView(
+                message: e.toString(),
+                onRetry: () =>
+                    ref.invalidate(pemohonMutationDetailProvider(mutationId)),
               ),
-            );
-          }
-
-          return RefreshIndicator(
-            onRefresh: () async {
-              ref.invalidate(pemohonMutationDetailProvider(mutationId));
-            },
-            child: SingleChildScrollView(
-              physics: const AlwaysScrollableScrollPhysics(),
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  // 1. Status & Ticket Hero Card (Navy Gradient)
-                  _buildHeroCard(context, m),
-                  const SizedBox(height: 16),
-
-                  // 2. Alert Banners (Returned / Rejected)
-                  if (m.status == MutationStatus.returned) ...[
-                    _buildReturnedAlertBanner(m),
-                    const SizedBox(height: 16),
-                  ],
-                  if (m.status == MutationStatus.rejected) ...[
-                    _buildRejectedAlertBanner(m),
-                    const SizedBox(height: 16),
-                  ],
-
-                  // 3. Pelacakan Alur Kerja (Workflow Timeline)
-                  _buildTrackingTimelineCard(m),
-                  const SizedBox(height: 16),
-
-                  // 4. Spesifikasi Aset Card
-                  _buildAssetSpecificationCard(m),
-                  const SizedBox(height: 16),
-
-                  // 5. Rincian Perpindahan Card
-                  _buildTransferDetailsCard(m),
-                  const SizedBox(height: 16),
-
-                  // 6. Alasan & Dokumen Pendukung
-                  _buildJustificationAndDocumentCard(context, m, ref),
-                  const SizedBox(height: 16),
-
-                  // 7. Status Info Card
-                  _buildStatusInfoBanner(m),
-                  const SizedBox(height: 24),
-
-                  // 8. Bottom Action Buttons
-                  if (m.status == MutationStatus.returned) ...[
-                    ElevatedButton.icon(
-                      onPressed: () async {
-                        await context.push(
-                          RouteNames.pemohonMutasiEditPath.replaceFirst(
-                            ':id',
-                            m.id,
+              data: (m) {
+                // Ownership guard
+                if (!_isMutationOwnedBy(m, authState.user)) {
+                  return Center(
+                    child: Padding(
+                      padding: const EdgeInsets.all(AppSpacing.xl),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Icon(
+                            Icons.lock_outline,
+                            size: 64,
+                            color: AppColors.error,
                           ),
-                        );
-                        ref.invalidate(pemohonMutationDetailProvider(mutationId));
-                      },
-                      icon: const Icon(Icons.edit_outlined, color: Colors.white),
-                      label: const Text(
-                        'Edit & Ajukan Ulang',
-                        style: TextStyle(
-                          fontSize: 14,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.white,
-                        ),
-                      ),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: AppColors.warning,
-                        minimumSize: const Size.fromHeight(48),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        elevation: 0,
+                          const SizedBox(height: AppSpacing.md),
+                          const Text(
+                            'Akses Ditolak',
+                            style: TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                              color: AppColors.textPrimary,
+                            ),
+                          ),
+                          const SizedBox(height: AppSpacing.sm),
+                          const Text(
+                            'Anda hanya dapat melihat pengajuan mutasi milik Anda sendiri.',
+                            textAlign: TextAlign.center,
+                            style: TextStyle(
+                              fontSize: 14,
+                              color: AppColors.textSecondary,
+                            ),
+                          ),
+                          const SizedBox(height: AppSpacing.lg),
+                          OutlinedButton.icon(
+                            onPressed: () {
+                              if (Navigator.of(context).canPop()) {
+                                Navigator.of(context).pop();
+                              } else {
+                                try {
+                                  context.go(RouteNames.pemohonMutasiPath);
+                                } catch (_) {}
+                              }
+                            },
+                            icon: const Icon(Icons.arrow_back),
+                            label: const Text('Kembali'),
+                          ),
+                        ],
                       ),
                     ),
-                    const SizedBox(height: 24),
-                  ],
-                  if (m.status == MutationStatus.waitingConfirmation ||
-                      m.status == MutationStatus.pendingConfirmation) ...[
-                    ElevatedButton.icon(
-                      onPressed: () {
-                        context.push(
-                          RouteNames.pemohonConfirmationPath.replaceFirst(
-                            ':id',
-                            m.id,
-                          ),
-                        );
-                      },
-                      icon: const Icon(
-                        Icons.check_circle_outline,
-                        color: Colors.white,
-                      ),
-                      label: const Text(
-                        'Konfirmasi Mutasi',
-                        style: TextStyle(
-                          fontSize: 14,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.white,
-                        ),
-                      ),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: AppColors.primary,
-                        minimumSize: const Size.fromHeight(48),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        elevation: 0,
-                      ),
+                  );
+                }
+
+                return RefreshIndicator(
+                  onRefresh: () async {
+                    ref.invalidate(pemohonMutationDetailProvider(mutationId));
+                  },
+                  child: SingleChildScrollView(
+                    physics: const AlwaysScrollableScrollPhysics(),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 16,
                     ),
-                    const SizedBox(height: 24),
-                  ],
-                ],
-              ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        // 1. Status & Ticket Hero Card (Navy Gradient)
+                        _buildHeroCard(context, m),
+                        const SizedBox(height: 16),
+
+                        // 2. Alert Banners (Returned / Rejected)
+                        if (m.status == MutationStatus.returned) ...[
+                          _buildReturnedAlertBanner(m),
+                          const SizedBox(height: 16),
+                        ],
+                        if (m.status == MutationStatus.rejected) ...[
+                          _buildRejectedAlertBanner(m),
+                          const SizedBox(height: 16),
+                        ],
+
+                        // 3. Pelacakan Alur Kerja (Workflow Timeline)
+                        _buildTrackingTimelineCard(m),
+                        const SizedBox(height: 16),
+
+                        // 4. Spesifikasi Aset Card
+                        _buildAssetSpecificationCard(m),
+                        const SizedBox(height: 16),
+
+                        // 5. Rincian Perpindahan Card
+                        _buildTransferDetailsCard(m),
+                        const SizedBox(height: 16),
+
+                        // 6. Alasan & Dokumen Pendukung
+                        _buildJustificationAndDocumentCard(context, m, ref),
+                        const SizedBox(height: 16),
+
+                        // 7. Status Info Card
+                        _buildStatusInfoBanner(m),
+                        const SizedBox(height: 24),
+
+                        // 8. Bottom Action Buttons
+                        if (m.status == MutationStatus.returned) ...[
+                          ElevatedButton.icon(
+                            onPressed: () async {
+                              await context.push(
+                                RouteNames.pemohonMutasiEditPath.replaceFirst(
+                                  ':id',
+                                  m.id,
+                                ),
+                              );
+                              ref.invalidate(
+                                pemohonMutationDetailProvider(mutationId),
+                              );
+                            },
+                            icon: const Icon(
+                              Icons.edit_outlined,
+                              color: Colors.white,
+                            ),
+                            label: const Text(
+                              'Edit & Ajukan Ulang',
+                              style: TextStyle(
+                                fontSize: 14,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.white,
+                              ),
+                            ),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: AppColors.warning,
+                              minimumSize: const Size.fromHeight(48),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              elevation: 0,
+                            ),
+                          ),
+                          const SizedBox(height: 24),
+                        ],
+                        if (m.status == MutationStatus.waitingConfirmation ||
+                            m.status == MutationStatus.pendingConfirmation) ...[
+                          ElevatedButton.icon(
+                            onPressed: () {
+                              context.push(
+                                RouteNames.pemohonConfirmationPath.replaceFirst(
+                                  ':id',
+                                  m.id,
+                                ),
+                              );
+                            },
+                            icon: const Icon(
+                              Icons.check_circle_outline,
+                              color: Colors.white,
+                            ),
+                            label: const Text(
+                              'Konfirmasi Mutasi',
+                              style: TextStyle(
+                                fontSize: 14,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.white,
+                              ),
+                            ),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: AppColors.primary,
+                              minimumSize: const Size.fromHeight(48),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              elevation: 0,
+                            ),
+                          ),
+                          const SizedBox(height: 24),
+                        ],
+                      ],
+                    ),
+                  ),
+                );
+              },
             ),
-          );
-        },
+          ),
+        ],
       ),
-    ),
-  ],
-),
     );
   }
 
@@ -262,11 +273,7 @@ class PemohonMutationDetailScreen extends ConsumerWidget {
         gradient: const LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
-          colors: [
-            Color(0xFF00273A),
-            Color(0xFF00344D),
-            Color(0xFF0A4866),
-          ],
+          colors: [Color(0xFF00273A), Color(0xFF00344D), Color(0xFF0A4866)],
         ),
         borderRadius: BorderRadius.circular(20),
         border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
@@ -361,9 +368,7 @@ class PemohonMutationDetailScreen extends ConsumerWidget {
             padding: const EdgeInsets.only(top: 12),
             decoration: BoxDecoration(
               border: Border(
-                top: BorderSide(
-                  color: Colors.white.withValues(alpha: 0.12),
-                ),
+                top: BorderSide(color: Colors.white.withValues(alpha: 0.12)),
               ),
             ),
             child: Row(
@@ -391,7 +396,7 @@ class PemohonMutationDetailScreen extends ConsumerWidget {
                           const SizedBox(width: 4),
                           Expanded(
                             child: Text(
-                              _formatDateShort(mutation.createdAt),
+                              SlaWitaHelper.formatDateTimeWita(mutation.createdAt),
                               style: const TextStyle(
                                 fontSize: 11,
                                 fontWeight: FontWeight.w500,
@@ -409,35 +414,52 @@ class PemohonMutationDetailScreen extends ConsumerWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(
-                        'TARGET SLA SELESAI',
-                        style: TextStyle(
-                          fontSize: 10,
-                          fontWeight: FontWeight.w600,
-                          color: const Color(0xFFA5F3FC).withValues(alpha: 0.7),
-                        ),
-                      ),
-                      const SizedBox(height: 3),
-                      Row(
-                        children: [
-                          const Icon(
-                            Icons.timer_outlined,
-                            size: 13,
-                            color: Color(0xFFFDE047),
-                          ),
-                          const SizedBox(width: 4),
-                          const Expanded(
-                            child: Text(
-                              '1x24 Jam (Sisa 18 Jam)',
-                              style: TextStyle(
-                                fontSize: 11,
-                                fontWeight: FontWeight.w500,
-                                color: Colors.white,
+                      SlaLiveBuilder(
+                        mutation: mutation,
+                        builder: (context, sla) {
+                          final isOverdue = sla.isOverdue;
+                          return Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'SLA',
+                                style: TextStyle(
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.w600,
+                                  color: const Color(0xFFA5F3FC).withValues(alpha: 0.7),
+                                ),
                               ),
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                          ),
-                        ],
+                              const SizedBox(height: 3),
+                              Row(
+                                children: [
+                                  Icon(
+                                    isOverdue
+                                        ? Icons.warning_amber_rounded
+                                        : Icons.timer_outlined,
+                                    size: 13,
+                                    color: isOverdue
+                                        ? const Color(0xFFF87171)
+                                        : const Color(0xFFFDE047),
+                                  ),
+                                  const SizedBox(width: 4),
+                                  Expanded(
+                                    child: Text(
+                                      sla.label,
+                                      style: TextStyle(
+                                        fontSize: 11,
+                                        fontWeight: FontWeight.w500,
+                                        color: isOverdue
+                                            ? const Color(0xFFFECACA)
+                                            : Colors.white,
+                                      ),
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ],
+                          );
+                        },
                       ),
                     ],
                   ),
@@ -465,8 +487,8 @@ class PemohonMutationDetailScreen extends ConsumerWidget {
                         children: [
                           CircleAvatar(
                             radius: 17,
-                            backgroundColor:
-                                const Color(0xFF06B6D4).withValues(alpha: 0.3),
+                            backgroundColor: const Color(0xFF06B6D4)
+                                .withValues(alpha: 0.3),
                             child: const Icon(
                               Icons.person,
                               size: 18,
@@ -502,8 +524,8 @@ class PemohonMutationDetailScreen extends ConsumerWidget {
                                 fontSize: 9,
                                 fontWeight: FontWeight.w600,
                                 letterSpacing: 0.5,
-                                color:
-                                    const Color(0xFFA5F3FC).withValues(alpha: 0.8),
+                                color: const Color(0xFFA5F3FC)
+                                    .withValues(alpha: 0.8),
                               ),
                             ),
                             Text(
@@ -555,7 +577,9 @@ class PemohonMutationDetailScreen extends ConsumerWidget {
                       Text(
                         mutation.status == MutationStatus.returned
                             ? 'Perlu Perbaikan'
-                            : 'Meninjau',
+                            : (mutation.status == MutationStatus.submitted
+                                  ? 'Pemeriksaan Operator'
+                                  : 'Meninjau'),
                         style: const TextStyle(
                           fontSize: 10,
                           fontWeight: FontWeight.bold,
@@ -621,10 +645,7 @@ class PemohonMutationDetailScreen extends ConsumerWidget {
           Container(
             width: 6,
             height: 6,
-            decoration: BoxDecoration(
-              color: text,
-              shape: BoxShape.circle,
-            ),
+            decoration: BoxDecoration(color: text, shape: BoxShape.circle),
           ),
           const SizedBox(width: 5),
           Text(
@@ -1494,7 +1515,8 @@ class PemohonMutationDetailScreen extends ConsumerWidget {
           const SizedBox(height: 12),
 
           // Document attachment tile
-          if (mutation.documentName != null && mutation.documentName!.isNotEmpty)
+          if (mutation.documentName != null &&
+              mutation.documentName!.isNotEmpty)
             Container(
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
@@ -1506,8 +1528,12 @@ class PemohonMutationDetailScreen extends ConsumerWidget {
                 builder: (context) {
                   final docName = mutation.documentName!;
                   final isPdf = docName.toLowerCase().endsWith('.pdf');
-                  final isImage = ['png', 'jpg', 'jpeg', 'webp']
-                      .any((ext) => docName.toLowerCase().endsWith(ext));
+                  final isImage = [
+                    'png',
+                    'jpg',
+                    'jpeg',
+                    'webp',
+                  ].any((ext) => docName.toLowerCase().endsWith(ext));
 
                   return Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -1522,15 +1548,15 @@ class PemohonMutationDetailScreen extends ConsumerWidget {
                                 color: isPdf
                                     ? const Color(0xFFFEE2E2)
                                     : isImage
-                                        ? const Color(0xFFDBEAF9)
-                                        : const Color(0xFFF1F5F9),
+                                    ? const Color(0xFFDBEAF9)
+                                    : const Color(0xFFF1F5F9),
                                 borderRadius: BorderRadius.circular(8),
                                 border: Border.all(
                                   color: isPdf
                                       ? const Color(0xFFFECACA)
                                       : isImage
-                                          ? const Color(0xFFBFDBFE)
-                                          : const Color(0xFFCBD5E1),
+                                      ? const Color(0xFFBFDBFE)
+                                      : const Color(0xFFCBD5E1),
                                 ),
                               ),
                               child: Center(
@@ -1538,79 +1564,79 @@ class PemohonMutationDetailScreen extends ConsumerWidget {
                                   isPdf
                                       ? Icons.picture_as_pdf
                                       : isImage
-                                          ? Icons.image
-                                          : Icons.description,
+                                      ? Icons.image
+                                      : Icons.description,
                                   size: 20,
                                   color: isPdf
                                       ? const Color(0xFFB91C1C)
                                       : isImage
-                                          ? const Color(0xFF1D4ED8)
-                                          : const Color(0xFF475569),
+                                      ? const Color(0xFF1D4ED8)
+                                      : const Color(0xFF475569),
                                 ),
                               ),
                             ),
-                        const SizedBox(width: 10),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                mutation.documentName!,
-                                style: const TextStyle(
-                                  fontSize: 13,
-                                  fontWeight: FontWeight.bold,
-                                  color: Color(0xFF1E293B),
-                                ),
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                              const Row(
+                            const SizedBox(width: 10),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  Icon(
-                                    Icons.verified,
-                                    size: 12,
-                                    color: Color(0xFF059669),
-                                  ),
-                                  SizedBox(width: 4),
                                   Text(
-                                    'Dokumen Terlampir',
-                                    style: TextStyle(
-                                      fontSize: 10,
-                                      color: Color(0xFF047857),
+                                    mutation.documentName!,
+                                    style: const TextStyle(
+                                      fontSize: 13,
+                                      fontWeight: FontWeight.bold,
+                                      color: Color(0xFF1E293B),
                                     ),
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                  const Row(
+                                    children: [
+                                      Icon(
+                                        Icons.verified,
+                                        size: 12,
+                                        color: Color(0xFF059669),
+                                      ),
+                                      SizedBox(width: 4),
+                                      Text(
+                                        'Dokumen Terlampir',
+                                        style: TextStyle(
+                                          fontSize: 10,
+                                          color: Color(0xFF047857),
+                                        ),
+                                      ),
+                                    ],
                                   ),
                                 ],
                               ),
-                            ],
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      TextButton.icon(
+                        onPressed: () =>
+                            _showDocumentPreviewDialog(context, mutation, ref),
+                        icon: const Icon(Icons.visibility, size: 14),
+                        label: const Text('Pratinjau Dokumen'),
+                        style: TextButton.styleFrom(
+                          backgroundColor: Colors.white,
+                          foregroundColor: const Color(0xFF334155),
+                          textStyle: const TextStyle(
+                            fontSize: 11,
+                            fontWeight: FontWeight.bold,
+                          ),
+                          side: const BorderSide(color: Color(0xFFCBD5E1)),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 10,
+                            vertical: 6,
                           ),
                         ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  TextButton.icon(
-                    onPressed: () =>
-                        _showDocumentPreviewDialog(context, mutation, ref),
-                    icon: const Icon(Icons.visibility, size: 14),
-                    label: const Text('Pratinjau Dokumen'),
-                    style: TextButton.styleFrom(
-                      backgroundColor: Colors.white,
-                      foregroundColor: const Color(0xFF334155),
-                      textStyle: const TextStyle(
-                        fontSize: 11,
-                        fontWeight: FontWeight.bold,
                       ),
-                      side: const BorderSide(color: Color(0xFFCBD5E1)),
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 10,
-                        vertical: 6,
-                      ),
-                    ),
-                  ),
-                ],
-              );
-            },
-          ),
-        )
+                    ],
+                  );
+                },
+              ),
+            )
           else
             Container(
               padding: const EdgeInsets.all(12),
@@ -1621,11 +1647,7 @@ class PemohonMutationDetailScreen extends ConsumerWidget {
               ),
               child: const Row(
                 children: [
-                  Icon(
-                    Icons.info_outline,
-                    size: 18,
-                    color: Color(0xFF64748B),
-                  ),
+                  Icon(Icons.info_outline, size: 18, color: Color(0xFF64748B)),
                   SizedBox(width: 8),
                   Expanded(
                     child: Text(
@@ -1656,31 +1678,35 @@ class PemohonMutationDetailScreen extends ConsumerWidget {
         borderRadius: BorderRadius.circular(12),
         border: Border.all(color: const Color(0xFFBFDBFE)),
       ),
-      child: const Row(
+      child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(
+          const Icon(
             Icons.notifications_active,
             size: 20,
             color: Color(0xFF2563EB),
           ),
-          SizedBox(width: 10),
+          const SizedBox(width: 10),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'Status Pengajuan Aktif',
-                  style: TextStyle(
+                  mutation.status == MutationStatus.submitted
+                      ? 'Menunggu Pemeriksaan Operator'
+                      : 'Status Pengajuan Aktif',
+                  style: const TextStyle(
                     fontSize: 13,
                     fontWeight: FontWeight.bold,
                     color: Color(0xFF1E3A8A),
                   ),
                 ),
-                SizedBox(height: 3),
+                const SizedBox(height: 3),
                 Text(
-                  'Pengajuan sedang diproses sesuai alur kerja. Anda akan menerima notifikasi otomatis begitu status disetujui atau memerlukan konfirmasi.',
-                  style: TextStyle(
+                  mutation.status == MutationStatus.submitted
+                      ? 'Pengajuan Anda telah berhasil dikirim dan sedang menunggu pemeriksaan kelengkapan oleh Operator.'
+                      : 'Pengajuan sedang diproses sesuai alur kerja. Anda akan menerima notifikasi otomatis begitu status disetujui atau memerlukan konfirmasi.',
+                  style: const TextStyle(
                     fontSize: 11,
                     color: Color(0xFF3B82F6),
                     height: 1.4,
@@ -1695,6 +1721,17 @@ class PemohonMutationDetailScreen extends ConsumerWidget {
   }
 
   Widget _buildReturnedAlertBanner(Mutation mutation) {
+    final isAssetReturn =
+        mutation.assetReturnReason != null &&
+        mutation.assetReturnReason!.trim().isNotEmpty;
+    final actorLabel = isAssetReturn ? 'Bagian Aset' : 'Operator';
+    final reasonText = isAssetReturn
+        ? mutation.assetReturnReason!.trim()
+        : ((mutation.returnReason != null &&
+                  mutation.returnReason!.trim().isNotEmpty)
+              ? mutation.returnReason!.trim()
+              : 'Harap periksa catatan pengembalian dan perbaiki pengajuan Anda.');
+
     return Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
@@ -1715,20 +1752,40 @@ class PemohonMutationDetailScreen extends ConsumerWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text(
-                  'Pengajuan Dikembalikan untuk Diperbaiki',
-                  style: TextStyle(
-                    fontSize: 13,
-                    fontWeight: FontWeight.bold,
-                    color: Color(0xFF9A3412),
-                  ),
+                Row(
+                  children: [
+                    const Text(
+                      'Pengajuan Dikembalikan untuk Diperbaiki',
+                      style: TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.bold,
+                        color: Color(0xFF9A3412),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 6,
+                        vertical: 2,
+                      ),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFEA580C).withValues(alpha: 0.15),
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                      child: Text(
+                        'Oleh: $actorLabel',
+                        style: const TextStyle(
+                          fontSize: 10,
+                          fontWeight: FontWeight.w600,
+                          color: Color(0xFFEA580C),
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  (mutation.returnReason != null &&
-                          mutation.returnReason!.trim().isNotEmpty)
-                      ? mutation.returnReason!.trim()
-                      : 'Harap perbaiki lokasi tujuan dan sertakan surat tugas.',
+                  reasonText,
                   style: const TextStyle(
                     fontSize: 12,
                     color: Color(0xFFC2410C),
@@ -1753,11 +1810,7 @@ class PemohonMutationDetailScreen extends ConsumerWidget {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Icon(
-            Icons.cancel_outlined,
-            size: 22,
-            color: Color(0xFFDC2626),
-          ),
+          const Icon(Icons.cancel_outlined, size: 22, color: Color(0xFFDC2626)),
           const SizedBox(width: 10),
           Expanded(
             child: Column(
@@ -1795,43 +1848,49 @@ class PemohonMutationDetailScreen extends ConsumerWidget {
   String _getReviewerName(Mutation mutation) {
     return switch (mutation.status) {
       MutationStatus.submitted ||
-      MutationStatus.returned ||
-      MutationStatus.waitingSync =>
-        mutation.verifiedBy ?? 'Siti Rahma',
+      MutationStatus.waitingSync => mutation.verifiedBy ?? 'Operator',
+      MutationStatus.returned =>
+        (mutation.assetReturnReason != null &&
+                mutation.assetReturnReason!.isNotEmpty)
+            ? (mutation.approvedBy ?? 'Bagian Aset')
+            : (mutation.verifiedBy ?? 'Operator'),
       MutationStatus.waitingAssetVerification ||
-      MutationStatus.verified =>
-        mutation.approvedBy ?? 'Hendra Setiawan',
+      MutationStatus.verified => mutation.approvedBy ?? 'Bagian Aset',
       MutationStatus.waitingDivisionHeadApproval ||
       MutationStatus.waitingKadivApproval =>
-        'Drs. Hendra',
-      MutationStatus.approved => mutation.staffUpdatedBy ?? 'Agus Pratama',
+        mutation.kadivApprovedBy ?? 'Pemimpin Divisi',
+      MutationStatus.approved => mutation.staffUpdatedBy ?? 'Bagian Aset',
       MutationStatus.waitingConfirmation ||
       MutationStatus.pendingConfirmation =>
-        mutation.applicantName,
-      MutationStatus.completed => 'Sistem Terverifikasi',
+        mutation.applicantName.isNotEmpty ? mutation.applicantName : 'Pemohon',
+      MutationStatus.completed => 'Sistem MutasiKu',
       MutationStatus.rejected =>
-        mutation.kadivRejectionReason != null ? 'Drs. Hendra' : 'Bpk. Budi Santoso',
+        mutation.kadivRejectedBy ??
+            (mutation.rejectedBy ??
+                (mutation.kadivRejectionReason != null
+                    ? 'Pemimpin Divisi'
+                    : 'Peninjau Mutasi')),
     };
   }
 
   String _getReviewerRole(Mutation mutation) {
     return switch (mutation.status) {
       MutationStatus.submitted ||
-      MutationStatus.returned ||
-      MutationStatus.waitingSync =>
-        'Operator Aset & Logistik',
+      MutationStatus.waitingSync => 'Pemeriksaan Kelengkapan',
+      MutationStatus.returned =>
+        (mutation.assetReturnReason != null &&
+                mutation.assetReturnReason!.isNotEmpty)
+            ? 'Pengembalian oleh Bagian Aset'
+            : 'Pengembalian oleh Operator',
       MutationStatus.waitingAssetVerification ||
-      MutationStatus.verified =>
-        'Bagian Aset',
+      MutationStatus.verified => 'Verifikasi Bagian Aset',
       MutationStatus.waitingDivisionHeadApproval ||
-      MutationStatus.waitingKadivApproval =>
-        'Pemimpin Divisi',
-      MutationStatus.approved => 'Bagian Aset',
+      MutationStatus.waitingKadivApproval => 'Approval Pemimpin Divisi',
+      MutationStatus.approved => 'Update Sistem Aset',
       MutationStatus.waitingConfirmation ||
-      MutationStatus.pendingConfirmation =>
-        'Pemohon (Konfirmasi Akhir)',
+      MutationStatus.pendingConfirmation => 'Konfirmasi Pemohon',
       MutationStatus.completed => 'Siklus Mutasi Selesai',
-      MutationStatus.rejected => 'Peninjau Mutasi',
+      MutationStatus.rejected => 'Pengajuan Ditolak',
     };
   }
 
@@ -1856,7 +1915,10 @@ class PemohonMutationDetailScreen extends ConsumerWidget {
   }
 
   void _showDocumentPreviewDialog(
-      BuildContext context, Mutation mutation, WidgetRef ref) {
+    BuildContext context,
+    Mutation mutation,
+    WidgetRef ref,
+  ) {
     DocumentPreviewDialog.show(
       context,
       mutation: mutation,

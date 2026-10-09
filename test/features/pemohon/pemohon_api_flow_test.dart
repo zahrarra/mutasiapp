@@ -1,4 +1,6 @@
+import 'package:mutasiku/core/errors/failures.dart';
 import 'dart:convert';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
@@ -25,21 +27,53 @@ class _FakeAuthRepository implements AuthRepository {
   Future<Result<User?>> getCurrentUser() async => Result.success(user);
 
   @override
-  Future<Result<User>> login({required String username, required String password}) async =>
-      throw UnimplementedError();
+  Future<Result<User>> login({
+    required String username,
+    required String password,
+  }) async => throw UnimplementedError();
 
   @override
   Future<void> logout() async {}
+    @override
+  Future<Result<User>> changePassword({
+    required String currentPassword,
+    required String newPassword,
+    required String confirmPassword,
+  }) async {
+    if (newPassword.length < 8) {
+      return Result.failure(
+        const ValidationFailure(message: 'Password baru minimal 8 karakter.'),
+      );
+    }
+    if (newPassword != confirmPassword) {
+      return Result.failure(
+        const ValidationFailure(message: 'Konfirmasi password baru tidak cocok.'),
+      );
+    }
+    if (newPassword == currentPassword) {
+      return Result.failure(
+        const ValidationFailure(
+          message: 'Password baru harus berbeda dengan password lama.',
+        ),
+      );
+    }
+    if (user != null) {
+      return Result.success(user!.copyWith(mustChangePassword: false));
+    }
+    return Result.failure(
+      const UnauthorizedFailure(message: 'Pengguna tidak ditemukan.'),
+    );
+  }
 }
 
 class _TestAuthNotifier extends AuthNotifier {
   _TestAuthNotifier(User user)
-      : super(
-          loginUseCase: LoginUseCase(repository: _FakeAuthRepository(user)),
-          logoutUseCase: LogoutUseCase(repository: _FakeAuthRepository(user)),
-          authRepository: _FakeAuthRepository(user),
-          checkInitialStatus: false,
-        ) {
+    : super(
+        loginUseCase: LoginUseCase(repository: _FakeAuthRepository(user)),
+        logoutUseCase: LogoutUseCase(repository: _FakeAuthRepository(user)),
+        authRepository: _FakeAuthRepository(user),
+        checkInitialStatus: false,
+      ) {
     state = AuthState(isLoading: false, user: user);
   }
 }
@@ -89,7 +123,7 @@ void main() {
                   'status': 'diajukan',
                   'reason': 'Kebutuhan dinas lapangan',
                   'created_at': '2026-03-01T10:00:00Z',
-                }
+                },
               ],
               'meta': {'current_page': 1, 'last_page': 1, 'total': 1},
             }),
@@ -100,13 +134,18 @@ void main() {
         return http.Response('Not Found', 404);
       });
 
-      final testApiClient = ApiClient(httpClient: mockClient, baseUrl: 'http://test.local');
+      final testApiClient = ApiClient(
+        httpClient: mockClient,
+        baseUrl: 'http://test.local',
+      );
       testApiClient.setAuthToken('sanctum_token_42');
 
       final container = ProviderContainer(
         overrides: [
           apiClientProvider.overrideWithValue(testApiClient),
-          authStateProvider.overrideWith((ref) => _TestAuthNotifier(pemohonUser)),
+          authStateProvider.overrideWith(
+            (ref) => _TestAuthNotifier(pemohonUser),
+          ),
         ],
       );
 
@@ -135,11 +174,16 @@ void main() {
         );
       });
 
-      final testApiClient = ApiClient(httpClient: mockClient, baseUrl: 'http://test.local');
+      final testApiClient = ApiClient(
+        httpClient: mockClient,
+        baseUrl: 'http://test.local',
+      );
       final container = ProviderContainer(
         overrides: [
           apiClientProvider.overrideWithValue(testApiClient),
-          authStateProvider.overrideWith((ref) => _TestAuthNotifier(pemohonUser)),
+          authStateProvider.overrideWith(
+            (ref) => _TestAuthNotifier(pemohonUser),
+          ),
         ],
       );
 
@@ -157,11 +201,16 @@ void main() {
         );
       });
 
-      final testApiClient = ApiClient(httpClient: mockClient, baseUrl: 'http://test.local');
+      final testApiClient = ApiClient(
+        httpClient: mockClient,
+        baseUrl: 'http://test.local',
+      );
       final container = ProviderContainer(
         overrides: [
           apiClientProvider.overrideWithValue(testApiClient),
-          authStateProvider.overrideWith((ref) => _TestAuthNotifier(pemohonUser)),
+          authStateProvider.overrideWith(
+            (ref) => _TestAuthNotifier(pemohonUser),
+          ),
         ],
       );
 
@@ -180,11 +229,16 @@ void main() {
         );
       });
 
-      final testApiClient = ApiClient(httpClient: mockClient, baseUrl: 'http://test.local');
+      final testApiClient = ApiClient(
+        httpClient: mockClient,
+        baseUrl: 'http://test.local',
+      );
       final container = ProviderContainer(
         overrides: [
           apiClientProvider.overrideWithValue(testApiClient),
-          authStateProvider.overrideWith((ref) => _TestAuthNotifier(pemohonUser)),
+          authStateProvider.overrideWith(
+            (ref) => _TestAuthNotifier(pemohonUser),
+          ),
         ],
       );
 
@@ -219,7 +273,8 @@ void main() {
                 'origin_location': {'id': 1, 'name': 'Kantor Pusat'},
                 'destination_location': {'id': 2, 'name': 'Cabang Jakarta'},
                 'status': 'dikembalikan_ke_pemohon',
-                'return_reason': 'Dokumen pendukung SK penugasan belum lengkap.',
+                'return_reason':
+                    'Dokumen pendukung SK penugasan belum lengkap.',
                 'reason': 'Rotasi kerja ke Cabang Jakarta',
               },
             }),
@@ -230,21 +285,31 @@ void main() {
         return http.Response('Not Found', 404);
       });
 
-      final testApiClient = ApiClient(httpClient: mockClient, baseUrl: 'http://test.local');
+      final testApiClient = ApiClient(
+        httpClient: mockClient,
+        baseUrl: 'http://test.local',
+      );
       final container = ProviderContainer(
         overrides: [
           apiClientProvider.overrideWithValue(testApiClient),
-          authStateProvider.overrideWith((ref) => _TestAuthNotifier(pemohonUser)),
+          authStateProvider.overrideWith(
+            (ref) => _TestAuthNotifier(pemohonUser),
+          ),
         ],
       );
 
-      final detail = await container.read(pemohonMutationDetailProvider('105').future);
+      final detail = await container.read(
+        pemohonMutationDetailProvider('105').future,
+      );
 
       expect(detailEndpointCalled, isTrue);
       expect(detail.id, equals('105'));
       expect(detail.ticketNumber, equals('MUT-2026-00105'));
       expect(detail.status, equals(MutationStatus.returned));
-      expect(detail.returnReason, equals('Dokumen pendukung SK penugasan belum lengkap.'));
+      expect(
+        detail.returnReason,
+        equals('Dokumen pendukung SK penugasan belum lengkap.'),
+      );
       expect(detail.asset.name, equals('MacBook Pro 16 M2'));
       expect(detail.currentLocation, equals('Kantor Pusat'));
       expect(detail.targetLocation, equals('Cabang Jakarta'));
@@ -262,16 +327,22 @@ void main() {
         );
       });
 
-      final testApiClient = ApiClient(httpClient: mockClient, baseUrl: 'http://test.local');
+      final testApiClient = ApiClient(
+        httpClient: mockClient,
+        baseUrl: 'http://test.local',
+      );
       final container = ProviderContainer(
         overrides: [
           apiClientProvider.overrideWithValue(testApiClient),
-          authStateProvider.overrideWith((ref) => _TestAuthNotifier(pemohonUser)),
+          authStateProvider.overrideWith(
+            (ref) => _TestAuthNotifier(pemohonUser),
+          ),
         ],
       );
 
       expect(
-        () async => await container.read(pemohonMutationDetailProvider('9999').future),
+        () async =>
+            await container.read(pemohonMutationDetailProvider('9999').future),
         throwsA(isA<Exception>()),
       );
     });
@@ -292,7 +363,7 @@ void main() {
                 'applicant': {'id': 42, 'name': 'Rina Pemohon Asli'},
                 'status': 'diajukan',
                 'reason': 'Testing real auth id',
-              }
+              },
             ],
             'meta': {'current_page': 1, 'last_page': 1, 'total': 1},
           }),
@@ -301,11 +372,16 @@ void main() {
         );
       });
 
-      final testApiClient = ApiClient(httpClient: mockClient, baseUrl: 'http://test.local');
+      final testApiClient = ApiClient(
+        httpClient: mockClient,
+        baseUrl: 'http://test.local',
+      );
       final container = ProviderContainer(
         overrides: [
           apiClientProvider.overrideWithValue(testApiClient),
-          authStateProvider.overrideWith((ref) => _TestAuthNotifier(pemohonUser)),
+          authStateProvider.overrideWith(
+            (ref) => _TestAuthNotifier(pemohonUser),
+          ),
         ],
       );
 

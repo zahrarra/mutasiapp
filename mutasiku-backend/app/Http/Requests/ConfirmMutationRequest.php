@@ -17,7 +17,7 @@ class ConfirmMutationRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'confirmation' => ['required', 'string', 'in:sesuai,tidak_sesuai'],
+            'confirmation' => ['nullable', 'string', 'in:sesuai,tidak_sesuai'],
             'reason' => ['nullable', 'string', 'max:1000'],
         ];
     }
@@ -34,13 +34,12 @@ class ConfirmMutationRequest extends FormRequest
     public function messages(): array
     {
         return [
-            'confirmation.required' => 'Hasil konfirmasi wajib dipilih.',
             'confirmation.in' => 'Hasil konfirmasi tidak valid. Pilihan: sesuai atau tidak_sesuai.',
         ];
     }
 
     public function isSesuai(): bool
     {
-        return $this->input('confirmation') === 'sesuai';
+        return $this->input('confirmation', 'sesuai') === 'sesuai';
     }
 }

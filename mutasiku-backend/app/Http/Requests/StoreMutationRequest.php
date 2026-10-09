@@ -108,6 +108,14 @@ class StoreMutationRequest extends FormRequest
     }
 
     /**
+     * Helper to get the original file name of uploaded SK document.
+     */
+    public function getSkDocumentOriginalName(): ?string
+    {
+        return $this->file('sk_document')?->getClientOriginalName();
+    }
+
+    /**
      * Helper to determine whether the asset moves with the applicant.
      */
     public function isMovingWithApplicant(): bool

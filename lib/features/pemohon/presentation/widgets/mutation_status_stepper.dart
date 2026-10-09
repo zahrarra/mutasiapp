@@ -12,11 +12,7 @@ class MutationStatusStepper extends StatelessWidget {
   final MutationStatus status;
   final Mutation? mutation;
 
-  const MutationStatusStepper({
-    super.key,
-    required this.status,
-    this.mutation,
-  });
+  const MutationStatusStepper({super.key, required this.status, this.mutation});
 
   @override
   Widget build(BuildContext context) {
@@ -64,9 +60,10 @@ class MutationStatusStepper extends StatelessWidget {
         }
 
         // Garis penghubung
-        final leftLineActive = i > 0 &&
-            (step.isCompleted || step.isCurrent || step.isAlert);
-        final rightLineActive = i < steps.length - 1 &&
+        final leftLineActive =
+            i > 0 && (step.isCompleted || step.isCurrent || step.isAlert);
+        final rightLineActive =
+            i < steps.length - 1 &&
             (steps[i + 1].isCompleted ||
                 steps[i + 1].isCurrent ||
                 steps[i + 1].isAlert);
@@ -120,15 +117,15 @@ class MutationStatusStepper extends StatelessWidget {
                   fontWeight: current || alert
                       ? FontWeight.bold
                       : done
-                          ? FontWeight.w600
-                          : FontWeight.normal,
+                      ? FontWeight.w600
+                      : FontWeight.normal,
                   color: alert
                       ? AppColors.error
                       : current
-                          ? AppColors.primary
-                          : done
-                              ? AppColors.textPrimary
-                              : AppColors.textSecondary,
+                      ? AppColors.primary
+                      : done
+                      ? AppColors.textPrimary
+                      : AppColors.textSecondary,
                 ),
               ),
             ],

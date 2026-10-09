@@ -9,13 +9,12 @@ import 'package:mutasiku/features/pemohon/presentation/screens/pemohon_notificat
 
 void main() {
   group('PemohonNotificationsScreen Tests', () {
-    testWidgets('renders notifications list and notification tiles',
-        (tester) async {
+    testWidgets('renders notifications list and notification tiles', (
+      tester,
+    ) async {
       await tester.pumpWidget(
         const ProviderScope(
-          child: MaterialApp(
-            home: PemohonNotificationsScreen(),
-          ),
+          child: MaterialApp(home: PemohonNotificationsScreen()),
         ),
       );
 
@@ -53,15 +52,16 @@ void main() {
       await tester.pumpWidget(
         UncontrolledProviderScope(
           container: container,
-          child: MaterialApp.router(
-            routerConfig: router,
-          ),
+          child: MaterialApp.router(routerConfig: router),
         ),
       );
 
       // Before clicking, notif_1 is unread
       final initialNotifs = container.read(notificationProvider);
-      expect(initialNotifs.firstWhere((n) => n.id == 'notif_1').isRead, isFalse);
+      expect(
+        initialNotifs.firstWhere((n) => n.id == 'notif_1').isRead,
+        isFalse,
+      );
 
       // Tap first tile
       await tester.tap(find.text('Pengajuan Diverifikasi'));
@@ -73,8 +73,49 @@ void main() {
     });
 
     testWidgets(
-        'tapping notification with relatedMutationId triggers navigation to mutation detail',
-        (tester) async {
+      'tapping notification with relatedMutationId triggers navigation to mutation detail',
+      (tester) async {
+        String? navigatedLocation;
+
+        final router = GoRouter(
+          initialLocation: '/notifications',
+          routes: [
+            GoRoute(
+              path: '/notifications',
+              builder: (context, state) => const PemohonNotificationsScreen(),
+            ),
+            GoRoute(
+              path: RouteNames.pemohonMutasiDetailPath,
+              builder: (context, state) {
+                navigatedLocation = state.matchedLocation;
+                return const Scaffold(body: Text('Detail Screen'));
+              },
+            ),
+            GoRoute(
+              path: RouteNames.pemohonDashboardPath,
+              builder: (context, state) {
+                navigatedLocation = state.matchedLocation;
+                return const Scaffold(body: Text('Dashboard Screen'));
+              },
+            ),
+          ],
+        );
+
+        await tester.pumpWidget(
+          ProviderScope(child: MaterialApp.router(routerConfig: router)),
+        );
+
+        // Tap notification that has relatedMutationId: 'mut_004'
+        await tester.tap(find.text('Pengajuan Diverifikasi'));
+        await tester.pumpAndSettle();
+
+        expect(navigatedLocation, '/pemohon/mutasi/mut_004');
+      },
+    );
+
+    testWidgets('tapping Kembali ke Dashboard navigates to dashboard route', (
+      tester,
+    ) async {
       String? navigatedLocation;
 
       final router = GoRouter(
@@ -83,13 +124,6 @@ void main() {
           GoRoute(
             path: '/notifications',
             builder: (context, state) => const PemohonNotificationsScreen(),
-          ),
-          GoRoute(
-            path: RouteNames.pemohonMutasiDetailPath,
-            builder: (context, state) {
-              navigatedLocation = state.matchedLocation;
-              return const Scaffold(body: Text('Detail Screen'));
-            },
           ),
           GoRoute(
             path: RouteNames.pemohonDashboardPath,
@@ -102,47 +136,7 @@ void main() {
       );
 
       await tester.pumpWidget(
-        ProviderScope(
-          child: MaterialApp.router(
-            routerConfig: router,
-          ),
-        ),
-      );
-
-      // Tap notification that has relatedMutationId: 'mut_004'
-      await tester.tap(find.text('Pengajuan Diverifikasi'));
-      await tester.pumpAndSettle();
-
-      expect(navigatedLocation, '/pemohon/mutasi/mut_004');
-    });
-
-    testWidgets('tapping Kembali ke Dashboard navigates to dashboard route',
-        (tester) async {
-      String? navigatedLocation;
-
-      final router = GoRouter(
-        initialLocation: '/notifications',
-        routes: [
-          GoRoute(
-            path: '/notifications',
-            builder: (context, state) => const PemohonNotificationsScreen(),
-          ),
-          GoRoute(
-            path: RouteNames.pemohonDashboardPath,
-            builder: (context, state) {
-              navigatedLocation = state.matchedLocation;
-              return const Scaffold(body: Text('Dashboard Screen'));
-            },
-          ),
-        ],
-      );
-
-      await tester.pumpWidget(
-        ProviderScope(
-          child: MaterialApp.router(
-            routerConfig: router,
-          ),
-        ),
+        ProviderScope(child: MaterialApp.router(routerConfig: router)),
       );
 
       // Tap Back button in AppBar
@@ -152,8 +146,9 @@ void main() {
       expect(navigatedLocation, RouteNames.pemohonDashboardPath);
     });
 
-    testWidgets('shows empty state when notifications list is empty',
-        (tester) async {
+    testWidgets('shows empty state when notifications list is empty', (
+      tester,
+    ) async {
       await tester.pumpWidget(
         ProviderScope(
           overrides: [
@@ -161,9 +156,7 @@ void main() {
               (ref) => _EmptyNotificationNotifier(),
             ),
           ],
-          child: const MaterialApp(
-            home: PemohonNotificationsScreen(),
-          ),
+          child: const MaterialApp(home: PemohonNotificationsScreen()),
         ),
       );
 

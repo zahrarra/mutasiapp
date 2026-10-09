@@ -26,7 +26,8 @@ Future<void> showMutationSubmitSuccessDialog(
   return showDialog<void>(
     context: context,
     barrierDismissible: false,
-    barrierColor: const Color(0xFF0F172A).withValues(alpha: 0.40), // bg-slate-900/40
+    barrierColor: const Color(0xFF0F172A)
+        .withValues(alpha: 0.40), // bg-slate-900/40
     builder: (dialogCtx) => BackdropFilter(
       filter: ImageFilter.blur(sigmaX: 6, sigmaY: 6), // backdrop-blur-sm
       child: MutationSubmitSuccessDialog(
@@ -103,7 +104,8 @@ class _MutationSubmitSuccessDialogState
               ),
               boxShadow: [
                 BoxShadow(
-                  color: const Color(0xFF0F172A).withValues(alpha: 0.10), // shadow-slate-900/10
+                  color: const Color(0xFF0F172A)
+                      .withValues(alpha: 0.10), // shadow-slate-900/10
                   blurRadius: 32,
                   offset: const Offset(0, 16),
                 ),
@@ -123,7 +125,8 @@ class _MutationSubmitSuccessDialogState
                     color: const Color(0xFFECFDF5), // bg-emerald-50
                     shape: BoxShape.circle,
                     border: Border.all(
-                      color: const Color(0xFFD1FAE5).withValues(alpha: 0.80), // border-emerald-100/80
+                      color: const Color(0xFFD1FAE5)
+                          .withValues(alpha: 0.80), // border-emerald-100/80
                       width: 1.5,
                     ),
                     boxShadow: [
@@ -134,9 +137,7 @@ class _MutationSubmitSuccessDialogState
                       ),
                     ],
                   ),
-                  child: const Center(
-                    child: _EmeraldCheckmark(size: 36),
-                  ),
+                  child: const Center(child: _EmeraldCheckmark(size: 36)),
                 ),
 
                 const SizedBox(height: 20),
@@ -175,12 +176,16 @@ class _MutationSubmitSuccessDialogState
                 // w-full bg-[#ecf4ff]/70 border border-slate-200/80 rounded-2xl p-3.5
                 Container(
                   width: double.infinity,
-                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 14,
+                    vertical: 12,
+                  ),
                   decoration: BoxDecoration(
                     color: const Color(0xFFECF4FF).withValues(alpha: 0.70),
                     borderRadius: BorderRadius.circular(16),
                     border: Border.all(
-                      color: const Color(0xFFCBD5E1).withValues(alpha: 0.80), // border-slate-200/80
+                      color: const Color(0xFFCBD5E1)
+                          .withValues(alpha: 0.80), // border-slate-200/80
                       width: 1,
                     ),
                   ),
@@ -238,8 +243,12 @@ class _MutationSubmitSuccessDialogState
                               borderRadius: BorderRadius.circular(8),
                               border: Border.all(
                                 color: _copied
-                                    ? const Color(0xFF6EE7B7) // border-emerald-300
-                                    : const Color(0xFFE2E8F0), // border-slate-200
+                                    ? const Color(
+                                        0xFF6EE7B7,
+                                      ) // border-emerald-300
+                                    : const Color(
+                                        0xFFE2E8F0,
+                                      ), // border-slate-200
                               ),
                               boxShadow: [
                                 BoxShadow(
@@ -258,7 +267,9 @@ class _MutationSubmitSuccessDialogState
                                       : Icons.copy_rounded,
                                   size: 13,
                                   color: _copied
-                                      ? const Color(0xFF059669) // text-emerald-600
+                                      ? const Color(
+                                          0xFF059669,
+                                        ) // text-emerald-600
                                       : const Color(0xFF00273A),
                                 ),
                                 const SizedBox(width: 5),
@@ -268,7 +279,9 @@ class _MutationSubmitSuccessDialogState
                                     size: 11.5,
                                     weight: FontWeight.w600,
                                     color: _copied
-                                        ? const Color(0xFF059669) // text-emerald-600
+                                        ? const Color(
+                                            0xFF059669,
+                                          ) // text-emerald-600
                                         : const Color(0xFF00273A),
                                   ),
                                 ),
@@ -297,7 +310,10 @@ class _MutationSubmitSuccessDialogState
                       final id = widget.mutationId;
                       if (id != null && id.isNotEmpty) {
                         context.go(
-                          RouteNames.pemohonMutasiDetailPath.replaceFirst(':id', id),
+                          RouteNames.pemohonMutasiDetailPath.replaceFirst(
+                            ':id',
+                            id,
+                          ),
                         );
                       } else {
                         context.go(RouteNames.pemohonMutasiPath);
@@ -366,9 +382,7 @@ class _MutationSubmitSuccessDialogState
 /// Emerald Checkmark matching SVG d="M5 13l4 4L19 7" from Stitch HTML.
 class _EmeraldCheckmark extends StatelessWidget {
   final double size;
-  const _EmeraldCheckmark({
-    this.size = 36,
-  });
+  const _EmeraldCheckmark({this.size = 36});
 
   @override
   Widget build(BuildContext context) {

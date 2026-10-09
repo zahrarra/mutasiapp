@@ -46,8 +46,12 @@ void main() {
     AssetRepositoryImpl.resetForTesting();
     MutationRepositoryImpl.resetForTesting();
     assetRepository = AssetRepositoryImpl();
-    mutationRepository = MutationRepositoryImpl(assetRepository: assetRepository);
-    confirmMutationUseCase = ConfirmMutationUseCase(repository: mutationRepository);
+    mutationRepository = MutationRepositoryImpl(
+      assetRepository: assetRepository,
+    );
+    confirmMutationUseCase = ConfirmMutationUseCase(
+      repository: mutationRepository,
+    );
   });
 
   group('Pemohon Confirmation Flow & Queue Tests', () {
@@ -87,7 +91,10 @@ void main() {
       final budiMutationId = budiSubmitRes.dataOrNull!.id;
 
       // Operator forward, Bagian Aset forward, Pemimpin Divisi approve Andi's mutation
-      await mutationRepository.operatorForward(mutationId: andiMutationId, operatorName: 'Operator');
+      await mutationRepository.operatorForward(
+        mutationId: andiMutationId,
+        operatorName: 'Operator',
+      );
       await mutationRepository.assetSectionForward(
         mutationId: andiMutationId,
         verifierName: 'Bagian Aset',
@@ -99,7 +106,10 @@ void main() {
       );
 
       // Budi's mutation only reaches Bagian Aset
-      await mutationRepository.operatorForward(mutationId: budiMutationId, operatorName: 'Operator');
+      await mutationRepository.operatorForward(
+        mutationId: budiMutationId,
+        operatorName: 'Operator',
+      );
       await mutationRepository.assetSectionForward(
         mutationId: budiMutationId,
         verifierName: 'Bagian Aset',
@@ -107,7 +117,9 @@ void main() {
       );
 
       // Verify Andi's queue contains his pending confirmation
-      final andiListRes = await mutationRepository.getMutationsByUser(pemohonUser.id);
+      final andiListRes = await mutationRepository.getMutationsByUser(
+        pemohonUser.id,
+      );
       expect(andiListRes.isSuccess, isTrue);
       final andiPending = andiListRes.dataOrNull!
           .where((m) => m.status.isWaitingConfirmation)
@@ -117,7 +129,9 @@ void main() {
       expect(andiPending.first.applicantId, pemohonUser.id);
 
       // Verify Budi does NOT see Andi's pending confirmation
-      final budiListRes = await mutationRepository.getMutationsByUser(otherPemohonUser.id);
+      final budiListRes = await mutationRepository.getMutationsByUser(
+        otherPemohonUser.id,
+      );
       expect(budiListRes.isSuccess, isTrue);
       final budiPending = budiListRes.dataOrNull!
           .where((m) => m.status.isWaitingConfirmation)
@@ -153,7 +167,10 @@ void main() {
       expect(confirmRes.failureOrNull, isA<ValidationFailure>());
 
       // Status: waitingAssetVerification -> Try confirm -> MUST fail
-      await mutationRepository.operatorForward(mutationId: mutationId, operatorName: 'Operator');
+      await mutationRepository.operatorForward(
+        mutationId: mutationId,
+        operatorName: 'Operator',
+      );
       confirmRes = await confirmMutationUseCase(
         ConfirmMutationParams(
           mutationId: mutationId,
@@ -223,7 +240,10 @@ void main() {
       );
       final mutationId = submitRes.dataOrNull!.id;
 
-      await mutationRepository.operatorForward(mutationId: mutationId, operatorName: 'Operator');
+      await mutationRepository.operatorForward(
+        mutationId: mutationId,
+        operatorName: 'Operator',
+      );
       await mutationRepository.assetSectionForward(
         mutationId: mutationId,
         verifierName: 'Bagian Aset',
@@ -276,7 +296,10 @@ void main() {
       final mutationId = submitRes.dataOrNull!.id;
       final ticketNumber = submitRes.dataOrNull!.ticketNumber;
 
-      await mutationRepository.operatorForward(mutationId: mutationId, operatorName: 'Operator');
+      await mutationRepository.operatorForward(
+        mutationId: mutationId,
+        operatorName: 'Operator',
+      );
       await mutationRepository.assetSectionForward(
         mutationId: mutationId,
         verifierName: 'Bagian Aset',
@@ -331,24 +354,29 @@ void main() {
       expect(submitRes.failureOrNull, isA<ValidationFailure>());
     });
 
-    test('6. Tracking: shows completed as final step when mutation is completed', () {
-      final steps = MutationTrackingHelper.buildTrackingSteps(
-        status: MutationStatus.completed,
-        requiresKadivApproval: false,
-        applicantName: pemohonUser.name,
-        staffUpdatedBy: 'Hendra Bagian Aset',
-      );
+    test(
+      '6. Tracking: shows completed as final step when mutation is completed',
+      () {
+        final steps = MutationTrackingHelper.buildTrackingSteps(
+          status: MutationStatus.completed,
+          requiresKadivApproval: false,
+          applicantName: pemohonUser.name,
+          staffUpdatedBy: 'Hendra Bagian Aset',
+        );
 
-      // Verify step 5 (Konfirmasi) is completed
-      final confirmStep = steps.firstWhere((s) => s.key == 'confirmation' || s.key == 'pendingConfirmation');
-      expect(confirmStep.state, TrackingStepState.completed);
-      expect(confirmStep.badgeText, 'Sesuai');
+        // Verify step 5 (Konfirmasi) is completed
+        final confirmStep = steps.firstWhere(
+          (s) => s.key == 'confirmation' || s.key == 'pendingConfirmation',
+        );
+        expect(confirmStep.state, TrackingStepState.completed);
+        expect(confirmStep.badgeText, 'Sesuai');
 
-      // Verify step 6 (Selesai) is completed
-      final completedStep = steps.firstWhere((s) => s.key == 'completed');
-      expect(completedStep.state, TrackingStepState.completed);
-      expect(completedStep.badgeText, 'Selesai');
-    });
+        // Verify step 6 (Selesai) is completed
+        final completedStep = steps.firstWhere((s) => s.key == 'completed');
+        expect(completedStep.state, TrackingStepState.completed);
+        expect(completedStep.badgeText, 'Selesai');
+      },
+    );
 
     test('7. Tracking: shows pendingConfirmation as current step when awaiting confirmation', () {
       final steps = MutationTrackingHelper.buildTrackingSteps(
@@ -363,7 +391,9 @@ void main() {
       expect(divisionStep.state, TrackingStepState.completed);
 
       // Verify step 5 (Konfirmasi) is current
-      final confirmStep = steps.firstWhere((s) => s.key == 'confirmation' || s.key == 'pendingConfirmation');
+      final confirmStep = steps.firstWhere(
+        (s) => s.key == 'confirmation' || s.key == 'pendingConfirmation',
+      );
       expect(confirmStep.state, TrackingStepState.current);
       expect(confirmStep.badgeText, 'Perlu Konfirmasi');
 

@@ -57,9 +57,13 @@ class _KadivApprovalsScreenState extends ConsumerState<KadivApprovalsScreen> {
     final sortOrder = ref.watch(kadivSortOrderProvider);
 
     final title = switch (statusFilter) {
+      KadivStatusFilter.processing => 'Diproses',
+      KadivStatusFilter.allocated => 'Dialokasikan',
+      KadivStatusFilter.returned => 'Dikembalikan',
+      KadivStatusFilter.completed => 'Selesai',
+      KadivStatusFilter.rejected => 'Ditolak',
       KadivStatusFilter.waiting => 'Menunggu Otorisasi',
       KadivStatusFilter.approved => 'Disetujui',
-      KadivStatusFilter.rejected => 'Ditolak',
       KadivStatusFilter.all => 'Semua Pengajuan',
     };
 
@@ -116,21 +120,41 @@ class _KadivApprovalsScreenState extends ConsumerState<KadivApprovalsScreen> {
                             value: statusFilter,
                             isDense: true,
                             isExpanded: true,
-                            icon: const Icon(Icons.filter_list_rounded,
-                                size: 16, color: _C.teal),
+                            icon: const Icon(
+                              Icons.filter_list_rounded,
+                              size: 16,
+                              color: _C.teal,
+                            ),
                             style: const TextStyle(
-                                fontSize: 12,
-                                fontWeight: FontWeight.w500,
-                                color: _C.textPrimary),
-                            items: KadivStatusFilter.values
-                                .map((s) => DropdownMenuItem(
-                                    value: s, child: Text(s.displayName)))
-                                .toList(),
+                              fontSize: 12,
+                              fontWeight: FontWeight.w500,
+                              color: _C.textPrimary,
+                            ),
+                            items:
+                                [
+                                      KadivStatusFilter.all,
+                                      KadivStatusFilter.processing,
+                                      KadivStatusFilter.allocated,
+                                      KadivStatusFilter.returned,
+                                      KadivStatusFilter.completed,
+                                      KadivStatusFilter.rejected,
+                                      KadivStatusFilter.waiting,
+                                    ]
+                                    .map(
+                                      (s) => DropdownMenuItem(
+                                        value: s,
+                                        child: Text(s.displayName),
+                                      ),
+                                    )
+                                    .toList(),
                             onChanged: (val) {
                               if (val != null) {
                                 ref
-                                    .read(kadivStatusFilterProvider.notifier)
-                                    .state = val;
+                                        .read(
+                                          kadivStatusFilterProvider.notifier,
+                                        )
+                                        .state =
+                                    val;
                               }
                             },
                           ),
@@ -144,21 +168,28 @@ class _KadivApprovalsScreenState extends ConsumerState<KadivApprovalsScreen> {
                           key: const Key('dropdown_filter_kadiv_sort'),
                           value: sortOrder,
                           isDense: true,
-                          icon: const Icon(Icons.sort_rounded,
-                              size: 16, color: _C.textSecondary),
+                          icon: const Icon(
+                            Icons.sort_rounded,
+                            size: 16,
+                            color: _C.textSecondary,
+                          ),
                           style: const TextStyle(
-                              fontSize: 12,
-                              fontWeight: FontWeight.w500,
-                              color: _C.textPrimary),
+                            fontSize: 12,
+                            fontWeight: FontWeight.w500,
+                            color: _C.textPrimary,
+                          ),
                           items: KadivSortOrder.values
-                              .map((s) => DropdownMenuItem(
-                                  value: s, child: Text(s.displayName)))
+                              .map(
+                                (s) => DropdownMenuItem(
+                                  value: s,
+                                  child: Text(s.displayName),
+                                ),
+                              )
                               .toList(),
                           onChanged: (val) {
                             if (val != null) {
-                              ref
-                                  .read(kadivSortOrderProvider.notifier)
-                                  .state = val;
+                              ref.read(kadivSortOrderProvider.notifier).state =
+                                  val;
                             }
                           },
                         ),
@@ -196,7 +227,9 @@ class _KadivApprovalsScreenState extends ConsumerState<KadivApprovalsScreen> {
               },
               loading: () => const Center(
                 child: CircularProgressIndicator(
-                    strokeWidth: 2, color: _C.teal),
+                  strokeWidth: 2,
+                  color: _C.teal,
+                ),
               ),
               error: (err, _) => _ErrorState(
                 message: '$err',
@@ -214,20 +247,31 @@ class _KadivApprovalsScreenState extends ConsumerState<KadivApprovalsScreen> {
 
   Widget _buildEmptyState(KadivStatusFilter filter) {
     final title = switch (filter) {
+      KadivStatusFilter.processing => 'Tidak Ada Mutasi Diproses',
+      KadivStatusFilter.allocated => 'Tidak Ada Mutasi Dialokasikan',
+      KadivStatusFilter.returned => 'Tidak Ada Mutasi Dikembalikan',
+      KadivStatusFilter.completed => 'Belum Ada Mutasi Selesai',
       KadivStatusFilter.waiting => 'Tidak Ada Mutasi Menunggu Approval',
       KadivStatusFilter.approved => 'Belum Ada Mutasi Disetujui',
       KadivStatusFilter.rejected => 'Belum Ada Mutasi Ditolak',
       KadivStatusFilter.all => 'Tidak Ada Pengajuan Ditemukan',
     };
     final subtitle = switch (filter) {
+      KadivStatusFilter.processing =>
+        'Pengajuan yang sedang diproses akan muncul di sini.',
+      KadivStatusFilter.allocated =>
+        'Pengajuan yang sedang dialokasikan akan muncul di sini.',
+      KadivStatusFilter.returned =>
+        'Pengajuan yang dikembalikan ke pemohon akan muncul di sini.',
+      KadivStatusFilter.completed =>
+        'Pengajuan yang telah selesai dikonfirmasi akan muncul di sini.',
       KadivStatusFilter.waiting =>
         'Seluruh pengajuan mutasi tingkat Pemimpin Divisi telah selesai diproses.',
       KadivStatusFilter.approved =>
         'Pengajuan yang Anda setujui akan muncul di sini.',
       KadivStatusFilter.rejected =>
         'Pengajuan yang Anda tolak akan muncul di sini.',
-      KadivStatusFilter.all =>
-        'Tidak ada data yang sesuai kriteria pencarian.',
+      KadivStatusFilter.all => 'Tidak ada data yang sesuai kriteria pencarian.',
     };
     return _EmptyState(title: title, subtitle: subtitle);
   }
@@ -282,8 +326,10 @@ class _KadivApprovalCard extends StatelessWidget {
                 ),
                 const SizedBox(width: 8),
                 Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 3,
+                  ),
                   decoration: BoxDecoration(
                     color: bg,
                     borderRadius: BorderRadius.circular(999),
@@ -291,7 +337,10 @@ class _KadivApprovalCard extends StatelessWidget {
                   child: Text(
                     mutation.status.displayName,
                     style: TextStyle(
-                        fontSize: 10, fontWeight: FontWeight.w600, color: fg),
+                      fontSize: 10,
+                      fontWeight: FontWeight.w600,
+                      color: fg,
+                    ),
                   ),
                 ),
               ],
@@ -300,23 +349,29 @@ class _KadivApprovalCard extends StatelessWidget {
             Text(
               mutation.asset.name,
               style: const TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w600,
-                  color: _C.textPrimary),
+                fontSize: 14,
+                fontWeight: FontWeight.w600,
+                color: _C.textPrimary,
+              ),
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
             ),
             const SizedBox(height: 4),
             Row(
               children: [
-                const Icon(Icons.place_outlined,
-                    size: 13, color: _C.textSecondary),
+                const Icon(
+                  Icons.place_outlined,
+                  size: 13,
+                  color: _C.textSecondary,
+                ),
                 const SizedBox(width: 4),
                 Expanded(
                   child: Text(
                     '${mutation.currentLocation} → ${mutation.targetLocation}',
                     style: const TextStyle(
-                        fontSize: 11, color: _C.textSecondary),
+                      fontSize: 11,
+                      color: _C.textSecondary,
+                    ),
                     overflow: TextOverflow.ellipsis,
                   ),
                 ),
@@ -325,14 +380,19 @@ class _KadivApprovalCard extends StatelessWidget {
             const SizedBox(height: 2),
             Row(
               children: [
-                const Icon(Icons.person_outline_rounded,
-                    size: 13, color: _C.textSecondary),
+                const Icon(
+                  Icons.person_outline_rounded,
+                  size: 13,
+                  color: _C.textSecondary,
+                ),
                 const SizedBox(width: 4),
                 Expanded(
                   child: Text(
                     'Pemohon: ${mutation.applicantName}  •  PIC: ${mutation.targetPic}',
                     style: const TextStyle(
-                        fontSize: 11, color: _C.textSecondary),
+                      fontSize: 11,
+                      color: _C.textSecondary,
+                    ),
                     overflow: TextOverflow.ellipsis,
                   ),
                 ),
@@ -343,19 +403,20 @@ class _KadivApprovalCard extends StatelessWidget {
                 mutation.approvedBy != null) ...[
               const SizedBox(height: 8),
               Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                 decoration: BoxDecoration(
                   color: _C.successLight,
                   borderRadius: BorderRadius.circular(8),
-                  border: Border.all(
-                      color: _C.success.withValues(alpha: 0.3)),
+                  border: Border.all(color: _C.success.withValues(alpha: 0.3)),
                 ),
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    const Icon(Icons.verified_rounded,
-                        size: 12, color: _C.success),
+                    const Icon(
+                      Icons.verified_rounded,
+                      size: 12,
+                      color: _C.success,
+                    ),
                     const SizedBox(width: 4),
                     Text(
                       'Verifikasi Bagian Aset: ${mutation.assetVerifiedBy ?? mutation.approvedBy}',
@@ -447,20 +508,27 @@ class _SearchField extends StatelessWidget {
         style: const TextStyle(fontSize: 13, color: _C.textPrimary),
         decoration: InputDecoration(
           hintText: hintText,
-          hintStyle:
-              const TextStyle(fontSize: 13, color: _C.textSecondary),
-          prefixIcon: const Icon(Icons.search_rounded,
-              size: 18, color: _C.textSecondary),
+          hintStyle: const TextStyle(fontSize: 13, color: _C.textSecondary),
+          prefixIcon: const Icon(
+            Icons.search_rounded,
+            size: 18,
+            color: _C.textSecondary,
+          ),
           suffixIcon: showClear
               ? GestureDetector(
                   onTap: onClear,
-                  child: const Icon(Icons.clear_rounded,
-                      size: 16, color: _C.textSecondary),
+                  child: const Icon(
+                    Icons.clear_rounded,
+                    size: 16,
+                    color: _C.textSecondary,
+                  ),
                 )
               : null,
           border: InputBorder.none,
-          contentPadding:
-              const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          contentPadding: const EdgeInsets.symmetric(
+            horizontal: 16,
+            vertical: 12,
+          ),
         ),
         onChanged: onChanged,
       ),
@@ -508,21 +576,28 @@ class _EmptyState extends StatelessWidget {
                 color: _C.successLight,
                 borderRadius: BorderRadius.circular(20),
               ),
-              child: const Icon(Icons.task_alt_rounded,
-                  size: 36, color: _C.success),
+              child: const Icon(
+                Icons.task_alt_rounded,
+                size: 36,
+                color: _C.success,
+              ),
             ),
             const SizedBox(height: 16),
-            Text(title,
-                textAlign: TextAlign.center,
-                style: const TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w700,
-                    color: _C.textPrimary)),
+            Text(
+              title,
+              textAlign: TextAlign.center,
+              style: const TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.w700,
+                color: _C.textPrimary,
+              ),
+            ),
             const SizedBox(height: 6),
-            Text(subtitle,
-                textAlign: TextAlign.center,
-                style: const TextStyle(
-                    fontSize: 13, color: _C.textSecondary)),
+            Text(
+              subtitle,
+              textAlign: TextAlign.center,
+              style: const TextStyle(fontSize: 13, color: _C.textSecondary),
+            ),
           ],
         ),
       ),
@@ -551,20 +626,27 @@ class _ErrorState extends StatelessWidget {
                 color: _C.errorLight,
                 borderRadius: BorderRadius.circular(18),
               ),
-              child: const Icon(Icons.error_outline_rounded,
-                  size: 32, color: _C.error),
+              child: const Icon(
+                Icons.error_outline_rounded,
+                size: 32,
+                color: _C.error,
+              ),
             ),
             const SizedBox(height: 16),
-            const Text('Gagal Memuat Data',
-                style: TextStyle(
-                    fontSize: 15,
-                    fontWeight: FontWeight.w700,
-                    color: _C.textPrimary)),
+            const Text(
+              'Gagal Memuat Data',
+              style: TextStyle(
+                fontSize: 15,
+                fontWeight: FontWeight.w700,
+                color: _C.textPrimary,
+              ),
+            ),
             const SizedBox(height: 6),
-            Text(message,
-                textAlign: TextAlign.center,
-                style: const TextStyle(
-                    fontSize: 12, color: _C.textSecondary)),
+            Text(
+              message,
+              textAlign: TextAlign.center,
+              style: const TextStyle(fontSize: 12, color: _C.textSecondary),
+            ),
             const SizedBox(height: 20),
             ElevatedButton.icon(
               onPressed: onRetry,
@@ -574,7 +656,8 @@ class _ErrorState extends StatelessWidget {
                 backgroundColor: _C.teal,
                 foregroundColor: Colors.white,
                 shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(10)),
+                  borderRadius: BorderRadius.circular(10),
+                ),
                 elevation: 0,
               ),
             ),

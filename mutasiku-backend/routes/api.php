@@ -21,13 +21,17 @@ Route::get('/user', function (Request $request) {
 
 Route::prefix('v1')->group(function () {
     Route::prefix('auth')->group(function () {
-        Route::post('/login', [AuthController::class, 'login']);
+        Route::post('/login', [AuthController::class, 'login'])->name('login');
 
         Route::middleware('auth:sanctum')->group(function () {
             Route::get('/me', [AuthController::class, 'me']);
             Route::post('/logout', [AuthController::class, 'logout']);
+            Route::post('/change-password', [AuthController::class, 'changePassword']);
         });
     });
+
+    // Alias / fallback route jika client memanggil POST /api/v1/login tanpa segmen auth
+    Route::post('/login', [AuthController::class, 'login']);
 
     Route::middleware('auth:sanctum')->group(function () {
         Route::get('/locations', [LocationController::class, 'index']);
@@ -36,16 +40,32 @@ Route::prefix('v1')->group(function () {
         Route::get('/assets/{id}', [AssetController::class, 'show']);
         Route::get('/assets/{id}/history', [AssetController::class, 'history']);
 
+        // Stage 5: Mutation CRUD & Transitions
         Route::get('/mutations', [MutationController::class, 'index']);
         Route::post('/mutations', [MutationController::class, 'store']);
         Route::get('/mutations/{id}', [MutationController::class, 'show']);
-
-        // Stage 5: Mutation Transitions
-        Route::post('/mutations/{id}/verify', [MutationController::class, 'verify']);
-        Route::post('/mutations/{id}/verify-asset', [MutationController::class, 'verifyAsset']);
-        Route::post('/mutations/{id}/approve', [MutationController::class, 'approve']);
-        Route::post('/mutations/{id}/confirm', [MutationController::class, 'confirm']);
+        Route::get('/mutations/{id}/document', [MutationController::class, 'downloadDocument']);
+        Route::put('/mutations/{id}', [MutationController::class, 'update']);
         Route::post('/mutations/{id}/resubmit', [MutationController::class, 'resubmit']);
+
+        // Operator
+        Route::post('/mutations/{id}/forward', [MutationController::class, 'forward']);
+        Route::post('/mutations/{id}/return-by-operator', [MutationController::class, 'returnByOperator']);
+
+        // Bagian Aset
+        Route::post('/mutations/{id}/verify-asset', [MutationController::class, 'verifyAsset']);
+        Route::post('/mutations/{id}/return-by-asset', [MutationController::class, 'returnByAsset']);
+
+        // Pemimpin Divisi
+        Route::post('/mutations/{id}/approve', [MutationController::class, 'approve']);
+        Route::post('/mutations/{id}/reject', [MutationController::class, 'reject']);
+
+        // Pemohon (Konfirmasi & Pelaporan)
+        Route::post('/mutations/{id}/confirm', [MutationController::class, 'confirm']);
+        Route::post('/mutations/{id}/report-discrepancy', [MutationController::class, 'reportDiscrepancy']);
+
+        // Backward compatibility / unified
+        Route::post('/mutations/{id}/verify', [MutationController::class, 'verify']);
 
         // Stage 6: Notifications
         Route::get('/notifications', [NotificationController::class, 'index']);

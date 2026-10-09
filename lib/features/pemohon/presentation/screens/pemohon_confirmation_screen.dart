@@ -10,6 +10,7 @@ import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 import '../../../../app/router/route_names.dart';
+import '../../../../core/utils/sla_wita_helper.dart';
 import '../../../../core/widgets/app_feedback.dart';
 import '../../../../core/widgets/error_view.dart';
 import '../../../../core/widgets/mutasiku_page_header.dart';
@@ -102,30 +103,14 @@ class _PemohonConfirmationScreenState
   }
 
   String _formatDateTime(DateTime dt) {
-    const months = [
-      'Jan',
-      'Feb',
-      'Mar',
-      'Apr',
-      'Mei',
-      'Jun',
-      'Jul',
-      'Agu',
-      'Sep',
-      'Okt',
-      'Nov',
-      'Des',
-    ];
-    final day = dt.day.toString().padLeft(2, '0');
-    final hour = dt.hour.toString().padLeft(2, '0');
-    final min = dt.minute.toString().padLeft(2, '0');
-    return '$day ${months[dt.month - 1]} ${dt.year}, $hour:$min WIB';
+    return SlaWitaHelper.formatDateTimeWita(dt);
   }
-
 
   @override
   Widget build(BuildContext context) {
-    final asyncMutation = ref.watch(mutationDetailProvider(widget.mutationId));
+    final asyncMutation = ref.watch(
+      pemohonMutationDetailProvider(widget.mutationId),
+    );
     final actionState = ref.watch(pemohonConfirmationActionProvider);
     final user = ref.watch(authStateProvider).user;
 
@@ -147,8 +132,12 @@ class _PemohonConfirmationScreenState
               ),
               error: (err, _) => ErrorView(
                 message: err.toString(),
-                onRetry: () =>
-                    ref.invalidate(mutationDetailProvider(widget.mutationId)),
+                onRetry: () {
+                  ref.invalidate(
+                    pemohonMutationDetailProvider(widget.mutationId),
+                  );
+                  ref.invalidate(mutationDetailProvider(widget.mutationId));
+                },
               ),
             ),
           ),
@@ -201,18 +190,20 @@ class _PemohonConfirmationScreenState
     PemohonConfirmationActionState actionState,
   ) {
     final m = actionState.result ?? mutation;
-    final isPending = m.status == MutationStatus.waitingConfirmation ||
+    final isPending =
+        m.status == MutationStatus.waitingConfirmation ||
         m.status == MutationStatus.pendingConfirmation;
     final isCompleted = m.status == MutationStatus.completed;
-    final isDisputedByApplicant = (m.status == MutationStatus.returned && m.staffUpdatedAt != null) ||
-        (m.status == MutationStatus.waitingAssetVerification && m.confirmationReason != null);
+    final isDisputedByApplicant =
+        (m.status == MutationStatus.returned && m.staffUpdatedAt != null) ||
+        (m.status == MutationStatus.waitingAssetVerification &&
+            m.confirmationReason != null);
 
     return Stack(
       children: [
         ListView(
           padding: const EdgeInsets.fromLTRB(16, 4, 16, 32),
           children: [
-
             if (actionState.successMessage != null) ...[
               _banner(
                 actionState.successMessage!,
@@ -346,7 +337,8 @@ class _PemohonConfirmationScreenState
   }
 
   Widget _ticketCard(Mutation m, {required bool isDisputedByApplicant}) {
-    final pending = m.status == MutationStatus.waitingConfirmation ||
+    final pending =
+        m.status == MutationStatus.waitingConfirmation ||
         m.status == MutationStatus.pendingConfirmation;
     final done = m.status == MutationStatus.completed;
 
@@ -1120,8 +1112,9 @@ class _PemohonConfirmationScreenState
                 );
 
                 final currentMutation = ref
-                    .read(mutationDetailProvider(widget.mutationId))
-                    .valueOrNull;
+                    .read(pemohonMutationDetailProvider(widget.mutationId))
+                    .valueOrNull ??
+                    ref.read(mutationDetailProvider(widget.mutationId)).valueOrNull;
                 ref
                     .read(notificationProvider.notifier)
                     .notifyRole(
@@ -1132,6 +1125,7 @@ class _PemohonConfirmationScreenState
                       type: NotificationType.action,
                       relatedMutationId: widget.mutationId,
                     );
+                ref.invalidate(pemohonMutationDetailProvider(widget.mutationId));
                 ref.invalidate(mutationDetailProvider(widget.mutationId));
                 // PENTING: pemohon TIDAK diarahkan ke halaman Edit Pengajuan.
                 // Yang perlu diperbaiki adalah hasil update data aset oleh
