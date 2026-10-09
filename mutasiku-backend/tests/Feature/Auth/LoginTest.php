@@ -317,4 +317,31 @@ class LoginTest extends TestCase
                 'password' => 'secretA',
             ])->assertStatus(200);
     }
+
+    public function test_login_accessible_via_official_and_fallback_endpoints(): void
+    {
+        $role = $this->createRole('pemohon');
+        $user = User::factory()->create([
+            'role_id' => $role->id,
+            'password' => 'password123',
+            'is_active' => true,
+        ]);
+
+        // 1. Endpoint resmi /api/v1/auth/login
+        $resOfficial = $this->postJson('/api/v1/auth/login', [
+            'email' => $user->email,
+            'password' => 'password123',
+        ]);
+        $resOfficial->assertStatus(200)
+            ->assertJsonPath('success', true);
+
+        // 2. Endpoint fallback /api/v1/login
+        $resFallback = $this->postJson('/api/v1/login', [
+            'email' => $user->email,
+            'password' => 'password123',
+        ]);
+        $resFallback->assertStatus(200)
+            ->assertJsonPath('success', true);
+    }
 }
+

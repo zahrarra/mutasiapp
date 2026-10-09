@@ -52,7 +52,8 @@ class AuthController extends Controller
             ]);
         }
 
-        $user = User::with('role')->where('email', $request->input('email'))->first();
+        $email = strtolower(trim((string) $request->input('email')));
+        $user = User::with('role')->where('email', $email)->first();
 
         if (! $user || ! Hash::check($request->input('password'), $user->password)) {
             RateLimiter::hit($throttleKey, 60);
@@ -84,6 +85,7 @@ class AuthController extends Controller
             'nip' => $user->nip,
             'role' => $roleName,
             'is_active' => (bool) $user->is_active,
+            'must_change_password' => (bool) $user->must_change_password,
             'created_at' => $user->created_at,
             'updated_at' => $user->updated_at,
         ];
@@ -94,12 +96,46 @@ class AuthController extends Controller
             'message' => 'Login berhasil.',
             'token' => $token,
             'role' => $roleName,
+            'must_change_password' => (bool) $user->must_change_password,
             'user' => $userData,
             'data' => [
                 'token' => $token,
                 'token_type' => 'Bearer',
                 'role' => $roleName,
+                'must_change_password' => (bool) $user->must_change_password,
                 'user' => $userData,
+            ],
+        ], 200);
+    }
+
+    /**
+     * Change user password (e.g. on first login or self-service update).
+     */
+    public function changePassword(\App\Http\Requests\ChangePasswordRequest $request): JsonResponse
+    {
+        $user = $request->user();
+
+        if (! Hash::check($request->input('current_password'), $user->password)) {
+            return response()->json([
+                'success' => false,
+                'status' => 'error',
+                'message' => 'Password lama tidak sesuai.',
+                'errors' => [
+                    'current_password' => ['Password lama tidak sesuai.'],
+                ],
+            ], 422);
+        }
+
+        $user->password = Hash::make($request->input('password'));
+        $user->must_change_password = false;
+        $user->save();
+
+        return response()->json([
+            'success' => true,
+            'status' => 'success',
+            'message' => 'Password berhasil diperbarui.',
+            'data' => [
+                'user' => new UserResource($user->loadMissing('role')),
             ],
         ], 200);
     }

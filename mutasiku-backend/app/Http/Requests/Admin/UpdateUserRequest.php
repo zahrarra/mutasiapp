@@ -13,6 +13,20 @@ class UpdateUserRequest extends FormRequest
         return $this->user()?->loadMissing('role')?->role?->name === 'admin';
     }
 
+    public function prepareForValidation(): void
+    {
+        if (! $this->filled('role_id') && $this->filled('role')) {
+            $roleName = strtolower(trim((string) $this->input('role')));
+            if ($roleName === 'kadiv') {
+                $roleName = 'pemimpin_divisi';
+            }
+            $role = \App\Models\Role::where('name', $roleName)->first();
+            if ($role) {
+                $this->merge(['role_id' => $role->id]);
+            }
+        }
+    }
+
     public function rules(): array
     {
         $userParam = $this->route('user') ?? $this->route('id');
@@ -23,6 +37,7 @@ class UpdateUserRequest extends FormRequest
             'email' => ['sometimes', 'required', 'string', 'email', 'max:255', Rule::unique('users', 'email')->ignore($userId)],
             'password' => ['nullable', 'string', 'min:6'],
             'role_id' => ['sometimes', 'required', 'integer', 'exists:roles,id'],
+            'role' => ['nullable', 'string'],
             'nip' => ['nullable', 'string', 'max:50', Rule::unique('users', 'nip')->ignore($userId)],
             'is_active' => ['nullable', 'boolean'],
         ];

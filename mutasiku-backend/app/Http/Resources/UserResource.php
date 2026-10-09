@@ -22,6 +22,7 @@ class UserResource extends JsonResource
             'role_id' => $this->role_id,
             'role' => $this->role?->name,
             'is_active' => (bool) $this->is_active,
+            'must_change_password' => (bool) $this->must_change_password,
             'created_at' => $this->created_at,
             'updated_at' => $this->updated_at,
         ];

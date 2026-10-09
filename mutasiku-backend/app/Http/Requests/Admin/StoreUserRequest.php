@@ -11,6 +11,20 @@ class StoreUserRequest extends FormRequest
         return $this->user()?->loadMissing('role')?->role?->name === 'admin';
     }
 
+    public function prepareForValidation(): void
+    {
+        if (! $this->filled('role_id') && $this->filled('role')) {
+            $roleName = strtolower(trim((string) $this->input('role')));
+            if ($roleName === 'kadiv') {
+                $roleName = 'pemimpin_divisi';
+            }
+            $role = \App\Models\Role::where('name', $roleName)->first();
+            if ($role) {
+                $this->merge(['role_id' => $role->id]);
+            }
+        }
+    }
+
     public function rules(): array
     {
         return [
@@ -18,6 +32,7 @@ class StoreUserRequest extends FormRequest
             'email' => ['required', 'string', 'email', 'max:255', 'unique:users,email'],
             'password' => ['required', 'string', 'min:6'],
             'role_id' => ['required', 'integer', 'exists:roles,id'],
+            'role' => ['nullable', 'string'],
             'nip' => ['nullable', 'string', 'max:50', 'unique:users,nip'],
             'is_active' => ['nullable', 'boolean'],
         ];

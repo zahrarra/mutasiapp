@@ -28,7 +28,9 @@ class UserController extends Controller
     public function store(StoreUserRequest $request): JsonResponse
     {
         $data = $request->validated();
+        $data['email'] = strtolower(trim($data['email']));
         $data['password'] = Hash::make($data['password']);
+        $data['must_change_password'] = true;
 
         $user = User::create($data);
         $user->load('role');
