@@ -19,6 +19,9 @@ abstract final class RouteNames {
   static const String unauthorizedPath = '/unauthorized';
   static const String unauthorizedName = 'unauthorized';
 
+  static const String changePasswordPath = '/change-password';
+  static const String changePasswordName = 'changePassword';
+
   // ─── Asset Routes ─────────────────────────────────────────────────────────
   static const String assetsPath = '/assets';
   static const String assetsName = 'assets';
@@ -64,7 +67,8 @@ abstract final class RouteNames {
   static const String bagianAsetDashboardPath = '/bagian-aset/dashboard';
   static const String bagianAsetDashboardName = 'bagianAsetDashboard';
 
-  static const String bagianAsetVerificationsPath = '/bagian-aset/verifications';
+  static const String bagianAsetVerificationsPath =
+      '/bagian-aset/verifications';
   static const String bagianAsetVerificationsName = 'bagianAsetVerifications';
 
   static const String bagianAsetVerificationDetailPath =
@@ -79,9 +83,9 @@ abstract final class RouteNames {
   static const String bagianAsetHistoryPath = '/bagian-aset/history';
   static const String bagianAsetHistoryName = 'bagianAsetHistory';
 
-  static const String bagianAsetNotificationsPath = '/bagian-aset/notifications';
+  static const String bagianAsetNotificationsPath =
+      '/bagian-aset/notifications';
   static const String bagianAsetNotificationsName = 'bagianAsetNotifications';
-
 
   // ─── Kadiv / Pemimpin Divisi Routes ──────────────────────────────────────
   static const String kadivDashboardPath = '/kadiv/dashboard';
@@ -107,15 +111,16 @@ abstract final class RouteNames {
   static const String pemimpinDivisiDashboardName = kadivDashboardName;
   static const String pemimpinDivisiApprovalsPath = kadivApprovalsPath;
   static const String pemimpinDivisiApprovalsName = kadivApprovalsName;
-  static const String pemimpinDivisiApprovalDetailPath = kadivApprovalDetailPath;
-  static const String pemimpinDivisiApprovalDetailName = kadivApprovalDetailName;
+  static const String pemimpinDivisiApprovalDetailPath =
+      kadivApprovalDetailPath;
+  static const String pemimpinDivisiApprovalDetailName =
+      kadivApprovalDetailName;
   static const String pemimpinDivisiRejectFormPath = kadivRejectFormPath;
   static const String pemimpinDivisiRejectFormName = kadivRejectFormName;
   static const String pemimpinDivisiHistoryPath = kadivHistoryPath;
   static const String pemimpinDivisiHistoryName = kadivHistoryName;
   static const String pemimpinDivisiNotificationsPath = kadivNotificationsPath;
   static const String pemimpinDivisiNotificationsName = kadivNotificationsName;
-
 
   // ─── Admin Routes ─────────────────────────────────────────────────────────
   static const String adminDashboardPath = '/admin/dashboard';

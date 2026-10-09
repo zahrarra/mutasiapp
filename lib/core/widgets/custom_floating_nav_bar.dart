@@ -277,8 +277,9 @@ class CustomFloatingNavBar extends ConsumerWidget {
     final activeLocation = _getActiveRoute(context);
     final unreadCount = ref.watch(unreadNotificationCountProvider);
     final isAdmin = items.any((item) => item.route.startsWith('/admin'));
-    final isBagianAset =
-        items.any((item) => item.route.startsWith('/bagian-aset'));
+    final isBagianAset = items.any(
+      (item) => item.route.startsWith('/bagian-aset'),
+    );
     final useStandardStyle = isAdmin || isBagianAset;
 
     if (useStandardStyle) {
@@ -308,11 +309,7 @@ class CustomFloatingNavBar extends ConsumerWidget {
                 ? const Color(0xFF0F3D56)
                 : const Color(0xFF94A3B8);
 
-            Widget iconWidget = Icon(
-              item.icon,
-              size: 20,
-              color: color,
-            );
+            Widget iconWidget = Icon(item.icon, size: 20, color: color);
             if (showBadge) {
               iconWidget = Badge(
                 smallSize: 8,
@@ -326,8 +323,10 @@ class CustomFloatingNavBar extends ConsumerWidget {
                 behavior: HitTestBehavior.opaque,
                 onTap: () => _onTap(context, item, isActive),
                 child: Padding(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 4,
+                    vertical: 2,
+                  ),
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
@@ -350,8 +349,9 @@ class CustomFloatingNavBar extends ConsumerWidget {
                         overflow: TextOverflow.ellipsis,
                         style: TextStyle(
                           fontSize: 11,
-                          fontWeight:
-                              isActive ? FontWeight.w700 : FontWeight.w500,
+                          fontWeight: isActive
+                              ? FontWeight.w700
+                              : FontWeight.w500,
                           color: color,
                           letterSpacing: -0.2,
                         ),

@@ -1,3 +1,4 @@
+import 'package:mutasiku/core/errors/failures.dart';
 // test/smoke_test.dart
 //
 // Comprehensive Smoke Test for all 15 audit criteria:
@@ -18,6 +19,7 @@
 // 15. Cek Admin semua menu bisa dibuka
 
 import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -48,19 +50,51 @@ class _MockAuthRepo implements AuthRepository {
   @override
   Future<Result<User?>> getCurrentUser() async => Result.success(user);
   @override
-  Future<Result<User>> login({required String username, required String password}) async =>
-      Result.success(user!);
+  Future<Result<User>> login({
+    required String username,
+    required String password,
+  }) async => Result.success(user!);
   @override
   Future<void> logout() async {}
+    @override
+  Future<Result<User>> changePassword({
+    required String currentPassword,
+    required String newPassword,
+    required String confirmPassword,
+  }) async {
+    if (newPassword.length < 8) {
+      return Result.failure(
+        const ValidationFailure(message: 'Password baru minimal 8 karakter.'),
+      );
+    }
+    if (newPassword != confirmPassword) {
+      return Result.failure(
+        const ValidationFailure(message: 'Konfirmasi password baru tidak cocok.'),
+      );
+    }
+    if (newPassword == currentPassword) {
+      return Result.failure(
+        const ValidationFailure(
+          message: 'Password baru harus berbeda dengan password lama.',
+        ),
+      );
+    }
+    if (user != null) {
+      return Result.success(user!.copyWith(mustChangePassword: false));
+    }
+    return Result.failure(
+      const UnauthorizedFailure(message: 'Pengguna tidak ditemukan.'),
+    );
+  }
 }
 
 class _MockAuthNotifier extends AuthNotifier {
   _MockAuthNotifier(User user)
-      : super(
-          loginUseCase: LoginUseCase(repository: _MockAuthRepo(user)),
-          logoutUseCase: LogoutUseCase(repository: _MockAuthRepo(user)),
-          authRepository: _MockAuthRepo(user),
-        ) {
+    : super(
+        loginUseCase: LoginUseCase(repository: _MockAuthRepo(user)),
+        logoutUseCase: LogoutUseCase(repository: _MockAuthRepo(user)),
+        authRepository: _MockAuthRepo(user),
+      ) {
     state = AuthState(isLoading: false, user: user);
   }
 }
@@ -158,7 +192,9 @@ void main() {
 
       // 2. Operator receives mutation in queue
       final allMutations = await mutationRepo.getAllMutations();
-      final oprQueue = allMutations.dataOrNull!.where((m) => m.status == MutationStatus.submitted).toList();
+      final oprQueue = allMutations.dataOrNull!
+          .where((m) => m.status == MutationStatus.submitted)
+          .toList();
       expect(oprQueue.any((m) => m.id == mutId), isTrue);
 
       // 3. Operator forwards to Bagian Aset
@@ -167,11 +203,16 @@ void main() {
         operatorName: 'Siti Operator',
       );
       expect(opForwardRes.isSuccess, isTrue);
-      expect(opForwardRes.dataOrNull!.status, equals(MutationStatus.waitingAssetVerification));
+      expect(
+        opForwardRes.dataOrNull!.status,
+        equals(MutationStatus.waitingAssetVerification),
+      );
 
       // 4. Bagian Aset receives and forwards to Pemimpin Divisi
       final allAfterOpr = await mutationRepo.getAllMutations();
-      final asetQueue = allAfterOpr.dataOrNull!.where((m) => m.status == MutationStatus.waitingAssetVerification).toList();
+      final asetQueue = allAfterOpr.dataOrNull!
+          .where((m) => m.status == MutationStatus.waitingAssetVerification)
+          .toList();
       expect(asetQueue.any((m) => m.id == mutId), isTrue);
 
       final asetForwardRes = await mutationRepo.assetSectionForward(
@@ -180,11 +221,16 @@ void main() {
         newPic: 'Ahmad Fauzi',
       );
       expect(asetForwardRes.isSuccess, isTrue);
-      expect(asetForwardRes.dataOrNull!.status, equals(MutationStatus.waitingDivisionHeadApproval));
+      expect(
+        asetForwardRes.dataOrNull!.status,
+        equals(MutationStatus.waitingDivisionHeadApproval),
+      );
 
       // 5. Pemimpin Divisi receives and approves
       final allAfterAset = await mutationRepo.getAllMutations();
-      final kadivQueue = allAfterAset.dataOrNull!.where((m) => m.status == MutationStatus.waitingDivisionHeadApproval).toList();
+      final kadivQueue = allAfterAset.dataOrNull!
+          .where((m) => m.status == MutationStatus.waitingDivisionHeadApproval)
+          .toList();
       expect(kadivQueue.any((m) => m.id == mutId), isTrue);
 
       final kadivApproveRes = await mutationRepo.divisionApprove(
@@ -192,7 +238,10 @@ void main() {
         divisionHeadName: 'Hendra Kadiv',
       );
       expect(kadivApproveRes.isSuccess, isTrue);
-      expect(kadivApproveRes.dataOrNull!.status, equals(MutationStatus.waitingConfirmation));
+      expect(
+        kadivApproveRes.dataOrNull!.status,
+        equals(MutationStatus.waitingConfirmation),
+      );
 
       // 6. Pemohon confirms (Sesuai) -> auto updates asset and completes
       final confirmRes = await mutationRepo.confirmMutationResult(
@@ -209,44 +258,62 @@ void main() {
       expect(updatedAsset.dataOrNull?.pic, equals('Ahmad Fauzi'));
     });
 
-    test('3, 4, 5: Alur Konfirmasi Tidak Sesuai (Kembali ke Bagian Aset)', () async {
-      // 1. Submit
-      final subRes = await mutationRepo.submitMutation(
-        const SubmitMutationParams(
-          applicantId: 'u_user_01',
-          applicantName: 'Rina Pemohon',
-          assetId: 'AST-SRV-001',
-          assetName: 'Server Dell PowerEdge',
-          sourceLocation: 'Data Center Pusat',
-          targetLocation: 'Data Center Bali',
-          targetPic: 'Kadek Surya',
-          reason: 'Relokasi server produksi bernilai tinggi',
-          isAssetMovingWithApplicant: true,
-          documentName: 'sk_srv.pdf',
-        ),
-      );
-      final mutId = subRes.dataOrNull!.id;
+    test(
+      '3, 4, 5: Alur Konfirmasi Tidak Sesuai (Kembali ke Bagian Aset)',
+      () async {
+        // 1. Submit
+        final subRes = await mutationRepo.submitMutation(
+          const SubmitMutationParams(
+            applicantId: 'u_user_01',
+            applicantName: 'Rina Pemohon',
+            assetId: 'AST-SRV-001',
+            assetName: 'Server Dell PowerEdge',
+            sourceLocation: 'Data Center Pusat',
+            targetLocation: 'Data Center Bali',
+            targetPic: 'Kadek Surya',
+            reason: 'Relokasi server produksi bernilai tinggi',
+            isAssetMovingWithApplicant: true,
+            documentName: 'sk_srv.pdf',
+          ),
+        );
+        final mutId = subRes.dataOrNull!.id;
 
-      // 2. Operator forwards
-      await mutationRepo.operatorForward(mutationId: mutId, operatorName: 'Siti Operator');
+        // 2. Operator forwards
+        await mutationRepo.operatorForward(
+          mutationId: mutId,
+          operatorName: 'Siti Operator',
+        );
 
-      // 3. Bagian Aset forwards
-      await mutationRepo.assetSectionForward(mutationId: mutId, verifierName: 'Bambang Bagian Aset');
+        // 3. Bagian Aset forwards
+        await mutationRepo.assetSectionForward(
+          mutationId: mutId,
+          verifierName: 'Bambang Bagian Aset',
+        );
 
-      // 4. Pemimpin Divisi approves
-      await mutationRepo.divisionApprove(mutationId: mutId, divisionHeadName: 'Hendra Kadiv');
+        // 4. Pemimpin Divisi approves
+        await mutationRepo.divisionApprove(
+          mutationId: mutId,
+          divisionHeadName: 'Hendra Kadiv',
+        );
 
-      // 5. Pemohon confirms Tidak Sesuai with reason
-      final disputeRes = await mutationRepo.confirmMutationResult(
-        mutationId: mutId,
-        confirmedBy: 'Rina Pemohon',
-        isSesuai: false,
-        reason: 'Fisik server tergores dan belum tiba di rak',
-      );
-      expect(disputeRes.isSuccess, isTrue);
-      expect(disputeRes.dataOrNull!.status, equals(MutationStatus.waitingAssetVerification));
-      expect(disputeRes.dataOrNull!.confirmationReason, equals('Fisik server tergores dan belum tiba di rak'));
-    });
+        // 5. Pemohon confirms Tidak Sesuai with reason
+        final disputeRes = await mutationRepo.confirmMutationResult(
+          mutationId: mutId,
+          confirmedBy: 'Rina Pemohon',
+          isSesuai: false,
+          reason: 'Fisik server tergores dan belum tiba di rak',
+        );
+        expect(disputeRes.isSuccess, isTrue);
+        expect(
+          disputeRes.dataOrNull!.status,
+          equals(MutationStatus.waitingAssetVerification),
+        );
+        expect(
+          disputeRes.dataOrNull!.confirmationReason,
+          equals('Fisik server tergores dan belum tiba di rak'),
+        );
+      },
+    );
   });
 
   group('SMOKE TEST 10: Notification Isolation per Role', () {
@@ -293,35 +360,49 @@ void main() {
       ];
 
       // Filter for Pemohon
-      final pemohonNotifs = notifs.where((n) =>
-          (n.targetUserId == pemohonUser.id) ||
-          (n.targetUserId == null && n.targetRole == pemohonUser.role)).toList();
+      final pemohonNotifs = notifs
+          .where(
+            (n) =>
+                (n.targetUserId == pemohonUser.id) ||
+                (n.targetUserId == null && n.targetRole == pemohonUser.role),
+          )
+          .toList();
       expect(pemohonNotifs.length, equals(1));
       expect(pemohonNotifs.first.targetRole, equals(UserRole.pemohon));
 
       // Filter for Operator
-      final oprNotifs = notifs.where((n) => n.targetRole == operatorUser.role).toList();
+      final oprNotifs = notifs
+          .where((n) => n.targetRole == operatorUser.role)
+          .toList();
       expect(oprNotifs.length, equals(1));
       expect(oprNotifs.first.targetRole, equals(UserRole.operator));
 
       // Filter for Bagian Aset
-      final bgNotifs = notifs.where((n) => n.targetRole == bagianAsetUser.role).toList();
+      final bgNotifs = notifs
+          .where((n) => n.targetRole == bagianAsetUser.role)
+          .toList();
       expect(bgNotifs.length, equals(1));
       expect(bgNotifs.first.targetRole, equals(UserRole.bagianAset));
 
       // Filter for Kadiv
-      final kdvNotifs = notifs.where((n) => n.targetRole == kadivUser.role).toList();
+      final kdvNotifs = notifs
+          .where((n) => n.targetRole == kadivUser.role)
+          .toList();
       expect(kdvNotifs.length, equals(1));
       expect(kdvNotifs.first.targetRole, equals(UserRole.kadiv));
     });
   });
 
   group('SMOKE TEST 11: Sorting / Filter Physically Affect Data', () {
-    testWidgets('Operator sorting and filtering change list contents', (tester) async {
+    testWidgets('Operator sorting and filtering change list contents', (
+      tester,
+    ) async {
       await tester.pumpWidget(
         ProviderScope(
           overrides: [
-            authStateProvider.overrideWith((ref) => _MockAuthNotifier(operatorUser)),
+            authStateProvider.overrideWith(
+              (ref) => _MockAuthNotifier(operatorUser),
+            ),
             apiMutationRepositoryProvider.overrideWith(
               (ref) => ref.watch(mutationRepositoryProvider),
             ),
@@ -332,11 +413,20 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.byKey(const Key('input_search_mutations')), findsOneWidget);
-      expect(find.byKey(const Key('dropdown_filter_operator_status')), findsOneWidget);
-      expect(find.byKey(const Key('dropdown_filter_operator_sort')), findsOneWidget);
+      expect(
+        find.byKey(const Key('dropdown_filter_operator_status')),
+        findsOneWidget,
+      );
+      expect(
+        find.byKey(const Key('dropdown_filter_operator_sort')),
+        findsOneWidget,
+      );
 
       // Search 'Budi'
-      await tester.enterText(find.byKey(const Key('input_search_mutations')), 'Budi');
+      await tester.enterText(
+        find.byKey(const Key('input_search_mutations')),
+        'Budi',
+      );
       await tester.pumpAndSettle();
       expect(find.text('Budi Santoso'), findsOneWidget);
       expect(find.text('Rina'), findsNothing);
@@ -344,7 +434,9 @@ void main() {
   });
 
   group('SMOKE TEST 12: Dropdown Lokasi Appears Inline Below Field', () {
-    testWidgets('InlineSearchableDropdown renders panel directly below input', (tester) async {
+    testWidgets('InlineSearchableDropdown renders panel directly below input', (
+      tester,
+    ) async {
       final controller = TextEditingController();
       String? selectedValue;
       await tester.pumpWidget(
@@ -392,7 +484,10 @@ void main() {
   group('SMOKE TEST 13: Zero Manual Refresh & Zero Ke Dashboard Buttons', () {
     test('Scan codebase for forbidden Refresh and Ke Dashboard texts', () {
       final libDir = Directory('lib');
-      final dartFiles = libDir.listSync(recursive: true).whereType<File>().where((f) => f.path.endsWith('.dart'));
+      final dartFiles = libDir
+          .listSync(recursive: true)
+          .whereType<File>()
+          .where((f) => f.path.endsWith('.dart'));
 
       int forbiddenRefreshFound = 0;
       int forbiddenKeDashboardFound = 0;
@@ -403,13 +498,23 @@ void main() {
         if (content.contains("'Refresh'") || content.contains('"Refresh"')) {
           forbiddenRefreshFound++;
         }
-        if (content.contains('Ke Dashboard') || content.contains('ke Dashboard')) {
+        if (content.contains('Ke Dashboard') ||
+            content.contains('ke Dashboard')) {
           forbiddenKeDashboardFound++;
         }
       }
 
-      expect(forbiddenRefreshFound, equals(0), reason: 'Found $forbiddenRefreshFound instances of Refresh buttons');
-      expect(forbiddenKeDashboardFound, equals(0), reason: 'Found $forbiddenKeDashboardFound instances of Ke Dashboard buttons');
+      expect(
+        forbiddenRefreshFound,
+        equals(0),
+        reason: 'Found $forbiddenRefreshFound instances of Refresh buttons',
+      );
+      expect(
+        forbiddenKeDashboardFound,
+        equals(0),
+        reason:
+            'Found $forbiddenKeDashboardFound instances of Ke Dashboard buttons',
+      );
     });
   });
 
@@ -442,11 +547,15 @@ void main() {
   });
 
   group('SMOKE TEST 15: Admin Dashboard and all menus are functional', () {
-    testWidgets('Admin Dashboard renders 3 menus with valid destinations', (tester) async {
+    testWidgets('Admin Dashboard renders 3 menus with valid destinations', (
+      tester,
+    ) async {
       await tester.pumpWidget(
         ProviderScope(
           overrides: [
-            authStateProvider.overrideWith((ref) => _MockAuthNotifier(adminUser)),
+            authStateProvider.overrideWith(
+              (ref) => _MockAuthNotifier(adminUser),
+            ),
           ],
           child: const MaterialApp(home: AdminDashboardScreen()),
         ),
@@ -458,33 +567,33 @@ void main() {
       expect(find.textContaining('Kategori Aset'), findsOneWidget);
     });
 
-    testWidgets('Admin Users Screen renders without dead buttons', (tester) async {
+    testWidgets('Admin Users Screen renders without dead buttons', (
+      tester,
+    ) async {
       await tester.pumpWidget(
-        const ProviderScope(
-          child: MaterialApp(home: AdminUsersScreen()),
-        ),
+        const ProviderScope(child: MaterialApp(home: AdminUsersScreen())),
       );
       await tester.pumpAndSettle();
       expect(find.text('User & Permission'), findsOneWidget);
       expect(find.byType(TextField), findsOneWidget);
     });
 
-    testWidgets('Admin Locations Screen renders with location items', (tester) async {
+    testWidgets('Admin Locations Screen renders with location items', (
+      tester,
+    ) async {
       await tester.pumpWidget(
-        const ProviderScope(
-          child: MaterialApp(home: AdminLocationsScreen()),
-        ),
+        const ProviderScope(child: MaterialApp(home: AdminLocationsScreen())),
       );
       await tester.pumpAndSettle();
       expect(find.text('Lokasi & Unit'), findsOneWidget);
       expect(find.textContaining('Lantai 1'), findsWidgets);
     });
 
-    testWidgets('Asset Category Screen renders with categories list', (tester) async {
+    testWidgets('Asset Category Screen renders with categories list', (
+      tester,
+    ) async {
       await tester.pumpWidget(
-        const ProviderScope(
-          child: MaterialApp(home: AssetCategoryScreen()),
-        ),
+        const ProviderScope(child: MaterialApp(home: AssetCategoryScreen())),
       );
       await tester.pumpAndSettle();
       expect(find.text('Kategori Master Aset'), findsOneWidget);

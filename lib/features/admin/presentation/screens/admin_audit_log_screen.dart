@@ -82,7 +82,8 @@ class _AdminAuditLogScreenState extends ConsumerState<AdminAuditLogScreen> {
             bottom: false,
             child: MutasiKuPageHeader(
               title: 'Log Audit Sistem',
-              subtitle: 'Histori pembaruan konfigurasi & rekam jejak tata kelola',
+              subtitle:
+                  'Histori pembaruan konfigurasi & rekam jejak tata kelola',
               onBack: () {
                 if (context.canPop()) {
                   context.pop();
@@ -246,8 +247,7 @@ class _AdminAuditLogScreenState extends ConsumerState<AdminAuditLogScreen> {
         title: 'Pembaruan Node Cabang',
         category: 'Master Data',
         time: '12m lalu',
-        desc:
-            'Node transit aset logistik regional ditambahkan ke KCP Thamrin.',
+        desc: 'Node transit aset logistik regional ditambahkan ke KCP Thamrin.',
         tagCode: '#LOC-1092',
         statusLabel: 'Sukses Diterapkan',
         isSuccess: true,
@@ -257,8 +257,7 @@ class _AdminAuditLogScreenState extends ConsumerState<AdminAuditLogScreen> {
         title: 'Penugasan Role Pegawai',
         category: 'User & Role',
         time: '1j lalu',
-        desc:
-            'User Dimas Pratama dialokasikan hak akses Petugas Aset TI oleh Admin Utama.',
+        desc: 'User Dimas Pratama dialokasikan hak akses Petugas Aset TI oleh Admin Utama.',
         tagCode: '#RBAC-441',
         statusLabel: 'Oleh Admin Utama',
         isSuccess: true,
@@ -268,8 +267,7 @@ class _AdminAuditLogScreenState extends ConsumerState<AdminAuditLogScreen> {
         title: 'Sinkronisasi Basis Data Aset',
         category: 'Sistem',
         time: '3j lalu',
-        desc:
-            'Validasi 6.302 entitas inventaris server selesai tanpa anomali data.',
+        desc: 'Validasi 6.302 entitas inventaris server selesai tanpa anomali data.',
         tagCode: '#SYNC-882',
         statusLabel: 'Integritas Terverifikasi',
         isSuccess: true,
@@ -279,8 +277,7 @@ class _AdminAuditLogScreenState extends ConsumerState<AdminAuditLogScreen> {
         title: 'Pembaruan Kebijakan Token Sesi',
         category: 'Sistem',
         time: '5j lalu',
-        desc:
-            'Ambang batas token refresh diperpanjang 15 menit untuk kestabilan koneksi operator.',
+        desc: 'Ambang batas token refresh diperpanjang 15 menit untuk kestabilan koneksi operator.',
         tagCode: '#SEC-019',
         statusLabel: 'Kebijakan Aktif',
         isSuccess: true,
@@ -290,8 +287,7 @@ class _AdminAuditLogScreenState extends ConsumerState<AdminAuditLogScreen> {
         title: 'Pendaftaran Akun Baru Pemohon',
         category: 'User & Role',
         time: '1h lalu',
-        desc:
-            'Akun baru untuk staf operasional Rina Wati berhasil dibuat dan dikaitkan ke KC Surabaya.',
+        desc: 'Akun baru untuk staf operasional Rina Wati berhasil dibuat dan dikaitkan ke KC Surabaya.',
         tagCode: '#USR-902',
         statusLabel: 'Akun Aktif',
         isSuccess: true,
@@ -301,8 +297,7 @@ class _AdminAuditLogScreenState extends ConsumerState<AdminAuditLogScreen> {
         title: 'Penambahan Kategori Aset Baru',
         category: 'Master Data',
         time: '2h lalu',
-        desc:
-            'Kategori aset "Peralatan Laboratorium TI" ditambahkan ke hierarki master kategori.',
+        desc: 'Kategori aset "Peralatan Laboratorium TI" ditambahkan ke hierarki master kategori.',
         tagCode: '#CAT-314',
         statusLabel: 'Sukses Diterapkan',
         isSuccess: true,
@@ -310,8 +305,7 @@ class _AdminAuditLogScreenState extends ConsumerState<AdminAuditLogScreen> {
     ];
 
     return all.where((log) {
-      if (_selectedCategory != 'Semua' &&
-          log.category != _selectedCategory) {
+      if (_selectedCategory != 'Semua' && log.category != _selectedCategory) {
         return false;
       }
       if (_searchQuery.isNotEmpty) {
@@ -331,9 +325,7 @@ class _AdminAuditLogScreenState extends ConsumerState<AdminAuditLogScreen> {
       decoration: BoxDecoration(
         color: _AuditColors.surfaceWhite,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(
-          color: _AuditColors.slate200.withValues(alpha: 0.8),
-        ),
+        border: Border.all(color: _AuditColors.slate200.withValues(alpha: 0.8)),
         boxShadow: const [
           BoxShadow(
             color: Color(0x06000000),
@@ -393,11 +385,7 @@ class _AdminAuditLogScreenState extends ConsumerState<AdminAuditLogScreen> {
                 const SizedBox(height: 3),
                 Text(
                   item.desc,
-                  style: _t(
-                    size: 12,
-                    color: _AuditColors.slate600,
-                    h: 1.3,
-                  ),
+                  style: _t(size: 12, color: _AuditColors.slate600, h: 1.3),
                 ),
                 const SizedBox(height: 8),
                 Wrap(
@@ -412,9 +400,7 @@ class _AdminAuditLogScreenState extends ConsumerState<AdminAuditLogScreen> {
                       decoration: BoxDecoration(
                         color: _AuditColors.slate100,
                         borderRadius: BorderRadius.circular(6),
-                        border: Border.all(
-                          color: _AuditColors.slate200,
-                        ),
+                        border: Border.all(color: _AuditColors.slate200),
                       ),
                       child: Text(
                         item.tagCode,

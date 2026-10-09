@@ -1,3 +1,4 @@
+import 'package:mutasiku/core/errors/failures.dart';
 // test/features/admin/admin_audit_log_screen_test.dart
 
 import 'package:flutter/material.dart';
@@ -27,15 +28,45 @@ class _MockAuthRepo implements AuthRepository {
   }) async => Result.success(user!);
   @override
   Future<void> logout() async {}
+    @override
+  Future<Result<User>> changePassword({
+    required String currentPassword,
+    required String newPassword,
+    required String confirmPassword,
+  }) async {
+    if (newPassword.length < 8) {
+      return Result.failure(
+        const ValidationFailure(message: 'Password baru minimal 8 karakter.'),
+      );
+    }
+    if (newPassword != confirmPassword) {
+      return Result.failure(
+        const ValidationFailure(message: 'Konfirmasi password baru tidak cocok.'),
+      );
+    }
+    if (newPassword == currentPassword) {
+      return Result.failure(
+        const ValidationFailure(
+          message: 'Password baru harus berbeda dengan password lama.',
+        ),
+      );
+    }
+    if (user != null) {
+      return Result.success(user!.copyWith(mustChangePassword: false));
+    }
+    return Result.failure(
+      const UnauthorizedFailure(message: 'Pengguna tidak ditemukan.'),
+    );
+  }
 }
 
 class _FakeAuthNotifier extends AuthNotifier {
   _FakeAuthNotifier(User? user)
-      : super(
-          loginUseCase: LoginUseCase(repository: _MockAuthRepo(user)),
-          logoutUseCase: LogoutUseCase(repository: _MockAuthRepo(user)),
-          authRepository: _MockAuthRepo(user),
-        ) {
+    : super(
+        loginUseCase: LoginUseCase(repository: _MockAuthRepo(user)),
+        logoutUseCase: LogoutUseCase(repository: _MockAuthRepo(user)),
+        authRepository: _MockAuthRepo(user),
+      ) {
     state = AuthState(isLoading: false, user: user);
   }
 }
@@ -50,15 +81,16 @@ void main() {
     isActive: true,
   );
 
-  Widget createSubject({String initialLocation = RouteNames.adminAuditLogPath}) {
+  Widget createSubject({
+    String initialLocation = RouteNames.adminAuditLogPath,
+  }) {
     final router = GoRouter(
       initialLocation: initialLocation,
       routes: [
         GoRoute(
           path: RouteNames.adminDashboardPath,
-          builder: (context, state) => const Scaffold(
-            body: Text('Admin Dashboard Target'),
-          ),
+          builder: (context, state) =>
+              const Scaffold(body: Text('Admin Dashboard Target')),
         ),
         GoRoute(
           path: RouteNames.adminAuditLogPath,
@@ -69,19 +101,16 @@ void main() {
 
     return ProviderScope(
       overrides: [
-        authStateProvider.overrideWith(
-          (ref) => _FakeAuthNotifier(adminUser),
-        ),
+        authStateProvider.overrideWith((ref) => _FakeAuthNotifier(adminUser)),
       ],
-      child: MaterialApp.router(
-        routerConfig: router,
-      ),
+      child: MaterialApp.router(routerConfig: router),
     );
   }
 
   group('AdminAuditLogScreen Tests', () {
-    testWidgets('renders page header, search, filter chips, and log cards',
-        (tester) async {
+    testWidgets('renders page header, search, filter chips, and log cards', (
+      tester,
+    ) async {
       await tester.pumpWidget(createSubject());
       await tester.pumpAndSettle();
 
@@ -114,8 +143,9 @@ void main() {
       expect(auditNavText.style?.color, const Color(0xFF0F3D56));
     });
 
-    testWidgets('filters log items when search query is entered',
-        (tester) async {
+    testWidgets('filters log items when search query is entered', (
+      tester,
+    ) async {
       await tester.pumpWidget(createSubject());
       await tester.pumpAndSettle();
 
@@ -129,8 +159,9 @@ void main() {
       expect(find.text('Penugasan Role Pegawai'), findsNothing);
     });
 
-    testWidgets('filters log items when category chip is selected',
-        (tester) async {
+    testWidgets('filters log items when category chip is selected', (
+      tester,
+    ) async {
       await tester.pumpWidget(createSubject());
       await tester.pumpAndSettle();
 
@@ -141,8 +172,9 @@ void main() {
       expect(find.text('Pembaruan Node Cabang'), findsNothing);
     });
 
-    testWidgets('back button returns to previous screen normally',
-        (tester) async {
+    testWidgets('back button returns to previous screen normally', (
+      tester,
+    ) async {
       final router = GoRouter(
         initialLocation: RouteNames.adminDashboardPath,
         routes: [
@@ -171,9 +203,7 @@ void main() {
               (ref) => _FakeAuthNotifier(adminUser),
             ),
           ],
-          child: MaterialApp.router(
-            routerConfig: router,
-          ),
+          child: MaterialApp.router(routerConfig: router),
         ),
       );
       await tester.pumpAndSettle();

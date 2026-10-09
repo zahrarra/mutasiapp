@@ -5,6 +5,7 @@
 // dilanjutkan kembali di kemudian waktu (PRD V1.1).
 
 import 'dart:convert';
+
 import 'package:shared_preferences/shared_preferences.dart';
 
 class MutationDraft {
@@ -45,8 +46,8 @@ class MutationDraft {
     this.documentBytes,
     DateTime? savedAt,
     DateTime? updatedAt,
-  })  : targetPic = targetPic ?? pic ?? '',
-        savedAt = savedAt ?? updatedAt ?? const _ConstDateTime();
+  }) : targetPic = targetPic ?? pic ?? '',
+       savedAt = savedAt ?? updatedAt ?? const _ConstDateTime();
 
   Map<String, dynamic> toJson() {
     return {
@@ -63,8 +64,9 @@ class MutationDraft {
       'documentName': documentName,
       'documentSize': documentSize,
       'documentPath': documentPath,
-      'documentBytes':
-          documentBytes != null ? base64Encode(documentBytes!) : null,
+      'documentBytes': documentBytes != null
+          ? base64Encode(documentBytes!)
+          : null,
       'savedAt': savedAt.toIso8601String(),
     };
   }
@@ -174,18 +176,16 @@ class MutationDraftService {
 
   static Future<SharedPreferences?> _getPrefs() async {
     try {
-      return await SharedPreferences.getInstance()
-          .timeout(const Duration(milliseconds: 100));
+      return await SharedPreferences.getInstance().timeout(
+        const Duration(milliseconds: 100),
+      );
     } catch (_) {
       return null;
     }
   }
 
   /// Simpan draf pengajuan.
-  static Future<void> saveDraft(
-    MutationDraft draft, {
-    String? userId,
-  }) async {
+  static Future<void> saveDraft(MutationDraft draft, {String? userId}) async {
     final uid = _resolveUid(userId);
     _inMemoryDrafts[uid] = draft;
 

@@ -37,6 +37,8 @@ abstract final class AppConstants {
   // Lihat .env.example.
 
   /// Base URL default (override via environment)
-  static const String defaultBaseUrl =
-      String.fromEnvironment('API_BASE_URL', defaultValue: 'http://127.0.0.1:8000');
+  static const String defaultBaseUrl = String.fromEnvironment(
+    'API_BASE_URL',
+    defaultValue: 'http://127.0.0.1:8000',
+  );
 }

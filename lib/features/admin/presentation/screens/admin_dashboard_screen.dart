@@ -22,6 +22,7 @@ import '../../../auth/domain/entities/user_role.dart';
 import '../../../auth/presentation/providers/auth_provider.dart';
 import '../../domain/entities/location_item.dart';
 import '../../../mutation/presentation/providers/mutation_form_provider.dart';
+import '../../../asset/presentation/widgets/admin_create_asset_dialog.dart';
 
 /// Design tokens persis sesuai dengan Stitch HTML Admin Dashboard
 abstract final class _StitchColors {
@@ -170,8 +171,6 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
         } else {
           actionGridColumns = 1;
         }
-
-
 
         return Scaffold(
           backgroundColor: _StitchColors.canvasBg,
@@ -1752,6 +1751,19 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
                 style: _t(size: 12, color: _StitchColors.slate500),
               ),
               const SizedBox(height: 20),
+              _buildSheetActionTile(
+                icon: Icons.inventory_2_outlined,
+                title: 'Tambah Aset Baru',
+                subtitle: 'Daftarkan inventaris baru ke Master Aset MutasiKu',
+                onTap: () async {
+                  Navigator.pop(ctx);
+                  final created = await AdminCreateAssetDialog.show(context);
+                  if (created == true) {
+                    ref.invalidate(assetListProvider);
+                    ref.invalidate(assetCategoriesProvider);
+                  }
+                },
+              ),
               _buildSheetActionTile(
                 icon: Icons.person_add_alt_1_outlined,
                 title: 'Tambah Pengguna Baru',

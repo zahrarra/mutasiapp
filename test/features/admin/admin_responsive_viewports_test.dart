@@ -17,6 +17,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:mutasiku/features/admin/presentation/screens/admin_dashboard_screen.dart';
 import 'package:mutasiku/features/admin/presentation/screens/admin_users_screen.dart';
 import 'package:mutasiku/features/asset/presentation/screens/asset_category_screen.dart';
+import 'package:mutasiku/features/auth/data/repositories/user_repository_impl.dart';
+import 'package:mutasiku/features/auth/presentation/providers/auth_provider.dart';
 
 void main() {
   const viewports = <String, Size>{
@@ -33,17 +35,21 @@ void main() {
 
   group('AdminUsersScreen Responsive Multi-Viewport Tests', () {
     for (final entry in viewports.entries) {
-      testWidgets('renders cleanly on ${entry.key} with 0 RenderFlex errors',
-          (tester) async {
+      testWidgets('renders cleanly on ${entry.key} with 0 RenderFlex errors', (
+        tester,
+      ) async {
         tester.view.physicalSize = entry.value;
         tester.view.devicePixelRatio = 1.0;
         addTearDown(tester.view.resetPhysicalSize);
 
         await tester.pumpWidget(
-          const ProviderScope(
-            child: MaterialApp(
-              home: AdminUsersScreen(),
-            ),
+          ProviderScope(
+            overrides: [
+              userRepositoryProvider.overrideWithValue(
+                UserRepositoryImpl.instance,
+              ),
+            ],
+            child: const MaterialApp(home: AdminUsersScreen()),
           ),
         );
         await tester.pumpAndSettle();
@@ -61,18 +67,15 @@ void main() {
 
   group('AdminDashboardScreen Responsive Multi-Viewport Tests', () {
     for (final entry in viewports.entries) {
-      testWidgets('renders cleanly on ${entry.key} with 0 RenderFlex errors',
-          (tester) async {
+      testWidgets('renders cleanly on ${entry.key} with 0 RenderFlex errors', (
+        tester,
+      ) async {
         tester.view.physicalSize = entry.value;
         tester.view.devicePixelRatio = 1.0;
         addTearDown(tester.view.resetPhysicalSize);
 
         await tester.pumpWidget(
-          const ProviderScope(
-            child: MaterialApp(
-              home: AdminDashboardScreen(),
-            ),
-          ),
+          const ProviderScope(child: MaterialApp(home: AdminDashboardScreen())),
         );
         await tester.pumpAndSettle();
 
@@ -87,35 +90,44 @@ void main() {
     }
   });
 
-  group('AssetCategoryScreen (Master Data Admin) Responsive Multi-Viewport Tests', () {
-    for (final entry in viewports.entries) {
-      testWidgets('renders cleanly on ${entry.key} with 0 RenderFlex errors',
+  group(
+    'AssetCategoryScreen (Master Data Admin) Responsive Multi-Viewport Tests',
+    () {
+      for (final entry in viewports.entries) {
+        testWidgets(
+          'renders cleanly on ${entry.key} with 0 RenderFlex errors',
           (tester) async {
-        tester.view.physicalSize = entry.value;
-        tester.view.devicePixelRatio = 1.0;
-        addTearDown(tester.view.resetPhysicalSize);
+            tester.view.physicalSize = entry.value;
+            tester.view.devicePixelRatio = 1.0;
+            addTearDown(tester.view.resetPhysicalSize);
 
-        await tester.pumpWidget(
-          const ProviderScope(
-            child: MaterialApp(
-              home: AssetCategoryScreen(),
-            ),
-          ),
+            await tester.pumpWidget(
+              const ProviderScope(
+                child: MaterialApp(home: AssetCategoryScreen()),
+              ),
+            );
+            await tester.pumpAndSettle();
+
+            // Check essential Stitch elements
+            expect(find.text('MUTASIKU ADMIN'), findsOneWidget);
+            expect(find.text('RINGKASAN MASTER DATA SISTEM'), findsOneWidget);
+            expect(find.text('Daftar Modul Master Data'), findsOneWidget);
+            expect(
+              find.text('Kelola Pengguna (User Management)'),
+              findsOneWidget,
+            );
+            expect(find.text('Role & Hak Akses (RBAC)'), findsOneWidget);
+            expect(
+              find.text('Master Unit Kerja & Pool Cabang'),
+              findsOneWidget,
+            );
+            expect(find.text('Kategori Master Aset'), findsOneWidget);
+
+            // Verify no RenderFlex overflow
+            expect(tester.takeException(), isNull);
+          },
         );
-        await tester.pumpAndSettle();
-
-        // Check essential Stitch elements
-        expect(find.text('MUTASIKU ADMIN'), findsOneWidget);
-        expect(find.text('RINGKASAN MASTER DATA SISTEM'), findsOneWidget);
-        expect(find.text('Daftar Modul Master Data'), findsOneWidget);
-        expect(find.text('Kelola Pengguna (User Management)'), findsOneWidget);
-        expect(find.text('Role & Hak Akses (RBAC)'), findsOneWidget);
-        expect(find.text('Master Unit Kerja & Pool Cabang'), findsOneWidget);
-        expect(find.text('Kategori Master Aset'), findsOneWidget);
-
-        // Verify no RenderFlex overflow
-        expect(tester.takeException(), isNull);
-      });
-    }
-  });
+      }
+    },
+  );
 }

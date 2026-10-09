@@ -56,7 +56,11 @@ class DashboardScreen extends ConsumerWidget {
                     ),
                     child: const Row(
                       children: [
-                        Icon(Icons.wifi_off, color: AppColors.warning, size: 18),
+                        Icon(
+                          Icons.wifi_off,
+                          color: AppColors.warning,
+                          size: 18,
+                        ),
                         SizedBox(width: AppSpacing.xs),
                         Expanded(
                           child: Text(
@@ -101,8 +105,7 @@ class DashboardScreen extends ConsumerWidget {
                             color: AppColors.textPrimary,
                           ),
                         ),
-                        if (user != null)
-                          StatusBadge.info(user.role.label),
+                        if (user != null) StatusBadge.info(user.role.label),
                       ],
                     ),
                     const SizedBox(height: AppSpacing.xs),
@@ -140,10 +143,7 @@ class DashboardScreen extends ConsumerWidget {
             const SizedBox(height: AppSpacing.xs),
             const Text(
               'Flutter Foundation siap. Seluruh arsitektur core, token desain, routing, auth skeleton, dan error handling telah berhasil diinisialisasi.',
-              style: TextStyle(
-                fontSize: 14,
-                color: AppColors.textSecondary,
-              ),
+              style: TextStyle(fontSize: 14, color: AppColors.textSecondary),
             ),
             const SizedBox(height: AppSpacing.xl),
 

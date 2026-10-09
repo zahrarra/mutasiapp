@@ -143,10 +143,11 @@ class DocumentPickerService {
 
       // 3. Validasi Ekstensi
       final fileName = file.name.trim().isNotEmpty ? file.name : 'dokumen.pdf';
-      final ext = (file.extension?.trim().isNotEmpty == true
-              ? file.extension!
-              : _getExtension(fileName))
-          .toLowerCase();
+      final ext =
+          (file.extension?.trim().isNotEmpty == true
+                  ? file.extension!
+                  : _getExtension(fileName))
+              .toLowerCase();
 
       if (allowedExtensions != null && !allowedExtensions.contains(ext)) {
         return DocumentPickerResult.failure(

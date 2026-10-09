@@ -1,3 +1,4 @@
+import 'package:mutasiku/core/errors/failures.dart';
 // test/features/admin/admin_dashboard_render_test.dart
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -23,6 +24,36 @@ class _MockAuthRepo implements AuthRepository {
   }) async => Result.success(user!);
   @override
   Future<void> logout() async {}
+    @override
+  Future<Result<User>> changePassword({
+    required String currentPassword,
+    required String newPassword,
+    required String confirmPassword,
+  }) async {
+    if (newPassword.length < 8) {
+      return Result.failure(
+        const ValidationFailure(message: 'Password baru minimal 8 karakter.'),
+      );
+    }
+    if (newPassword != confirmPassword) {
+      return Result.failure(
+        const ValidationFailure(message: 'Konfirmasi password baru tidak cocok.'),
+      );
+    }
+    if (newPassword == currentPassword) {
+      return Result.failure(
+        const ValidationFailure(
+          message: 'Password baru harus berbeda dengan password lama.',
+        ),
+      );
+    }
+    if (user != null) {
+      return Result.success(user!.copyWith(mustChangePassword: false));
+    }
+    return Result.failure(
+      const UnauthorizedFailure(message: 'Pengguna tidak ditemukan.'),
+    );
+  }
 }
 
 class _MockAuthNotifier extends AuthNotifier {

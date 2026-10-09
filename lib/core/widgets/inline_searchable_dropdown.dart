@@ -4,6 +4,8 @@
 // Tidak menggunakan popup atau bottom sheet modal.
 
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
+
 import '../../app/theme/app_colors.dart';
 import '../../app/theme/app_spacing.dart';
 
@@ -93,14 +95,27 @@ class _InlineSearchableDropdownState extends State<InlineSearchableDropdown> {
             }
           },
           validator: widget.validator,
+          style: GoogleFonts.montserrat(
+            fontSize: 13,
+            fontWeight: FontWeight.w400,
+            color: AppColors.textPrimary,
+          ),
           decoration: InputDecoration(
             labelText: widget.labelText,
+            labelStyle: GoogleFonts.montserrat(
+              fontSize: 13,
+              fontWeight: FontWeight.w400,
+              color: AppColors.textSecondary,
+            ),
             hintText: widget.hintText,
+            hintStyle: GoogleFonts.montserrat(
+              fontSize: 13,
+              fontWeight: FontWeight.w400,
+              color: AppColors.textSecondary,
+            ),
             suffixIcon: IconButton(
               icon: Icon(
-                _isExpanded
-                    ? Icons.arrow_drop_up
-                    : Icons.arrow_drop_down,
+                _isExpanded ? Icons.arrow_drop_up : Icons.arrow_drop_down,
                 color: AppColors.primary,
               ),
               onPressed: () {
@@ -126,7 +141,9 @@ class _InlineSearchableDropdownState extends State<InlineSearchableDropdown> {
             decoration: BoxDecoration(
               color: Colors.white,
               borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
-              border: Border.all(color: AppColors.primary.withValues(alpha: 0.5)),
+              border: Border.all(
+                color: AppColors.primary.withValues(alpha: 0.5),
+              ),
               boxShadow: [
                 BoxShadow(
                   color: Colors.black.withValues(alpha: 0.08),
@@ -143,9 +160,18 @@ class _InlineSearchableDropdownState extends State<InlineSearchableDropdown> {
                   padding: const EdgeInsets.all(AppSpacing.sm),
                   child: TextField(
                     controller: _searchController,
+                    style: GoogleFonts.montserrat(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w400,
+                      color: AppColors.textPrimary,
+                    ),
                     decoration: InputDecoration(
                       hintText: 'Cari...',
-                      hintStyle: const TextStyle(fontSize: 13),
+                      hintStyle: GoogleFonts.montserrat(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w400,
+                        color: AppColors.textSecondary,
+                      ),
                       prefixIcon: const Icon(Icons.search, size: 18),
                       suffixIcon: _searchQuery.isNotEmpty
                           ? IconButton(
@@ -162,8 +188,9 @@ class _InlineSearchableDropdownState extends State<InlineSearchableDropdown> {
                         vertical: AppSpacing.xs,
                       ),
                       border: OutlineInputBorder(
-                        borderRadius:
-                            BorderRadius.circular(AppSpacing.radiusSm),
+                        borderRadius: BorderRadius.circular(
+                          AppSpacing.radiusSm,
+                        ),
                         borderSide: const BorderSide(color: AppColors.border),
                       ),
                       filled: true,
@@ -180,12 +207,13 @@ class _InlineSearchableDropdownState extends State<InlineSearchableDropdown> {
                 ConstrainedBox(
                   constraints: const BoxConstraints(maxHeight: 180),
                   child: filtered.isEmpty
-                      ? const Padding(
-                          padding: EdgeInsets.all(AppSpacing.md),
+                      ? Padding(
+                          padding: const EdgeInsets.all(AppSpacing.md),
                           child: Text(
                             'Data tidak ditemukan',
-                            style: TextStyle(
+                            style: GoogleFonts.montserrat(
                               fontSize: 12,
+                              fontWeight: FontWeight.w400,
                               color: AppColors.textSecondary,
                             ),
                           ),
@@ -211,11 +239,11 @@ class _InlineSearchableDropdownState extends State<InlineSearchableDropdown> {
                                 visualDensity: VisualDensity.compact,
                                 title: Text(
                                   item,
-                                  style: TextStyle(
+                                  style: GoogleFonts.montserrat(
                                     fontSize: 13,
                                     fontWeight: isSelected
-                                        ? FontWeight.bold
-                                        : FontWeight.normal,
+                                        ? FontWeight.w500
+                                        : FontWeight.w400,
                                     color: isSelected
                                         ? AppColors.primary
                                         : AppColors.textPrimary,

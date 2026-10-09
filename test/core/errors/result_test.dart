@@ -34,7 +34,9 @@ void main() {
       );
       expect(val, 84);
 
-      const failureResult = Result<int>.failure(NetworkFailure(message: 'Error'));
+      const failureResult = Result<int>.failure(
+        NetworkFailure(message: 'Error'),
+      );
       int errVal = 0;
       failureResult.when(
         onSuccess: (data) => errVal = data * 2,

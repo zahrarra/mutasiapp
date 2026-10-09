@@ -79,45 +79,54 @@ void main() {
       expect(loggedInUser.name, equals('Danu Sanjaya'));
     });
 
-    test('2. Admin dapat mengedit data user (nama, departemen, role)', () async {
-      final userResult = await userRepo.getUserByUsername('danu_operator');
-      expect(userResult is Success<User>, isTrue);
-      final current = (userResult as Success<User>).data;
+    test(
+      '2. Admin dapat mengedit data user (nama, departemen, role)',
+      () async {
+        final userResult = await userRepo.getUserByUsername('danu_operator');
+        expect(userResult is Success<User>, isTrue);
+        final current = (userResult as Success<User>).data;
 
-      final updated = current.copyWith(
-        name: 'Danu Sanjaya, S.Kom',
-        department: 'Divisi Audit Internal',
-        role: UserRole.bagianAset,
-      );
+        final updated = current.copyWith(
+          name: 'Danu Sanjaya, S.Kom',
+          department: 'Divisi Audit Internal',
+          role: UserRole.bagianAset,
+        );
 
-      final updateResult = await userRepo.updateUser(updated);
-      expect(updateResult is Success<User>, isTrue);
+        final updateResult = await userRepo.updateUser(updated);
+        expect(updateResult is Success<User>, isTrue);
 
-      final reFetch = await userRepo.getUserById(current.id);
-      expect((reFetch as Success<User>).data.name, equals('Danu Sanjaya, S.Kom'));
-      expect(reFetch.data.department, equals('Divisi Audit Internal'));
-      expect(reFetch.data.role, equals(UserRole.bagianAset));
-    });
+        final reFetch = await userRepo.getUserById(current.id);
+        expect(
+          (reFetch as Success<User>).data.name,
+          equals('Danu Sanjaya, S.Kom'),
+        );
+        expect(reFetch.data.department, equals('Divisi Audit Internal'));
+        expect(reFetch.data.role, equals(UserRole.bagianAset));
+      },
+    );
 
-    test('3. Admin dapat menonaktifkan user dan user nonaktif DITOLAK saat login', () async {
-      final userResult = await userRepo.getUserByUsername('danu_operator');
-      final current = (userResult as Success<User>).data;
+    test(
+      '3. Admin dapat menonaktifkan user dan user nonaktif DITOLAK saat login',
+      () async {
+        final userResult = await userRepo.getUserByUsername('danu_operator');
+        final current = (userResult as Success<User>).data;
 
-      // Nonaktifkan user
-      final toggleResult = await userRepo.toggleUserActive(current.id, false);
-      expect(toggleResult is Success<void>, isTrue);
+        // Nonaktifkan user
+        final toggleResult = await userRepo.toggleUserActive(current.id, false);
+        expect(toggleResult is Success<void>, isTrue);
 
-      // Percobaan login harus gagal karena akun dinonaktifkan
-      final loginAttempt = await authRepo.login(
-        username: 'danu_operator',
-        password: 'password123',
-      );
+        // Percobaan login harus gagal karena akun dinonaktifkan
+        final loginAttempt = await authRepo.login(
+          username: 'danu_operator',
+          password: 'password123',
+        );
 
-      expect(loginAttempt is AppFailure<User>, isTrue);
-      final failure = (loginAttempt as AppFailure<User>).failure;
-      expect(failure is UnauthorizedFailure, isTrue);
-      expect(failure.message, contains('dinonaktifkan'));
-    });
+        expect(loginAttempt is AppFailure<User>, isTrue);
+        final failure = (loginAttempt as AppFailure<User>).failure;
+        expect(failure is UnauthorizedFailure, isTrue);
+        expect(failure.message, contains('dinonaktifkan'));
+      },
+    );
 
     test('4. Akun sistem default dilindungi dari hard delete demi keamanan histori', () async {
       final deleteResult = await userRepo.deleteUser('usr_pemohon');
@@ -165,9 +174,7 @@ void main() {
       final target = allLocs.firstWhere((l) => l.name.contains('Cyber 2'));
 
       final updateResult = await locationRepo.updateLocation(
-        target.copyWith(
-          description: 'Fasilitas Utama Cloud Data Center',
-        ),
+        target.copyWith(description: 'Fasilitas Utama Cloud Data Center'),
       );
 
       expect(updateResult is Success<LocationItem>, isTrue);
@@ -195,14 +202,17 @@ void main() {
       expect(activeLocations.contains(target.name), isFalse);
     });
 
-    test('4. Lokasi default historis dilindungi dari penghapusan fisik', () async {
-      final deleteResult = await locationRepo.deleteLocation('loc_1');
-      expect(deleteResult is AppFailure<void>, isTrue);
-      expect(
-        (deleteResult as AppFailure<void>).failure.message,
-        contains('tidak dapat dihapus permanen'),
-      );
-    });
+    test(
+      '4. Lokasi default historis dilindungi dari penghapusan fisik',
+      () async {
+        final deleteResult = await locationRepo.deleteLocation('loc_1');
+        expect(deleteResult is AppFailure<void>, isTrue);
+        expect(
+          (deleteResult as AppFailure<void>).failure.message,
+          contains('tidak dapat dihapus permanen'),
+        );
+      },
+    );
   });
 
   group('ADMIN ASSET CATEGORIES', () {
@@ -243,13 +253,21 @@ void main() {
       expect(editResult is Success<AssetCategory>, isTrue);
 
       // Nonaktifkan
-      final toggleResult = await assetRepo.toggleCategoryActive(target.id, false);
+      final toggleResult = await assetRepo.toggleCategoryActive(
+        target.id,
+        false,
+      );
       expect(toggleResult is Success<void>, isTrue);
 
       final reFetch = await assetRepo.getCategories();
-      final updated = (reFetch as Success<List<AssetCategory>>).data.firstWhere((c) => c.code == 'LAB');
+      final updated = (reFetch as Success<List<AssetCategory>>).data.firstWhere(
+        (c) => c.code == 'LAB',
+      );
       expect(updated.isActive, isFalse);
-      expect(updated.description, equals('Perangkat laboratorium kimia & fisika'));
+      expect(
+        updated.description,
+        equals('Perangkat laboratorium kimia & fisika'),
+      );
     });
 
     test('3. Kategori yang digunakan oleh aset aktif dilindungi dari penghapusan fisik', () async {
@@ -264,17 +282,20 @@ void main() {
   });
 
   group('HISTORI MUTASI TETAP AMAN', () {
-    test('Histori mutasi yang sudah ada tetap utuh dan tersimpan di repository', () async {
-      final repo = MutationRepositoryImpl(
-        assetRepository: AssetRepositoryImpl(),
-      );
-      final allMutationsResult = await repo.getAllMutations();
-      expect(allMutationsResult is Success<List<dynamic>>, isTrue);
-      final list = (allMutationsResult as Success<List<dynamic>>).data;
-      expect(list.isNotEmpty, isTrue);
+    test(
+      'Histori mutasi yang sudah ada tetap utuh dan tersimpan di repository',
+      () async {
+        final repo = MutationRepositoryImpl(
+          assetRepository: AssetRepositoryImpl(),
+        );
+        final allMutationsResult = await repo.getAllMutations();
+        expect(allMutationsResult is Success<List<dynamic>>, isTrue);
+        final list = (allMutationsResult as Success<List<dynamic>>).data;
+        expect(list.isNotEmpty, isTrue);
 
-      // Pastikan tiket mutasi awal tetap ada
-      expect(list.any((m) => m.ticketNumber.contains('2026')), isTrue);
-    });
+        // Pastikan tiket mutasi awal tetap ada
+        expect(list.any((m) => m.ticketNumber.contains('2026')), isTrue);
+      },
+    );
   });
 }

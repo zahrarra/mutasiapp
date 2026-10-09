@@ -22,6 +22,7 @@ abstract final class RouteGuards {
     if (location == RouteNames.dashboardPath ||
         location == RouteNames.unauthorizedPath ||
         location == RouteNames.profilePath ||
+        location == RouteNames.changePasswordPath ||
         location == RouteNames.assetsPath ||
         location.startsWith('/assets/')) {
       return true;
@@ -48,6 +49,7 @@ abstract final class RouteGuards {
   static String? handleRedirect({
     required bool isAuthenticated,
     required UserRole? role,
+    bool mustChangePassword = false,
     required String currentLocation,
   }) {
     // Route yang dapat diakses tanpa login.
@@ -65,7 +67,29 @@ abstract final class RouteGuards {
       return RouteNames.loginPath;
     }
 
-    // 2. Sudah login tetapi mencoba membuka Landing/Login.
+    // 2. User wajib mengganti password saat first login.
+    if (isAuthenticated && mustChangePassword) {
+      if (currentLocation != RouteNames.changePasswordPath) {
+        debugPrint(
+          '[RouteGuard] First login must change password -> redirected to '
+          '${RouteNames.changePasswordPath}',
+        );
+
+        return RouteNames.changePasswordPath;
+      }
+
+      return null;
+    }
+
+    // 3. User sudah ganti password mencoba akses route change password lagi.
+    if (isAuthenticated &&
+        !mustChangePassword &&
+        currentLocation == RouteNames.changePasswordPath) {
+      final defaultTarget = role?.defaultRoute ?? RouteNames.dashboardPath;
+      return defaultTarget;
+    }
+
+    // 4. Sudah login tetapi mencoba membuka Landing/Login.
     if (isAuthenticated &&
         (currentLocation == RouteNames.loginPath ||
             currentLocation == RouteNames.landingPath)) {

@@ -170,8 +170,7 @@ abstract final class AppTheme {
           borderSide: const BorderSide(color: AppColors.border),
         ),
         labelStyle: AppTypography.body.copyWith(color: AppColors.textSecondary),
-        hintStyle:
-            AppTypography.body.copyWith(color: AppColors.textDisabled),
+        hintStyle: AppTypography.body.copyWith(color: AppColors.textDisabled),
         errorStyle: AppTypography.caption.copyWith(color: AppColors.error),
       ),
 
@@ -207,8 +206,7 @@ abstract final class AppTheme {
       // SnackBar
       snackBarTheme: SnackBarThemeData(
         backgroundColor: AppColors.textPrimary,
-        contentTextStyle:
-            AppTypography.body.copyWith(color: AppColors.surface),
+        contentTextStyle: AppTypography.body.copyWith(color: AppColors.surface),
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(AppRadius.button),
         ),

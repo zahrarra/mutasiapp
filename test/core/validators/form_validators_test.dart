@@ -19,7 +19,10 @@ void main() {
     });
 
     test('minLength validator', () {
-      expect(FormValidators.minLength('123', 6, 'Password'), 'Password minimal 6 karakter');
+      expect(
+        FormValidators.minLength('123', 6, 'Password'),
+        'Password minimal 6 karakter',
+      );
       expect(FormValidators.minLength('123456', 6, 'Password'), isNull);
     });
   });

@@ -16,6 +16,7 @@ import '../../features/asset/presentation/screens/asset_category_screen.dart';
 import '../../features/asset/presentation/screens/asset_detail_screen.dart';
 import '../../features/asset/presentation/screens/asset_list_screen.dart';
 import '../../features/auth/presentation/providers/auth_provider.dart';
+import '../../features/auth/presentation/screens/change_password_screen.dart';
 import '../../features/auth/presentation/screens/login_screen.dart';
 import '../../features/auth/presentation/screens/unauthorized_screen.dart';
 import '../../features/dashboard/presentation/screens/dashboard_screen.dart';
@@ -71,6 +72,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       return RouteGuards.handleRedirect(
         isAuthenticated: authState.isAuthenticated,
         role: authState.user?.role,
+        mustChangePassword: authState.user?.mustChangePassword ?? false,
         currentLocation: currentLocation,
       );
     },
@@ -103,6 +105,11 @@ final appRouterProvider = Provider<GoRouter>((ref) {
           transitionDuration: const Duration(milliseconds: 300),
           reverseTransitionDuration: const Duration(milliseconds: 200),
         ),
+      ),
+      GoRoute(
+        path: RouteNames.changePasswordPath,
+        name: RouteNames.changePasswordName,
+        builder: (context, state) => const ChangePasswordScreen(),
       ),
       GoRoute(
         path: RouteNames.dashboardPath,
@@ -181,7 +188,8 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         path: RouteNames.pemohonMutasiPath,
         name: RouteNames.pemohonMutasiName,
         builder: (context, state) {
-          final filter = state.uri.queryParameters['filter'] ??
+          final filter =
+              state.uri.queryParameters['filter'] ??
               (state.extra is String ? state.extra as String : null);
           return PemohonMutationListScreen(initialFilter: filter);
         },
@@ -189,7 +197,8 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/pemohon/mutations',
         builder: (context, state) {
-          final filter = state.uri.queryParameters['filter'] ??
+          final filter =
+              state.uri.queryParameters['filter'] ??
               (state.extra is String ? state.extra as String : null);
           return PemohonMutationListScreen(initialFilter: filter);
         },
@@ -197,7 +206,8 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/pemohon/history',
         builder: (context, state) {
-          final filter = state.uri.queryParameters['filter'] ??
+          final filter =
+              state.uri.queryParameters['filter'] ??
               (state.extra is String ? state.extra as String : null);
           return PemohonMutationListScreen(initialFilter: filter);
         },
@@ -205,7 +215,8 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/pemohon/mutation-history',
         builder: (context, state) {
-          final filter = state.uri.queryParameters['filter'] ??
+          final filter =
+              state.uri.queryParameters['filter'] ??
               (state.extra is String ? state.extra as String : null);
           return PemohonMutationListScreen(initialFilter: filter);
         },
@@ -263,7 +274,8 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         path: RouteNames.operatorMutationsPath,
         name: RouteNames.operatorMutationsName,
         builder: (context, state) {
-          final filter = state.uri.queryParameters['filter'] ??
+          final filter =
+              state.uri.queryParameters['filter'] ??
               (state.extra is String ? state.extra as String : null);
           return OperatorMutationsScreen(initialFilter: filter);
         },
@@ -363,7 +375,6 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         name: RouteNames.kadivNotificationsName,
         builder: (context, state) => const NotificationScreen(),
       ),
-
 
       // ─── Common Routes ────────────────────────────────────────────────────
       // Dipakai Operator/Bagian Aset/Pemimpin Divisi/Admin. Pemohon punya profil sendiri

@@ -6,25 +6,31 @@
 //   * Format PDF: Pratinjau halaman PDF interaktif (PdfPreview).
 //   * Format Gambar (PNG, JPG, JPEG, WEBP): Tampilan gambar interaktif (InteractiveViewer).
 //   * Format lain atau file fisik tidak ada di disk: Fallback informatif jujur tanpa dummy.
+// - Terintegrasi dengan endpoint streaming dokumen berautentikasi Laravel (/api/v1/mutations/{id}/document).
 
 import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:printing/printing.dart';
 
 import '../../app/theme/app_colors.dart';
 import '../../features/auth/domain/entities/user.dart';
 import '../../features/auth/domain/entities/user_role.dart';
 import '../../features/mutation/domain/entities/mutation.dart';
+import '../errors/result.dart';
+import '../network/api_client.dart';
+import '../providers/core_providers.dart';
 import 'app_feedback.dart';
 
-class DocumentPreviewDialog extends StatelessWidget {
+class DocumentPreviewDialog extends StatefulWidget {
   final Mutation? mutation;
   final User? currentUser;
   final String? customFileName;
   final Uint8List? customBytes;
   final String? customFilePath;
+  final ApiClient? apiClient;
 
   const DocumentPreviewDialog({
     super.key,
@@ -33,6 +39,7 @@ class DocumentPreviewDialog extends StatelessWidget {
     this.customFileName,
     this.customBytes,
     this.customFilePath,
+    this.apiClient,
   });
 
   /// Method statis untuk membuka dialog preview dengan pengecekan otorisasi role.
@@ -40,6 +47,7 @@ class DocumentPreviewDialog extends StatelessWidget {
     BuildContext context, {
     required Mutation mutation,
     required User? currentUser,
+    ApiClient? apiClient,
   }) async {
     // Validasi otorisasi akses
     if (!hasAccess(mutation, currentUser)) {
@@ -50,12 +58,21 @@ class DocumentPreviewDialog extends StatelessWidget {
       return;
     }
 
-    if (mutation.documentName == null || mutation.documentName!.trim().isEmpty) {
+    if (mutation.documentName == null ||
+        mutation.documentName!.trim().isEmpty) {
       AppFeedback.showInfo(
         context,
         'Tidak ada dokumen yang dilampirkan pada mutasi ini.',
       );
       return;
+    }
+
+    ApiClient? client = apiClient;
+    if (client == null) {
+      try {
+        client = ProviderScope.containerOf(context, listen: false)
+            .read(apiClientProvider);
+      } catch (_) {}
     }
 
     await showDialog<void>(
@@ -64,6 +81,7 @@ class DocumentPreviewDialog extends StatelessWidget {
       builder: (ctx) => DocumentPreviewDialog(
         mutation: mutation,
         currentUser: currentUser,
+        apiClient: client,
       ),
     );
   }
@@ -103,41 +121,100 @@ class DocumentPreviewDialog extends StatelessWidget {
         final applicantName = mutation.applicantName.toLowerCase().trim();
         final uname = user.name.toLowerCase().trim();
         return (applicantId.isNotEmpty && applicantId == uid) ||
-            (uname.isNotEmpty && (applicantName.contains(uname) || uname.contains(applicantName))) ||
+            (uname.isNotEmpty &&
+                (applicantName.contains(uname) ||
+                    uname.contains(applicantName))) ||
             user.username.toLowerCase().trim() == 'pemohon';
 
       case UserRole.operator:
       case UserRole.bagianAset:
       case UserRole.kadiv:
       case UserRole.admin:
-        // Role operasional, manajerial, dan peninjau memiliki akses ke dokumen pengajuan
+        // Seluruh role operasional, verifikasi, approval, dan audit memiliki akses
         return true;
     }
   }
 
   @override
+  State<DocumentPreviewDialog> createState() => _DocumentPreviewDialogState();
+}
+
+class _DocumentPreviewDialogState extends State<DocumentPreviewDialog> {
+  Uint8List? _bytes;
+  bool _isLoading = false;
+  String? _errorMessage;
+
+  @override
+  void initState() {
+    super.initState();
+    _initBytes();
+  }
+
+  void _initBytes() {
+    // 1. Cek customBytes
+    if (widget.customBytes != null && widget.customBytes!.isNotEmpty) {
+      _bytes = widget.customBytes;
+      return;
+    }
+
+    // 2. Cek documentBytes dari entity Mutation
+    if (widget.mutation?.documentBytes != null &&
+        widget.mutation!.documentBytes!.isNotEmpty) {
+      _bytes = Uint8List.fromList(widget.mutation!.documentBytes!);
+      return;
+    }
+
+    // 3. Cek file lokal di disk jika ada
+    final localPath = widget.customFilePath ?? widget.mutation?.documentPath;
+    if (localPath != null && localPath.isNotEmpty) {
+      try {
+        final f = File(localPath);
+        if (f.existsSync()) {
+          _bytes = f.readAsBytesSync();
+          return;
+        }
+      } catch (_) {}
+    }
+
+    // 4. Jika belum ada bytes dan memiliki apiClient serta mutation ID, download via API
+    if (widget.apiClient != null && widget.mutation != null) {
+      final cleanId = widget.mutation!.id.replaceAll('mut_', '');
+      _loadDocumentFromApi(cleanId);
+    }
+  }
+
+  Future<void> _loadDocumentFromApi(String mutationId) async {
+    setState(() {
+      _isLoading = true;
+      _errorMessage = null;
+    });
+
+    final result = await widget.apiClient!
+        .getBytes('/api/v1/mutations/$mutationId/document');
+    if (!mounted) return;
+
+    switch (result) {
+      case Success(:final data):
+        setState(() {
+          _bytes = data;
+          _isLoading = false;
+        });
+      case AppFailure(:final failure):
+        setState(() {
+          _isLoading = false;
+          _errorMessage =
+              failure.message ?? 'Gagal memuat dokumen fisik dari server.';
+        });
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
-    final docName = customFileName ?? mutation?.documentName ?? 'Dokumen';
+    final docName =
+        widget.customFileName ?? widget.mutation?.documentName ?? 'Dokumen';
     final ext = _getExtension(docName);
     final isPdf = ext == 'pdf';
     final isImage = ['png', 'jpg', 'jpeg', 'webp', 'gif', 'bmp'].contains(ext);
-
-    Uint8List? bytes = customBytes;
-    if (bytes == null || bytes.isEmpty) {
-      if (mutation?.documentBytes != null && mutation!.documentBytes!.isNotEmpty) {
-        bytes = Uint8List.fromList(mutation!.documentBytes!);
-      } else {
-        final path = customFilePath ?? mutation?.documentPath;
-        if (path != null && path.isNotEmpty) {
-          try {
-            final f = File(path);
-            if (f.existsSync()) {
-              bytes = f.readAsBytesSync();
-            }
-          } catch (_) {}
-        }
-      }
-    }
 
     final screenHeight = MediaQuery.of(context).size.height;
     final screenWidth = MediaQuery.of(context).size.width;
@@ -205,8 +282,8 @@ class DocumentPreviewDialog extends StatelessWidget {
                         ),
                         const SizedBox(height: 2),
                         Text(
-                          mutation != null
-                              ? 'Tiket: ${mutation!.ticketNumber} • ${mutation!.asset.name}'
+                          widget.mutation != null
+                              ? 'Tiket: ${widget.mutation!.ticketNumber} • ${widget.mutation!.asset.name}'
                               : 'Berkas SK SDM (Lampiran Pengajuan Mutasi)',
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
@@ -233,7 +310,7 @@ class DocumentPreviewDialog extends StatelessWidget {
                 context,
                 isPdf: isPdf,
                 isImage: isImage,
-                bytes: bytes,
+                bytes: _bytes,
                 docName: docName,
                 ext: ext,
               ),
@@ -244,8 +321,9 @@ class DocumentPreviewDialog extends StatelessWidget {
               padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
               decoration: const BoxDecoration(
                 color: AppColors.background,
-                borderRadius:
-                    BorderRadius.vertical(bottom: Radius.circular(16)),
+                borderRadius: BorderRadius.vertical(
+                  bottom: Radius.circular(16),
+                ),
                 border: Border(top: BorderSide(color: AppColors.border)),
               ),
               child: Row(
@@ -293,6 +371,35 @@ class DocumentPreviewDialog extends StatelessWidget {
     required String docName,
     required String ext,
   }) {
+    // 0. State Loading
+    if (_isLoading) {
+      return const Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            CircularProgressIndicator(),
+            SizedBox(height: 16),
+            Text(
+              'Mengunduh dan menyiapkan dokumen...',
+              style: TextStyle(
+                fontSize: 13,
+                color: AppColors.textSecondary,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    // 0. State Error
+    if (_errorMessage != null) {
+      return _buildErrorCard(
+        title: 'Gagal Memuat Dokumen',
+        description: _errorMessage!,
+      );
+    }
+
     // 1. Kasus Dokumen PDF
     if (isPdf) {
       if (bytes != null && bytes.isNotEmpty) {
@@ -305,9 +412,7 @@ class DocumentPreviewDialog extends StatelessWidget {
             allowPrinting: false,
             allowSharing: false,
             maxPageWidth: 650,
-            loadingWidget: const Center(
-              child: CircularProgressIndicator(),
-            ),
+            loadingWidget: const Center(child: CircularProgressIndicator()),
             onError: (context, error) => _buildErrorCard(
               title: 'Gagal Membaca File PDF',
               description: 'Format data PDF tidak dapat diproses: $error',
@@ -412,21 +517,14 @@ class DocumentPreviewDialog extends StatelessWidget {
     );
   }
 
-  Widget _buildErrorCard({
-    required String title,
-    required String description,
-  }) {
+  Widget _buildErrorCard({required String title, required String description}) {
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(24),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const Icon(
-              Icons.error_outline,
-              size: 44,
-              color: AppColors.error,
-            ),
+            const Icon(Icons.error_outline, size: 44, color: AppColors.error),
             const SizedBox(height: 12),
             Text(
               title,

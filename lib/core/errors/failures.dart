@@ -13,7 +13,8 @@ sealed class Failure {
     }
 
     if (this is ForbiddenFailure) {
-      return message ?? 'Anda tidak memiliki izin untuk melakukan tindakan ini.';
+      return message ??
+          'Anda tidak memiliki izin untuk melakukan tindakan ini.';
     }
 
     if (this is ValidationFailure) {
