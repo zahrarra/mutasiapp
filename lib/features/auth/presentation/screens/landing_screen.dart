@@ -50,10 +50,7 @@ class _LandingScreenState extends State<LandingScreen>
     );
 
     _fadeAnimation = Tween<double>(begin: 1.0, end: 0.0).animate(
-      CurvedAnimation(
-        parent: _fadeController,
-        curve: Curves.easeInOut,
-      ),
+      CurvedAnimation(parent: _fadeController, curve: Curves.easeInOut),
     );
 
     // Saat loading penuh → langsung mulai fade-out (tanpa delay tambahan)
@@ -149,10 +146,7 @@ class _LandingScreenState extends State<LandingScreen>
                   gradient: LinearGradient(
                     begin: Alignment.bottomCenter,
                     end: Alignment.topCenter,
-                    colors: [
-                      Color(0xFF040C13),
-                      Colors.transparent,
-                    ],
+                    colors: [Color(0xFF040C13), Colors.transparent],
                   ),
                 ),
               ),
@@ -173,8 +167,9 @@ class _LandingScreenState extends State<LandingScreen>
                           child: ConstrainedBox(
                             constraints: const BoxConstraints(maxWidth: 420),
                             child: Padding(
-                              padding:
-                                  const EdgeInsets.symmetric(horizontal: 28),
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 28,
+                              ),
                               child: Column(
                                 children: [
                                   const Spacer(flex: 4),
@@ -194,8 +189,9 @@ class _LandingScreenState extends State<LandingScreen>
                                       letterSpacing: -0.5,
                                       shadows: [
                                         Shadow(
-                                          color: Colors.black
-                                              .withValues(alpha: 0.4),
+                                          color: Colors.black.withValues(
+                                            alpha: 0.4,
+                                          ),
                                           blurRadius: 12,
                                           offset: const Offset(0, 3),
                                         ),
@@ -283,10 +279,7 @@ class _LandingScreenState extends State<LandingScreen>
             gradient: const LinearGradient(
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
-              colors: [
-                Color(0xFF0F3D56),
-                Color(0xFF0F766E),
-              ],
+              colors: [Color(0xFF0F3D56), Color(0xFF0F766E)],
             ),
             border: Border.all(
               color: Colors.white.withValues(alpha: 0.20),
@@ -324,8 +317,10 @@ class _LandingScreenState extends State<LandingScreen>
           return AnimatedBuilder(
             animation: _progressAnimation,
             builder: (context, child) {
-              final fillWidth = (totalWidth * _progressAnimation.value)
-                  .clamp(0.0, totalWidth);
+              final fillWidth = (totalWidth * _progressAnimation.value).clamp(
+                0.0,
+                totalWidth,
+              );
               return Align(
                 alignment: Alignment.centerLeft,
                 child: Container(
@@ -342,8 +337,7 @@ class _LandingScreenState extends State<LandingScreen>
                     ),
                     boxShadow: [
                       BoxShadow(
-                        color:
-                            const Color(0xFF14B8A6).withValues(alpha: 0.85),
+                        color: const Color(0xFF14B8A6).withValues(alpha: 0.85),
                         blurRadius: 10,
                         spreadRadius: 1,
                       ),
@@ -403,10 +397,7 @@ class _MutasiKuEmblemRibbonPainter extends CustomPainter {
       ..shader = const LinearGradient(
         begin: Alignment.topRight,
         end: Alignment.bottomLeft,
-        colors: [
-          Color(0xFF0284C7),
-          Color(0xFF14B8A6),
-        ],
+        colors: [Color(0xFF0284C7), Color(0xFF14B8A6)],
       ).createShader(const Rect.fromLTWH(38, 54, 44, 36))
       ..style = PaintingStyle.stroke
       ..strokeWidth = 7.5

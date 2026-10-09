@@ -4,6 +4,7 @@
 // Sumber: TECHNICAL-DESIGN.md §4.1, PROJECT-SETUP.md §11.
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+
 import '../../../../core/errors/failures.dart';
 import '../../../../core/errors/result.dart';
 import '../../../../core/providers/core_providers.dart';
@@ -18,7 +19,8 @@ import '../../domain/repositories/user_repository.dart';
 
 /// Provider untuk [UserRepository].
 final userRepositoryProvider = Provider<UserRepository>((ref) {
-  return UserRepositoryImpl.instance;
+  final apiClient = ref.watch(apiClientProvider);
+  return UserRepositoryImpl(apiClient: apiClient);
 });
 
 /// Provider untuk [AuthRepository].
@@ -54,16 +56,16 @@ class MasterUsersNotifier extends StateNotifier<AsyncValue<List<User>>> {
     }
   }
 
-  Future<Result<User>> createUser(User user) async {
-    final result = await _repository.createUser(user);
+  Future<Result<User>> createUser(User user, {String? password}) async {
+    final result = await _repository.createUser(user, password: password);
     if (result is Success<User>) {
       await loadUsers();
     }
     return result;
   }
 
-  Future<Result<User>> updateUser(User user) async {
-    final result = await _repository.updateUser(user);
+  Future<Result<User>> updateUser(User user, {String? password}) async {
+    final result = await _repository.updateUser(user, password: password);
     if (result is Success<User>) {
       await loadUsers();
     }
@@ -89,9 +91,9 @@ class MasterUsersNotifier extends StateNotifier<AsyncValue<List<User>>> {
 
 final masterUsersProvider =
     StateNotifierProvider<MasterUsersNotifier, AsyncValue<List<User>>>((ref) {
-  final repo = ref.watch(userRepositoryProvider);
-  return MasterUsersNotifier(repo);
-});
+      final repo = ref.watch(userRepositoryProvider);
+      return MasterUsersNotifier(repo);
+    });
 
 /// Provider untuk [LoginUseCase].
 final loginUseCaseProvider = Provider<LoginUseCase>((ref) {
@@ -111,11 +113,7 @@ class AuthState {
   final User? user;
   final Failure? failure;
 
-  const AuthState({
-    this.isLoading = false,
-    this.user,
-    this.failure,
-  });
+  const AuthState({this.isLoading = false, this.user, this.failure});
 
   bool get isAuthenticated => user != null;
 
@@ -166,10 +164,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
   Future<bool> login(String username, String password) async {
     state = state.copyWith(isLoading: true, clearFailure: true);
 
-    final result = await loginUseCase(
-      username: username,
-      password: password,
-    );
+    final result = await loginUseCase(username: username, password: password);
 
     if (result is Success<User>) {
       state = AuthState(isLoading: false, user: result.data);
@@ -194,6 +189,24 @@ class AuthNotifier extends StateNotifier<AuthState> {
       state = const AuthState(isLoading: false, user: null);
       await logoutUseCase();
     }
+  }
+
+  /// Ubah password user saat first-login atau mandiri.
+  Future<Result<User>> changePassword({
+    required String currentPassword,
+    required String newPassword,
+    required String confirmPassword,
+  }) async {
+    final result = await authRepository.changePassword(
+      currentPassword: currentPassword,
+      newPassword: newPassword,
+      confirmPassword: confirmPassword,
+    );
+
+    if (result is Success<User>) {
+      state = state.copyWith(user: result.data);
+    }
+    return result;
   }
 }
 

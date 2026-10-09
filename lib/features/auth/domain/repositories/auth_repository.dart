@@ -39,4 +39,11 @@ abstract class AuthRepository {
 
   /// Logout — invalidasi session dan hapus credential tersimpan.
   Future<void> logout();
+
+  /// Ubah password user (mandatory saat first login atau self-service).
+  Future<Result<User>> changePassword({
+    required String currentPassword,
+    required String newPassword,
+    required String confirmPassword,
+  });
 }

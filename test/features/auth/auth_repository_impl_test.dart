@@ -10,6 +10,7 @@
 
 import 'dart:convert';
 import 'dart:io';
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
@@ -25,7 +26,8 @@ class FakeSecureStorage implements SecureStorage {
   final Map<String, String> _storage = {};
 
   @override
-  Future<void> saveAuthToken(String token) async => _storage['auth_token'] = token;
+  Future<void> saveAuthToken(String token) async =>
+      _storage['auth_token'] = token;
 
   @override
   Future<String?> getAuthToken() async => _storage['auth_token'];
@@ -165,7 +167,8 @@ void main() {
               jsonEncode({
                 'success': false,
                 'status': 'error',
-                'message': 'Akun Anda dinonaktifkan. Silakan hubungi Administrator.',
+                'message':
+                    'Akun Anda dinonaktifkan. Silakan hubungi Administrator.',
               }),
               403,
               headers: {'content-type': 'application/json'},
@@ -292,20 +295,23 @@ void main() {
       expect(await secureStorage.hasAuthToken(), isFalse);
     });
 
-    test('5. Email valid format tetapi bukan user database -> DITOLAK', () async {
-      final repo = createRepository(createMockBackendClient());
+    test(
+      '5. Email valid format tetapi bukan user database -> DITOLAK',
+      () async {
+        final repo = createRepository(createMockBackendClient());
 
-      final result = await repo.login(
-        username: 'orangasing@gmail.com',
-        password: 'password_apa_saja',
-      );
+        final result = await repo.login(
+          username: 'orangasing@gmail.com',
+          password: 'password_apa_saja',
+        );
 
-      expect(result, isA<AppFailure<User>>());
-      final failure = (result as AppFailure<User>).failure;
-      expect(failure, isA<UnauthorizedFailure>());
-      expect(failure.userMessage, 'Email atau password salah.');
-      expect(await secureStorage.hasAuthToken(), isFalse);
-    });
+        expect(result, isA<AppFailure<User>>());
+        final failure = (result as AppFailure<User>).failure;
+        expect(failure, isA<UnauthorizedFailure>());
+        expect(failure.userMessage, 'Email atau password salah.');
+        expect(await secureStorage.hasAuthToken(), isFalse);
+      },
+    );
 
     test('6. Email tanpa format valid -> DITOLAK', () async {
       final repo = createRepository(createMockBackendClient());
@@ -319,7 +325,10 @@ void main() {
       final failure = (result as AppFailure<User>).failure;
       expect(failure, isA<ValidationFailure>());
       final valFailure = failure as ValidationFailure;
-      expect(valFailure.fieldErrors?['email'], contains('Format email tidak valid.'));
+      expect(
+        valFailure.fieldErrors?['email'],
+        contains('Format email tidak valid.'),
+      );
       expect(await secureStorage.hasAuthToken(), isFalse);
     });
 
@@ -447,6 +456,94 @@ void main() {
         apiClient.setAuthToken('expired_token');
         await apiClient.get('/api/v1/auth/me');
         expect(unauthCalled, isTrue);
+      });
+    });
+
+    group('Auth Endpoint Exact Path & Anti-Duplication Verification', () {
+      test('Login mengirim HTTP POST persis ke /api/v1/auth/login dan tanpa prefix ganda', () async {
+        String? capturedMethod;
+        String? capturedPath;
+
+        final mockClient = MockClient((request) async {
+          capturedMethod = request.method;
+          capturedPath = request.url.path;
+          return http.Response(
+            jsonEncode({
+              'success': true,
+              'token': 'mock_token',
+              'user': {
+                'id': 1,
+                'email': 'admin@mutasiku.id',
+                'name': 'Admin',
+                'role': 'admin',
+                'is_active': true,
+              },
+            }),
+            200,
+            headers: {'content-type': 'application/json'},
+          );
+        });
+
+        // Test 1: baseUrl standard (http://127.0.0.1:8000)
+        final standardClient = ApiClient(baseUrl: 'http://127.0.0.1:8000', httpClient: mockClient);
+        final repo1 = AuthRepositoryImpl(secureStorage: FakeSecureStorage(), apiClient: standardClient);
+        await repo1.login(username: 'admin@mutasiku.id', password: 'password');
+        expect(capturedMethod, equals('POST'));
+        expect(capturedPath, equals('/api/v1/auth/login'));
+
+        // Test 2: baseUrl dengan suffix /api/v1 (mencegah prefix ganda /api/v1/api/v1/auth/login)
+        final prefixedClient = ApiClient(baseUrl: 'http://127.0.0.1:8000/api/v1', httpClient: mockClient);
+        final repo2 = AuthRepositoryImpl(secureStorage: FakeSecureStorage(), apiClient: prefixedClient);
+        await repo2.login(username: 'admin@mutasiku.id', password: 'password');
+        expect(capturedMethod, equals('POST'));
+        expect(capturedPath, equals('/api/v1/auth/login'));
+      });
+
+      test('Endpoint /me, /logout, dan /change-password menggunakan path yang benar', () async {
+        final capturedPaths = <String>[];
+        final capturedMethods = <String>[];
+
+        final mockClient = MockClient((request) async {
+          capturedMethods.add(request.method);
+          capturedPaths.add(request.url.path);
+          return http.Response(
+            jsonEncode({
+              'success': true,
+              'data': {
+                'user': {
+                  'id': 1,
+                  'email': 'admin@mutasiku.id',
+                  'name': 'Admin',
+                  'role': 'admin',
+                  'is_active': true,
+                },
+              },
+            }),
+            200,
+            headers: {'content-type': 'application/json'},
+          );
+        });
+
+        final client = ApiClient(baseUrl: 'http://127.0.0.1:8000', httpClient: mockClient);
+        final storage = FakeSecureStorage();
+        await storage.saveAuthToken('tok_test');
+        final repo = AuthRepositoryImpl(secureStorage: storage, apiClient: client);
+
+        await repo.getCurrentUser();
+        expect(capturedPaths.last, equals('/api/v1/auth/me'));
+        expect(capturedMethods.last, equals('GET'));
+
+        await repo.changePassword(
+          currentPassword: 'old',
+          newPassword: 'new123',
+          confirmPassword: 'new123',
+        );
+        expect(capturedPaths.last, equals('/api/v1/auth/change-password'));
+        expect(capturedMethods.last, equals('POST'));
+
+        await repo.logout();
+        expect(capturedPaths.last, equals('/api/v1/auth/logout'));
+        expect(capturedMethods.last, equals('POST'));
       });
     });
   });

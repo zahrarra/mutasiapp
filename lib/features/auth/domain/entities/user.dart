@@ -16,6 +16,7 @@ class User {
     this.email,
     this.department,
     this.isActive = true,
+    this.mustChangePassword = false,
   });
 
   /// Identifier unik user (dari backend).
@@ -39,8 +40,12 @@ class User {
   /// Status aktif user (true = aktif, false = dinonaktifkan).
   final bool isActive;
 
+  /// Flag wajib ubah password saat first login.
+  final bool mustChangePassword;
+
   /// Periksa apakah user memiliki permission tertentu melalui rolenya.
-  bool hasPermission(UserPermission permission) => role.hasPermission(permission);
+  bool hasPermission(UserPermission permission) =>
+      role.hasPermission(permission);
 
   // ─── Equality ─────────────────────────────────────────────────────────────
 
@@ -55,7 +60,8 @@ class User {
           role == other.role &&
           email == other.email &&
           department == other.department &&
-          isActive == other.isActive;
+          isActive == other.isActive &&
+          mustChangePassword == other.mustChangePassword;
 
   @override
   int get hashCode =>
@@ -65,7 +71,8 @@ class User {
       role.hashCode ^
       email.hashCode ^
       department.hashCode ^
-      isActive.hashCode;
+      isActive.hashCode ^
+      mustChangePassword.hashCode;
 
   // ─── Copy ─────────────────────────────────────────────────────────────────
 
@@ -77,6 +84,7 @@ class User {
     String? email,
     String? department,
     bool? isActive,
+    bool? mustChangePassword,
   }) {
     return User(
       id: id ?? this.id,
@@ -86,10 +94,11 @@ class User {
       email: email ?? this.email,
       department: department ?? this.department,
       isActive: isActive ?? this.isActive,
+      mustChangePassword: mustChangePassword ?? this.mustChangePassword,
     );
   }
 
   @override
   String toString() =>
-      'User(id: $id, username: $username, name: $name, role: ${role.displayName}, active: $isActive)';
+      'User(id: $id, username: $username, name: $name, role: ${role.displayName}, active: $isActive, mustChangePassword: $mustChangePassword)';
 }

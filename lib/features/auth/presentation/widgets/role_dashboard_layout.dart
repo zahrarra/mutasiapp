@@ -51,11 +51,13 @@ class RoleDashboardLayout extends ConsumerWidget {
     final authState = ref.watch(authStateProvider);
     final connectivityAsync = ref.watch(connectivityStatusProvider);
     final user = authState.user;
-    final activeNavItems = navItems ??
+    final activeNavItems =
+        navItems ??
         RoleNavConfig.getNavItemsForRole(user?.role ?? UserRole.operator);
 
-    final initials =
-        (user?.name.isNotEmpty ?? false) ? user!.name[0].toUpperCase() : 'U';
+    final initials = (user?.name.isNotEmpty ?? false)
+        ? user!.name[0].toUpperCase()
+        : 'U';
     final roleBadgeLabel = _roleLabel(user?.role);
 
     return Scaffold(
@@ -190,12 +192,7 @@ class _TopBar extends StatelessWidget {
           padding: const EdgeInsets.symmetric(horizontal: 16),
           decoration: BoxDecoration(
             color: _LC.surface,
-            border: Border(
-              bottom: BorderSide(
-                color: _LC.border,
-                width: 1,
-              ),
-            ),
+            border: Border(bottom: BorderSide(color: _LC.border, width: 1)),
           ),
           child: Row(
             children: [

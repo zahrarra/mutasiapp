@@ -36,16 +36,35 @@ enum UserRole {
     UserRole.kadiv,
   ];
 
+  /// ID numerik role sesuai database backend.
+  int get roleId => switch (this) {
+    UserRole.admin => 1,
+    UserRole.pemohon => 2,
+    UserRole.operator => 3,
+    UserRole.bagianAset => 4,
+    UserRole.kadiv => 5,
+  };
+
+  /// Parse role dari ID numerik database backend.
+  static UserRole fromRoleId(int id) => switch (id) {
+    1 => UserRole.admin,
+    2 => UserRole.pemohon,
+    3 => UserRole.operator,
+    4 => UserRole.bagianAset,
+    5 => UserRole.kadiv,
+    _ => UserRole.pemohon,
+  };
+
   // ─── Display ──────────────────────────────────────────────────────────────
 
   /// Label tampilan untuk role ini.
   String get displayName => switch (this) {
-        UserRole.admin => 'Admin',
-        UserRole.pemohon => 'Pemohon',
-        UserRole.operator => 'Operator',
-        UserRole.bagianAset => 'Bagian Aset',
-        UserRole.kadiv => 'Pemimpin Divisi',
-      };
+    UserRole.admin => 'Admin',
+    UserRole.pemohon => 'Pemohon',
+    UserRole.operator => 'Operator',
+    UserRole.bagianAset => 'Bagian Aset',
+    UserRole.kadiv => 'Pemimpin Divisi',
+  };
 
   /// Label alias untuk displayName.
   String get label => displayName;
@@ -55,51 +74,51 @@ enum UserRole {
   /// Path navigasi default (home) setelah login untuk role ini.
   /// Sumber: ROLE-FLOW.md §10 & PRD V1.1.
   String get defaultRoute => switch (this) {
-        UserRole.admin => '/admin/dashboard',
-        UserRole.pemohon => '/pemohon/dashboard',
-        UserRole.operator => '/operator/dashboard',
-        UserRole.bagianAset => '/bagian-aset/dashboard',
-        UserRole.kadiv => '/kadiv/dashboard',
-      };
+    UserRole.admin => '/admin/dashboard',
+    UserRole.pemohon => '/pemohon/dashboard',
+    UserRole.operator => '/operator/dashboard',
+    UserRole.bagianAset => '/bagian-aset/dashboard',
+    UserRole.kadiv => '/kadiv/dashboard',
+  };
 
   // ─── Route Prefix ─────────────────────────────────────────────────────────
 
   /// Prefix route yang diizinkan untuk role ini.
   String get routePrefix => switch (this) {
-        UserRole.admin => '/admin',
-        UserRole.pemohon => '/pemohon',
-        UserRole.operator => '/operator',
-        UserRole.bagianAset => '/bagian-aset',
-        UserRole.kadiv => '/kadiv',
-      };
+    UserRole.admin => '/admin',
+    UserRole.pemohon => '/pemohon',
+    UserRole.operator => '/operator',
+    UserRole.bagianAset => '/bagian-aset',
+    UserRole.kadiv => '/kadiv',
+  };
 
   // ─── Permissions ──────────────────────────────────────────────────────────
 
   /// Daftar permission yang dimiliki oleh role ini.
   /// Sumber: PRD V1.1 §5.
   Set<UserPermission> get permissions => switch (this) {
-        UserRole.admin => {
-            UserPermission.manageMasterData,
-            UserPermission.viewNotifications,
-          },
-        UserRole.pemohon => {
-            UserPermission.submitMutation,
-            UserPermission.confirmMutation,
-            UserPermission.viewNotifications,
-          },
-        UserRole.operator => {
-            UserPermission.verifyMutation,
-            UserPermission.viewNotifications,
-          },
-        UserRole.bagianAset => {
-            UserPermission.verifyAssetData,
-            UserPermission.viewNotifications,
-          },
-        UserRole.kadiv => {
-            UserPermission.approveKadiv,
-            UserPermission.viewNotifications,
-          },
-      };
+    UserRole.admin => {
+      UserPermission.manageMasterData,
+      UserPermission.viewNotifications,
+    },
+    UserRole.pemohon => {
+      UserPermission.submitMutation,
+      UserPermission.confirmMutation,
+      UserPermission.viewNotifications,
+    },
+    UserRole.operator => {
+      UserPermission.verifyMutation,
+      UserPermission.viewNotifications,
+    },
+    UserRole.bagianAset => {
+      UserPermission.verifyAssetData,
+      UserPermission.viewNotifications,
+    },
+    UserRole.kadiv => {
+      UserPermission.approveKadiv,
+      UserPermission.viewNotifications,
+    },
+  };
 
   /// Periksa apakah role memiliki [permission] tertentu.
   bool hasPermission(UserPermission permission) =>
@@ -109,12 +128,12 @@ enum UserRole {
 
   /// String nilai yang diharapkan dari API untuk role ini.
   String get apiValue => switch (this) {
-        UserRole.admin => 'admin',
-        UserRole.pemohon => 'pemohon',
-        UserRole.operator => 'operator',
-        UserRole.bagianAset => 'bagian_aset',
-        UserRole.kadiv => 'kadiv',
-      };
+    UserRole.admin => 'admin',
+    UserRole.pemohon => 'pemohon',
+    UserRole.operator => 'operator',
+    UserRole.bagianAset => 'bagian_aset',
+    UserRole.kadiv => 'pemimpin_divisi',
+  };
 
   /// Parse dari string API.
   static UserRole? fromApiValue(String? value) {
@@ -131,8 +150,7 @@ enum UserRole {
       'pemimpin_divisi_aset' ||
       'pemimpin divisi aset' ||
       'kepala_divisi' ||
-      'kepala divisi' =>
-        UserRole.kadiv,
+      'kepala divisi' => UserRole.kadiv,
       'bagian_aset' ||
       'bagianaset' ||
       'bagian aset' ||
@@ -142,8 +160,7 @@ enum UserRole {
       'kabag aset' ||
       'staff_aset' ||
       'staffaset' ||
-      'staff aset' =>
-        UserRole.bagianAset,
+      'staff aset' => UserRole.bagianAset,
       _ => null,
     };
   }

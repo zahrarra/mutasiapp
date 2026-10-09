@@ -13,7 +13,10 @@ void main() {
       expect(UserRole.admin.defaultRoute, RouteNames.adminDashboardPath);
       expect(UserRole.pemohon.defaultRoute, RouteNames.pemohonDashboardPath);
       expect(UserRole.operator.defaultRoute, RouteNames.operatorDashboardPath);
-      expect(UserRole.bagianAset.defaultRoute, RouteNames.bagianAsetDashboardPath);
+      expect(
+        UserRole.bagianAset.defaultRoute,
+        RouteNames.bagianAsetDashboardPath,
+      );
       expect(UserRole.kadiv.defaultRoute, RouteNames.kadivDashboardPath);
     });
 
@@ -62,8 +65,14 @@ void main() {
       expect(operatorUser.hasPermission(UserPermission.verifyMutation), true);
       expect(operatorUser.hasPermission(UserPermission.approveKadiv), false);
 
-      expect(bagianAsetUser.hasPermission(UserPermission.verifyAssetData), true);
-      expect(bagianAsetUser.hasPermission(UserPermission.manageMasterData), false);
+      expect(
+        bagianAsetUser.hasPermission(UserPermission.verifyAssetData),
+        true,
+      );
+      expect(
+        bagianAsetUser.hasPermission(UserPermission.manageMasterData),
+        false,
+      );
 
       expect(kadivUser.hasPermission(UserPermission.approveKadiv), true);
       expect(kadivUser.hasPermission(UserPermission.verifyAssetData), false);
@@ -72,43 +81,58 @@ void main() {
     test('RouteGuards prevents cross-role access', () {
       // Pemohon attempting to access /admin/dashboard -> denied
       expect(
-        RouteGuards.canAccessRoute(UserRole.pemohon, RouteNames.adminDashboardPath),
+        RouteGuards.canAccessRoute(
+          UserRole.pemohon,
+          RouteNames.adminDashboardPath,
+        ),
         false,
       );
 
       // Pemohon accessing /pemohon/dashboard -> allowed
       expect(
-        RouteGuards.canAccessRoute(UserRole.pemohon, RouteNames.pemohonDashboardPath),
+        RouteGuards.canAccessRoute(
+          UserRole.pemohon,
+          RouteNames.pemohonDashboardPath,
+        ),
         true,
       );
 
       // Operator attempting to access /bagian-aset/dashboard -> denied
       expect(
-        RouteGuards.canAccessRoute(UserRole.operator, RouteNames.bagianAsetDashboardPath),
+        RouteGuards.canAccessRoute(
+          UserRole.operator,
+          RouteNames.bagianAsetDashboardPath,
+        ),
         false,
       );
 
       // Bagian Aset accessing /bagian-aset/dashboard -> allowed
       expect(
-        RouteGuards.canAccessRoute(UserRole.bagianAset, RouteNames.bagianAsetDashboardPath),
+        RouteGuards.canAccessRoute(
+          UserRole.bagianAset,
+          RouteNames.bagianAsetDashboardPath,
+        ),
         true,
       );
     });
 
-    test('RouteGuards redirects logged-in user to default role route from /login', () {
-      final redirectAdmin = RouteGuards.handleRedirect(
-        isAuthenticated: true,
-        role: UserRole.admin,
-        currentLocation: RouteNames.loginPath,
-      );
-      expect(redirectAdmin, RouteNames.adminDashboardPath);
+    test(
+      'RouteGuards redirects logged-in user to default role route from /login',
+      () {
+        final redirectAdmin = RouteGuards.handleRedirect(
+          isAuthenticated: true,
+          role: UserRole.admin,
+          currentLocation: RouteNames.loginPath,
+        );
+        expect(redirectAdmin, RouteNames.adminDashboardPath);
 
-      final redirectKadiv = RouteGuards.handleRedirect(
-        isAuthenticated: true,
-        role: UserRole.kadiv,
-        currentLocation: RouteNames.loginPath,
-      );
-      expect(redirectKadiv, RouteNames.kadivDashboardPath);
-    });
+        final redirectKadiv = RouteGuards.handleRedirect(
+          isAuthenticated: true,
+          role: UserRole.kadiv,
+          currentLocation: RouteNames.loginPath,
+        );
+        expect(redirectKadiv, RouteNames.kadivDashboardPath);
+      },
+    );
   });
 }

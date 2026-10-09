@@ -24,7 +24,9 @@ class AuthRepositoryImpl implements AuthRepository {
     required this.secureStorage,
     this.apiClient,
     UserRepository? userRepository,
-  }) : userRepository = userRepository ?? (apiClient == null ? UserRepositoryImpl.instance : null);
+  }) : userRepository =
+           userRepository ??
+           (apiClient == null ? UserRepositoryImpl.instance : null);
 
   @override
   Future<Result<User>> login({
@@ -33,7 +35,9 @@ class AuthRepositoryImpl implements AuthRepository {
   }) async {
     if (username.trim().isEmpty || password.isEmpty) {
       return Result.failure(
-        const ValidationFailure(message: 'Email dan password tidak boleh kosong'),
+        const ValidationFailure(
+          message: 'Email dan password tidak boleh kosong',
+        ),
       );
     }
 
@@ -41,10 +45,7 @@ class AuthRepositoryImpl implements AuthRepository {
     if (apiClient != null) {
       final response = await apiClient!.post(
         '/api/v1/auth/login',
-        body: {
-          'email': username.trim(),
-          'password': password,
-        },
+        body: {'email': username.trim(), 'password': password},
       );
 
       switch (response) {
@@ -53,7 +54,8 @@ class AuthRepositoryImpl implements AuthRepository {
           if (!success) {
             return Result.failure(
               UnauthorizedFailure(
-                message: data['message'] as String? ?? 'Email atau password salah.',
+                message:
+                    data['message'] as String? ?? 'Email atau password salah.',
               ),
             );
           }
@@ -74,8 +76,14 @@ class AuthRepositoryImpl implements AuthRepository {
           }
 
           final roleStr =
-              (data['role'] ?? userMap['role'] ?? data['data']?['role']) as String?;
+              (data['role'] ?? userMap['role'] ?? data['data']?['role'])
+                  as String?;
           final role = UserRole.fromApiValue(roleStr) ?? UserRole.pemohon;
+
+          final mustChangePassword = (data['must_change_password'] ??
+                  userMap['must_change_password'] ??
+                  data['data']?['must_change_password']) as bool? ??
+              false;
 
           final user = User(
             id: userMap['id'].toString(),
@@ -85,6 +93,7 @@ class AuthRepositoryImpl implements AuthRepository {
             role: role,
             department: userMap['department'] as String? ?? 'Aset & Logistik',
             isActive: userMap['is_active'] as bool? ?? true,
+            mustChangePassword: mustChangePassword,
           );
 
           _currentUser = user;
@@ -107,14 +116,16 @@ class AuthRepositoryImpl implements AuthRepository {
         if (!found.isActive) {
           return Result.failure(
             const UnauthorizedFailure(
-              message:
-                  'Akun Anda telah dinonaktifkan oleh Administrator. Silakan hubungi Admin.',
+              message: 'Akun Anda telah dinonaktifkan oleh Administrator. Silakan hubungi Admin.',
             ),
           );
         }
         _currentUser = found;
         await secureStorage.saveAuthToken('token_${found.id}');
         await secureStorage.saveUserId(found.id);
+        if (apiClient != null) {
+          apiClient!.setAuthToken('token_${found.id}');
+        }
         return Result.success(found);
       }
     }
@@ -138,7 +149,15 @@ class AuthRepositoryImpl implements AuthRepository {
 
   @override
   Future<Result<User?>> getCurrentUser() async {
-    if (_currentUser != null) return Result.success(_currentUser);
+    if (_currentUser != null) {
+      if (apiClient != null && !apiClient!.hasAuthToken) {
+        final token = await secureStorage.getAuthToken();
+        if (token != null && token.isNotEmpty) {
+          apiClient!.setAuthToken(token);
+        }
+      }
+      return Result.success(_currentUser);
+    }
 
     final hasToken = await secureStorage.hasAuthToken();
     if (!hasToken) return Result.success(null);
@@ -163,6 +182,9 @@ class AuthRepositoryImpl implements AuthRepository {
             final roleStr = userMap['role'] as String?;
             final role = UserRole.fromApiValue(roleStr) ?? UserRole.pemohon;
 
+            final mustChangePassword =
+                (userMap['must_change_password'] as bool?) ?? false;
+
             _currentUser = User(
               id: userMap['id'].toString(),
               username: userMap['email'] as String? ?? '',
@@ -171,6 +193,7 @@ class AuthRepositoryImpl implements AuthRepository {
               role: role,
               department: userMap['department'] as String? ?? 'Aset & Logistik',
               isActive: true,
+              mustChangePassword: mustChangePassword,
             );
             return Result.success(_currentUser);
           }
@@ -203,5 +226,58 @@ class AuthRepositoryImpl implements AuthRepository {
     }
 
     return Result.success(null);
+  }
+
+  @override
+  Future<Result<User>> changePassword({
+    required String currentPassword,
+    required String newPassword,
+    required String confirmPassword,
+  }) async {
+    if (apiClient != null) {
+      final response = await apiClient!.post(
+        '/api/v1/auth/change-password',
+        body: {
+          'current_password': currentPassword,
+          'password': newPassword,
+          'password_confirmation': confirmPassword,
+        },
+      );
+
+      switch (response) {
+        case Success(:final data):
+          final success = data['success'] as bool? ?? true;
+          if (!success) {
+            return Result.failure(
+              ServerFailure(
+                message:
+                    data['message'] as String? ?? 'Gagal mengubah password.',
+              ),
+            );
+          }
+          if (_currentUser != null) {
+            _currentUser = _currentUser!.copyWith(mustChangePassword: false);
+          }
+          return Result.success(
+            _currentUser ??
+                const User(
+                  id: '1',
+                  username: 'user',
+                  name: 'User',
+                  role: UserRole.pemohon,
+                  mustChangePassword: false,
+                ),
+          );
+        case AppFailure(:final failure):
+          return Result.failure(failure);
+      }
+    }
+
+    // Mock fallback
+    if (_currentUser != null) {
+      _currentUser = _currentUser!.copyWith(mustChangePassword: false);
+      return Result.success(_currentUser!);
+    }
+    return Result.failure(const ServerFailure(message: 'User belum login.'));
   }
 }

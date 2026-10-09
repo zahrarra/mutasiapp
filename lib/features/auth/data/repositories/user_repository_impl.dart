@@ -1,16 +1,22 @@
 // lib/features/auth/data/repositories/user_repository_impl.dart
 //
-// Implementasi in-memory UserRepository untuk data master User.
-// Sumber: PRD.md §5, ROLE-FLOW.md §2.
+// Implementasi UserRepository terintegrasi backend Laravel API & local mock fallback.
+// Sumber: PRD.md §5, ROLE-FLOW.md §2, TECHNICAL-DESIGN.md §4.1.
 
 import '../../../../core/errors/failures.dart';
 import '../../../../core/errors/result.dart';
+import '../../../../core/network/api_client.dart';
 import '../../domain/entities/user.dart';
 import '../../domain/entities/user_role.dart';
 import '../../domain/repositories/user_repository.dart';
 
 class UserRepositoryImpl implements UserRepository {
-  // Shared state agar login & screen admin selalu mengacu pada store yang sama
+  final ApiClient? apiClient;
+
+  // Cache dinamis role ID dari tabel roles di backend
+  static final Map<String, int> _roleNameToIdCache = {};
+
+  // Shared state agar login & screen admin selalu mengacu pada store yang sama saat mock (apiClient == null)
   static final List<User> _users = [
     const User(
       id: 'usr_pemohon',
@@ -67,39 +73,149 @@ class UserRepositoryImpl implements UserRepository {
     'usr_admin',
   };
 
-  static final UserRepositoryImpl instance = UserRepositoryImpl._();
-  UserRepositoryImpl._();
-  factory UserRepositoryImpl() => instance;
+  UserRepositoryImpl({this.apiClient});
+
+  static final UserRepositoryImpl instance = UserRepositoryImpl();
+  factory UserRepositoryImpl.withClient(ApiClient? client) =>
+      UserRepositoryImpl(apiClient: client);
+
+  /// Resolusi dinamis ID role dari backend jika tabel roles memiliki urutan ID berbeda.
+  Future<int> resolveRoleId(UserRole role) async {
+    final roleName = role.apiValue;
+    if (_roleNameToIdCache.containsKey(roleName)) {
+      return _roleNameToIdCache[roleName]!;
+    }
+
+    if (apiClient != null) {
+      try {
+        final res = await apiClient!.get('/api/v1/admin/roles');
+        if (res is Success<Map<String, dynamic>>) {
+          final list = (res.data['data'] as List<dynamic>?) ?? [];
+          for (final item in list) {
+            if (item is Map<String, dynamic>) {
+              final name = (item['name'] as String?)?.toLowerCase();
+              final id = item['id'];
+              if (name != null && id is int) {
+                _roleNameToIdCache[name] = id;
+              }
+            }
+          }
+        }
+      } catch (_) {}
+    }
+
+    return _roleNameToIdCache[roleName] ?? role.roleId;
+  }
 
   @override
   Future<Result<List<User>>> getAllUsers() async {
+    if (apiClient != null) {
+      final response = await apiClient!.get('/api/v1/admin/users');
+      switch (response) {
+        case Success(:final data):
+          final list = (data['data'] as List<dynamic>?) ?? [];
+          final users = list.map((item) {
+            final m = item as Map<String, dynamic>;
+            final roleName = m['role'] as String?;
+            final role = UserRole.fromApiValue(roleName) ?? UserRole.pemohon;
+            return User(
+              id: m['id'].toString(),
+              username: (m['nip'] ?? m['email'] ?? '').toString(),
+              name: (m['name'] ?? '').toString(),
+              email: m['email'] as String?,
+              department: (m['department'] as String?) ?? 'Unit Kerja',
+              role: role,
+              isActive: m['is_active'] == true,
+              mustChangePassword: m['must_change_password'] == true,
+            );
+          }).toList();
+          return Result.success(users);
+        case AppFailure(:final failure):
+          // Kegagalan API nyata dilaporkan langsung ke pemanggil, tidak disamarkan
+          return Result.failure(failure);
+      }
+    }
+
+    // Fallback murni untuk lingkungan pengujian test non-HTTP
     return Result.success(List.unmodifiable(_users));
   }
 
   @override
   Future<Result<User>> getUserById(String id) async {
+    if (apiClient != null) {
+      final response = await apiClient!.get('/api/v1/admin/users/$id');
+      switch (response) {
+        case Success(:final data):
+          final m = (data['data'] ?? data) as Map<String, dynamic>;
+          final roleName = m['role'] as String?;
+          final role = UserRole.fromApiValue(roleName) ?? UserRole.pemohon;
+          return Result.success(
+            User(
+              id: m['id'].toString(),
+              username: (m['nip'] ?? m['email'] ?? '').toString(),
+              name: (m['name'] ?? '').toString(),
+              email: m['email'] as String?,
+              department: (m['department'] as String?) ?? 'Unit Kerja',
+              role: role,
+              isActive: m['is_active'] == true,
+              mustChangePassword: m['must_change_password'] == true,
+            ),
+          );
+        case AppFailure(:final failure):
+          return Result.failure(failure);
+      }
+    }
+
     try {
       final user = _users.firstWhere((u) => u.id == id);
       return Result.success(user);
     } catch (_) {
-      return Result.failure(const NotFoundFailure(message: 'User tidak ditemukan.'));
+      return Result.failure(
+        const NotFoundFailure(message: 'User tidak ditemukan.'),
+      );
     }
   }
 
   @override
   Future<Result<User>> getUserByUsername(String username) async {
+    final clean = username.trim().toLowerCase();
+    if (apiClient != null) {
+      final all = await getAllUsers();
+      switch (all) {
+        case Success(:final data):
+          try {
+            final found = data.firstWhere(
+              (u) =>
+                  u.username.toLowerCase() == clean ||
+                  (u.email?.toLowerCase() == clean),
+            );
+            return Result.success(found);
+          } catch (_) {
+            return Result.failure(
+              const NotFoundFailure(message: 'User tidak ditemukan.'),
+            );
+          }
+        case AppFailure(:final failure):
+          return Result.failure(failure);
+      }
+    }
+
     try {
       final user = _users.firstWhere(
-        (u) => u.username.trim().toLowerCase() == username.trim().toLowerCase(),
+        (u) =>
+            u.username.trim().toLowerCase() == clean ||
+            (u.email?.trim().toLowerCase() == clean),
       );
       return Result.success(user);
     } catch (_) {
-      return Result.failure(const NotFoundFailure(message: 'User tidak ditemukan.'));
+      return Result.failure(
+        const NotFoundFailure(message: 'User tidak ditemukan.'),
+      );
     }
   }
 
   @override
-  Future<Result<User>> createUser(User user) async {
+  Future<Result<User>> createUser(User user, {String? password}) async {
     final cleanUsername = user.username.trim();
     if (cleanUsername.isEmpty || user.name.trim().isEmpty) {
       return Result.failure(
@@ -107,12 +223,51 @@ class UserRepositoryImpl implements UserRepository {
       );
     }
 
+    if (apiClient != null) {
+      final resolvedRoleId = await resolveRoleId(user.role);
+      final response = await apiClient!.post(
+        '/api/v1/admin/users',
+        body: {
+          'name': user.name.trim(),
+          'email': user.email?.trim(),
+          'password': password ?? 'password',
+          'role_id': resolvedRoleId,
+          'role': user.role.apiValue,
+          if (cleanUsername.isNotEmpty) 'nip': cleanUsername,
+          'is_active': user.isActive,
+        },
+      );
+
+      switch (response) {
+        case Success(:final data):
+          final m = (data['data'] ?? data) as Map<String, dynamic>;
+          final roleName = m['role'] as String?;
+          final role = UserRole.fromApiValue(roleName) ?? user.role;
+          final created = User(
+            id: m['id'].toString(),
+            username: (m['nip'] ?? m['email'] ?? cleanUsername).toString(),
+            name: (m['name'] ?? user.name).toString(),
+            email: m['email'] as String? ?? user.email,
+            department: user.department,
+            role: role,
+            isActive: m['is_active'] == true,
+            mustChangePassword: m['must_change_password'] == true,
+          );
+          return Result.success(created);
+
+        case AppFailure(:final failure):
+          return Result.failure(failure);
+      }
+    }
+
     final exists = _users.any(
       (u) => u.username.toLowerCase() == cleanUsername.toLowerCase(),
     );
     if (exists) {
       return Result.failure(
-        ValidationFailure(message: 'Username "$cleanUsername" sudah digunakan.'),
+        ValidationFailure(
+          message: 'Username "$cleanUsername" sudah digunakan.',
+        ),
       );
     }
 
@@ -134,13 +289,50 @@ class UserRepositoryImpl implements UserRepository {
   }
 
   @override
-  Future<Result<User>> updateUser(User user) async {
-    final index = _users.indexWhere((u) => u.id == user.id);
-    if (index == -1) {
-      return Result.failure(const NotFoundFailure(message: 'User tidak ditemukan.'));
+  Future<Result<User>> updateUser(User user, {String? password}) async {
+    final cleanUsername = user.username.trim();
+    if (apiClient != null) {
+      final resolvedRoleId = await resolveRoleId(user.role);
+      final body = <String, dynamic>{
+        'name': user.name.trim(),
+        if (user.email != null) 'email': user.email!.trim(),
+        'role_id': resolvedRoleId,
+        'role': user.role.apiValue,
+        if (cleanUsername.isNotEmpty) 'nip': cleanUsername,
+        'is_active': user.isActive,
+        if (password != null && password.isNotEmpty) 'password': password,
+      };
+
+      final response = await apiClient!.put(
+        '/api/v1/admin/users/${user.id}',
+        body: body,
+      );
+
+      switch (response) {
+        case Success(:final data):
+          final m = (data['data'] ?? data) as Map<String, dynamic>;
+          final roleName = m['role'] as String?;
+          final role = UserRole.fromApiValue(roleName) ?? user.role;
+          final updated = user.copyWith(
+            name: (m['name'] ?? user.name).toString(),
+            email: m['email'] as String? ?? user.email,
+            role: role,
+            isActive: m['is_active'] == true,
+          );
+          return Result.success(updated);
+
+        case AppFailure(:final failure):
+          return Result.failure(failure);
+      }
     }
 
-    final cleanUsername = user.username.trim();
+    final index = _users.indexWhere((u) => u.id == user.id);
+    if (index == -1) {
+      return Result.failure(
+        const NotFoundFailure(message: 'User tidak ditemukan.'),
+      );
+    }
+
     final duplicate = _users.any(
       (u) =>
           u.id != user.id &&
@@ -148,7 +340,9 @@ class UserRepositoryImpl implements UserRepository {
     );
     if (duplicate) {
       return Result.failure(
-        ValidationFailure(message: 'Username "$cleanUsername" sudah digunakan.'),
+        ValidationFailure(
+          message: 'Username "$cleanUsername" sudah digunakan.',
+        ),
       );
     }
 
@@ -165,9 +359,24 @@ class UserRepositoryImpl implements UserRepository {
 
   @override
   Future<Result<void>> toggleUserActive(String id, bool isActive) async {
+    if (apiClient != null) {
+      final response = await apiClient!.put(
+        '/api/v1/admin/users/$id',
+        body: {'is_active': isActive},
+      );
+      switch (response) {
+        case Success():
+          return Result.success(null);
+        case AppFailure(:final failure):
+          return Result.failure(failure);
+      }
+    }
+
     final index = _users.indexWhere((u) => u.id == id);
     if (index == -1) {
-      return Result.failure(const NotFoundFailure(message: 'User tidak ditemukan.'));
+      return Result.failure(
+        const NotFoundFailure(message: 'User tidak ditemukan.'),
+      );
     }
 
     _users[index] = _users[index].copyWith(isActive: isActive);
@@ -183,6 +392,16 @@ class UserRepositoryImpl implements UserRepository {
               'User sistem/histori tidak dapat dihapus permanen untuk menjaga integritas data. Silakan nonaktifkan akun.',
         ),
       );
+    }
+
+    if (apiClient != null) {
+      final response = await apiClient!.delete('/api/v1/admin/users/$id');
+      switch (response) {
+        case Success():
+          return Result.success(null);
+        case AppFailure(:final failure):
+          return Result.failure(failure);
+      }
     }
 
     _users.removeWhere((u) => u.id == id);

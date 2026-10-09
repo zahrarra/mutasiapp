@@ -19,9 +19,7 @@ class UnauthorizedScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.background,
-      appBar: AppBar(
-        title: const Text('Akses Ditolak'),
-      ),
+      appBar: AppBar(title: const Text('Akses Ditolak')),
       body: Center(
         child: Padding(
           padding: const EdgeInsets.all(AppSpacing.xl),
@@ -46,10 +44,7 @@ class UnauthorizedScreen extends StatelessWidget {
               const Text(
                 'Peran (Role) akun Anda tidak memiliki hak akses untuk membuka halaman ini.',
                 textAlign: TextAlign.center,
-                style: TextStyle(
-                  fontSize: 14,
-                  color: AppColors.textSecondary,
-                ),
+                style: TextStyle(fontSize: 14, color: AppColors.textSecondary),
               ),
               const SizedBox(height: AppSpacing.xl),
               CustomButton(

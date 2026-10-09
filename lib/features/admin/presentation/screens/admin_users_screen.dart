@@ -201,7 +201,10 @@ class _AdminUsersScreenState extends ConsumerState<AdminUsersScreen> {
         borderRadius: BorderRadius.circular(10),
         borderSide: const BorderSide(color: Color(0xFFB42318), width: 1.5),
       ),
-      errorStyle: GoogleFonts.inter(fontSize: 11, color: const Color(0xFFB42318)),
+      errorStyle: GoogleFonts.inter(
+        fontSize: 11,
+        color: const Color(0xFFB42318),
+      ),
     );
   }
 
@@ -213,11 +216,7 @@ class _AdminUsersScreenState extends ConsumerState<AdminUsersScreen> {
     if (isCompact) {
       return Column(
         crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          left,
-          const SizedBox(height: 12),
-          right,
-        ],
+        children: [left, const SizedBox(height: 12), right],
       );
     }
     return Row(
@@ -239,11 +238,7 @@ class _AdminUsersScreenState extends ConsumerState<AdminUsersScreen> {
         gradient: const RadialGradient(
           center: Alignment.center,
           radius: 1.15,
-          colors: [
-            Color(0xFF006A63),
-            Color(0xFF0F3D56),
-            Color(0xFF00273A),
-          ],
+          colors: [Color(0xFF006A63), Color(0xFF0F3D56), Color(0xFF00273A)],
           stops: [0.0, 0.48, 1.0],
         ),
         boxShadow: [
@@ -312,10 +307,7 @@ class _AdminUsersScreenState extends ConsumerState<AdminUsersScreen> {
         gradient: const LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
-          colors: [
-            Color(0xFF0F3D56),
-            Color(0xFF00273A),
-          ],
+          colors: [Color(0xFF0F3D56), Color(0xFF00273A)],
         ),
         boxShadow: [
           BoxShadow(
@@ -387,17 +379,17 @@ class _AdminUsersScreenState extends ConsumerState<AdminUsersScreen> {
 
           return Dialog(
             backgroundColor: Colors.transparent,
-            insetPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
+            insetPadding: const EdgeInsets.symmetric(
+              horizontal: 16,
+              vertical: 24,
+            ),
             child: ConstrainedBox(
               constraints: const BoxConstraints(maxWidth: 440),
               child: Container(
                 decoration: BoxDecoration(
                   color: Colors.white,
                   borderRadius: BorderRadius.circular(32),
-                  border: Border.all(
-                    color: const Color(0xFFE2E8F0),
-                    width: 1,
-                  ),
+                  border: Border.all(color: const Color(0xFFE2E8F0), width: 1),
                   boxShadow: [
                     BoxShadow(
                       color: Colors.black.withValues(alpha: 0.12),
@@ -454,7 +446,8 @@ class _AdminUsersScreenState extends ConsumerState<AdminUsersScreen> {
                                   decoration: _buildStitchInputDecoration(
                                     hintText: 'Masukkan nama depan',
                                   ),
-                                  validator: (v) => (v == null || v.trim().isEmpty)
+                                  validator: (v) =>
+                                      (v == null || v.trim().isEmpty)
                                       ? 'Wajib diisi'
                                       : null,
                                 ),
@@ -473,7 +466,8 @@ class _AdminUsersScreenState extends ConsumerState<AdminUsersScreen> {
                                   decoration: _buildStitchInputDecoration(
                                     hintText: 'Nama belakang / NIP',
                                   ),
-                                  validator: (v) => (v == null || v.trim().isEmpty)
+                                  validator: (v) =>
+                                      (v == null || v.trim().isEmpty)
                                       ? 'Wajib diisi'
                                       : null,
                                 ),
@@ -531,28 +525,45 @@ class _AdminUsersScreenState extends ConsumerState<AdminUsersScreen> {
                                   items: const [
                                     DropdownMenuItem(
                                       value: 'Divisi Operasional',
-                                      child: Text('Divisi Operasional', overflow: TextOverflow.ellipsis),
+                                      child: Text(
+                                        'Divisi Operasional',
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
                                     ),
                                     DropdownMenuItem(
                                       value: 'Divisi TI',
-                                      child: Text('Divisi TI', overflow: TextOverflow.ellipsis),
+                                      child: Text(
+                                        'Divisi TI',
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
                                     ),
                                     DropdownMenuItem(
                                       value: 'Divisi Keuangan',
-                                      child: Text('Divisi Keuangan', overflow: TextOverflow.ellipsis),
+                                      child: Text(
+                                        'Divisi Keuangan',
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
                                     ),
                                     DropdownMenuItem(
                                       value: 'Divisi SDM',
-                                      child: Text('Divisi SDM', overflow: TextOverflow.ellipsis),
+                                      child: Text(
+                                        'Divisi SDM',
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
                                     ),
                                     DropdownMenuItem(
                                       value: 'Divisi Logistik & Aset',
-                                      child: Text('Divisi Logistik & Aset', overflow: TextOverflow.ellipsis),
+                                      child: Text(
+                                        'Divisi Logistik & Aset',
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
                                     ),
                                   ],
                                   onChanged: (val) {
                                     if (val != null) {
-                                      setDialogState(() => selectedDivision = val);
+                                      setDialogState(
+                                        () => selectedDivision = val,
+                                      );
                                     }
                                   },
                                 ),
@@ -622,7 +633,8 @@ class _AdminUsersScreenState extends ConsumerState<AdminUsersScreen> {
                                         color: const Color(0xFF94A3B8),
                                       ),
                                       onPressed: () => setDialogState(
-                                        () => obscurePassword = !obscurePassword,
+                                        () =>
+                                            obscurePassword = !obscurePassword,
                                       ),
                                     ),
                                   ),
@@ -665,6 +677,9 @@ class _AdminUsersScreenState extends ConsumerState<AdminUsersScreen> {
                                     ),
                                   ),
                                   validator: (v) {
+                                    if (v == null || v.isEmpty) {
+                                      return 'Konfirmasi kata sandi wajib diisi';
+                                    }
                                     if (v != passwordCtrl.text) {
                                       return 'Sandi tidak sama';
                                     }
@@ -730,26 +745,39 @@ class _AdminUsersScreenState extends ConsumerState<AdminUsersScreen> {
                                       padding: EdgeInsets.zero,
                                     ),
                                     onPressed: () async {
-                                      if (!formKey.currentState!.validate()) return;
-                                      Navigator.of(dialogCtx).pop();
+                                      if (!formKey.currentState!.validate()) {
+                                        return;
+                                      }
 
-                                      final firstName = firstNameCtrl.text.trim();
-                                      final lastNameNip = lastNameNipCtrl.text.trim();
-                                      final fullName = '$firstName $lastNameNip'.trim();
+                                      final firstName = firstNameCtrl.text
+                                          .trim();
+                                      final lastNameNip = lastNameNipCtrl.text
+                                          .trim();
+                                      final fullName = '$firstName $lastNameNip'
+                                          .trim();
 
                                       String cleanUsername = lastNameNip
                                           .toLowerCase()
-                                          .replaceAll(RegExp(r'[^a-z0-9_]'), '');
+                                          .replaceAll(
+                                            RegExp(r'[^a-z0-9_]'),
+                                            '',
+                                          );
                                       if (cleanUsername.length < 3) {
-                                        cleanUsername = '${firstName}_$lastNameNip'
-                                            .toLowerCase()
-                                            .replaceAll(RegExp(r'[^a-z0-9_]'), '');
+                                        cleanUsername =
+                                            '${firstName}_$lastNameNip'
+                                                .toLowerCase()
+                                                .replaceAll(
+                                                  RegExp(r'[^a-z0-9_]'),
+                                                  '',
+                                                );
                                       }
                                       if (cleanUsername.length < 3) {
-                                        cleanUsername = '${firstName.toLowerCase().replaceAll(RegExp(r'[^a-z0-9_]'), '')}usr';
+                                        cleanUsername =
+                                            '${firstName.toLowerCase().replaceAll(RegExp(r'[^a-z0-9_]'), '')}usr';
                                       }
                                       if (cleanUsername.length < 3) {
-                                        cleanUsername = 'usr_${DateTime.now().millisecondsSinceEpoch % 100000}';
+                                        cleanUsername =
+                                            'usr_${DateTime.now().millisecondsSinceEpoch % 100000}';
                                       }
 
                                       final newUser = User(
@@ -764,10 +792,14 @@ class _AdminUsersScreenState extends ConsumerState<AdminUsersScreen> {
 
                                       final result = await ref
                                           .read(masterUsersProvider.notifier)
-                                          .createUser(newUser);
+                                          .createUser(
+                                            newUser,
+                                            password: passwordCtrl.text,
+                                          );
 
                                       if (!context.mounted) return;
                                       if (result is Success<User>) {
+                                        Navigator.of(dialogCtx).pop();
                                         AppFeedback.showSuccess(
                                           context,
                                           'User "${result.data.name}" (@${result.data.username}) berhasil ditambahkan.',
@@ -810,7 +842,9 @@ class _AdminUsersScreenState extends ConsumerState<AdminUsersScreen> {
     final formKey = GlobalKey<FormState>();
     final nameParts = user.name.trim().split(RegExp(r'\s+'));
     final initialFirst = nameParts.isNotEmpty ? nameParts.first : '';
-    final initialLast = nameParts.length > 1 ? nameParts.sublist(1).join(' ') : '';
+    final initialLast = nameParts.length > 1
+        ? nameParts.sublist(1).join(' ')
+        : '';
     final firstNameCtrl = TextEditingController(text: initialFirst);
     final lastNameCtrl = TextEditingController(text: initialLast);
     final emailCtrl = TextEditingController(text: user.email ?? '');
@@ -829,17 +863,17 @@ class _AdminUsersScreenState extends ConsumerState<AdminUsersScreen> {
 
           return Dialog(
             backgroundColor: Colors.transparent,
-            insetPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
+            insetPadding: const EdgeInsets.symmetric(
+              horizontal: 16,
+              vertical: 24,
+            ),
             child: ConstrainedBox(
               constraints: const BoxConstraints(maxWidth: 440),
               child: Container(
                 decoration: BoxDecoration(
                   color: Colors.white,
                   borderRadius: BorderRadius.circular(32),
-                  border: Border.all(
-                    color: const Color(0xFFE2E8F0),
-                    width: 1,
-                  ),
+                  border: Border.all(color: const Color(0xFFE2E8F0), width: 1),
                   boxShadow: [
                     BoxShadow(
                       color: Colors.black.withValues(alpha: 0.12),
@@ -887,7 +921,8 @@ class _AdminUsersScreenState extends ConsumerState<AdminUsersScreen> {
                                   decoration: _buildStitchInputDecoration(
                                     hintText: 'First name',
                                   ),
-                                  validator: (v) => (v == null || v.trim().isEmpty)
+                                  validator: (v) =>
+                                      (v == null || v.trim().isEmpty)
                                       ? 'Wajib diisi'
                                       : null,
                                 ),
@@ -988,7 +1023,8 @@ class _AdminUsersScreenState extends ConsumerState<AdminUsersScreen> {
                                   decoration: _buildStitchInputDecoration(
                                     hintText: 'Divisi / Unit Kerja',
                                   ),
-                                  validator: (v) => (v == null || v.trim().isEmpty)
+                                  validator: (v) =>
+                                      (v == null || v.trim().isEmpty)
                                       ? 'Wajib diisi'
                                       : null,
                                 ),
@@ -1048,7 +1084,9 @@ class _AdminUsersScreenState extends ConsumerState<AdminUsersScreen> {
                                   ],
                                   onChanged: (val) {
                                     if (val != null) {
-                                      setDialogState(() => selectedStatus = val);
+                                      setDialogState(
+                                        () => selectedStatus = val,
+                                      );
                                     }
                                   },
                                 ),
@@ -1075,7 +1113,8 @@ class _AdminUsersScreenState extends ConsumerState<AdminUsersScreen> {
                                       ),
                                       padding: EdgeInsets.zero,
                                     ),
-                                    onPressed: () => Navigator.of(dialogCtx).pop(),
+                                    onPressed: () =>
+                                        Navigator.of(dialogCtx).pop(),
                                     child: Text(
                                       'Batal',
                                       style: GoogleFonts.inter(
@@ -1101,10 +1140,12 @@ class _AdminUsersScreenState extends ConsumerState<AdminUsersScreen> {
                                       padding: EdgeInsets.zero,
                                     ),
                                     onPressed: () async {
-                                      if (!formKey.currentState!.validate()) return;
-                                      Navigator.of(dialogCtx).pop();
+                                      if (!formKey.currentState!.validate()) {
+                                        return;
+                                      }
 
-                                      final firstName = firstNameCtrl.text.trim();
+                                      final firstName = firstNameCtrl.text
+                                          .trim();
                                       final lastName = lastNameCtrl.text.trim();
                                       final fullName = lastName.isNotEmpty
                                           ? '$firstName $lastName'
@@ -1124,6 +1165,7 @@ class _AdminUsersScreenState extends ConsumerState<AdminUsersScreen> {
 
                                       if (!context.mounted) return;
                                       if (result is Success<User>) {
+                                        Navigator.of(dialogCtx).pop();
                                         AppFeedback.showSuccess(
                                           context,
                                           'Data user "${result.data.username}" berhasil diperbarui.',
@@ -1174,7 +1216,11 @@ class _AdminUsersScreenState extends ConsumerState<AdminUsersScreen> {
         content: Text(
           'Apakah Anda yakin ingin menghapus user "${user.name}" (@${user.username})?\n\n'
           'Perhatian: User dengan riwayat aktivitas mutasi tidak dapat dihapus permanen untuk menjaga integritas audit data.',
-          style: _font(size: 13, height: 1.4, color: _StitchUserColors.textSecondary),
+          style: _font(
+            size: 13,
+            height: 1.4,
+            color: _StitchUserColors.textSecondary,
+          ),
         ),
         actions: [
           TextButton(
@@ -1394,6 +1440,12 @@ class _AdminUsersScreenState extends ConsumerState<AdminUsersScreen> {
                                 ? 'User "${user.name}" berhasil diaktifkan.'
                                 : 'User "${user.name}" dinonaktifkan.',
                           );
+                        } else if (res is AppFailure<void>) {
+                          AppFeedback.showError(
+                            context,
+                            'Gagal Mengubah Status',
+                            details: res.failure.message,
+                          );
                         }
                       },
                     ),
@@ -1409,8 +1461,11 @@ class _AdminUsersScreenState extends ConsumerState<AdminUsersScreen> {
                   ),
                   const SizedBox(width: 4),
                   IconButton.filledTonal(
-                    icon: const Icon(Icons.delete_outline,
-                        size: 18, color: AppColors.error),
+                    icon: const Icon(
+                      Icons.delete_outline,
+                      size: 18,
+                      color: AppColors.error,
+                    ),
                     tooltip: 'Hapus User',
                     onPressed: () {
                       Navigator.of(ctx).pop();
@@ -1436,10 +1491,7 @@ class _AdminUsersScreenState extends ConsumerState<AdminUsersScreen> {
             label,
             style: _font(size: 12, color: _StitchUserColors.textSecondary),
           ),
-          Text(
-            value,
-            style: _font(size: 12, w: FontWeight.w600),
-          ),
+          Text(value, style: _font(size: 12, w: FontWeight.w600)),
         ],
       ),
     );
@@ -1483,15 +1535,18 @@ class _AdminUsersScreenState extends ConsumerState<AdminUsersScreen> {
                 final username = u.username.toLowerCase();
                 final dept = (u.department ?? '').toLowerCase();
                 final q = _searchQuery.toLowerCase();
-                final matchesQuery = q.isEmpty ||
+                final matchesQuery =
+                    q.isEmpty ||
                     name.contains(q) ||
                     username.contains(q) ||
                     dept.contains(q);
 
-                final matchesRole = _selectedRoleFilter == null ||
+                final matchesRole =
+                    _selectedRoleFilter == null ||
                     u.role == _selectedRoleFilter;
 
-                final matchesUnit = _selectedUnitFilter == 'Semua Unit' ||
+                final matchesUnit =
+                    _selectedUnitFilter == 'Semua Unit' ||
                     dept.contains(_selectedUnitFilter.toLowerCase());
 
                 return matchesQuery && matchesRole && matchesUnit;
@@ -1562,7 +1617,9 @@ class _AdminUsersScreenState extends ConsumerState<AdminUsersScreen> {
                                         ),
                                         decoration: BoxDecoration(
                                           color: _StitchUserColors.slate100,
-                                          borderRadius: BorderRadius.circular(999),
+                                          borderRadius: BorderRadius.circular(
+                                            999,
+                                          ),
                                         ),
                                         child: Text(
                                           '${filtered.length}',
@@ -1640,7 +1697,8 @@ class _AdminUsersScreenState extends ConsumerState<AdminUsersScreen> {
                                           style: _font(
                                             size: 14,
                                             w: FontWeight.w600,
-                                            color: _StitchUserColors.textSecondary,
+                                            color:
+                                                _StitchUserColors.textSecondary,
                                           ),
                                         ),
                                         const SizedBox(height: 4),
@@ -1655,31 +1713,31 @@ class _AdminUsersScreenState extends ConsumerState<AdminUsersScreen> {
                                     ),
                                   )
                                 : gridColumns == 1
-                                    ? ListView.separated(
-                                        shrinkWrap: true,
-                                        physics:
-                                            const NeverScrollableScrollPhysics(),
-                                        itemCount: filtered.length,
-                                        separatorBuilder: (_, _) =>
-                                            const SizedBox(height: 10),
-                                        itemBuilder: (ctx, idx) =>
-                                            _buildUserCard(filtered[idx]),
-                                      )
-                                    : GridView.builder(
-                                        shrinkWrap: true,
-                                        physics:
-                                            const NeverScrollableScrollPhysics(),
-                                        gridDelegate:
-                                            SliverGridDelegateWithFixedCrossAxisCount(
+                                ? ListView.separated(
+                                    shrinkWrap: true,
+                                    physics:
+                                        const NeverScrollableScrollPhysics(),
+                                    itemCount: filtered.length,
+                                    separatorBuilder: (_, _) =>
+                                        const SizedBox(height: 10),
+                                    itemBuilder: (ctx, idx) =>
+                                        _buildUserCard(filtered[idx]),
+                                  )
+                                : GridView.builder(
+                                    shrinkWrap: true,
+                                    physics:
+                                        const NeverScrollableScrollPhysics(),
+                                    gridDelegate:
+                                        SliverGridDelegateWithFixedCrossAxisCount(
                                           crossAxisCount: gridColumns,
                                           crossAxisSpacing: 12,
                                           mainAxisSpacing: 12,
                                           mainAxisExtent: 116,
                                         ),
-                                        itemCount: filtered.length,
-                                        itemBuilder: (ctx, idx) =>
-                                            _buildUserCard(filtered[idx]),
-                                      ),
+                                    itemCount: filtered.length,
+                                    itemBuilder: (ctx, idx) =>
+                                        _buildUserCard(filtered[idx]),
+                                  ),
                           ),
                         ],
                       ),
@@ -1688,12 +1746,60 @@ class _AdminUsersScreenState extends ConsumerState<AdminUsersScreen> {
                 ),
               );
             },
-            loading: () =>
-                const LoadingIndicator(message: 'Memuat data user...'),
-            error: (err, stack) => ErrorView(
-              message: err.toString(),
-              onRetry: () =>
-                  ref.read(masterUsersProvider.notifier).loadUsers(),
+            loading: () => SingleChildScrollView(
+              child: Center(
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 1440),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      _buildTopHeader(
+                        context,
+                        horizontalPadding: horizontalPadding,
+                        isDesktop: isDesktop,
+                      ),
+                      _buildSearchAndFilters(
+                        context,
+                        horizontalPadding: horizontalPadding,
+                        allUsers: const [],
+                      ),
+                      const Padding(
+                        padding: EdgeInsets.all(40),
+                        child: LoadingIndicator(message: 'Memuat data user...'),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+            error: (err, stack) => SingleChildScrollView(
+              child: Center(
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 1440),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      _buildTopHeader(
+                        context,
+                        horizontalPadding: horizontalPadding,
+                        isDesktop: isDesktop,
+                      ),
+                      _buildSearchAndFilters(
+                        context,
+                        horizontalPadding: horizontalPadding,
+                        allUsers: const [],
+                      ),
+                      Padding(
+                        padding: const EdgeInsets.all(40),
+                        child: ErrorView(
+                          message: err.toString(),
+                          onRetry: () => ref.read(masterUsersProvider.notifier).loadUsers(),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
             ),
           ),
           bottomNavigationBar: SafeArea(
@@ -1725,7 +1831,8 @@ class _AdminUsersScreenState extends ConsumerState<AdminUsersScreen> {
   }) {
     return MutasiKuPageHeader(
       title: 'User & Permission',
-      subtitle: 'Kelola data pengguna, hak akses per role, dan status aktifasi akun',
+      subtitle:
+          'Kelola data pengguna, hak akses per role, dan status aktifasi akun',
       onBack: () {
         if (context.canPop()) {
           context.pop();
@@ -1798,10 +1905,7 @@ class _AdminUsersScreenState extends ConsumerState<AdminUsersScreen> {
                   itemBuilder: (ctx) => _unitList.map((unit) {
                     return PopupMenuItem(
                       value: unit,
-                      child: Text(
-                        unit,
-                        style: _font(size: 12),
-                      ),
+                      child: Text(unit, style: _font(size: 12)),
                     );
                   }).toList(),
                   child: Container(
@@ -1959,7 +2063,9 @@ class _AdminUsersScreenState extends ConsumerState<AdminUsersScreen> {
               boxShadow: isSelected
                   ? [
                       BoxShadow(
-                        color: _StitchUserColors.darkNavy.withValues(alpha: 0.2),
+                        color: _StitchUserColors.darkNavy.withValues(
+                          alpha: 0.2,
+                        ),
                         blurRadius: 6,
                         offset: const Offset(0, 2),
                       ),
@@ -2127,11 +2233,7 @@ class _AdminUsersScreenState extends ConsumerState<AdminUsersScreen> {
             onPressed: () => _showUserAccessModal(context, user),
             child: Text(
               'Kelola Akses',
-              style: _font(
-                size: 11,
-                w: FontWeight.w600,
-                color: Colors.white,
-              ),
+              style: _font(size: 11, w: FontWeight.w600, color: Colors.white),
             ),
           ),
         ],

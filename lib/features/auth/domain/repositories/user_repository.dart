@@ -17,10 +17,10 @@ abstract class UserRepository {
   Future<Result<User>> getUserByUsername(String username);
 
   /// Menambahkan user baru.
-  Future<Result<User>> createUser(User user);
+  Future<Result<User>> createUser(User user, {String? password});
 
   /// Memperbarui informasi user.
-  Future<Result<User>> updateUser(User user);
+  Future<Result<User>> updateUser(User user, {String? password});
 
   /// Mengaktifkan atau menonaktifkan akun user.
   Future<Result<void>> toggleUserActive(String id, bool isActive);

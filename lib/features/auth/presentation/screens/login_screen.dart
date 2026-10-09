@@ -19,6 +19,7 @@
 // - 100% preservation of auth logic, state management, validation, routing, and test keys.
 
 import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -341,10 +342,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       body: Row(
         children: [
           // ── Left Column: Brand Hero Panel (Reference Image Specs) ──────────
-          Expanded(
-            flex: 9,
-            child: _buildDesktopHeroPanel(),
-          ),
+          Expanded(flex: 9, child: _buildDesktopHeroPanel()),
 
           // ── Right Column: Login Form Canvas (Reference Image Specs) ────────
           Expanded(
@@ -365,7 +363,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                         height: 720,
                         decoration: BoxDecoration(
                           shape: BoxShape.circle,
-                          color: const Color(0xFFE8F1F7).withValues(alpha: 0.65),
+                          color: const Color(0xFFE8F1F7)
+                              .withValues(alpha: 0.65),
                         ),
                       ),
                     ),
@@ -379,7 +378,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                         height: 540,
                         decoration: BoxDecoration(
                           shape: BoxShape.circle,
-                          color: const Color(0xFFDFEBF4).withValues(alpha: 0.55),
+                          color: const Color(0xFFDFEBF4)
+                              .withValues(alpha: 0.55),
                         ),
                       ),
                     ),
@@ -393,7 +393,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                         height: 340,
                         decoration: BoxDecoration(
                           shape: BoxShape.circle,
-                          color: const Color(0xFFD6E5F1).withValues(alpha: 0.40),
+                          color: const Color(0xFFD6E5F1)
+                              .withValues(alpha: 0.40),
                         ),
                       ),
                     ),
@@ -412,14 +413,18 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                             ),
                             child: ConstrainedBox(
                               constraints: BoxConstraints(
-                                minHeight: math.max(0, viewportConstraints.maxHeight - 48),
+                                minHeight: math.max(
+                                  0,
+                                  viewportConstraints.maxHeight - 48,
+                                ),
                                 maxWidth: 440,
                               ),
                               child: IntrinsicHeight(
                                 child: Form(
                                   key: _formKey,
                                   child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.stretch,
                                     children: [
                                       // Top Action Bar: Back Button & Status Badge
                                       _buildTopHeader(),
@@ -433,7 +438,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
                                       // Error Alert Banner (if auth failed)
                                       if (auth.failure != null) ...[
-                                        _buildErrorBanner(auth.failure!.userMessage),
+                                        _buildErrorBanner(
+                                          auth.failure!.userMessage,
+                                        ),
                                         const SizedBox(height: 16),
                                       ],
 
@@ -635,22 +642,19 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                           _buildDesktopFeatureItem(
                             icon: Icons.verified_user_rounded,
                             title: 'Otorisasi & Alur Berjenjang',
-                            desc:
-                                'Alur transisi status resmi: Pemohon → Operator → Bagian Aset → Kadiv → Selesai.',
+                            desc: 'Alur transisi status resmi: Pemohon → Operator → Bagian Aset → Kadiv → Selesai.',
                           ),
                           const SizedBox(height: 14),
                           _buildDesktopFeatureItem(
                             icon: Icons.show_chart_rounded,
                             title: 'Pelacakan Status Real-Time',
-                            desc:
-                                'Pantau riwayat pergerakan dan perpindahan lokasi fisik aset secara transparan dan akurat.',
+                            desc: 'Pantau riwayat pergerakan dan perpindahan lokasi fisik aset secara transparan dan akurat.',
                           ),
                           const SizedBox(height: 14),
                           _buildDesktopFeatureItem(
                             icon: Icons.assignment_turned_in_rounded,
                             title: 'Audit Trail Otomatis SIPA',
-                            desc:
-                                'Validasi ketat Serial Number & Kode Aset master data dengan enkripsi sistem SIPA.',
+                            desc: 'Validasi ketat Serial Number & Kode Aset master data dengan enkripsi sistem SIPA.',
                           ),
 
                           const SizedBox(height: 24),
@@ -759,9 +763,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       decoration: BoxDecoration(
         color: Colors.white.withValues(alpha: 0.04),
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(
-          color: Colors.white.withValues(alpha: 0.08),
-        ),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -937,9 +939,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       decoration: BoxDecoration(
         color: _LoginTheme.errorContainer,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(
-          color: _LoginTheme.error.withValues(alpha: 0.3),
-        ),
+        border: Border.all(color: _LoginTheme.error.withValues(alpha: 0.3)),
       ),
       child: Row(
         children: [
@@ -1346,10 +1346,7 @@ class _MutasiKuEmblemRibbonPainter extends CustomPainter {
       ..shader = const LinearGradient(
         begin: Alignment.topRight,
         end: Alignment.bottomLeft,
-        colors: [
-          Color(0xFF0284C7),
-          Color(0xFF14B8A6),
-        ],
+        colors: [Color(0xFF0284C7), Color(0xFF14B8A6)],
       ).createShader(const Rect.fromLTWH(38, 54, 44, 36))
       ..style = PaintingStyle.stroke
       ..strokeWidth = 7.5
