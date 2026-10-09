@@ -13,11 +13,7 @@ class NotificationTile extends StatelessWidget {
   final NotificationItem item;
   final VoidCallback onTap;
 
-  const NotificationTile({
-    super.key,
-    required this.item,
-    required this.onTap,
-  });
+  const NotificationTile({super.key, required this.item, required this.onTap});
 
   @override
   Widget build(BuildContext context) {

@@ -10,6 +10,7 @@ import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:mutasiku/core/widgets/custom_floating_nav_bar.dart';
 
+import '../../../../core/utils/sla_wita_helper.dart';
 import '../../../../core/widgets/mutasiku_page_header.dart';
 
 import '../../../../app/router/route_names.dart';
@@ -145,17 +146,18 @@ class _NotificationScreenState extends ConsumerState<NotificationScreen> {
   }
 
   String _relative(DateTime d) {
+    final wita = SlaWitaHelper.toWita(d);
     final diff = DateTime.now().difference(d);
-    final h = d.hour.toString().padLeft(2, '0');
-    final min = d.minute.toString().padLeft(2, '0');
+    final h = wita.hour.toString().padLeft(2, '0');
+    final min = wita.minute.toString().padLeft(2, '0');
     if (diff.inMinutes < 60) {
-      return '${diff.inMinutes.clamp(0, 59)} menit yang lalu • $h:$min WIB';
+      return '${diff.inMinutes.clamp(0, 59)} menit yang lalu • $h:$min WITA';
     }
     if (diff.inHours < 24 && diff.inDays == 0) {
-      return '${diff.inHours} jam yang lalu • $h:$min WIB';
+      return '${diff.inHours} jam yang lalu • $h:$min WITA';
     }
-    if (diff.inDays == 1) return 'Kemarin, $h:$min WIB';
-    return '${_fmtDate(d)}, $h:$min WIB';
+    if (diff.inDays == 1) return 'Kemarin, $h:$min WITA';
+    return '${_fmtDate(wita)}, $h:$min WITA';
   }
 
   (IconData, Color, Color) _iconStyle(NotificationItem n) {

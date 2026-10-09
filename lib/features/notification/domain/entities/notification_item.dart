@@ -6,12 +6,7 @@
 import '../../../auth/domain/entities/user_role.dart';
 
 /// Kategori notifikasi, dipetakan longgar ke event MutationStatus.
-enum NotificationType {
-  info,
-  success,
-  warning,
-  action,
-}
+enum NotificationType { info, success, warning, action }
 
 /// Entity domain untuk satu item notifikasi.
 class NotificationItem {
@@ -54,8 +49,7 @@ class NotificationItem {
     if (readByUserIds.contains(userId)) {
       return true;
     }
-    if (isStandardPemohonId(userId) &&
-        readByUserIds.any(isStandardPemohonId)) {
+    if (isStandardPemohonId(userId) && readByUserIds.any(isStandardPemohonId)) {
       return true;
     }
     if (targetUserId != null) {
@@ -77,19 +71,18 @@ class NotificationItem {
     UserRole? targetRole,
     String? targetUserId,
     Set<String>? readByUserIds,
-  }) =>
-      NotificationItem(
-        id: id,
-        title: title ?? this.title,
-        message: message ?? this.message,
-        type: type ?? this.type,
-        createdAt: createdAt ?? this.createdAt,
-        isRead: isRead ?? this.isRead,
-        relatedMutationId: relatedMutationId ?? this.relatedMutationId,
-        targetRole: targetRole ?? this.targetRole,
-        targetUserId: targetUserId ?? this.targetUserId,
-        readByUserIds: readByUserIds ?? this.readByUserIds,
-      );
+  }) => NotificationItem(
+    id: id,
+    title: title ?? this.title,
+    message: message ?? this.message,
+    type: type ?? this.type,
+    createdAt: createdAt ?? this.createdAt,
+    isRead: isRead ?? this.isRead,
+    relatedMutationId: relatedMutationId ?? this.relatedMutationId,
+    targetRole: targetRole ?? this.targetRole,
+    targetUserId: targetUserId ?? this.targetUserId,
+    readByUserIds: readByUserIds ?? this.readByUserIds,
+  );
 }
 
 /// Helper untuk mengenali ID default/alias Pemohon

@@ -11,6 +11,7 @@
 // 8. Ketahanan terhadap MissingPluginException
 
 import 'dart:typed_data';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mutasiku/core/services/document_picker_service.dart';
@@ -85,7 +86,11 @@ void main() {
     id: 'ast_laptop_01',
     assetCode: 'AST-IT-2026-001',
     name: 'Laptop ThinkPad X1 Carbon',
-    category: const AssetCategory(id: 'cat_it', code: 'IT', name: 'IT Equipment'),
+    category: const AssetCategory(
+      id: 'cat_it',
+      code: 'IT',
+      name: 'IT Equipment',
+    ),
     location: 'Lantai 2 - IT',
     pic: 'Budi Santoso',
     status: AssetStatus.available,
@@ -102,7 +107,16 @@ void main() {
 
   // 2. PDF 25 MB (antara 20-30 MB)
   final large25MbPdfBytes = Uint8List(25 * 1024 * 1024);
-  large25MbPdfBytes.setRange(0, 8, [0x25, 0x50, 0x44, 0x46, 0x2D, 0x31, 0x2E, 0x37]); // %PDF-1.7
+  large25MbPdfBytes.setRange(0, 8, [
+    0x25,
+    0x50,
+    0x44,
+    0x46,
+    0x2D,
+    0x31,
+    0x2E,
+    0x37,
+  ]); // %PDF-1.7
 
   // 3. Image Bytes (1x1 PNG transparan valid)
   final imagePngBytes = Uint8List.fromList([
@@ -118,52 +132,58 @@ void main() {
   ]);
 
   group('DocumentPickerService — Ukuran dan Format Dokumen', () {
-    test('PDF kecil (<1 MB) berhasil dipilih dengan nama dan bytes utuh', () async {
-      DocumentPickerService.testPicker = () async {
-        return DocumentPickerResult.success(
-          PickedDocument(
-            name: 'Surat_Permohonan.pdf',
-            size: smallPdfBytes.length,
-            bytes: smallPdfBytes,
-            path: '/mock/path/Surat_Permohonan.pdf',
-          ),
-        );
-      };
+    test(
+      'PDF kecil (<1 MB) berhasil dipilih dengan nama dan bytes utuh',
+      () async {
+        DocumentPickerService.testPicker = () async {
+          return DocumentPickerResult.success(
+            PickedDocument(
+              name: 'Surat_Permohonan.pdf',
+              size: smallPdfBytes.length,
+              bytes: smallPdfBytes,
+              path: '/mock/path/Surat_Permohonan.pdf',
+            ),
+          );
+        };
 
-      final result = await DocumentPickerService.pickDocument();
+        final result = await DocumentPickerService.pickDocument();
 
-      expect(result.isSuccess, isTrue);
-      expect(result.document, isNotNull);
-      expect(result.document!.name, 'Surat_Permohonan.pdf');
-      expect(result.document!.isPdf, isTrue);
-      expect(result.document!.isImage, isFalse);
-      expect(result.document!.bytes, equals(smallPdfBytes));
-      expect(result.document!.bytes!.isNotEmpty, isTrue);
-      expect(result.document!.size, smallPdfBytes.length);
-    });
+        expect(result.isSuccess, isTrue);
+        expect(result.document, isNotNull);
+        expect(result.document!.name, 'Surat_Permohonan.pdf');
+        expect(result.document!.isPdf, isTrue);
+        expect(result.document!.isImage, isFalse);
+        expect(result.document!.bytes, equals(smallPdfBytes));
+        expect(result.document!.bytes!.isNotEmpty, isTrue);
+        expect(result.document!.size, smallPdfBytes.length);
+      },
+    );
 
-    test('PDF 20–30 MB (misal 25 MB) diizinkan dan berhasil disimpan', () async {
-      const size25Mb = 25 * 1024 * 1024;
-      DocumentPickerService.testPicker = () async {
-        return DocumentPickerResult.success(
-          PickedDocument(
-            name: 'Dokumen_Audit_Teknis_25MB.pdf',
-            size: size25Mb,
-            bytes: large25MbPdfBytes,
-            path: '/mock/path/Dokumen_Audit_Teknis_25MB.pdf',
-          ),
-        );
-      };
+    test(
+      'PDF 20–30 MB (misal 25 MB) diizinkan dan berhasil disimpan',
+      () async {
+        const size25Mb = 25 * 1024 * 1024;
+        DocumentPickerService.testPicker = () async {
+          return DocumentPickerResult.success(
+            PickedDocument(
+              name: 'Dokumen_Audit_Teknis_25MB.pdf',
+              size: size25Mb,
+              bytes: large25MbPdfBytes,
+              path: '/mock/path/Dokumen_Audit_Teknis_25MB.pdf',
+            ),
+          );
+        };
 
-      final result = await DocumentPickerService.pickDocument();
+        final result = await DocumentPickerService.pickDocument();
 
-      expect(result.isSuccess, isTrue);
-      expect(result.document, isNotNull);
-      expect(result.document!.name, 'Dokumen_Audit_Teknis_25MB.pdf');
-      expect(result.document!.size, equals(size25Mb));
-      expect(result.document!.bytes!.length, equals(size25Mb));
-      expect(result.document!.isPdf, isTrue);
-    });
+        expect(result.isSuccess, isTrue);
+        expect(result.document, isNotNull);
+        expect(result.document!.name, 'Dokumen_Audit_Teknis_25MB.pdf');
+        expect(result.document!.size, equals(size25Mb));
+        expect(result.document!.bytes!.length, equals(size25Mb));
+        expect(result.document!.isPdf, isTrue);
+      },
+    );
 
     test('PDF <= 30 MB (tepat 30 MB) upload berhasil', () async {
       const size30Mb = 30 * 1024 * 1024;
@@ -205,7 +225,10 @@ void main() {
       expect(result.isFailure, isTrue);
       expect(result.isSuccess, isFalse);
       expect(result.document, isNull);
-      expect(result.errorMessage, equals('Upload gagal. Ukuran file maksimal 30 MB.'));
+      expect(
+        result.errorMessage,
+        equals('Upload gagal. Ukuran file maksimal 30 MB.'),
+      );
     });
 
     test('Picker throw/crash di-handle secara tangguh dan tidak menyebabkan aplikasi crash', () async {
@@ -223,27 +246,30 @@ void main() {
       }
     });
 
-    test('Image (PNG, JPG, JPEG, WEBP) berhasil dipilih dan diidentifikasi', () async {
-      DocumentPickerService.testPicker = () async {
-        return DocumentPickerResult.success(
-          PickedDocument(
-            name: 'Foto_Kondisi_Fisik_Laptop.png',
-            size: imagePngBytes.length,
-            bytes: imagePngBytes,
-            path: '/mock/path/Foto_Kondisi_Fisik_Laptop.png',
-          ),
-        );
-      };
+    test(
+      'Image (PNG, JPG, JPEG, WEBP) berhasil dipilih dan diidentifikasi',
+      () async {
+        DocumentPickerService.testPicker = () async {
+          return DocumentPickerResult.success(
+            PickedDocument(
+              name: 'Foto_Kondisi_Fisik_Laptop.png',
+              size: imagePngBytes.length,
+              bytes: imagePngBytes,
+              path: '/mock/path/Foto_Kondisi_Fisik_Laptop.png',
+            ),
+          );
+        };
 
-      final result = await DocumentPickerService.pickDocument();
+        final result = await DocumentPickerService.pickDocument();
 
-      expect(result.isSuccess, isTrue);
-      expect(result.document, isNotNull);
-      expect(result.document!.name, 'Foto_Kondisi_Fisik_Laptop.png');
-      expect(result.document!.isImage, isTrue);
-      expect(result.document!.isPdf, isFalse);
-      expect(result.document!.bytes, equals(imagePngBytes));
-    });
+        expect(result.isSuccess, isTrue);
+        expect(result.document, isNotNull);
+        expect(result.document!.name, 'Foto_Kondisi_Fisik_Laptop.png');
+        expect(result.document!.isImage, isTrue);
+        expect(result.document!.isPdf, isFalse);
+        expect(result.document!.bytes, equals(imagePngBytes));
+      },
+    );
 
     test('Format tidak didukung (.exe, .zip) ditolak', () async {
       DocumentPickerService.testPicker = () async {
@@ -278,32 +304,55 @@ void main() {
     );
 
     test('Pemohon pemilik mutasi memiliki hak akses melihat dokumen', () {
-      expect(DocumentPreviewDialog.hasAccess(sampleMutation, pemohonUser), isTrue);
+      expect(
+        DocumentPreviewDialog.hasAccess(sampleMutation, pemohonUser),
+        isTrue,
+      );
     });
 
-    test('Pemohon lain TIDAK memiliki hak akses melihat dokumen mutasi orang lain', () {
-      expect(DocumentPreviewDialog.hasAccess(sampleMutation, anotherPemohonUser), isFalse);
-    });
+    test(
+      'Pemohon lain TIDAK memiliki hak akses melihat dokumen mutasi orang lain',
+      () {
+        expect(
+          DocumentPreviewDialog.hasAccess(sampleMutation, anotherPemohonUser),
+          isFalse,
+        );
+      },
+    );
 
     test('Operator memiliki akses ke dokumen pengajuan', () {
-      expect(DocumentPreviewDialog.hasAccess(sampleMutation, operatorUser), isTrue);
+      expect(
+        DocumentPreviewDialog.hasAccess(sampleMutation, operatorUser),
+        isTrue,
+      );
     });
 
     test('Bagian Aset memiliki akses ke dokumen pengajuan', () {
-      expect(DocumentPreviewDialog.hasAccess(sampleMutation, bagianAsetUser), isTrue);
+      expect(
+        DocumentPreviewDialog.hasAccess(sampleMutation, bagianAsetUser),
+        isTrue,
+      );
     });
 
     test('Kadiv memiliki akses ke dokumen pengajuan', () {
-      expect(DocumentPreviewDialog.hasAccess(sampleMutation, kadivUser), isTrue);
+      expect(
+        DocumentPreviewDialog.hasAccess(sampleMutation, kadivUser),
+        isTrue,
+      );
     });
 
     test('Admin memiliki akses ke dokumen pengajuan', () {
-      expect(DocumentPreviewDialog.hasAccess(sampleMutation, adminUser), isTrue);
+      expect(
+        DocumentPreviewDialog.hasAccess(sampleMutation, adminUser),
+        isTrue,
+      );
     });
   });
 
   group('DocumentPreviewDialog — Tampilan & Error Handling', () {
-    testWidgets('Image preview menampilkan InteractiveViewer dan file gambar', (tester) async {
+    testWidgets('Image preview menampilkan InteractiveViewer dan file gambar', (
+      tester,
+    ) async {
       final imgMutation = Mutation(
         id: 'mut_img',
         ticketNumber: 'IT-2026-00100',
@@ -347,101 +396,113 @@ void main() {
       expect(find.byType(Image), findsOneWidget);
     });
 
-    testWidgets('Dokumen PDF tanpa bytes menampilkan error jelas: File PDF Tidak Tersedia', (tester) async {
-      final missingDocMutation = Mutation(
-        id: 'mut_missing_pdf',
-        ticketNumber: 'IT-2026-00101',
-        asset: testAsset,
-        applicantId: 'usr_pemohon_01',
-        applicantName: 'Budi Santoso',
-        currentLocation: 'Lantai 2',
-        targetLocation: 'Lantai 3',
-        currentPic: 'Budi',
-        targetPic: 'Diana',
-        reason: 'Uji file hilang',
-        documentName: 'berkas_hilang.pdf',
-        documentBytes: null, // Bytes tidak tersedia
-        status: MutationStatus.submitted,
-        createdAt: DateTime.now(),
-      );
+    testWidgets(
+      'Dokumen PDF tanpa bytes menampilkan error jelas: File PDF Tidak Tersedia',
+      (tester) async {
+        final missingDocMutation = Mutation(
+          id: 'mut_missing_pdf',
+          ticketNumber: 'IT-2026-00101',
+          asset: testAsset,
+          applicantId: 'usr_pemohon_01',
+          applicantName: 'Budi Santoso',
+          currentLocation: 'Lantai 2',
+          targetLocation: 'Lantai 3',
+          currentPic: 'Budi',
+          targetPic: 'Diana',
+          reason: 'Uji file hilang',
+          documentName: 'berkas_hilang.pdf',
+          documentBytes: null, // Bytes tidak tersedia
+          status: MutationStatus.submitted,
+          createdAt: DateTime.now(),
+        );
 
-      await tester.pumpWidget(
-        MaterialApp(
-          home: Scaffold(
-            body: Builder(
-              builder: (ctx) => ElevatedButton(
-                onPressed: () => DocumentPreviewDialog.show(
-                  ctx,
-                  mutation: missingDocMutation,
-                  currentUser: bagianAsetUser,
+        await tester.pumpWidget(
+          MaterialApp(
+            home: Scaffold(
+              body: Builder(
+                builder: (ctx) => ElevatedButton(
+                  onPressed: () => DocumentPreviewDialog.show(
+                    ctx,
+                    mutation: missingDocMutation,
+                    currentUser: bagianAsetUser,
+                  ),
+                  child: const Text('Buka Preview'),
                 ),
-                child: const Text('Buka Preview'),
               ),
             ),
           ),
-        ),
-      );
+        );
 
-      await tester.tap(find.text('Buka Preview'));
-      await tester.pumpAndSettle();
+        await tester.tap(find.text('Buka Preview'));
+        await tester.pumpAndSettle();
 
-      expect(find.byType(Dialog), findsOneWidget);
-      expect(find.text('berkas_hilang.pdf'), findsOneWidget);
-      expect(find.text('File PDF Tidak Tersedia'), findsOneWidget);
-      expect(
-        find.text('Dokumen "berkas_hilang.pdf" tidak tersedia atau gagal dimuat dari penyimpanan.'),
-        findsOneWidget,
-      );
-    });
+        expect(find.byType(Dialog), findsOneWidget);
+        expect(find.text('berkas_hilang.pdf'), findsOneWidget);
+        expect(find.text('File PDF Tidak Tersedia'), findsOneWidget);
+        expect(
+          find.text(
+            'Dokumen "berkas_hilang.pdf" tidak tersedia atau gagal dimuat dari penyimpanan.',
+          ),
+          findsOneWidget,
+        );
+      },
+    );
 
-    testWidgets('Dokumen Gambar tanpa bytes menampilkan error jelas: File Gambar Tidak Tersedia', (tester) async {
-      final missingImgMutation = Mutation(
-        id: 'mut_missing_img',
-        ticketNumber: 'IT-2026-00102',
-        asset: testAsset,
-        applicantId: 'usr_pemohon_01',
-        applicantName: 'Budi Santoso',
-        currentLocation: 'Lantai 2',
-        targetLocation: 'Lantai 3',
-        currentPic: 'Budi',
-        targetPic: 'Diana',
-        reason: 'Uji gambar hilang',
-        documentName: 'foto_hilang.jpg',
-        documentBytes: null,
-        status: MutationStatus.submitted,
-        createdAt: DateTime.now(),
-      );
+    testWidgets(
+      'Dokumen Gambar tanpa bytes menampilkan error jelas: File Gambar Tidak Tersedia',
+      (tester) async {
+        final missingImgMutation = Mutation(
+          id: 'mut_missing_img',
+          ticketNumber: 'IT-2026-00102',
+          asset: testAsset,
+          applicantId: 'usr_pemohon_01',
+          applicantName: 'Budi Santoso',
+          currentLocation: 'Lantai 2',
+          targetLocation: 'Lantai 3',
+          currentPic: 'Budi',
+          targetPic: 'Diana',
+          reason: 'Uji gambar hilang',
+          documentName: 'foto_hilang.jpg',
+          documentBytes: null,
+          status: MutationStatus.submitted,
+          createdAt: DateTime.now(),
+        );
 
-      await tester.pumpWidget(
-        MaterialApp(
-          home: Scaffold(
-            body: Builder(
-              builder: (ctx) => ElevatedButton(
-                onPressed: () => DocumentPreviewDialog.show(
-                  ctx,
-                  mutation: missingImgMutation,
-                  currentUser: bagianAsetUser,
+        await tester.pumpWidget(
+          MaterialApp(
+            home: Scaffold(
+              body: Builder(
+                builder: (ctx) => ElevatedButton(
+                  onPressed: () => DocumentPreviewDialog.show(
+                    ctx,
+                    mutation: missingImgMutation,
+                    currentUser: bagianAsetUser,
+                  ),
+                  child: const Text('Buka Preview'),
                 ),
-                child: const Text('Buka Preview'),
               ),
             ),
           ),
-        ),
-      );
+        );
 
-      await tester.tap(find.text('Buka Preview'));
-      await tester.pumpAndSettle();
+        await tester.tap(find.text('Buka Preview'));
+        await tester.pumpAndSettle();
 
-      expect(find.byType(Dialog), findsOneWidget);
-      expect(find.text('foto_hilang.jpg'), findsOneWidget);
-      expect(find.text('File Gambar Tidak Tersedia'), findsOneWidget);
-      expect(
-        find.text('Gambar lampiran "foto_hilang.jpg" tidak tersedia atau gagal dimuat dari penyimpanan.'),
-        findsOneWidget,
-      );
-    });
+        expect(find.byType(Dialog), findsOneWidget);
+        expect(find.text('foto_hilang.jpg'), findsOneWidget);
+        expect(find.text('File Gambar Tidak Tersedia'), findsOneWidget);
+        expect(
+          find.text(
+            'Gambar lampiran "foto_hilang.jpg" tidak tersedia atau gagal dimuat dari penyimpanan.',
+          ),
+          findsOneWidget,
+        );
+      },
+    );
 
-    testWidgets('Format tidak didukung (.docx) menampilkan fallback jujur', (tester) async {
+    testWidgets('Format tidak didukung (.docx) menampilkan fallback jujur', (
+      tester,
+    ) async {
       final docxMutation = Mutation(
         id: 'mut_docx',
         ticketNumber: 'IT-2026-00103',
@@ -482,7 +543,9 @@ void main() {
       expect(find.text('Laporan_Spesifikasi.docx'), findsOneWidget);
       expect(find.text('Pratinjau Tidak Didukung'), findsOneWidget);
       expect(
-        find.text('Format file (.docx) tidak mendukung pratinjau langsung di dalam aplikasi.'),
+        find.text(
+          'Format file (.docx) tidak mendukung pratinjau langsung di dalam aplikasi.',
+        ),
         findsOneWidget,
       );
     });

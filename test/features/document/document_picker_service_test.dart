@@ -76,34 +76,43 @@ void main() {
       expect(result.isFailure, isTrue);
       expect(result.isSuccess, isFalse);
       expect(result.document, isNull);
-      expect(result.errorMessage, equals('Upload gagal. Ukuran file maksimal 30 MB.'));
+      expect(
+        result.errorMessage,
+        equals('Upload gagal. Ukuran file maksimal 30 MB.'),
+      );
     });
 
-    test('Picker error/exception ditangani aman tanpa menyebabkan crash', () async {
-      DocumentPickerService.testPicker = () async {
-        return const DocumentPickerResult.failure(
-          'Gagal memilih file: Platform channel error',
-        );
-      };
+    test(
+      'Picker error/exception ditangani aman tanpa menyebabkan crash',
+      () async {
+        DocumentPickerService.testPicker = () async {
+          return const DocumentPickerResult.failure(
+            'Gagal memilih file: Platform channel error',
+          );
+        };
 
-      final result = await DocumentPickerService.pickDocument();
+        final result = await DocumentPickerService.pickDocument();
 
-      expect(result.isFailure, isTrue);
-      expect(result.errorMessage, contains('Gagal memilih file'));
-      expect(result.document, isNull);
-    });
+        expect(result.isFailure, isTrue);
+        expect(result.errorMessage, contains('Gagal memilih file'));
+        expect(result.document, isNull);
+      },
+    );
 
-    test('User membatalkan dialog pemilihan file → canceled tanpa crash', () async {
-      DocumentPickerService.testPicker = () async {
-        return const DocumentPickerResult.canceled();
-      };
+    test(
+      'User membatalkan dialog pemilihan file → canceled tanpa crash',
+      () async {
+        DocumentPickerService.testPicker = () async {
+          return const DocumentPickerResult.canceled();
+        };
 
-      final result = await DocumentPickerService.pickDocument();
+        final result = await DocumentPickerService.pickDocument();
 
-      expect(result.isCanceled, isTrue);
-      expect(result.isSuccess, isFalse);
-      expect(result.isFailure, isFalse);
-      expect(result.document, isNull);
-    });
+        expect(result.isCanceled, isTrue);
+        expect(result.isSuccess, isFalse);
+        expect(result.isFailure, isFalse);
+        expect(result.document, isNull);
+      },
+    );
   });
 }

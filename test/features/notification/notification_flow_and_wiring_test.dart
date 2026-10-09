@@ -1,3 +1,4 @@
+import 'package:mutasiku/core/errors/failures.dart';
 // test/features/notification/notification_flow_and_wiring_test.dart
 //
 // Comprehensive validation test suite for Notification functionality and wiring
@@ -27,19 +28,51 @@ class _FakeAuthRepo implements AuthRepository {
   @override
   Future<Result<User?>> getCurrentUser() async => Result.success(user);
   @override
-  Future<Result<User>> login({required String username, required String password}) async =>
-      Result.success(user!);
+  Future<Result<User>> login({
+    required String username,
+    required String password,
+  }) async => Result.success(user!);
   @override
   Future<void> logout() async {}
+    @override
+  Future<Result<User>> changePassword({
+    required String currentPassword,
+    required String newPassword,
+    required String confirmPassword,
+  }) async {
+    if (newPassword.length < 8) {
+      return Result.failure(
+        const ValidationFailure(message: 'Password baru minimal 8 karakter.'),
+      );
+    }
+    if (newPassword != confirmPassword) {
+      return Result.failure(
+        const ValidationFailure(message: 'Konfirmasi password baru tidak cocok.'),
+      );
+    }
+    if (newPassword == currentPassword) {
+      return Result.failure(
+        const ValidationFailure(
+          message: 'Password baru harus berbeda dengan password lama.',
+        ),
+      );
+    }
+    if (user != null) {
+      return Result.success(user!.copyWith(mustChangePassword: false));
+    }
+    return Result.failure(
+      const UnauthorizedFailure(message: 'Pengguna tidak ditemukan.'),
+    );
+  }
 }
 
 class _FakeAuthNotifier extends AuthNotifier {
   _FakeAuthNotifier(User user)
-      : super(
-          loginUseCase: LoginUseCase(repository: _FakeAuthRepo(user)),
-          logoutUseCase: LogoutUseCase(repository: _FakeAuthRepo(user)),
-          authRepository: _FakeAuthRepo(user),
-        ) {
+    : super(
+        loginUseCase: LoginUseCase(repository: _FakeAuthRepo(user)),
+        logoutUseCase: LogoutUseCase(repository: _FakeAuthRepo(user)),
+        authRepository: _FakeAuthRepo(user),
+      ) {
     state = AuthState(isLoading: false, user: user);
   }
 }
@@ -89,7 +122,9 @@ void main() {
     test('User only sees notifications targeted to their role or user ID', () {
       final container = ProviderContainer(
         overrides: [
-          authStateProvider.overrideWith((ref) => _FakeAuthNotifier(pemohonUser)),
+          authStateProvider.overrideWith(
+            (ref) => _FakeAuthNotifier(pemohonUser),
+          ),
         ],
       );
       addTearDown(container.dispose);
@@ -144,97 +179,106 @@ void main() {
   });
 
   group('2. Unread Badge & Reactive Updates', () {
-    testWidgets('Unread badge visible when unread > 0, disappears when all read',
-        (tester) async {
-      final authNotifier = _FakeAuthNotifier(operatorUser);
-      final container = ProviderContainer(
-        overrides: [
-          authStateProvider.overrideWith((ref) => authNotifier),
-        ],
-      );
-      addTearDown(container.dispose);
+    testWidgets(
+      'Unread badge visible when unread > 0, disappears when all read',
+      (tester) async {
+        final authNotifier = _FakeAuthNotifier(operatorUser);
+        final container = ProviderContainer(
+          overrides: [authStateProvider.overrideWith((ref) => authNotifier)],
+        );
+        addTearDown(container.dispose);
 
-      await tester.pumpWidget(
-        UncontrolledProviderScope(
-          container: container,
-          child: MaterialApp(
-            home: Scaffold(
-              bottomNavigationBar: CustomFloatingNavBar.forRole(UserRole.operator),
+        await tester.pumpWidget(
+          UncontrolledProviderScope(
+            container: container,
+            child: MaterialApp(
+              home: Scaffold(
+                bottomNavigationBar: CustomFloatingNavBar.forRole(
+                  UserRole.operator,
+                ),
+              ),
             ),
           ),
-        ),
-      );
-      await tester.pumpAndSettle();
+        );
+        await tester.pumpAndSettle();
 
-      // Initially unread > 0 -> Badge widget is found
-      final initialUnread = container.read(unreadNotificationCountProvider);
-      expect(initialUnread, greaterThan(0));
-      expect(find.byType(Badge), findsOneWidget);
+        // Initially unread > 0 -> Badge widget is found
+        final initialUnread = container.read(unreadNotificationCountProvider);
+        expect(initialUnread, greaterThan(0));
+        expect(find.byType(Badge), findsOneWidget);
 
-      // Mark all read for operator
-      container.read(notificationProvider.notifier).markAllAsRead(
-            role: UserRole.operator,
-            userId: operatorUser.id,
-          );
-      await tester.pumpAndSettle();
+        // Mark all read for operator
+        container
+            .read(notificationProvider.notifier)
+            .markAllAsRead(role: UserRole.operator, userId: operatorUser.id);
+        await tester.pumpAndSettle();
 
-      // Badge disappears reactively without manual refresh
-      final updatedUnread = container.read(unreadNotificationCountProvider);
-      expect(updatedUnread, equals(0));
-      expect(find.byType(Badge), findsNothing);
-    });
+        // Badge disappears reactively without manual refresh
+        final updatedUnread = container.read(unreadNotificationCountProvider);
+        expect(updatedUnread, equals(0));
+        expect(find.byType(Badge), findsNothing);
+      },
+    );
 
-    test('Reading one notification does not mark unrelated notifications as read', () {
-      final container = ProviderContainer(
-        overrides: [
-          authStateProvider.overrideWith((ref) => _FakeAuthNotifier(operatorUser)),
-        ],
-      );
-      addTearDown(container.dispose);
+    test(
+      'Reading one notification does not mark unrelated notifications as read',
+      () {
+        final container = ProviderContainer(
+          overrides: [
+            authStateProvider.overrideWith(
+              (ref) => _FakeAuthNotifier(operatorUser),
+            ),
+          ],
+        );
+        addTearDown(container.dispose);
 
-      final notifsBefore = container.read(roleNotificationsProvider);
-      final unreadCountBefore = container.read(unreadNotificationCountProvider);
-      expect(unreadCountBefore, greaterThan(1));
+        final notifsBefore = container.read(roleNotificationsProvider);
+        final unreadCountBefore = container.read(
+          unreadNotificationCountProvider,
+        );
+        expect(unreadCountBefore, greaterThan(1));
 
-      final firstId = notifsBefore.first.id;
-      final secondId = notifsBefore[1].id;
+        final firstId = notifsBefore.first.id;
+        final secondId = notifsBefore[1].id;
 
-      container.read(notificationProvider.notifier).markAsRead(
-            firstId,
-            userId: operatorUser.id,
-          );
+        container
+            .read(notificationProvider.notifier)
+            .markAsRead(firstId, userId: operatorUser.id);
 
-      final notifsAfter = container.read(roleNotificationsProvider);
-      final firstAfter = notifsAfter.firstWhere((n) => n.id == firstId);
-      final secondAfter = notifsAfter.firstWhere((n) => n.id == secondId);
+        final notifsAfter = container.read(roleNotificationsProvider);
+        final firstAfter = notifsAfter.firstWhere((n) => n.id == firstId);
+        final secondAfter = notifsAfter.firstWhere((n) => n.id == secondId);
 
-      expect(firstAfter.isRead, isTrue);
-      expect(secondAfter.isRead, isFalse);
-      expect(
-        container.read(unreadNotificationCountProvider),
-        equals(unreadCountBefore - 1),
-      );
-    });
+        expect(firstAfter.isRead, isTrue);
+        expect(secondAfter.isRead, isFalse);
+        expect(
+          container.read(unreadNotificationCountProvider),
+          equals(unreadCountBefore - 1),
+        );
+      },
+    );
   });
 
   group('3. Notification List & Visual Differentiation', () {
-    testWidgets('Notification screen shows title, message, timestamp, and visual unread indicator',
-        (tester) async {
-      await tester.pumpWidget(
-        ProviderScope(
-          overrides: [
-            authStateProvider.overrideWith((ref) => _FakeAuthNotifier(operatorUser)),
-          ],
-          child: const MaterialApp(
-            home: NotificationScreen(),
+    testWidgets(
+      'Notification screen shows title, message, timestamp, and visual unread indicator',
+      (tester) async {
+        await tester.pumpWidget(
+          ProviderScope(
+            overrides: [
+              authStateProvider.overrideWith(
+                (ref) => _FakeAuthNotifier(operatorUser),
+              ),
+            ],
+            child: const MaterialApp(home: NotificationScreen()),
           ),
-        ),
-      );
-      await tester.pumpAndSettle();
+        );
+        await tester.pumpAndSettle();
 
-      expect(find.text('Notifikasi'), findsWidgets);
-      expect(find.text('Pengajuan Baru Masuk'), findsWidgets);
-    });
+        expect(find.text('Notifikasi'), findsWidgets);
+        expect(find.text('Pengajuan Baru Masuk'), findsWidgets);
+      },
+    );
   });
 
   group('4 & 5. Notification Tap & Role-Based Routing for all 5 roles', () {
@@ -301,9 +345,7 @@ void main() {
       await tester.pumpWidget(
         UncontrolledProviderScope(
           container: container,
-          child: MaterialApp.router(
-            routerConfig: router,
-          ),
+          child: MaterialApp.router(routerConfig: router),
         ),
       );
       await tester.pumpAndSettle();
@@ -331,7 +373,9 @@ void main() {
       }
     }
 
-    testWidgets('Pemohon notification tap routes to /pemohon/mutasi/:id', (tester) async {
+    testWidgets('Pemohon notification tap routes to /pemohon/mutasi/:id', (
+      tester,
+    ) async {
       await testRoleRouting(
         tester: tester,
         user: pemohonUser,
@@ -340,7 +384,9 @@ void main() {
       );
     });
 
-    testWidgets('Operator notification tap routes to /operator/mutations/:id', (tester) async {
+    testWidgets('Operator notification tap routes to /operator/mutations/:id', (
+      tester,
+    ) async {
       await testRoleRouting(
         tester: tester,
         user: operatorUser,
@@ -349,16 +395,21 @@ void main() {
       );
     });
 
-    testWidgets('Bagian Aset notification tap routes to /bagian-aset/verifications/:id', (tester) async {
-      await testRoleRouting(
-        tester: tester,
-        user: bagianAsetUser,
-        expectedPathPrefix: '/bagian-aset/verifications',
-        isPemohonScreen: false,
-      );
-    });
+    testWidgets(
+      'Bagian Aset notification tap routes to /bagian-aset/verifications/:id',
+      (tester) async {
+        await testRoleRouting(
+          tester: tester,
+          user: bagianAsetUser,
+          expectedPathPrefix: '/bagian-aset/verifications',
+          isPemohonScreen: false,
+        );
+      },
+    );
 
-    testWidgets('Kadiv notification tap routes to /kadiv/approvals/:id', (tester) async {
+    testWidgets('Kadiv notification tap routes to /kadiv/approvals/:id', (
+      tester,
+    ) async {
       await testRoleRouting(
         tester: tester,
         user: kadivUser,
@@ -369,45 +420,47 @@ void main() {
   });
 
   group('6 & 7. Tandai Semua Dibaca', () {
-    testWidgets('"Tandai semua dibaca" only visible when unread exists, marks current user read',
-        (tester) async {
-      final container = ProviderContainer(
-        overrides: [
-          authStateProvider.overrideWith((ref) => _FakeAuthNotifier(bagianAsetUser)),
-        ],
-      );
-      addTearDown(container.dispose);
+    testWidgets(
+      '"Tandai semua dibaca" only visible when unread exists, marks current user read',
+      (tester) async {
+        final container = ProviderContainer(
+          overrides: [
+            authStateProvider.overrideWith(
+              (ref) => _FakeAuthNotifier(bagianAsetUser),
+            ),
+          ],
+        );
+        addTearDown(container.dispose);
 
-      await tester.pumpWidget(
-        UncontrolledProviderScope(
-          container: container,
-          child: const MaterialApp(
-            home: NotificationScreen(),
+        await tester.pumpWidget(
+          UncontrolledProviderScope(
+            container: container,
+            child: const MaterialApp(home: NotificationScreen()),
           ),
-        ),
-      );
-      await tester.pumpAndSettle();
+        );
+        await tester.pumpAndSettle();
 
-      // Button is visible because unread > 0
-      expect(find.text('Tandai Semua Dibaca'), findsOneWidget);
+        // Button is visible because unread > 0
+        expect(find.text('Tandai Semua Dibaca'), findsOneWidget);
 
-      // Press button
-      await tester.tap(find.text('Tandai Semua Dibaca'));
-      await tester.pumpAndSettle();
+        // Press button
+        await tester.tap(find.text('Tandai Semua Dibaca'));
+        await tester.pumpAndSettle();
 
-      // Button becomes "Semua Terbaca"
-      expect(find.text('Semua Terbaca'), findsOneWidget);
+        // Button becomes "Semua Terbaca"
+        expect(find.text('Semua Terbaca'), findsOneWidget);
 
-      // All Bagian Aset notifications are now read
-      final notifs = container.read(roleNotificationsProvider);
-      expect(notifs.every((n) => n.isRead), isTrue);
+        // All Bagian Aset notifications are now read
+        final notifs = container.read(roleNotificationsProvider);
+        expect(notifs.every((n) => n.isRead), isTrue);
 
-      // Other roles (e.g. Operator) are NOT modified
-      final oprNotifs = container
-          .read(notificationProvider)
-          .where((n) => n.targetRole == UserRole.operator);
-      expect(oprNotifs.any((n) => !n.isReadBy(operatorUser.id)), isTrue);
-    });
+        // Other roles (e.g. Operator) are NOT modified
+        final oprNotifs = container
+            .read(notificationProvider)
+            .where((n) => n.targetRole == UserRole.operator);
+        expect(oprNotifs.any((n) => !n.isReadBy(operatorUser.id)), isTrue);
+      },
+    );
   });
 
   group('8. Status-Specific Notifications and No Duplicate Events', () {
@@ -424,7 +477,9 @@ void main() {
       );
 
       final oprNotifs = notifier.state.where(
-        (n) => n.targetRole == UserRole.operator && n.relatedMutationId == 'mut_event_1',
+        (n) =>
+            n.targetRole == UserRole.operator &&
+            n.relatedMutationId == 'mut_event_1',
       );
       expect(oprNotifs.length, equals(1));
 
@@ -438,7 +493,9 @@ void main() {
       );
 
       final bgNotifs = notifier.state.where(
-        (n) => n.targetRole == UserRole.bagianAset && n.relatedMutationId == 'mut_event_1',
+        (n) =>
+            n.targetRole == UserRole.bagianAset &&
+            n.relatedMutationId == 'mut_event_1',
       );
       expect(bgNotifs.length, equals(1));
 
@@ -452,7 +509,9 @@ void main() {
       );
 
       final kdvNotifs = notifier.state.where(
-        (n) => n.targetRole == UserRole.kadiv && n.relatedMutationId == 'mut_event_1',
+        (n) =>
+            n.targetRole == UserRole.kadiv &&
+            n.relatedMutationId == 'mut_event_1',
       );
       expect(kdvNotifs.length, equals(1));
 
@@ -534,15 +593,21 @@ void main() {
       );
 
       expect(
-        notifier.state.where((n) => n.relatedMutationId == 'mut_event_2').length,
+        notifier.state
+            .where((n) => n.relatedMutationId == 'mut_event_2')
+            .length,
         equals(1),
       );
       expect(
-        notifier.state.where((n) => n.relatedMutationId == 'mut_event_3').length,
+        notifier.state
+            .where((n) => n.relatedMutationId == 'mut_event_3')
+            .length,
         equals(1),
       );
       expect(
-        notifier.state.where((n) => n.relatedMutationId == 'mut_event_4').length,
+        notifier.state
+            .where((n) => n.relatedMutationId == 'mut_event_4')
+            .length,
         equals(1),
       );
     });

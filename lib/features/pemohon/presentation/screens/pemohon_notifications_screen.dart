@@ -29,10 +29,9 @@ class PemohonNotificationsScreen extends ConsumerWidget {
   ) {
     // 1. Tandai notifikasi sebagai dibaca oleh user yang sedang login
     final currentUser = ref.read(authStateProvider).user;
-    ref.read(notificationProvider.notifier).markAsRead(
-          item.id,
-          userId: currentUser?.id ?? 'usr_pemohon',
-        );
+    ref
+        .read(notificationProvider.notifier)
+        .markAsRead(item.id, userId: currentUser?.id ?? 'usr_pemohon');
 
     // 2. Jika notifikasi memiliki ID mutasi terkait, navigasi ke Detail Mutasi Pemohon
     final mutationId = item.relatedMutationId;
@@ -76,7 +75,8 @@ class PemohonNotificationsScreen extends ConsumerWidget {
                 alignment: Alignment.centerRight,
                 child: TextButton.icon(
                   onPressed: () {
-                    final user = currentUser ??
+                    final user =
+                        currentUser ??
                         const User(
                           id: 'usr_pemohon',
                           username: 'pemohon',
@@ -84,12 +84,15 @@ class PemohonNotificationsScreen extends ConsumerWidget {
                           email: 'pemohon@mutasiku.id',
                           role: UserRole.pemohon,
                         );
-                    ref.read(notificationProvider.notifier).markAllAsRead(
-                          role: user.role,
-                          userId: user.id,
-                        );
+                    ref
+                        .read(notificationProvider.notifier)
+                        .markAllAsRead(role: user.role, userId: user.id);
                   },
-                  icon: const Icon(Icons.done_all_rounded, size: 16, color: AppColors.primary),
+                  icon: const Icon(
+                    Icons.done_all_rounded,
+                    size: 16,
+                    color: AppColors.primary,
+                  ),
                   label: const Text(
                     'Tandai semua dibaca',
                     style: TextStyle(

@@ -3,6 +3,7 @@
 // Pengujian untuk Feedback Global, Document Preview across Roles, dan Total Aset Tanggung Jawab.
 
 import 'dart:typed_data';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mutasiku/app/theme/app_colors.dart';
@@ -61,7 +62,11 @@ void main() {
     id: 'ast_test_1',
     assetCode: 'AST-TEST-001',
     name: 'MacBook Pro M2 Max',
-    category: const AssetCategory(id: 'cat_it', code: 'IT', name: 'IT Equipment'),
+    category: const AssetCategory(
+      id: 'cat_it',
+      code: 'IT',
+      name: 'IT Equipment',
+    ),
     location: 'Lantai 3',
     pic: 'Budi Santoso',
     status: AssetStatus.available,
@@ -82,7 +87,16 @@ void main() {
     targetPic: 'Ahmad Supir',
     reason: 'Kebutuhan kerja',
     documentName: 'Surat_Tugas.pdf',
-    documentBytes: Uint8List.fromList([0x25, 0x50, 0x44, 0x46, 0x2D, 0x31, 0x2E, 0x35]), // %PDF-1.5 header
+    documentBytes: Uint8List.fromList([
+      0x25,
+      0x50,
+      0x44,
+      0x46,
+      0x2D,
+      0x31,
+      0x2E,
+      0x35,
+    ]), // %PDF-1.5 header
     status: MutationStatus.submitted,
     createdAt: DateTime.now(),
   );
@@ -108,7 +122,7 @@ void main() {
       0x54, 0x78, 0x9C, 0x63, 0x00, 0x01, 0x00, 0x00,
       0x05, 0x00, 0x01, 0x0D, 0x0A, 0x2D, 0xB4, 0x00,
       0x00, 0x00, 0x00, 0x49, 0x45, 0x4E, 0x44, 0xAE,
-      0x42, 0x60, 0x82
+      0x42, 0x60, 0x82,
     ]),
     status: MutationStatus.submitted,
     createdAt: DateTime.now(),
@@ -131,158 +145,205 @@ void main() {
   );
 
   group('Feedback Global (AppFeedback) Tests', () {
-    testWidgets('AppFeedback.showSuccess displays green floating snackbar with check icon', (tester) async {
-      await tester.pumpWidget(
-        MaterialApp(
-          home: Scaffold(
-            body: Builder(
-              builder: (context) => ElevatedButton(
-                onPressed: () {
-                  AppFeedback.showSuccess(context, 'Pengajuan berhasil diverifikasi.');
-                },
-                child: const Text('Trigger'),
+    testWidgets(
+      'AppFeedback.showSuccess displays green floating snackbar with check icon',
+      (tester) async {
+        await tester.pumpWidget(
+          MaterialApp(
+            home: Scaffold(
+              body: Builder(
+                builder: (context) => ElevatedButton(
+                  onPressed: () {
+                    AppFeedback.showSuccess(
+                      context,
+                      'Pengajuan berhasil diverifikasi.',
+                    );
+                  },
+                  child: const Text('Trigger'),
+                ),
               ),
             ),
           ),
-        ),
-      );
+        );
 
-      await tester.tap(find.text('Trigger'));
-      await tester.pump(); // Start animation
-      await tester.pump(const Duration(milliseconds: 500)); // Visible
+        await tester.tap(find.text('Trigger'));
+        await tester.pump(); // Start animation
+        await tester.pump(const Duration(milliseconds: 500)); // Visible
 
-      expect(find.text('Pengajuan berhasil diverifikasi.'), findsOneWidget);
-      expect(find.byIcon(Icons.check_circle_rounded), findsOneWidget);
+        expect(find.text('Pengajuan berhasil diverifikasi.'), findsOneWidget);
+        expect(find.byIcon(Icons.check_circle_rounded), findsOneWidget);
 
-      final snackBar = tester.widget<SnackBar>(find.byType(SnackBar));
-      expect(snackBar.backgroundColor, equals(AppColors.success));
-    });
+        final snackBar = tester.widget<SnackBar>(find.byType(SnackBar));
+        expect(snackBar.backgroundColor, equals(AppColors.success));
+      },
+    );
 
-    testWidgets('AppFeedback.showError displays red floating snackbar with error icon', (tester) async {
-      await tester.pumpWidget(
-        MaterialApp(
-          home: Scaffold(
-            body: Builder(
-              builder: (context) => ElevatedButton(
-                onPressed: () {
-                  AppFeedback.showError(context, 'Gagal memverifikasi pengajuan.');
-                },
-                child: const Text('Trigger'),
+    testWidgets(
+      'AppFeedback.showError displays red floating snackbar with error icon',
+      (tester) async {
+        await tester.pumpWidget(
+          MaterialApp(
+            home: Scaffold(
+              body: Builder(
+                builder: (context) => ElevatedButton(
+                  onPressed: () {
+                    AppFeedback.showError(
+                      context,
+                      'Gagal memverifikasi pengajuan.',
+                    );
+                  },
+                  child: const Text('Trigger'),
+                ),
               ),
             ),
           ),
-        ),
-      );
+        );
 
-      await tester.tap(find.text('Trigger'));
-      await tester.pump();
-      await tester.pump(const Duration(milliseconds: 500));
+        await tester.tap(find.text('Trigger'));
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 500));
 
-      expect(find.text('Gagal memverifikasi pengajuan.'), findsOneWidget);
-      expect(find.byIcon(Icons.error_outline_rounded), findsOneWidget);
+        expect(find.text('Gagal memverifikasi pengajuan.'), findsOneWidget);
+        expect(find.byIcon(Icons.error_outline_rounded), findsOneWidget);
 
-      final snackBar = tester.widget<SnackBar>(find.byType(SnackBar));
-      expect(snackBar.backgroundColor, equals(AppColors.error));
-    });
+        final snackBar = tester.widget<SnackBar>(find.byType(SnackBar));
+        expect(snackBar.backgroundColor, equals(AppColors.error));
+      },
+    );
 
-    testWidgets('AppFeedback.showWarning displays amber floating snackbar with warning icon', (tester) async {
-      await tester.pumpWidget(
-        MaterialApp(
-          home: Scaffold(
-            body: Builder(
-              builder: (context) => ElevatedButton(
-                onPressed: () {
-                  AppFeedback.showWarning(context, 'Perhatian: Data perlu dilengkapi.');
-                },
-                child: const Text('Trigger'),
+    testWidgets(
+      'AppFeedback.showWarning displays amber floating snackbar with warning icon',
+      (tester) async {
+        await tester.pumpWidget(
+          MaterialApp(
+            home: Scaffold(
+              body: Builder(
+                builder: (context) => ElevatedButton(
+                  onPressed: () {
+                    AppFeedback.showWarning(
+                      context,
+                      'Perhatian: Data perlu dilengkapi.',
+                    );
+                  },
+                  child: const Text('Trigger'),
+                ),
               ),
             ),
           ),
-        ),
-      );
+        );
 
-      await tester.tap(find.text('Trigger'));
-      await tester.pump();
-      await tester.pump(const Duration(milliseconds: 500));
+        await tester.tap(find.text('Trigger'));
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 500));
 
-      expect(find.text('Perhatian: Data perlu dilengkapi.'), findsOneWidget);
-      expect(find.byIcon(Icons.warning_amber_rounded), findsOneWidget);
+        expect(find.text('Perhatian: Data perlu dilengkapi.'), findsOneWidget);
+        expect(find.byIcon(Icons.warning_amber_rounded), findsOneWidget);
 
-      final snackBar = tester.widget<SnackBar>(find.byType(SnackBar));
-      expect(snackBar.backgroundColor, equals(AppColors.warning));
-    });
+        final snackBar = tester.widget<SnackBar>(find.byType(SnackBar));
+        expect(snackBar.backgroundColor, equals(AppColors.warning));
+      },
+    );
   });
 
   group('Document Access & Preview across All Roles', () {
-    test('Role authorization check: Pemohon can only view own mutation documents', () {
-      expect(DocumentPreviewDialog.hasAccess(testMutationWithPdf, pemohonUser), isTrue);
-      expect(DocumentPreviewDialog.hasAccess(testMutationWithPdf, anotherPemohonUser), isFalse);
-    });
+    test(
+      'Role authorization check: Pemohon can only view own mutation documents',
+      () {
+        expect(
+          DocumentPreviewDialog.hasAccess(testMutationWithPdf, pemohonUser),
+          isTrue,
+        );
+        expect(
+          DocumentPreviewDialog.hasAccess(
+            testMutationWithPdf,
+            anotherPemohonUser,
+          ),
+          isFalse,
+        );
+      },
+    );
 
     test('Role authorization check: Operator, Bagian Aset, Kadiv have legitimate access', () {
-      expect(DocumentPreviewDialog.hasAccess(testMutationWithPdf, operatorUser), isTrue);
-      expect(DocumentPreviewDialog.hasAccess(testMutationWithPdf, bagianAsetUser), isTrue);
-      expect(DocumentPreviewDialog.hasAccess(testMutationWithPdf, kadivUser), isTrue);
-    });
-
-    testWidgets('DocumentPreviewDialog displays Image preview for supported image format', (tester) async {
-      await tester.pumpWidget(
-        MaterialApp(
-          home: Scaffold(
-            body: Builder(
-              builder: (context) => ElevatedButton(
-                onPressed: () {
-                  DocumentPreviewDialog.show(
-                    context,
-                    mutation: testMutationWithImage,
-                    currentUser: operatorUser,
-                  );
-                },
-                child: const Text('View Doc'),
-              ),
-            ),
-          ),
-        ),
-      );
-
-      await tester.tap(find.text('View Doc'));
-      await tester.pumpAndSettle();
-
-      expect(find.byType(Dialog), findsOneWidget);
-      expect(find.text('bukti_fisik.png'), findsOneWidget);
-      expect(find.byType(InteractiveViewer), findsOneWidget);
-    });
-
-    testWidgets('DocumentPreviewDialog displays honest fallback for unsupported formats without fake claim', (tester) async {
-      await tester.pumpWidget(
-        MaterialApp(
-          home: Scaffold(
-            body: Builder(
-              builder: (context) => ElevatedButton(
-                onPressed: () {
-                  DocumentPreviewDialog.show(
-                    context,
-                    mutation: testMutationUnsupported,
-                    currentUser: bagianAsetUser,
-                  );
-                },
-                child: const Text('View Doc'),
-              ),
-            ),
-          ),
-        ),
-      );
-
-      await tester.tap(find.text('View Doc'));
-      await tester.pumpAndSettle();
-
-      expect(find.byType(Dialog), findsOneWidget);
-      expect(find.text('Laporan_Spesifikasi.docx'), findsOneWidget);
-      expect(find.text('Pratinjau Tidak Didukung'), findsOneWidget);
       expect(
-        find.text('Format file (.docx) tidak mendukung pratinjau langsung di dalam aplikasi.'),
-        findsOneWidget,
+        DocumentPreviewDialog.hasAccess(testMutationWithPdf, operatorUser),
+        isTrue,
+      );
+      expect(
+        DocumentPreviewDialog.hasAccess(testMutationWithPdf, bagianAsetUser),
+        isTrue,
+      );
+      expect(
+        DocumentPreviewDialog.hasAccess(testMutationWithPdf, kadivUser),
+        isTrue,
       );
     });
+
+    testWidgets(
+      'DocumentPreviewDialog displays Image preview for supported image format',
+      (tester) async {
+        await tester.pumpWidget(
+          MaterialApp(
+            home: Scaffold(
+              body: Builder(
+                builder: (context) => ElevatedButton(
+                  onPressed: () {
+                    DocumentPreviewDialog.show(
+                      context,
+                      mutation: testMutationWithImage,
+                      currentUser: operatorUser,
+                    );
+                  },
+                  child: const Text('View Doc'),
+                ),
+              ),
+            ),
+          ),
+        );
+
+        await tester.tap(find.text('View Doc'));
+        await tester.pumpAndSettle();
+
+        expect(find.byType(Dialog), findsOneWidget);
+        expect(find.text('bukti_fisik.png'), findsOneWidget);
+        expect(find.byType(InteractiveViewer), findsOneWidget);
+      },
+    );
+
+    testWidgets(
+      'DocumentPreviewDialog displays honest fallback for unsupported formats without fake claim',
+      (tester) async {
+        await tester.pumpWidget(
+          MaterialApp(
+            home: Scaffold(
+              body: Builder(
+                builder: (context) => ElevatedButton(
+                  onPressed: () {
+                    DocumentPreviewDialog.show(
+                      context,
+                      mutation: testMutationUnsupported,
+                      currentUser: bagianAsetUser,
+                    );
+                  },
+                  child: const Text('View Doc'),
+                ),
+              ),
+            ),
+          ),
+        );
+
+        await tester.tap(find.text('View Doc'));
+        await tester.pumpAndSettle();
+
+        expect(find.byType(Dialog), findsOneWidget);
+        expect(find.text('Laporan_Spesifikasi.docx'), findsOneWidget);
+        expect(find.text('Pratinjau Tidak Didukung'), findsOneWidget);
+        expect(
+          find.text(
+            'Format file (.docx) tidak mendukung pratinjau langsung di dalam aplikasi.',
+          ),
+          findsOneWidget,
+        );
+      },
+    );
   });
 }
