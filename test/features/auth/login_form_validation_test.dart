@@ -9,12 +9,14 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
+import 'package:mutasiku/core/errors/failures.dart';
 import 'package:mutasiku/features/auth/presentation/providers/auth_provider.dart';
 import 'package:mutasiku/features/auth/presentation/screens/login_screen.dart';
 
 class FakeAuthNotifier extends StateNotifier<AuthState>
     implements AuthNotifier {
-  FakeAuthNotifier() : super(const AuthState(isLoading: false));
+  FakeAuthNotifier([AuthState? initialState])
+      : super(initialState ?? const AuthState(isLoading: false));
 
   @override
   Future<bool> login(String username, String password) async => true;
@@ -24,7 +26,7 @@ class FakeAuthNotifier extends StateNotifier<AuthState>
 }
 
 void main() {
-  Widget createLoginTestWidget() {
+  Widget createLoginTestWidget({AuthState? authState}) {
     final router = GoRouter(
       initialLocation: '/',
       routes: [
@@ -33,7 +35,9 @@ void main() {
     );
 
     return ProviderScope(
-      overrides: [authStateProvider.overrideWith((ref) => FakeAuthNotifier())],
+      overrides: [
+        authStateProvider.overrideWith((ref) => FakeAuthNotifier(authState)),
+      ],
       child: MaterialApp.router(routerConfig: router),
     );
   }
@@ -84,8 +88,8 @@ void main() {
         await tester.pump();
         await tester.pump(const Duration(milliseconds: 200));
 
-        expect(find.text('Email tidak boleh kosong'), findsOneWidget);
-        expect(find.text('Password wajib diisi'), findsOneWidget);
+        expect(find.text('Silakan masukkan alamat email.'), findsOneWidget);
+        expect(find.text('Silakan masukkan kata sandi.'), findsOneWidget);
       },
     );
 
@@ -118,9 +122,9 @@ void main() {
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 200));
 
-      expect(find.text('Format email tidak valid'), findsOneWidget);
-      expect(find.text('Email tidak boleh kosong'), findsNothing);
-      expect(find.text('Password wajib diisi'), findsNothing);
+      expect(find.text('Format alamat email tidak valid.'), findsOneWidget);
+      expect(find.text('Silakan masukkan alamat email.'), findsNothing);
+      expect(find.text('Silakan masukkan kata sandi.'), findsNothing);
     });
 
     testWidgets('input format email tidak valid lainnya ditolak', (
@@ -152,7 +156,7 @@ void main() {
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 200));
 
-      expect(find.text('Format email tidak valid'), findsOneWidget);
+      expect(find.text('Format alamat email tidak valid.'), findsOneWidget);
     });
 
     testWidgets('input email valid ("pemohon@example.com") lolos validasi', (
@@ -185,9 +189,120 @@ void main() {
       await tester.pump(const Duration(milliseconds: 200));
 
       // Tidak ada error validasi format email atau required
-      expect(find.text('Format email tidak valid'), findsNothing);
-      expect(find.text('Email tidak boleh kosong'), findsNothing);
-      expect(find.text('Password wajib diisi'), findsNothing);
+      expect(find.text('Format alamat email tidak valid.'), findsNothing);
+      expect(find.text('Silakan masukkan alamat email.'), findsNothing);
+      expect(find.text('Silakan masukkan kata sandi.'), findsNothing);
+    });
+  });
+
+  group('LoginScreen Indonesian Error Banner & Feedback Tests', () {
+    testWidgets('menampilkan pesan "Email atau kata sandi salah." saat kredensial ditolak', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        createLoginTestWidget(
+          authState: const AuthState(
+            failure: UnauthorizedFailure(message: 'Email atau password salah.'),
+          ),
+        ),
+      );
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 200));
+
+      expect(find.text('Email atau kata sandi salah.'), findsWidgets);
+    });
+
+    testWidgets('menampilkan pesan akun dinonaktifkan saat failure akun nonaktif', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        createLoginTestWidget(
+          authState: const AuthState(
+            failure: ForbiddenFailure(
+              message: 'Akun Anda telah dinonaktifkan oleh Administrator. Silakan hubungi Admin.',
+            ),
+          ),
+        ),
+      );
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 200));
+
+      expect(
+        find.text('Akun Anda telah dinonaktifkan oleh Administrator. Silakan hubungi Admin.'),
+        findsWidgets,
+      );
+    });
+
+    testWidgets('menampilkan pesan "Koneksi ke server tidak tersedia..." saat kegagalan jaringan', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        createLoginTestWidget(
+          authState: const AuthState(
+            failure: NetworkFailure(message: 'SocketException: connection refused'),
+          ),
+        ),
+      );
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 200));
+
+      expect(
+        find.text('Koneksi ke server tidak tersedia. Periksa koneksi Anda, lalu coba lagi.'),
+        findsWidgets,
+      );
+    });
+
+    testWidgets('menampilkan pesan "Waktu permintaan habis..." saat network timeout', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        createLoginTestWidget(
+          authState: const AuthState(
+            failure: NetworkFailure(message: 'Connection timeout'),
+          ),
+        ),
+      );
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 200));
+
+      expect(
+        find.text('Waktu permintaan habis. Silakan periksa koneksi Anda dan coba lagi.'),
+        findsWidgets,
+      );
+    });
+
+    testWidgets('menampilkan pesan "Terjadi kesalahan pada server. Silakan coba lagi." saat server failure', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        createLoginTestWidget(
+          authState: const AuthState(
+            failure: ServerFailure(message: 'Server error 500'),
+          ),
+        ),
+      );
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 200));
+
+      expect(
+        find.text('Terjadi kesalahan pada server. Silakan coba lagi.'),
+        findsWidgets,
+      );
+    });
+
+    testWidgets('menampilkan indikator dan teks "Sedang masuk..." saat state loading', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        createLoginTestWidget(
+          authState: const AuthState(isLoading: true),
+        ),
+      );
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 200));
+
+      expect(find.text('Sedang masuk...'), findsWidgets);
+      expect(find.byType(CircularProgressIndicator), findsWidgets);
     });
   });
 }

@@ -26,6 +26,7 @@ import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 import '../../../../app/router/route_names.dart';
+import '../../../../core/errors/failures.dart';
 import '../../../../core/validators/form_validators.dart';
 import '../providers/auth_provider.dart';
 
@@ -281,7 +282,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
                         // Error Alert Banner (if auth failed)
                         if (auth.failure != null) ...[
-                          _buildErrorBanner(auth.failure!.userMessage),
+                          _buildErrorBanner(
+                            _resolveLoginErrorMessage(auth.failure!),
+                          ),
                           const SizedBox(height: 16),
                         ],
 
@@ -439,7 +442,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                                       // Error Alert Banner (if auth failed)
                                       if (auth.failure != null) ...[
                                         _buildErrorBanner(
-                                          auth.failure!.userMessage,
+                                          _resolveLoginErrorMessage(
+                                            auth.failure!,
+                                          ),
                                         ),
                                         const SizedBox(height: 16),
                                       ],
@@ -592,7 +597,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                                       ],
                                     ),
                                     Text(
-                                      'Enterprise Asset Portal',
+                                      'Portal Tata Kelola Aset',
                                       style: GoogleFonts.plusJakartaSans(
                                         fontSize: 12,
                                         fontWeight: FontWeight.w500,
@@ -910,7 +915,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          'Hello Again!',
+          'Selamat Datang!',
           style: GoogleFonts.montserrat(
             fontSize: 36,
             fontWeight: FontWeight.w800,
@@ -921,7 +926,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
         ),
         const SizedBox(height: 8),
         Text(
-          "Welcome back you've\nbeen missed.",
+          'Kelola pengajuan mutasi aset\ndengan mudah.',
           style: GoogleFonts.plusJakartaSans(
             fontSize: 16,
             fontWeight: FontWeight.w400,
@@ -931,6 +936,45 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
         ),
       ],
     );
+  }
+
+  String _resolveLoginErrorMessage(Failure failure) {
+    if (failure is NetworkFailure) {
+      final msg = failure.message?.toLowerCase() ?? '';
+      if (msg.contains('timeout')) {
+        return 'Waktu permintaan habis. Silakan periksa koneksi Anda dan coba lagi.';
+      }
+      return 'Koneksi ke server tidak tersedia. Periksa koneksi Anda, lalu coba lagi.';
+    }
+    if (failure is UnauthorizedFailure) {
+      final raw = (failure.message ?? '').trim();
+      final lower = raw.toLowerCase();
+      if (lower.contains('dinonaktifkan') ||
+          lower.contains('tidak aktif') ||
+          lower.contains('inactive')) {
+        return raw.isNotEmpty
+            ? raw
+            : 'Akun Anda telah dinonaktifkan oleh Administrator. Silakan hubungi Admin.';
+      }
+      return 'Email atau kata sandi salah.';
+    }
+    if (failure is ForbiddenFailure) {
+      final raw = (failure.message ?? '').trim();
+      if (raw.isNotEmpty &&
+          !raw.contains('403') &&
+          !raw.toLowerCase().contains('forbidden')) {
+        return raw;
+      }
+      return 'Akun Anda telah dinonaktifkan oleh Administrator. Silakan hubungi Admin.';
+    }
+    if (failure is ServerFailure) {
+      return 'Terjadi kesalahan pada server. Silakan coba lagi.';
+    }
+    if (failure is ValidationFailure) {
+      return failure.message ??
+          'Format alamat email atau kata sandi tidak valid.';
+    }
+    return failure.userMessage;
   }
 
   Widget _buildErrorBanner(String message) {
@@ -1035,7 +1079,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
           color: _LoginTheme.textBody,
         ),
         decoration: InputDecoration(
-          hintText: 'Password',
+          hintText: 'Kata Sandi',
           hintStyle: GoogleFonts.plusJakartaSans(
             fontSize: 14.5,
             color: _LoginTheme.textPlaceholder,
@@ -1061,8 +1105,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
             vertical: 14,
           ),
         ),
-        validator: (v) =>
-            (v == null || v.isEmpty) ? 'Password wajib diisi' : null,
+        validator: (v) => (v == null || v.trim().isEmpty)
+            ? 'Silakan masukkan kata sandi.'
+            : null,
       ),
     );
   }
@@ -1096,7 +1141,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
               ),
               const SizedBox(width: 8),
               Text(
-                'Remember me',
+                'Ingat saya',
                 style: GoogleFonts.plusJakartaSans(
                   fontSize: 12.5,
                   fontWeight: FontWeight.w400,
@@ -1111,7 +1156,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
         GestureDetector(
           onTap: _showHelpdeskDialog,
           child: Text(
-            'Forgot Password?',
+            'Lupa kata sandi?',
             style: GoogleFonts.plusJakartaSans(
               fontSize: 12.5,
               fontWeight: FontWeight.w600,
@@ -1140,16 +1185,32 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
           ),
         ),
         child: loading
-            ? const SizedBox(
-                width: 20,
-                height: 20,
-                child: CircularProgressIndicator(
-                  strokeWidth: 2,
-                  color: Colors.white,
-                ),
+            ? Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const SizedBox(
+                    width: 18,
+                    height: 18,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      color: Colors.white,
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  Text(
+                    'Sedang masuk...',
+                    style: GoogleFonts.montserrat(
+                      fontSize: 14.5,
+                      fontWeight: FontWeight.w600,
+                      color: Colors.white,
+                      letterSpacing: 0.2,
+                    ),
+                  ),
+                ],
               )
             : Text(
-                'Login',
+                'Masuk',
                 style: GoogleFonts.montserrat(
                   fontSize: 14.5,
                   fontWeight: FontWeight.w600,

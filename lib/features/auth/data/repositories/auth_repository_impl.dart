@@ -37,7 +37,7 @@ class AuthRepositoryImpl implements AuthRepository {
     if (username.trim().isEmpty || password.isEmpty) {
       return Result.failure(
         const ValidationFailure(
-          message: 'Email dan password tidak boleh kosong',
+          message: 'Silakan masukkan alamat email dan kata sandi.',
         ),
       );
     }
@@ -56,7 +56,7 @@ class AuthRepositoryImpl implements AuthRepository {
             return Result.failure(
               UnauthorizedFailure(
                 message:
-                    data['message'] as String? ?? 'Email atau password salah.',
+                    data['message'] as String? ?? 'Email atau kata sandi salah.',
               ),
             );
           }
@@ -133,7 +133,7 @@ class AuthRepositoryImpl implements AuthRepository {
     }
 
     return Result.failure(
-      const UnauthorizedFailure(message: 'Email atau password salah.'),
+      const UnauthorizedFailure(message: 'Email atau kata sandi salah.'),
     );
   }
 
