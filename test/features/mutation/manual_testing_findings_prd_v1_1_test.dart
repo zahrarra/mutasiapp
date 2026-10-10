@@ -35,9 +35,32 @@ import 'package:mutasiku/features/kadiv/presentation/screens/kadiv_approval_deta
 import 'package:mutasiku/features/mutation/domain/entities/mutation.dart';
 import 'package:mutasiku/features/mutation/domain/entities/mutation_status.dart';
 import 'package:mutasiku/features/mutation/domain/repositories/mutation_repository.dart';
+import 'package:mutasiku/features/admin/domain/entities/location_item.dart';
+import 'package:mutasiku/features/admin/domain/repositories/location_repository.dart';
+import 'package:mutasiku/features/mutation/presentation/providers/mutation_form_provider.dart';
 import 'package:mutasiku/features/mutation/presentation/providers/mutation_provider.dart';
 import 'package:mutasiku/features/operator/presentation/screens/operator_verification_detail_screen.dart';
 import 'package:mutasiku/features/pemohon/presentation/screens/pemohon_create_mutation_screen.dart';
+
+class _FakeLocationRepository implements LocationRepository {
+  final List<LocationItem> locations;
+  _FakeLocationRepository(this.locations);
+  @override
+  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
+  @override
+  List<LocationItem> get currentLocations => locations;
+  @override
+  Future<Result<List<LocationItem>>> getAllLocations() async => Result.success(locations);
+  @override
+  Future<Result<List<LocationItem>>> getActiveLocations() async => Result.success(locations);
+}
+
+class _TestMasterLocationsNotifier extends MasterLocationsNotifier {
+  _TestMasterLocationsNotifier(List<LocationItem> locations)
+      : super(_FakeLocationRepository(locations)) {
+    state = AsyncValue.data(locations);
+  }
+}
 
 class _FakeAuthRepository implements AuthRepository {
   final User? user;
@@ -305,6 +328,17 @@ void main() {
             overrides: [
               authStateProvider.overrideWith(
                 (ref) => _TestAuthNotifier(testPemohon),
+              ),
+              masterLocationsProvider.overrideWith(
+                (ref) => _TestMasterLocationsNotifier(const [
+                  LocationItem(
+                    id: '40',
+                    name: 'Cabang Donggala',
+                    description: 'CAB-DGL',
+                    isBranch: true,
+                    isActive: true,
+                  ),
+                ]),
               ),
             ],
             child: const MaterialApp(home: PemohonCreateMutationScreen()),

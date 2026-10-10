@@ -35,7 +35,32 @@ import 'package:mutasiku/features/pemohon/presentation/screens/pemohon_edit_muta
 import 'package:mutasiku/features/pemohon/presentation/screens/pemohon_mutation_detail_screen.dart';
 import 'package:mutasiku/features/pemohon/presentation/screens/pemohon_mutation_list_screen.dart';
 import 'package:mutasiku/features/pemohon/presentation/screens/pemohon_notifications_screen.dart';
+import 'package:mutasiku/features/admin/domain/entities/location_item.dart';
+import 'package:mutasiku/features/admin/domain/repositories/location_repository.dart';
+import 'package:mutasiku/features/mutation/presentation/providers/mutation_form_provider.dart';
 import 'package:mutasiku/features/profile/presentation/screens/profile_screen.dart';
+
+class _FakeLocationRepository implements LocationRepository {
+  final List<LocationItem> locations;
+  _FakeLocationRepository(this.locations);
+  @override
+  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
+  @override
+  List<LocationItem> get currentLocations => locations;
+  @override
+  Future<Result<List<LocationItem>>> getAllLocations() async =>
+      Result.success(locations);
+  @override
+  Future<Result<List<LocationItem>>> getActiveLocations() async =>
+      Result.success(locations);
+}
+
+class _TestMasterLocationsNotifier extends MasterLocationsNotifier {
+  _TestMasterLocationsNotifier(List<LocationItem> locations)
+      : super(_FakeLocationRepository(locations)) {
+    state = AsyncValue.data(locations);
+  }
+}
 
 class _FakeFullMutationRepository implements MutationRepository {
   final Map<String, Mutation> _mutations = {};
@@ -589,6 +614,17 @@ void main() {
               apiMutationRepositoryProvider.overrideWithValue(repo),
               authStateProvider.overrideWith(
                 (ref) => FakePemohonAuthNotifier(testUser),
+              ),
+              masterLocationsProvider.overrideWith(
+                (ref) => _TestMasterLocationsNotifier([
+                  const LocationItem(
+                    id: '40',
+                    name: 'Cabang Donggala',
+                    description: 'CAB-DGL',
+                    isBranch: true,
+                    isActive: true,
+                  ),
+                ]),
               ),
             ],
             child: MaterialApp.router(routerConfig: router),

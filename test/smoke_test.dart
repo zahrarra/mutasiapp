@@ -43,6 +43,31 @@ import 'package:mutasiku/features/mutation/presentation/providers/mutation_provi
 import 'package:mutasiku/features/notification/domain/entities/notification_item.dart';
 import 'package:mutasiku/features/operator/presentation/screens/operator_mutations_screen.dart';
 import 'package:mutasiku/features/profile/presentation/screens/profile_screen.dart';
+import 'package:mutasiku/features/admin/domain/entities/location_item.dart';
+import 'package:mutasiku/features/admin/domain/repositories/location_repository.dart';
+import 'package:mutasiku/features/mutation/presentation/providers/mutation_form_provider.dart';
+
+class _FakeLocationRepository implements LocationRepository {
+  final List<LocationItem> locations;
+  _FakeLocationRepository(this.locations);
+  @override
+  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
+  @override
+  List<LocationItem> get currentLocations => locations;
+  @override
+  Future<Result<List<LocationItem>>> getAllLocations() async =>
+      Result.success(locations);
+  @override
+  Future<Result<List<LocationItem>>> getActiveLocations() async =>
+      Result.success(locations);
+}
+
+class _TestMasterLocationsNotifier extends MasterLocationsNotifier {
+  _TestMasterLocationsNotifier(List<LocationItem> locations)
+      : super(_FakeLocationRepository(locations)) {
+    state = AsyncValue.data(locations);
+  }
+}
 
 class _MockAuthRepo implements AuthRepository {
   final User? user;
@@ -582,7 +607,22 @@ void main() {
       tester,
     ) async {
       await tester.pumpWidget(
-        const ProviderScope(child: MaterialApp(home: AdminLocationsScreen())),
+        ProviderScope(
+          overrides: [
+            masterLocationsProvider.overrideWith(
+              (ref) => _TestMasterLocationsNotifier([
+                const LocationItem(
+                  id: '22',
+                  name: 'Lantai 1',
+                  description: 'LT-1',
+                  isBranch: false,
+                  isActive: true,
+                ),
+              ]),
+            ),
+          ],
+          child: const MaterialApp(home: AdminLocationsScreen()),
+        ),
       );
       await tester.pumpAndSettle();
       expect(find.text('Lokasi & Unit'), findsOneWidget);
