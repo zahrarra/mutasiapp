@@ -16,6 +16,7 @@ import 'package:go_router/go_router.dart';
 import '../../../../app/router/route_names.dart';
 import '../../../../app/theme/app_colors.dart';
 import '../../../../app/theme/app_spacing.dart';
+import '../../../auth/domain/entities/user.dart';
 import '../../../auth/domain/entities/user_role.dart';
 import '../../../auth/presentation/providers/auth_provider.dart';
 import '../../../../core/utils/sla_wita_helper.dart';
@@ -28,7 +29,6 @@ import '../../../../core/widgets/sla_live_badge.dart';
 import '../../../mutation/domain/entities/mutation.dart';
 import '../../../mutation/domain/entities/mutation_status.dart';
 import '../../../mutation/presentation/models/mutation_tracking_step.dart';
-import '../../../mutation/presentation/providers/mutation_form_provider.dart';
 import '../../../mutation/presentation/providers/mutation_provider.dart';
 import '../../../mutation/presentation/widgets/mutation_return_dialog.dart';
 import '../../../notification/domain/entities/notification_item.dart';
@@ -835,7 +835,6 @@ class BagianAsetVerificationDetailScreen extends ConsumerWidget {
     final needsPic = isLeftBehind || mutation.targetPic.trim().isEmpty;
     final picController = TextEditingController();
     final formKey = GlobalKey<FormState>();
-    final pics = ref.read(availablePicsProvider);
 
     showDialog(
       context: context,
@@ -880,19 +879,79 @@ class BagianAsetVerificationDetailScreen extends ConsumerWidget {
                     const SizedBox(height: 6),
                     ConstrainedBox(
                       constraints: const BoxConstraints(maxHeight: 320),
-                      child: InlineSearchableDropdown(
-                        fieldKey: const Key('input_pic_baru_bagian_aset'),
-                        labelText: isLeftBehind
-                            ? 'PIC Baru Unit Asal (Master Data) *'
-                            : 'PIC Baru (Master Data) *',
-                        hintText: isLeftBehind
-                            ? 'Pilih atau cari PIC baru di unit asal...'
-                            : 'Pilih nama PIC baru...',
-                        controller: picController,
-                        items: pics,
-                        validator: (v) => (v == null || v.trim().isEmpty)
-                            ? 'PIC baru wajib ditentukan oleh Bagian Aset'
-                            : null,
+                      child: Consumer(
+                        builder: (ctx, modalRef, _) {
+                          final usersAsync = modalRef.watch(masterUsersProvider);
+                          final users = usersAsync.valueOrNull ?? [];
+                          final activeUsers = users.where((u) => u.isActive).toList();
+                          final picNames = activeUsers
+                              .map((u) => '${u.name} (${u.role.displayName})')
+                              .toList();
+
+                          final isLoading = usersAsync.isLoading && activeUsers.isEmpty;
+                          final hasError = usersAsync.hasError && activeUsers.isEmpty;
+
+                          return Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              InlineSearchableDropdown(
+                                fieldKey: const Key('input_pic_baru_bagian_aset'),
+                                labelText: isLeftBehind
+                                    ? 'PIC Baru Unit Asal (Master Data) *'
+                                    : 'PIC Baru (Master Data) *',
+                                hintText: isLoading
+                                    ? 'Memuat daftar PIC dari server...'
+                                    : (isLeftBehind
+                                        ? 'Pilih atau cari PIC baru di unit asal...'
+                                        : 'Pilih nama PIC baru...'),
+                                controller: picController,
+                                items: picNames,
+                                validator: (v) => (v == null || v.trim().isEmpty)
+                                    ? 'PIC baru wajib ditentukan oleh Bagian Aset'
+                                    : null,
+                              ),
+                              if (isLoading)
+                                const Padding(
+                                  padding: EdgeInsets.only(top: 4),
+                                  child: Row(
+                                    children: [
+                                      SizedBox(
+                                        width: 12,
+                                        height: 12,
+                                        child: CircularProgressIndicator(strokeWidth: 1.5),
+                                      ),
+                                      SizedBox(width: 6),
+                                      Text(
+                                        'Menghubungkan ke server...',
+                                        style: TextStyle(fontSize: 11, color: AppColors.textSecondary),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              if (hasError)
+                                Padding(
+                                  padding: const EdgeInsets.only(top: 4),
+                                  child: Row(
+                                    children: [
+                                      const Icon(Icons.info_outline, size: 14, color: Color(0xFFDC2626)),
+                                      const SizedBox(width: 4),
+                                      const Expanded(
+                                        child: Text(
+                                          'Koneksi server offline. Anda tetap dapat mengetik nama PIC.',
+                                          style: TextStyle(fontSize: 11, color: Color(0xFF991B1B)),
+                                        ),
+                                      ),
+                                      TextButton(
+                                        onPressed: () => modalRef.read(masterUsersProvider.notifier).loadUsers(),
+                                        child: const Text('Coba Lagi', style: TextStyle(fontSize: 11)),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                            ],
+                          );
+                        },
                       ),
                     ),
                   ],
@@ -942,11 +1001,30 @@ class BagianAsetVerificationDetailScreen extends ConsumerWidget {
                 return;
               }
               Navigator.of(dialogContext).pop();
+
+              String? picIdToSubmit;
+              if (needsPic) {
+                final input = picController.text.trim();
+                final users = ref.read(masterUsersProvider).valueOrNull ?? [];
+                final activeUsers = users.where((u) => u.isActive).toList();
+                User? matchedUser;
+                for (final u in activeUsers) {
+                  final fullLabel = '${u.name} (${u.role.displayName})';
+                  if (fullLabel == input ||
+                      u.name.toLowerCase() == input.toLowerCase() ||
+                      u.id == input) {
+                    matchedUser = u;
+                    break;
+                  }
+                }
+                picIdToSubmit = matchedUser?.id ?? input;
+              }
+
               final success = await ref
                   .read(bagianAsetVerificationActionProvider.notifier)
                   .verifyAndForward(
                     mutationId: mutation.id,
-                    newPic: needsPic ? picController.text.trim() : null,
+                    newPic: picIdToSubmit,
                   );
 
               if (context.mounted) {

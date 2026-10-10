@@ -27,8 +27,37 @@ import 'package:mutasiku/features/auth/presentation/providers/auth_provider.dart
 import 'package:mutasiku/features/mutation/domain/entities/mutation.dart';
 import 'package:mutasiku/features/mutation/domain/entities/mutation_status.dart';
 import 'package:mutasiku/features/mutation/domain/repositories/mutation_repository.dart';
+import 'package:mutasiku/features/admin/domain/entities/location_item.dart';
+import 'package:mutasiku/features/admin/domain/repositories/location_repository.dart';
+import 'package:mutasiku/features/mutation/presentation/providers/mutation_form_provider.dart';
 import 'package:mutasiku/features/mutation/presentation/providers/mutation_provider.dart';
 import 'package:mutasiku/features/pemohon/presentation/screens/pemohon_create_mutation_screen.dart';
+
+class _FakeLocationRepository implements LocationRepository {
+  static const _locations = [
+    LocationItem(id: '1', name: 'Kantor Pusat', isActive: true),
+    LocationItem(id: '2', name: 'Gedung A', isActive: true),
+    LocationItem(id: '3', name: 'Gedung B', isActive: true),
+    LocationItem(id: '4', name: 'Ruang Divisi Umum', isActive: true),
+    LocationItem(id: '7', name: 'Cabang Surabaya', isActive: true),
+    LocationItem(id: '8', name: 'Cabang Bandung', isActive: true),
+    LocationItem(id: '9', name: 'Cabang Semarang', isActive: true),
+  ];
+
+  @override
+  List<LocationItem> get currentLocations => _locations;
+
+  @override
+  Future<Result<List<LocationItem>>> getAllLocations() async =>
+      const Result.success(_locations);
+
+  @override
+  Future<Result<List<LocationItem>>> getActiveLocations() async =>
+      const Result.success(_locations);
+
+  @override
+  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
+}
 
 class _FakeAuthRepository implements AuthRepository {
   final User user;
@@ -201,6 +230,7 @@ void main() {
           }
           return userAssets ?? testAssets;
         }),
+        locationRepositoryProvider.overrideWithValue(_FakeLocationRepository()),
       ],
       child: const MaterialApp(home: PemohonCreateMutationScreen()),
     );

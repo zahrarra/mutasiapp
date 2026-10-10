@@ -22,6 +22,7 @@ import '../../../../core/widgets/loading_indicator.dart';
 import '../../../auth/domain/entities/user.dart';
 import '../../../auth/domain/entities/user_role.dart';
 import '../../../auth/presentation/providers/auth_provider.dart';
+import '../../../../core/constants/master_departments.dart';
 import '../../../../core/widgets/mutasiku_page_header.dart';
 
 /// Design tokens persis sesuai Stitch HTML (6e7839efd09d4717b972b5cdacdae8cd)
@@ -364,7 +365,7 @@ class _AdminUsersScreenState extends ConsumerState<AdminUsersScreen> {
     final emailCtrl = TextEditingController();
     final passwordCtrl = TextEditingController();
     final confirmPasswordCtrl = TextEditingController();
-    String selectedDivision = 'Divisi Operasional';
+    String selectedDivision = MasterDepartments.defaultDepartment;
     UserRole selectedRole = UserRole.operator;
     bool obscurePassword = true;
     bool obscureConfirm = true;
@@ -522,43 +523,15 @@ class _AdminUsersScreenState extends ConsumerState<AdminUsersScreen> {
                                   decoration: _buildStitchInputDecoration(
                                     hintText: 'Pilih Divisi',
                                   ),
-                                  items: const [
-                                    DropdownMenuItem(
-                                      value: 'Divisi Operasional',
+                                  items: MasterDepartments.all.map((dept) {
+                                    return DropdownMenuItem<String>(
+                                      value: dept,
                                       child: Text(
-                                        'Divisi Operasional',
+                                        dept,
                                         overflow: TextOverflow.ellipsis,
                                       ),
-                                    ),
-                                    DropdownMenuItem(
-                                      value: 'Divisi TI',
-                                      child: Text(
-                                        'Divisi TI',
-                                        overflow: TextOverflow.ellipsis,
-                                      ),
-                                    ),
-                                    DropdownMenuItem(
-                                      value: 'Divisi Keuangan',
-                                      child: Text(
-                                        'Divisi Keuangan',
-                                        overflow: TextOverflow.ellipsis,
-                                      ),
-                                    ),
-                                    DropdownMenuItem(
-                                      value: 'Divisi SDM',
-                                      child: Text(
-                                        'Divisi SDM',
-                                        overflow: TextOverflow.ellipsis,
-                                      ),
-                                    ),
-                                    DropdownMenuItem(
-                                      value: 'Divisi Logistik & Aset',
-                                      child: Text(
-                                        'Divisi Logistik & Aset',
-                                        overflow: TextOverflow.ellipsis,
-                                      ),
-                                    ),
-                                  ],
+                                    );
+                                  }).toList(),
                                   onChanged: (val) {
                                     if (val != null) {
                                       setDialogState(
@@ -716,7 +689,7 @@ class _AdminUsersScreenState extends ConsumerState<AdminUsersScreen> {
                                       passwordCtrl.clear();
                                       confirmPasswordCtrl.clear();
                                       setDialogState(() {
-                                        selectedDivision = 'Divisi Operasional';
+                                        selectedDivision = MasterDepartments.defaultDepartment;
                                         selectedRole = UserRole.operator;
                                       });
                                     },
@@ -848,7 +821,11 @@ class _AdminUsersScreenState extends ConsumerState<AdminUsersScreen> {
     final firstNameCtrl = TextEditingController(text: initialFirst);
     final lastNameCtrl = TextEditingController(text: initialLast);
     final emailCtrl = TextEditingController(text: user.email ?? '');
-    final deptCtrl = TextEditingController(text: user.department ?? '');
+    final initialDept = MasterDepartments.contains(user.department?.trim())
+        ? user.department!.trim()
+        : MasterDepartments.defaultDepartment;
+    final deptCtrl = TextEditingController(text: initialDept);
+    String selectedDivision = initialDept;
     final nipCtrl = TextEditingController(text: user.username);
     UserRole selectedRole = user.role;
     String selectedStatus = user.isActive ? 'Aktif' : 'Nonaktif';
@@ -1014,19 +991,38 @@ class _AdminUsersScreenState extends ConsumerState<AdminUsersScreen> {
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 _buildStitchFieldLabel('Divisi / Unit Kerja'),
-                                TextFormField(
-                                  controller: deptCtrl,
+                                DropdownButtonFormField<String>(
+                                  initialValue: selectedDivision,
+                                  isExpanded: true,
                                   style: GoogleFonts.inter(
                                     fontSize: 13,
                                     color: const Color(0xFF0F172A),
                                   ),
-                                  decoration: _buildStitchInputDecoration(
-                                    hintText: 'Divisi / Unit Kerja',
+                                  icon: const Icon(
+                                    Icons.expand_more_rounded,
+                                    size: 20,
+                                    color: Color(0xFF94A3B8),
                                   ),
-                                  validator: (v) =>
-                                      (v == null || v.trim().isEmpty)
-                                      ? 'Wajib diisi'
-                                      : null,
+                                  decoration: _buildStitchInputDecoration(
+                                    hintText: 'Pilih Divisi / Unit Kerja',
+                                  ),
+                                  items: MasterDepartments.all.map((dept) {
+                                    return DropdownMenuItem<String>(
+                                      value: dept,
+                                      child: Text(
+                                        dept,
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                    );
+                                  }).toList(),
+                                  onChanged: (val) {
+                                    if (val != null) {
+                                      setDialogState(() {
+                                        selectedDivision = val;
+                                        deptCtrl.text = val;
+                                      });
+                                    }
+                                  },
                                 ),
                               ],
                             ),
@@ -1154,7 +1150,7 @@ class _AdminUsersScreenState extends ConsumerState<AdminUsersScreen> {
                                       final updatedUser = user.copyWith(
                                         name: fullName,
                                         email: emailCtrl.text.trim(),
-                                        department: deptCtrl.text.trim(),
+                                        department: selectedDivision,
                                         role: selectedRole,
                                         isActive: selectedStatus == 'Aktif',
                                       );

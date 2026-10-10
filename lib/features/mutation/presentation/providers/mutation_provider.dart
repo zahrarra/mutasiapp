@@ -176,6 +176,23 @@ final mutationListProvider = FutureProvider<List<Mutation>>((ref) async {
   return [];
 });
 
+/// Provider daftar seluruh mutasi transaksi sistem untuk kebutuhan Admin Dashboard & Audit Log.
+/// Membaca langsung dari API backend Laravel (/api/v1/mutations?view=all).
+final adminMutationsProvider = FutureProvider<List<Mutation>>((ref) async {
+  final repo = ref.watch(apiMutationRepositoryProvider);
+  final result = await repo.getAllMutations();
+
+  if (result is Success<List<Mutation>>) {
+    return result.data;
+  }
+
+  if (result is AppFailure<List<Mutation>>) {
+    throw Exception(result.failure.userMessage);
+  }
+
+  return [];
+});
+
 // ─── Mutation Detail Provider ────────────────────────────────────────────────
 
 /// Provider detail satu mutasi berdasarkan ID via API Laravel.

@@ -19,6 +19,7 @@ import '../../../../core/widgets/app_feedback.dart';
 import '../../../../core/widgets/document_preview_dialog.dart';
 import '../../../../core/widgets/inline_searchable_dropdown.dart';
 import '../../../../core/widgets/mutasiku_page_header.dart';
+import '../../../admin/domain/entities/location_item.dart';
 import '../../../asset/domain/entities/asset.dart';
 import '../../../asset/presentation/providers/asset_provider.dart';
 import '../../../auth/domain/entities/user_role.dart';
@@ -75,6 +76,7 @@ class _PemohonCreateMutationScreenState
   bool _bringAsset = true;
 
   String? _selectedAssetId;
+  String? _selectedTargetLocationId;
 
   static const _maxReason = 250;
 
@@ -104,6 +106,12 @@ class _PemohonCreateMutationScreenState
         });
       }
       _loadSavedDraft();
+
+      // Trigger pemuatan master lokasi aktif terkini jika belum dimuat atau dalam state error
+      final locState = ref.read(masterLocationsProvider);
+      if (locState.hasError || (locState.valueOrNull?.isEmpty ?? true)) {
+        ref.read(masterLocationsProvider.notifier).loadLocations();
+      }
     });
   }
 
@@ -593,6 +601,16 @@ class _PemohonCreateMutationScreenState
       return;
     }
 
+    // Resolve target location ID dari master data jika belum tersimpan
+    String? destLocId = _selectedTargetLocationId;
+    if (destLocId == null || destLocId.isEmpty) {
+      final matchedLoc = ref
+          .read(availableActiveLocationItemsProvider)
+          .where((l) => l.name.toLowerCase() == targetLoc.toLowerCase())
+          .firstOrNull;
+      destLocId = matchedLoc?.id;
+    }
+
     final params = SubmitMutationParams(
       applicantId: user?.id,
       applicantName: user?.name,
@@ -603,6 +621,7 @@ class _PemohonCreateMutationScreenState
       isUnregisteredAsset: false,
       sourceLocation: sourceLocation,
       targetLocation: fullTarget,
+      destinationLocationId: destLocId,
       currentPic: _currentPicController.text.trim().isNotEmpty
           ? _currentPicController.text.trim()
           : (user?.name ?? ''),
@@ -659,10 +678,28 @@ class _PemohonCreateMutationScreenState
   Widget build(BuildContext context) {
     final submitState = ref.watch(submitMutationProvider);
     final locations = ref.watch(availableLocationsProvider);
+    final locationItems = ref.watch(availableActiveLocationItemsProvider);
+    final locationsAsync = ref.watch(masterLocationsProvider);
     final assetsAsync = ref.watch(userResponsibleAssetsProvider);
     final user = ref.watch(authStateProvider).user;
     if (_bringAsset && user != null && _picController.text.trim().isEmpty) {
       _picController.text = user.name;
+    }
+
+    // Jika master lokasi aktif selesai dimuat dan controller masih memegang data lama yang tidak valid,
+    // jangan pertahankan data lama tersebut.
+    if (locations.isNotEmpty && _locationController.text.trim().isNotEmpty) {
+      final currentTarget = _locationController.text.trim();
+      if (!locations.contains(currentTarget)) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted && _locationController.text.trim() == currentTarget) {
+            setState(() {
+              _locationController.clear();
+              _selectedTargetLocationId = null;
+            });
+          }
+        });
+      }
     }
 
     return Scaffold(
@@ -683,7 +720,7 @@ class _PemohonCreateMutationScreenState
 
                     const SizedBox(height: 16),
 
-                    _sectionRoute(locations),
+                    _sectionRoute(locations, locationItems, locationsAsync),
 
                     const SizedBox(height: 16),
 
@@ -1050,7 +1087,11 @@ class _PemohonCreateMutationScreenState
   // SECTION RUTE
   // ---------------------------------------------------------------------------
 
-  Widget _sectionRoute(List<String> locations) {
+  Widget _sectionRoute(
+    List<String> locations,
+    List<LocationItem> locationItems,
+    AsyncValue<List<LocationItem>> locationsAsync,
+  ) {
     final sourceLocation = _sourceLocationController.text.trim();
 
     return _card(
@@ -1152,6 +1193,70 @@ class _PemohonCreateMutationScreenState
 
           const SizedBox(height: 6),
 
+          // Tampilkan loading / error / kosong secara jelas
+          if (locationsAsync.isLoading)
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 6),
+              child: Row(
+                children: [
+                  const SizedBox(
+                    width: 14,
+                    height: 14,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  ),
+                  const SizedBox(width: 8),
+                  Text(
+                    'Memuat master lokasi dari server...',
+                    style: _m(size: 12, color: _C.muted),
+                  ),
+                ],
+              ),
+            )
+          else if (locationsAsync.hasError)
+            Container(
+              margin: const EdgeInsets.only(bottom: 8),
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: const Color(0xFFFEF2F2),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: const Color(0xFFFECACA)),
+              ),
+              child: Row(
+                children: [
+                  const Icon(
+                    Icons.error_outline,
+                    size: 16,
+                    color: Color(0xFFDC2626),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      'Gagal memuat master lokasi dari server.',
+                      style: _m(size: 12, color: const Color(0xFFDC2626)),
+                    ),
+                  ),
+                  TextButton(
+                    onPressed: () => ref.refresh(masterLocationsProvider),
+                    child: const Text('Coba Lagi', style: TextStyle(fontSize: 12)),
+                  ),
+                ],
+              ),
+            )
+          else if (locations.isEmpty)
+            Container(
+              margin: const EdgeInsets.only(bottom: 8),
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: const Color(0xFFFFFBEB),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: const Color(0xFFFDE68A)),
+              ),
+              child: Text(
+                'Data master lokasi belum tersedia.',
+                style: _m(size: 12, color: const Color(0xFFD97706)),
+              ),
+            ),
+
           DropdownButtonFormField<String>(
             key: const Key('dropdown_target_location'),
             initialValue: locations.contains(_locationController.text.trim())
@@ -1172,6 +1277,12 @@ class _PemohonCreateMutationScreenState
               if (val != null) {
                 setState(() {
                   _locationController.text = val;
+                  final match = locationItems
+                      .where((l) => l.name.toLowerCase() == val.toLowerCase())
+                      .firstOrNull;
+                  if (match != null) {
+                    _selectedTargetLocationId = match.id;
+                  }
                 });
               }
             },

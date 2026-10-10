@@ -38,6 +38,9 @@ class SubmitMutationParams {
   /// Nomor seri aset manual (jika [isUnregisteredAsset] true).
   final String? customSerialNumber;
 
+  /// ID database riil lokasi tujuan (jika tersedia dari master data).
+  final String? destinationLocationId;
+
   const SubmitMutationParams({
     this.applicantId,
     this.applicantName,
@@ -45,6 +48,7 @@ class SubmitMutationParams {
     this.assetName = '',
     required this.sourceLocation,
     required this.targetLocation,
+    this.destinationLocationId,
     this.currentPic,
     required this.targetPic,
     required this.reason,
@@ -137,6 +141,12 @@ abstract class MutationRepository {
     required String confirmedBy,
     required bool isSesuai,
     String? reason,
+  });
+
+  /// Melaporkan ketidaksesuaian fisik hasil mutasi oleh Pemohon (POST /mutations/{id}/report-discrepancy).
+  Future<Result<Mutation>> reportDiscrepancy({
+    required String mutationId,
+    required String reason,
   });
 
   // ─── Legacy Compatibility Methods ──────────────────────────────────────────

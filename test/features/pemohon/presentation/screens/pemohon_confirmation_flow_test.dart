@@ -39,6 +39,24 @@ class _FakeMutationRepository implements MutationRepository {
   }
 
   @override
+  Future<Result<Mutation>> reportDiscrepancy({
+    required String mutationId,
+    required String reason,
+  }) async {
+    final current = _mutations[mutationId];
+    if (current == null) {
+      return const Result.failure(NotFoundFailure(message: 'Not found'));
+    }
+    final updated = current.copyWith(
+      status: MutationStatus.waitingAssetVerification,
+      confirmationReason: reason,
+      returnReason: reason,
+    );
+    _mutations[mutationId] = updated;
+    return Result.success(updated);
+  }
+
+  @override
   Future<Result<Mutation>> confirmMutationResult({
     required String mutationId,
     required String confirmedBy,

@@ -182,6 +182,24 @@ class _FakeFullMutationRepository implements MutationRepository {
   }) async => throw UnimplementedError();
 
   @override
+  Future<Result<Mutation>> reportDiscrepancy({
+    required String mutationId,
+    required String reason,
+  }) async {
+    final current = _mutations[mutationId];
+    if (current == null) {
+      return const Result.failure(NotFoundFailure(message: 'Not found'));
+    }
+    final updated = current.copyWith(
+      status: MutationStatus.waitingAssetVerification,
+      confirmationReason: reason,
+      returnReason: reason,
+    );
+    _mutations[mutationId] = updated;
+    return Result.success(updated);
+  }
+
+  @override
   Future<Result<Mutation>> confirmMutationResult({
     required String mutationId,
     required String confirmedBy,
@@ -628,7 +646,7 @@ void main() {
         );
         await tester.tap(find.byKey(const Key('dropdown_target_location')));
         await tester.pumpAndSettle();
-        await tester.tap(find.text('Cabang Bandung').last);
+        await tester.tap(find.text('Cabang Donggala').last);
         await tester.pumpAndSettle();
 
         final roomField = find.widgetWithText(

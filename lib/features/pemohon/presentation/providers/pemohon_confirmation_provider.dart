@@ -187,9 +187,6 @@ class PemohonConfirmationActionNotifier
     required String mutationId,
     required String reason,
   }) async {
-    final authState = ref.read(authStateProvider);
-    final pemohonName = authState.user?.name ?? 'Pemohon';
-
     state = state.copyWith(
       isLoading: true,
       clearError: true,
@@ -197,10 +194,8 @@ class PemohonConfirmationActionNotifier
     );
 
     final repo = ref.read(apiMutationRepositoryProvider);
-    final result = await repo.confirmMutationResult(
+    final result = await repo.reportDiscrepancy(
       mutationId: mutationId,
-      confirmedBy: pemohonName,
-      isSesuai: false,
       reason: reason,
     );
 

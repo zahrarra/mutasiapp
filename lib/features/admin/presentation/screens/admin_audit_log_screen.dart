@@ -13,6 +13,11 @@ import '../../../../app/theme/app_spacing.dart';
 import '../../../../core/widgets/custom_floating_nav_bar.dart';
 import '../../../../core/widgets/mutasiku_page_header.dart';
 import '../../../auth/domain/entities/user_role.dart';
+import '../../../auth/presentation/providers/auth_provider.dart';
+import '../../../mutation/domain/entities/mutation.dart';
+import '../../../mutation/domain/entities/mutation_status.dart';
+import '../../../mutation/presentation/providers/mutation_form_provider.dart';
+import '../../../mutation/presentation/providers/mutation_provider.dart';
 
 abstract final class _AuditColors {
   static const primaryNavy = Color(0xFF0F3D56);
@@ -42,6 +47,7 @@ class _AdminAuditLogScreenState extends ConsumerState<AdminAuditLogScreen> {
 
   final List<String> _categories = const [
     'Semua',
+    'Transaksi Mutasi',
     'User & Role',
     'Master Data',
     'Sistem',
@@ -241,68 +247,80 @@ class _AdminAuditLogScreenState extends ConsumerState<AdminAuditLogScreen> {
   }
 
   List<_AuditLogItem> _getFilteredLogs() {
-    final all = [
-      const _AuditLogItem(
-        avatarText: 'AP',
-        title: 'Pembaruan Node Cabang',
-        category: 'Master Data',
-        time: '12m lalu',
-        desc: 'Node transit aset logistik regional ditambahkan ke KCP Thamrin.',
-        tagCode: '#LOC-1092',
-        statusLabel: 'Sukses Diterapkan',
-        isSuccess: true,
-      ),
-      const _AuditLogItem(
-        avatarText: 'DP',
-        title: 'Penugasan Role Pegawai',
-        category: 'User & Role',
-        time: '1j lalu',
-        desc: 'User Dimas Pratama dialokasikan hak akses Petugas Aset TI oleh Admin Utama.',
-        tagCode: '#RBAC-441',
-        statusLabel: 'Oleh Admin Utama',
-        isSuccess: true,
-      ),
-      const _AuditLogItem(
+    final mutationsList =
+        ref.watch(adminMutationsProvider).valueOrNull ?? const <Mutation>[];
+    final usersList =
+        ref.watch(masterUsersProvider).valueOrNull ?? const [];
+    final locationsList =
+        ref.watch(masterLocationsProvider).valueOrNull ?? const [];
+
+    final all = <_AuditLogItem>[];
+
+    // 1. Log dari Transaksi Mutasi Nyata Backend
+    for (final m in mutationsList.take(6)) {
+      all.add(
+        _AuditLogItem(
+          avatarText: 'MUT',
+          title: 'Pengajuan Mutasi ${m.ticketNumber}',
+          category: 'Transaksi Mutasi',
+          time: 'Terbaru',
+          desc:
+              'Aset "${m.asset.name}" diajukan oleh ${m.applicantName} menuju ${m.targetLocation}. Status saat ini: ${m.status.displayName}.',
+          tagCode: '#MUT-${m.id.replaceAll("mut_", "")}',
+          statusLabel: m.status.displayName,
+          isSuccess: m.status != MutationStatus.rejected,
+        ),
+      );
+    }
+
+    // 2. Log dari Master User Nyata
+    for (final u in usersList.take(4)) {
+      all.add(
+        _AuditLogItem(
+          avatarText: u.name.isNotEmpty ? u.name[0].toUpperCase() : 'U',
+          title: 'Penugasan Akun ${u.name}',
+          category: 'User & Role',
+          time: 'Aktif',
+          desc:
+              'Pengguna terdaftar dengan role ${u.role.displayName} pada divisi ${u.department ?? "Kantor Pusat"}.',
+          tagCode: '#USR-${u.id}',
+          statusLabel: u.isActive ? 'Akun Aktif' : 'Nonaktif',
+          isSuccess: u.isActive,
+        ),
+      );
+    }
+
+    // 3. Log dari Master Lokasi Nyata
+    for (final loc in locationsList.take(4)) {
+      all.add(
+        _AuditLogItem(
+          avatarText: loc.name.isNotEmpty ? loc.name[0].toUpperCase() : 'L',
+          title: 'Unit Lokasi ${loc.name}',
+          category: 'Master Data',
+          time: 'Aktif',
+          desc:
+              'Unit ${loc.isBranch ? "Kantor Cabang" : "Kantor Pusat/Unit"} terdaftar dengan kode ${loc.description ?? "-"}.',
+          tagCode: '#LOC-${loc.id}',
+          statusLabel: loc.isActive ? 'Aktif Resmi' : 'Nonaktif',
+          isSuccess: loc.isActive,
+        ),
+      );
+    }
+
+    // 4. Log Sinkronisasi Sistem
+    all.add(
+      _AuditLogItem(
         avatarText: 'SYS',
-        title: 'Sinkronisasi Basis Data Aset',
+        title: 'Sinkronisasi Backend MutasiKu',
         category: 'Sistem',
-        time: '3j lalu',
-        desc: 'Validasi 6.302 entitas inventaris server selesai tanpa anomali data.',
-        tagCode: '#SYNC-882',
+        time: 'Live',
+        desc:
+            'Sistem mengelola ${mutationsList.length} transaksi mutasi aktif dan ${usersList.length} akun pengguna terdaftar.',
+        tagCode: '#SYNC-LIVE',
         statusLabel: 'Integritas Terverifikasi',
         isSuccess: true,
       ),
-      const _AuditLogItem(
-        avatarText: 'SEC',
-        title: 'Pembaruan Kebijakan Token Sesi',
-        category: 'Sistem',
-        time: '5j lalu',
-        desc: 'Ambang batas token refresh diperpanjang 15 menit untuk kestabilan koneksi operator.',
-        tagCode: '#SEC-019',
-        statusLabel: 'Kebijakan Aktif',
-        isSuccess: true,
-      ),
-      const _AuditLogItem(
-        avatarText: 'USR',
-        title: 'Pendaftaran Akun Baru Pemohon',
-        category: 'User & Role',
-        time: '1h lalu',
-        desc: 'Akun baru untuk staf operasional Rina Wati berhasil dibuat dan dikaitkan ke KC Surabaya.',
-        tagCode: '#USR-902',
-        statusLabel: 'Akun Aktif',
-        isSuccess: true,
-      ),
-      const _AuditLogItem(
-        avatarText: 'AST',
-        title: 'Penambahan Kategori Aset Baru',
-        category: 'Master Data',
-        time: '2h lalu',
-        desc: 'Kategori aset "Peralatan Laboratorium TI" ditambahkan ke hierarki master kategori.',
-        tagCode: '#CAT-314',
-        statusLabel: 'Sukses Diterapkan',
-        isSuccess: true,
-      ),
-    ];
+    );
 
     return all.where((log) {
       if (_selectedCategory != 'Semua' && log.category != _selectedCategory) {

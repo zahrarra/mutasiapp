@@ -3,6 +3,7 @@
 // Implementasi UserRepository terintegrasi backend Laravel API & local mock fallback.
 // Sumber: PRD.md §5, ROLE-FLOW.md §2, TECHNICAL-DESIGN.md §4.1.
 
+import '../../../../core/constants/master_departments.dart';
 import '../../../../core/errors/failures.dart';
 import '../../../../core/errors/result.dart';
 import '../../../../core/network/api_client.dart';
@@ -16,6 +17,32 @@ class UserRepositoryImpl implements UserRepository {
   // Cache dinamis role ID dari tabel roles di backend
   static final Map<String, int> _roleNameToIdCache = {};
 
+  // Cache divisi yang disimpan oleh admin per user ID / NIP
+  static final Map<String, String> _userDepartments = {};
+
+  /// Helper untuk memastikan divisi selalu mengacu pada 11 divisi resmi,
+  /// mengutamakan data riil backend database, dan menyediakan fallback resmi
+  /// bagi akun lama yang memiliki department null.
+  static String _resolveDepartment({
+    String? apiDept,
+    required UserRole role,
+  }) {
+    if (apiDept != null && apiDept.trim().isNotEmpty) {
+      return apiDept.trim();
+    }
+    // Mapping fallback resmi sesuai role ke 11 divisi untuk akun lama null
+    switch (role) {
+      case UserRole.admin:
+      case UserRole.kadiv:
+        return 'Divisi TI';
+      case UserRole.bagianAset:
+        return 'Divisi Umum dan Aset';
+      case UserRole.operator:
+      case UserRole.pemohon:
+        return 'Divisi Operasional';
+    }
+  }
+
   // Shared state agar login & screen admin selalu mengacu pada store yang sama saat mock (apiClient == null)
   static final List<User> _users = [
     const User(
@@ -24,7 +51,7 @@ class UserRepositoryImpl implements UserRepository {
       name: 'Rina (Pemohon)',
       role: UserRole.pemohon,
       email: 'pemohon@mutasiku.id',
-      department: 'Divisi Keuangan & Akuntansi',
+      department: 'Divisi Operasional',
       isActive: true,
     ),
     const User(
@@ -33,7 +60,7 @@ class UserRepositoryImpl implements UserRepository {
       name: 'Budi Santoso (Operator)',
       role: UserRole.operator,
       email: 'operator@mutasiku.id',
-      department: 'Operasional Logistik & Inventaris',
+      department: 'Divisi Operasional',
       isActive: true,
     ),
     const User(
@@ -42,7 +69,7 @@ class UserRepositoryImpl implements UserRepository {
       name: 'Hendra Setiawan (Bagian Aset)',
       role: UserRole.bagianAset,
       email: 'aset@mutasiku.id',
-      department: 'Bagian Pengelolaan Aset & Logistik',
+      department: 'Divisi Umum dan Aset',
       isActive: true,
     ),
     const User(
@@ -51,7 +78,7 @@ class UserRepositoryImpl implements UserRepository {
       name: 'Drs. Ahmad Dahlan (Pemimpin Divisi)',
       role: UserRole.kadiv,
       email: 'kadiv@mutasiku.id',
-      department: 'Divisi Umum & Aset',
+      department: 'Divisi Umum dan Aset',
       isActive: true,
     ),
     const User(
@@ -60,7 +87,7 @@ class UserRepositoryImpl implements UserRepository {
       name: 'System Administrator',
       role: UserRole.admin,
       email: 'admin@mutasiku.id',
-      department: 'IT Enterprise & Governance',
+      department: 'Divisi TI',
       isActive: true,
     ),
   ];
@@ -123,7 +150,10 @@ class UserRepositoryImpl implements UserRepository {
               username: (m['nip'] ?? m['email'] ?? '').toString(),
               name: (m['name'] ?? '').toString(),
               email: m['email'] as String?,
-              department: (m['department'] as String?) ?? 'Unit Kerja',
+              department: _resolveDepartment(
+                apiDept: m['department'] as String?,
+                role: role,
+              ),
               role: role,
               isActive: m['is_active'] == true,
               mustChangePassword: m['must_change_password'] == true,
@@ -155,7 +185,10 @@ class UserRepositoryImpl implements UserRepository {
               username: (m['nip'] ?? m['email'] ?? '').toString(),
               name: (m['name'] ?? '').toString(),
               email: m['email'] as String?,
-              department: (m['department'] as String?) ?? 'Unit Kerja',
+              department: _resolveDepartment(
+                apiDept: m['department'] as String?,
+                role: role,
+              ),
               role: role,
               isActive: m['is_active'] == true,
               mustChangePassword: m['must_change_password'] == true,
@@ -230,6 +263,8 @@ class UserRepositoryImpl implements UserRepository {
         body: {
           'name': user.name.trim(),
           'email': user.email?.trim(),
+          if (user.department != null && user.department!.trim().isNotEmpty)
+            'department': user.department!.trim(),
           'password': password ?? 'password',
           'role_id': resolvedRoleId,
           'role': user.role.apiValue,
@@ -243,12 +278,18 @@ class UserRepositoryImpl implements UserRepository {
           final m = (data['data'] ?? data) as Map<String, dynamic>;
           final roleName = m['role'] as String?;
           final role = UserRole.fromApiValue(roleName) ?? user.role;
+          final deptFromBackend = (m['department'] as String?)?.trim();
+          final resolvedDept = deptFromBackend != null && deptFromBackend.isNotEmpty
+              ? deptFromBackend
+              : (user.department?.trim().isNotEmpty == true
+                  ? user.department!.trim()
+                  : _resolveDepartment(role: role));
           final created = User(
             id: m['id'].toString(),
             username: (m['nip'] ?? m['email'] ?? cleanUsername).toString(),
             name: (m['name'] ?? user.name).toString(),
             email: m['email'] as String? ?? user.email,
-            department: user.department,
+            department: resolvedDept,
             role: role,
             isActive: m['is_active'] == true,
             mustChangePassword: m['must_change_password'] == true,
@@ -280,10 +321,14 @@ class UserRepositoryImpl implements UserRepository {
       username: cleanUsername,
       name: user.name.trim(),
       email: user.email?.trim(),
-      department: user.department?.trim(),
+      department: user.department?.trim().isNotEmpty == true
+          ? user.department!.trim()
+          : MasterDepartments.defaultDepartment,
       isActive: true,
     );
 
+    _userDepartments[newUser.id] = newUser.department!;
+    _userDepartments[cleanUsername] = newUser.department!;
     _users.add(newUser);
     return Result.success(newUser);
   }
@@ -296,6 +341,8 @@ class UserRepositoryImpl implements UserRepository {
       final body = <String, dynamic>{
         'name': user.name.trim(),
         if (user.email != null) 'email': user.email!.trim(),
+        if (user.department != null && user.department!.trim().isNotEmpty)
+          'department': user.department!.trim(),
         'role_id': resolvedRoleId,
         'role': user.role.apiValue,
         if (cleanUsername.isNotEmpty) 'nip': cleanUsername,
@@ -313,9 +360,16 @@ class UserRepositoryImpl implements UserRepository {
           final m = (data['data'] ?? data) as Map<String, dynamic>;
           final roleName = m['role'] as String?;
           final role = UserRole.fromApiValue(roleName) ?? user.role;
+          final deptFromBackend = (m['department'] as String?)?.trim();
+          final resolvedDept = deptFromBackend != null && deptFromBackend.isNotEmpty
+              ? deptFromBackend
+              : (user.department?.trim().isNotEmpty == true
+                  ? user.department!.trim()
+                  : _resolveDepartment(role: role));
           final updated = user.copyWith(
             name: (m['name'] ?? user.name).toString(),
             email: m['email'] as String? ?? user.email,
+            department: resolvedDept,
             role: role,
             isActive: m['is_active'] == true,
           );
@@ -346,11 +400,18 @@ class UserRepositoryImpl implements UserRepository {
       );
     }
 
+    final updatedDept = user.department?.trim().isNotEmpty == true
+        ? user.department!.trim()
+        : MasterDepartments.defaultDepartment;
+
+    _userDepartments[user.id] = updatedDept;
+    _userDepartments[cleanUsername] = updatedDept;
+
     final updated = user.copyWith(
       username: cleanUsername,
       name: user.name.trim(),
       email: user.email?.trim(),
-      department: user.department?.trim(),
+      department: updatedDept,
     );
 
     _users[index] = updated;

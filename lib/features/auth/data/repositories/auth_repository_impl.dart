@@ -3,6 +3,7 @@
 // Implementasi AuthRepository terintegrasi backend Laravel API & local SecureStorage.
 // Sumber: SKILLS.md §5 (authentication), TECHNICAL-DESIGN.md §4.1.
 
+import '../../../../core/constants/master_departments.dart';
 import '../../../../core/errors/failures.dart';
 import '../../../../core/errors/result.dart';
 import '../../../../core/network/api_client.dart';
@@ -91,7 +92,8 @@ class AuthRepositoryImpl implements AuthRepository {
             name: userMap['name'] as String? ?? '',
             email: userMap['email'] as String? ?? username,
             role: role,
-            department: userMap['department'] as String? ?? 'Aset & Logistik',
+            department: userMap['department'] as String? ??
+                MasterDepartments.defaultDepartment,
             isActive: userMap['is_active'] as bool? ?? true,
             mustChangePassword: mustChangePassword,
           );
@@ -191,7 +193,8 @@ class AuthRepositoryImpl implements AuthRepository {
               name: userMap['name'] as String? ?? '',
               email: userMap['email'] as String? ?? '',
               role: role,
-              department: userMap['department'] as String? ?? 'Aset & Logistik',
+              department: userMap['department'] as String? ??
+                  MasterDepartments.defaultDepartment,
               isActive: true,
               mustChangePassword: mustChangePassword,
             );

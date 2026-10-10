@@ -12,6 +12,7 @@ import 'package:go_router/go_router.dart';
 import '../../../../app/router/route_names.dart';
 import '../../../../app/theme/app_colors.dart';
 import '../../../../app/theme/app_spacing.dart';
+import '../../../../core/providers/core_providers.dart';
 import '../../../../core/utils/sla_wita_helper.dart';
 import '../../../../core/widgets/document_preview_dialog.dart';
 import '../../../../core/widgets/error_view.dart';
@@ -1923,6 +1924,7 @@ class PemohonMutationDetailScreen extends ConsumerWidget {
       context,
       mutation: mutation,
       currentUser: ref.read(authStateProvider).user,
+      apiClient: ref.read(apiClientProvider),
     );
   }
 }

@@ -114,6 +114,7 @@ class _InlineSearchableDropdownState extends State<InlineSearchableDropdown> {
               color: AppColors.textSecondary,
             ),
             suffixIcon: IconButton(
+              key: widget.fieldKey != null ? ValueKey('${widget.fieldKey}_toggle') : null,
               icon: Icon(
                 _isExpanded ? Icons.arrow_drop_up : Icons.arrow_drop_down,
                 color: AppColors.primary,

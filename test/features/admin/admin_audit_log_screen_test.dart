@@ -1,4 +1,3 @@
-import 'package:mutasiku/core/errors/failures.dart';
 // test/features/admin/admin_audit_log_screen_test.dart
 
 import 'package:flutter/material.dart';
@@ -6,15 +5,24 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:mutasiku/app/router/route_names.dart';
+import 'package:mutasiku/core/errors/result.dart';
+import 'package:mutasiku/features/admin/domain/entities/location_item.dart';
+import 'package:mutasiku/features/admin/domain/repositories/location_repository.dart';
 import 'package:mutasiku/features/admin/presentation/screens/admin_audit_log_screen.dart';
+import 'package:mutasiku/features/asset/domain/entities/asset.dart';
+import 'package:mutasiku/features/asset/domain/entities/asset_category.dart';
+import 'package:mutasiku/features/asset/domain/entities/asset_status.dart';
 import 'package:mutasiku/features/auth/domain/entities/user.dart';
 import 'package:mutasiku/features/auth/domain/entities/user_role.dart';
-import 'package:mutasiku/features/auth/presentation/providers/auth_provider.dart';
-
-import 'package:mutasiku/core/errors/result.dart';
 import 'package:mutasiku/features/auth/domain/repositories/auth_repository.dart';
+import 'package:mutasiku/features/auth/domain/repositories/user_repository.dart';
 import 'package:mutasiku/features/auth/domain/usecases/login_usecase.dart';
 import 'package:mutasiku/features/auth/domain/usecases/logout_usecase.dart';
+import 'package:mutasiku/features/auth/presentation/providers/auth_provider.dart';
+import 'package:mutasiku/features/mutation/domain/entities/mutation.dart';
+import 'package:mutasiku/features/mutation/domain/entities/mutation_status.dart';
+import 'package:mutasiku/features/mutation/presentation/providers/mutation_form_provider.dart';
+import 'package:mutasiku/features/mutation/presentation/providers/mutation_provider.dart';
 
 class _MockAuthRepo implements AuthRepository {
   final User? user;
@@ -28,35 +36,13 @@ class _MockAuthRepo implements AuthRepository {
   }) async => Result.success(user!);
   @override
   Future<void> logout() async {}
-    @override
+  @override
   Future<Result<User>> changePassword({
     required String currentPassword,
     required String newPassword,
     required String confirmPassword,
   }) async {
-    if (newPassword.length < 8) {
-      return Result.failure(
-        const ValidationFailure(message: 'Password baru minimal 8 karakter.'),
-      );
-    }
-    if (newPassword != confirmPassword) {
-      return Result.failure(
-        const ValidationFailure(message: 'Konfirmasi password baru tidak cocok.'),
-      );
-    }
-    if (newPassword == currentPassword) {
-      return Result.failure(
-        const ValidationFailure(
-          message: 'Password baru harus berbeda dengan password lama.',
-        ),
-      );
-    }
-    if (user != null) {
-      return Result.success(user!.copyWith(mustChangePassword: false));
-    }
-    return Result.failure(
-      const UnauthorizedFailure(message: 'Pengguna tidak ditemukan.'),
-    );
+    return Result.success(user!);
   }
 }
 
@@ -71,6 +57,40 @@ class _FakeAuthNotifier extends AuthNotifier {
   }
 }
 
+class _FakeUserRepository implements UserRepository {
+  final List<User> users;
+  _FakeUserRepository(this.users);
+  @override
+  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
+  @override
+  Future<Result<List<User>>> getAllUsers() async => Result.success(users);
+}
+
+class _FakeLocationRepository implements LocationRepository {
+  final List<LocationItem> locations;
+  _FakeLocationRepository(this.locations);
+  @override
+  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
+  @override
+  List<LocationItem> get currentLocations => locations;
+  @override
+  Future<Result<List<LocationItem>>> getAllLocations() async => Result.success(locations);
+  @override
+  Future<Result<List<LocationItem>>> getActiveLocations() async => Result.success(locations);
+}
+
+class _TestMasterUsersNotifier extends MasterUsersNotifier {
+  _TestMasterUsersNotifier(List<User> users) : super(_FakeUserRepository(users)) {
+    state = AsyncValue.data(users);
+  }
+}
+
+class _TestMasterLocationsNotifier extends MasterLocationsNotifier {
+  _TestMasterLocationsNotifier(List<LocationItem> locations) : super(_FakeLocationRepository(locations)) {
+    state = AsyncValue.data(locations);
+  }
+}
+
 void main() {
   const adminUser = User(
     id: 'admin_1',
@@ -79,6 +99,51 @@ void main() {
     role: UserRole.admin,
     email: 'admin@mutasiku.id',
     isActive: true,
+  );
+
+  const testUser = User(
+    id: 'usr_1',
+    name: 'Pegawai Testing',
+    username: 'pegawai',
+    role: UserRole.operator,
+    email: 'pegawai@mutasiku.id',
+    department: 'Divisi Operasional',
+    isActive: true,
+  );
+
+  const testLocation = LocationItem(
+    id: 'loc_1',
+    name: 'KCU Palu',
+    description: 'CAB-PLU-KCU',
+    isBranch: true,
+    isActive: true,
+  );
+
+  final testMutation = Mutation(
+    id: 'mut_1',
+    ticketNumber: 'TI-2026-001',
+    applicantId: 'usr_1',
+    applicantName: 'Pegawai Testing',
+    asset: const Asset(
+      id: 'ast_1',
+      assetCode: 'AST-001',
+      name: 'Laptop Lenovo',
+      category: AssetCategory(id: '1', code: 'TI', name: 'Aset TI'),
+      location: 'KCU Palu',
+      pic: 'Pegawai Testing',
+      status: AssetStatus.available,
+      condition: 'Baik',
+      serialNumber: 'SN-001',
+      acquisitionYear: 2024,
+    ),
+    currentLocation: 'KCU Palu',
+    targetLocation: 'Cabang Donggala',
+    currentPic: 'Pegawai Testing',
+    targetPic: 'Pegawai Testing',
+    reason: 'Kebutuhan tugas',
+    isAssetMovingWithApplicant: true,
+    status: MutationStatus.submitted,
+    createdAt: DateTime.now(),
   );
 
   Widget createSubject({
@@ -102,6 +167,9 @@ void main() {
     return ProviderScope(
       overrides: [
         authStateProvider.overrideWith((ref) => _FakeAuthNotifier(adminUser)),
+        adminMutationsProvider.overrideWith((ref) async => [testMutation]),
+        masterUsersProvider.overrideWith((ref) => _TestMasterUsersNotifier([testUser])),
+        masterLocationsProvider.overrideWith((ref) => _TestMasterLocationsNotifier([testLocation])),
       ],
       child: MaterialApp.router(routerConfig: router),
     );
@@ -111,6 +179,13 @@ void main() {
     testWidgets('renders page header, search, filter chips, and log cards', (
       tester,
     ) async {
+      tester.view.physicalSize = const Size(1200, 1600);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(() {
+        tester.view.resetPhysicalSize();
+        tester.view.resetDevicePixelRatio();
+      });
+
       await tester.pumpWidget(createSubject());
       await tester.pumpAndSettle();
 
@@ -127,10 +202,11 @@ void main() {
       expect(find.text('Master Data'), findsNWidgets(2)); // Chip and navbar
       expect(find.text('Sistem'), findsOneWidget);
 
-      // Verify default log cards are present
-      expect(find.text('Pembaruan Node Cabang'), findsOneWidget);
-      expect(find.text('Penugasan Role Pegawai'), findsOneWidget);
-      expect(find.text('Sinkronisasi Basis Data Aset'), findsOneWidget);
+      // Verify dynamic audit log cards from providers are present
+      expect(find.text('Pengajuan Mutasi TI-2026-001'), findsOneWidget);
+      expect(find.text('Penugasan Akun Pegawai Testing'), findsOneWidget);
+      expect(find.text('Unit Lokasi KCU Palu'), findsOneWidget);
+      expect(find.text('Sinkronisasi Backend MutasiKu'), findsOneWidget);
 
       // Verify navbar rendered with 4 admin items
       expect(find.text('Beranda'), findsOneWidget);
@@ -152,11 +228,11 @@ void main() {
       final searchField = find.byType(TextField);
       expect(searchField, findsOneWidget);
 
-      await tester.enterText(searchField, 'Node Cabang');
+      await tester.enterText(searchField, 'KCU Palu');
       await tester.pumpAndSettle();
 
-      expect(find.text('Pembaruan Node Cabang'), findsOneWidget);
-      expect(find.text('Penugasan Role Pegawai'), findsNothing);
+      expect(find.text('Unit Lokasi KCU Palu'), findsOneWidget);
+      expect(find.text('Penugasan Akun Pegawai Testing'), findsNothing);
     });
 
     testWidgets('filters log items when category chip is selected', (
@@ -168,8 +244,8 @@ void main() {
       await tester.tap(find.text('User & Role'));
       await tester.pumpAndSettle();
 
-      expect(find.text('Penugasan Role Pegawai'), findsOneWidget);
-      expect(find.text('Pembaruan Node Cabang'), findsNothing);
+      expect(find.text('Penugasan Akun Pegawai Testing'), findsOneWidget);
+      expect(find.text('Unit Lokasi KCU Palu'), findsNothing);
     });
 
     testWidgets('back button returns to previous screen normally', (

@@ -390,7 +390,7 @@ void main() {
         (w) => w is DropdownButtonFormField<String> && w.decoration.hintText == 'Pilih Lokasi Penempatan',
       );
       final locDropdown = tester.widget<DropdownButtonFormField<String>>(locFinder);
-      locDropdown.onChanged?.call('loc_1');
+      locDropdown.onChanged?.call('22');
       await tester.pumpAndSettle();
 
       // Pilih PIC Dropdown

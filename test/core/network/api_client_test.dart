@@ -250,5 +250,39 @@ void main() {
       expect(capturedMethod, equals('POST'));
       expect(capturedPath, equals('/api/v1/auth/login'));
     });
+
+    test('7. Path tanpa prefix (/locations, /admin/users) otomatis dinormalisasi ke /api/v1', () {
+      final client = ApiClient(baseUrl: 'http://127.0.0.1:8000');
+      expect(
+        client.buildUri('/locations').toString(),
+        equals('http://127.0.0.1:8000/api/v1/locations'),
+      );
+      expect(
+        client.buildUri('/admin/users').toString(),
+        equals('http://127.0.0.1:8000/api/v1/admin/users'),
+      );
+    });
+
+    test('8. Android Emulator BaseUrl (http://10.0.2.2:8000) dan Physical IP dengan atau tanpa /api/v1', () {
+      final clientEmulator = ApiClient(baseUrl: 'http://10.0.2.2:8000');
+      expect(
+        clientEmulator.buildUri('/api/v1/mutations').toString(),
+        equals('http://10.0.2.2:8000/api/v1/mutations'),
+      );
+      expect(
+        clientEmulator.buildUri('/mutations').toString(),
+        equals('http://10.0.2.2:8000/api/v1/mutations'),
+      );
+
+      final clientPhysicalWithSlash = ApiClient(baseUrl: 'http://192.168.1.10:8000/api/v1/');
+      expect(
+        clientPhysicalWithSlash.buildUri('/api/v1/mutations').toString(),
+        equals('http://192.168.1.10:8000/api/v1/mutations'),
+      );
+      expect(
+        clientPhysicalWithSlash.buildUri('/mutations').toString(),
+        equals('http://192.168.1.10:8000/api/v1/mutations'),
+      );
+    });
   });
 }

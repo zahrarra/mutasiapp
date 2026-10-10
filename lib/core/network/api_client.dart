@@ -129,18 +129,28 @@ class ApiClient {
       cleanPath = '/$cleanPath';
     }
 
-    // 1. Normalisasi endpoint login jika segmen 'auth' tidak sengaja terlewat
-    if (cleanPath == '/api/v1/login') {
+    // 1. Normalisasi segmen login
+    if (cleanPath == '/api/v1/login' || cleanPath == '/login' || cleanPath == '/auth/login') {
       cleanPath = '/api/v1/auth/login';
-    } else if (cleanPath == '/login') {
-      cleanPath = base.endsWith('/api/v1') ? '/auth/login' : '/api/v1/auth/login';
-    } else if (cleanPath == '/auth/login' && !base.endsWith('/api/v1')) {
-      cleanPath = '/api/v1/auth/login';
+    } else if (cleanPath.startsWith('/v1/')) {
+      cleanPath = '/api$cleanPath';
+    } else if (cleanPath.startsWith('/api/') && !cleanPath.startsWith('/api/v1/')) {
+      cleanPath = '/api/v1${cleanPath.substring('/api'.length)}';
+    } else if (!cleanPath.startsWith('/api/v1/')) {
+      cleanPath = '/api/v1$cleanPath';
     }
 
-    // 2. Mencegah duplikasi prefix jika baseUrl sudah berakhiran /api/v1 dan path juga diawali /api/v1
-    if (base.endsWith('/api/v1') && cleanPath.startsWith('/api/v1/')) {
+    // 2. Mencegah duplikasi prefix jika baseUrl sudah mengandung /api/v1 atau /api
+    if (base.endsWith('/api/v1')) {
       cleanPath = cleanPath.substring('/api/v1'.length);
+      if (!cleanPath.startsWith('/')) {
+        cleanPath = '/$cleanPath';
+      }
+    } else if (base.endsWith('/api')) {
+      cleanPath = cleanPath.substring('/api'.length);
+      if (!cleanPath.startsWith('/')) {
+        cleanPath = '/$cleanPath';
+      }
     }
 
     final fullUrl = '$base$cleanPath';

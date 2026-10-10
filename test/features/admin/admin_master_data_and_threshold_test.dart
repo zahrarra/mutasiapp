@@ -145,7 +145,11 @@ void main() {
     });
 
     test('1. Admin dapat menambah lokasi baru dan otomatis muncul di availableLocationsProvider', () async {
-      final container = ProviderContainer();
+      final container = ProviderContainer(
+        overrides: [
+          locationRepositoryProvider.overrideWithValue(locationRepo),
+        ],
+      );
       addTearDown(container.dispose);
 
       const newLocName = 'Gedung Cyber 2 — Lantai 8 Data Center';
@@ -185,7 +189,11 @@ void main() {
     });
 
     test('3. Menonaktifkan lokasi otomatis menyembunyikan lokasi dari dropdown form Pemohon', () async {
-      final container = ProviderContainer();
+      final container = ProviderContainer(
+        overrides: [
+          locationRepositoryProvider.overrideWithValue(locationRepo),
+        ],
+      );
       addTearDown(container.dispose);
 
       final allResult = await locationRepo.getAllLocations();

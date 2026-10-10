@@ -21,7 +21,10 @@ import '../../../auth/domain/entities/user.dart';
 import '../../../auth/domain/entities/user_role.dart';
 import '../../../auth/presentation/providers/auth_provider.dart';
 import '../../domain/entities/location_item.dart';
+import '../../../mutation/domain/entities/mutation.dart';
+import '../../../mutation/domain/entities/mutation_status.dart';
 import '../../../mutation/presentation/providers/mutation_form_provider.dart';
+import '../../../mutation/presentation/providers/mutation_provider.dart';
 import '../../../asset/presentation/widgets/admin_create_asset_dialog.dart';
 
 /// Design tokens persis sesuai dengan Stitch HTML Admin Dashboard
@@ -111,40 +114,192 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
     final userName = user?.name ?? 'Administrator';
     final userInitials = _formatInitials(user?.name);
 
-    // Watch real-time master data providers safely
+    // Watch real-time master data & transaction providers safely
     final usersAsync = ref.watch(masterUsersProvider);
     final locationsAsync = ref.watch(masterLocationsProvider);
     final categoriesAsync = ref.watch(assetCategoriesProvider);
+    final mutationsAsync = ref.watch(adminMutationsProvider);
 
     // Calculate metrics with safe null handling & authentic data
-    final usersList =
-        usersAsync.asData?.value ?? usersAsync.valueOrNull ?? const <User>[];
-    final totalUsers = usersList.isNotEmpty ? usersList.length : 142;
-    final pemohonCount = usersList
-        .where((u) => u.role == UserRole.pemohon)
-        .length;
-    final oprCount = usersList.where((u) => u.role == UserRole.operator).length;
-    final asetCount = usersList
-        .where((u) => u.role == UserRole.bagianAset)
-        .length;
-    final kadivCount = usersList.where((u) => u.role == UserRole.kadiv).length;
-    final usersBreakdown = usersList.isNotEmpty
-        ? '$pemohonCount Pemohon • $oprCount Opr • $asetCount Aset • $kadivCount Kadiv'
-        : '118 Pemohon • 8 Opr • 12 Aset • 4 Kadiv';
+    // 1. User metrics
+    final String usersValue;
+    final String usersTag;
+    final String usersSubtitle;
+    final String configUsersTag;
 
-    final locationsList =
-        locationsAsync.asData?.value ??
-        locationsAsync.valueOrNull ??
-        const <LocationItem>[];
-    final totalLocations = locationsList.isNotEmpty ? locationsList.length : 34;
+    if (usersAsync.isLoading) {
+      usersValue = '...';
+      usersTag = 'Memuat';
+      usersSubtitle = 'Memuat data pengguna...';
+      configUsersTag = 'Memuat...';
+    } else if (usersAsync.hasError) {
+      usersValue = '-';
+      usersTag = 'Error';
+      usersSubtitle = 'Gagal memuat pengguna';
+      configUsersTag = 'Error';
+    } else {
+      final usersList =
+          usersAsync.asData?.value ?? usersAsync.valueOrNull ?? const <User>[];
+      final totalUsers = usersList.length;
+      usersValue = '$totalUsers';
+      configUsersTag = '$totalUsers Akun';
+      if (usersList.isEmpty) {
+        usersTag = '0 User';
+        usersSubtitle = 'Belum ada akun pengguna';
+      } else {
+        final activeCount = usersList.where((u) => u.isActive).length;
+        final inactiveCount = totalUsers - activeCount;
+        final pemohonCount =
+            usersList.where((u) => u.role == UserRole.pemohon).length;
+        final oprCount =
+            usersList.where((u) => u.role == UserRole.operator).length;
+        final asetCount =
+            usersList.where((u) => u.role == UserRole.bagianAset).length;
+        final kadivCount =
+            usersList.where((u) => u.role == UserRole.kadiv).length;
+        final adminCount =
+            usersList.where((u) => u.role == UserRole.admin).length;
 
-    final categoriesList =
-        categoriesAsync.asData?.value ??
-        categoriesAsync.valueOrNull ??
-        const <AssetCategory>[];
-    final totalCategories = categoriesList.isNotEmpty
-        ? categoriesList.length
-        : 2;
+        final roleParts = <String>[];
+        if (pemohonCount > 0) roleParts.add('$pemohonCount Pemohon');
+        if (oprCount > 0) roleParts.add('$oprCount Opr');
+        if (asetCount > 0) roleParts.add('$asetCount Aset');
+        if (kadivCount > 0) roleParts.add('$kadivCount Kadiv');
+        if (adminCount > 0) roleParts.add('$adminCount Admin');
+
+        usersTag = '$activeCount Aktif';
+        usersSubtitle = roleParts.isNotEmpty
+            ? roleParts.join(' • ')
+            : (inactiveCount > 0
+                ? '$activeCount Aktif • $inactiveCount Nonaktif'
+                : '$activeCount Aktif');
+      }
+    }
+
+    // 2. Location metrics
+    final String locationsValue;
+    final String locationsTag;
+    final String locationsSubtitle;
+    final String configLocationsTag;
+
+    if (locationsAsync.isLoading) {
+      locationsValue = '...';
+      locationsTag = 'Memuat';
+      locationsSubtitle = 'Memuat unit & lokasi...';
+      configLocationsTag = 'Memuat...';
+    } else if (locationsAsync.hasError) {
+      locationsValue = '-';
+      locationsTag = 'Error';
+      locationsSubtitle = 'Gagal memuat lokasi';
+      configLocationsTag = 'Error';
+    } else {
+      final locationsList =
+          locationsAsync.asData?.value ??
+          locationsAsync.valueOrNull ??
+          const <LocationItem>[];
+      final totalLocations = locationsList.length;
+      locationsValue = '$totalLocations';
+      configLocationsTag = '$totalLocations Unit';
+      if (locationsList.isEmpty) {
+        locationsTag = '0 Unit';
+        locationsSubtitle = 'Belum ada unit kerja / lokasi';
+      } else {
+        final activeCount = locationsList.where((l) => l.isActive).length;
+        final branchCount = locationsList.where((l) => l.isBranch).length;
+        final nonBranchCount = totalLocations - branchCount;
+
+        final locParts = <String>[];
+        if (nonBranchCount > 0) locParts.add('$nonBranchCount Pusat/Unit');
+        if (branchCount > 0) locParts.add('$branchCount Cabang');
+
+        locationsTag = '$activeCount Aktif';
+        locationsSubtitle = locParts.isNotEmpty
+            ? locParts.join(' • ')
+            : '$activeCount Unit Aktif';
+      }
+    }
+
+    // 3. Asset Categories metrics
+    final String categoriesValue;
+    final String categoriesTag;
+    final String categoriesSubtitle;
+    final String configCategoriesTag;
+
+    if (categoriesAsync.isLoading) {
+      categoriesValue = '...';
+      categoriesTag = 'Memuat';
+      categoriesSubtitle = 'Memuat kategori aset...';
+      configCategoriesTag = 'Memuat...';
+    } else if (categoriesAsync.hasError) {
+      categoriesValue = '-';
+      categoriesTag = 'Error';
+      categoriesSubtitle = 'Gagal memuat kategori';
+      configCategoriesTag = 'Error';
+    } else {
+      final categoriesList =
+          categoriesAsync.asData?.value ??
+          categoriesAsync.valueOrNull ??
+          const <AssetCategory>[];
+      final totalCategories = categoriesList.length;
+      categoriesValue = '$totalCategories';
+      if (categoriesList.isEmpty) {
+        categoriesTag = '0 Kategori';
+        categoriesSubtitle = 'Belum ada kategori aset';
+        configCategoriesTag = '0 Kategori';
+      } else {
+        final activeCount = categoriesList.where((c) => c.isActive).length;
+        final catLabels = categoriesList
+            .map((c) => c.code.isNotEmpty ? c.code : c.name)
+            .take(4)
+            .join(' • ');
+        final overflowText =
+            categoriesList.length > 4 ? ' • +${categoriesList.length - 4}' : '';
+
+        categoriesTag = '$activeCount Aktif';
+        categoriesSubtitle = '$catLabels$overflowText';
+        configCategoriesTag = categoriesList.length <= 2
+            ? categoriesList
+                .map((c) => c.code.isNotEmpty ? c.code : c.name)
+                .join(' & ')
+            : '$totalCategories Kategori';
+      }
+    }
+
+    // 4. Transaction mutations metrics (Data Transaksi Backend Nyata)
+    final String mutationsValue;
+    final String mutationsTag;
+    final String mutationsSubtitle;
+
+    if (mutationsAsync.isLoading) {
+      mutationsValue = '...';
+      mutationsTag = 'Memuat';
+      mutationsSubtitle = 'Memuat data transaksi...';
+    } else if (mutationsAsync.hasError) {
+      mutationsValue = '-';
+      mutationsTag = 'Backend';
+      mutationsSubtitle = 'Gagal memuat mutasi';
+    } else {
+      final mutationsList = mutationsAsync.asData?.value ??
+          mutationsAsync.valueOrNull ??
+          const <Mutation>[];
+      final totalMutations = mutationsList.length;
+      mutationsValue = '$totalMutations Tiket';
+      if (mutationsList.isEmpty) {
+        mutationsTag = '0 Tiket';
+        mutationsSubtitle = 'Belum ada transaksi mutasi';
+      } else {
+        final activeCount = mutationsList
+            .where((m) =>
+                m.status != MutationStatus.completed &&
+                m.status != MutationStatus.rejected)
+            .length;
+        final completedCount = mutationsList
+            .where((m) => m.status == MutationStatus.completed)
+            .length;
+        mutationsTag = '$activeCount Proses';
+        mutationsSubtitle = '$completedCount Selesai • $activeCount Dalam Proses';
+      }
+    }
 
     return LayoutBuilder(
       builder: (context, constraints) {
@@ -180,6 +335,7 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
               ref.invalidate(masterUsersProvider);
               ref.invalidate(masterLocationsProvider);
               ref.invalidate(assetCategoriesProvider);
+              ref.invalidate(adminMutationsProvider);
             },
             child: SingleChildScrollView(
               controller: _scrollController,
@@ -212,18 +368,27 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
                         // A. RINGKASAN MASTER DATA SISTEM (Adaptive 4-col or 2x2 Bento Metric Grid)
                         _buildMasterDataSummarySection(
                           availableWidth: availableWidth,
-                          totalUsers: totalUsers,
-                          usersBreakdown: usersBreakdown,
-                          totalLocations: totalLocations,
-                          totalCategories: totalCategories,
+                          usersValue: usersValue,
+                          usersTag: usersTag,
+                          usersSubtitle: usersSubtitle,
+                          locationsValue: locationsValue,
+                          locationsTag: locationsTag,
+                          locationsSubtitle: locationsSubtitle,
+                          categoriesValue: categoriesValue,
+                          categoriesTag: categoriesTag,
+                          categoriesSubtitle: categoriesSubtitle,
+                          mutationsValue: mutationsValue,
+                          mutationsTag: mutationsTag,
+                          mutationsSubtitle: mutationsSubtitle,
                         ),
                         const SizedBox(height: 24),
 
                         // B. SECTION UTAMA: KELOLA MASTER DATA & KONFIGURASI (Responsive Grid)
                         _buildMasterDataConfigSection(
                           context: context,
-                          totalUsers: totalUsers,
-                          totalLocations: totalLocations,
+                          usersTag: configUsersTag,
+                          locationsTag: configLocationsTag,
+                          categoriesTag: configCategoriesTag,
                           columns: actionGridColumns,
                         ),
                         const SizedBox(height: 24),
@@ -696,45 +861,53 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
   // ── 2. RINGKASAN MASTER DATA SISTEM (BENTO METRIC GRID) ────────────────────
   Widget _buildMasterDataSummarySection({
     required double availableWidth,
-    required int totalUsers,
-    required String usersBreakdown,
-    required int totalLocations,
-    required int totalCategories,
+    required String usersValue,
+    required String usersTag,
+    required String usersSubtitle,
+    required String locationsValue,
+    required String locationsTag,
+    required String locationsSubtitle,
+    required String categoriesValue,
+    required String categoriesTag,
+    required String categoriesSubtitle,
+    required String mutationsValue,
+    required String mutationsTag,
+    required String mutationsSubtitle,
   }) {
     final card1 = _buildBentoMetricCard(
       title: 'Total Pengguna',
-      value: '$totalUsers',
-      tag: 'User',
-      subtitle: usersBreakdown,
+      value: usersValue,
+      tag: usersTag,
+      subtitle: usersSubtitle,
       icon: Icons.group,
       onTap: () => context.push(RouteNames.adminUsersPath),
     );
 
     final card2 = _buildBentoMetricCard(
       title: 'Unit & Cabang',
-      value: '$totalLocations',
-      tag: 'Unit',
-      subtitle: '1 KP • 18 KC • 12 KCP • 3 Gudang',
+      value: locationsValue,
+      tag: locationsTag,
+      subtitle: locationsSubtitle,
       icon: Icons.account_balance,
       onTap: () => context.push(RouteNames.adminLocationsPath),
     );
 
     final card3 = _buildBentoMetricCard(
       title: 'Kategori Aset',
-      value: '$totalCategories',
-      tag: 'Kategori',
-      subtitle: 'TI (2.410) & Umum (3.892)',
+      value: categoriesValue,
+      tag: categoriesTag,
+      subtitle: categoriesSubtitle,
       icon: Icons.category,
       onTap: () => context.push(RouteNames.adminCategoriesPath),
     );
 
     final card4 = _buildBentoMetricCard(
-      title: 'Hak Akses RBAC',
-      value: '5 Role',
-      tag: 'Aktif',
-      subtitle: 'Pemohon, Opr, Aset, Kadiv, Admin',
-      icon: Icons.admin_panel_settings,
-      onTap: () => _showRbacInfoModal(context),
+      title: 'Transaksi Mutasi Aset',
+      value: mutationsValue,
+      tag: mutationsTag,
+      subtitle: mutationsSubtitle,
+      icon: Icons.sync_alt,
+      onTap: () => context.push(RouteNames.adminAuditLogPath),
     );
 
     return Column(
@@ -963,8 +1136,9 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
   // ── 3. SECTION UTAMA: KELOLA MASTER DATA & KONFIGURASI (5 Action Cards) ────
   Widget _buildMasterDataConfigSection({
     required BuildContext context,
-    required int totalUsers,
-    required int totalLocations,
+    required String usersTag,
+    required String locationsTag,
+    required String categoriesTag,
     required int columns,
   }) {
     final cards = [
@@ -972,7 +1146,7 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
         key: const Key('action_user_management'),
         icon: Icons.manage_accounts,
         title: 'Kelola Pengguna (User Management)',
-        tag: '$totalUsers Akun',
+        tag: usersTag,
         subtitle: 'Aktivasi akun, assign unit, dan reset akses pegawai',
         onTap: () => context.push(RouteNames.adminUsersPath),
       ),
@@ -988,7 +1162,7 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
         key: const Key('action_locations_management'),
         icon: Icons.apartment,
         title: 'Master Unit Kerja & Lokasi Cabang',
-        tag: '$totalLocations Cabang',
+        tag: locationsTag,
         subtitle: 'Struktur Kantor Pusat, KC, KCP, dan Pool Gudang Aset',
         onTap: () => context.push(RouteNames.adminLocationsPath),
       ),
@@ -996,7 +1170,7 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
         key: const Key('action_categories_management'),
         icon: Icons.inventory_2,
         title: 'Kategori Master Aset',
-        tag: 'TI & Umum',
+        tag: categoriesTag,
         subtitle: 'Klasifikasi Aset TI & Aset Umum beserta format tiket',
         onTap: () => context.push(RouteNames.adminCategoriesPath),
       ),
@@ -1248,8 +1422,22 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
     );
   }
 
-  // ── 4. SECTION SEKUNDER: LOG AUDIT & AKTIVITAS TERKINI (Stitch 1:1) ─────────
+  // ── 4. SECTION SEKUNDER: LOG AUDIT & AKTIVITAS TERKINI (Data Nyata Sistem) ───
   Widget _buildAuditLogSection(BuildContext context) {
+    final usersList = ref.watch(masterUsersProvider).valueOrNull ?? const <User>[];
+    final locationsList = ref.watch(masterLocationsProvider).valueOrNull ?? const <LocationItem>[];
+    final categoriesList = ref.watch(assetCategoriesProvider).valueOrNull ?? const <AssetCategory>[];
+    final mutationsList = ref.watch(adminMutationsProvider).valueOrNull ?? const <Mutation>[];
+
+    final latestMutation = mutationsList.isNotEmpty ? mutationsList.first : null;
+    final latestUser = usersList.isNotEmpty ? usersList.first : null;
+    final latestLoc = locationsList.isNotEmpty
+        ? locationsList.firstWhere((l) => l.isBranch, orElse: () => locationsList.first)
+        : null;
+
+    final userInitials = latestUser != null ? _formatInitials(latestUser.name) : 'AP';
+    final locInitials = latestLoc != null ? _formatInitials(latestLoc.name) : 'LK';
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -1318,31 +1506,72 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
         ),
         const SizedBox(height: 12),
 
-        // Log Items (Stitch 1:1)
+        // Log Items (Bersumber dari transaksi nyata & master data backend)
+        if (latestMutation != null) ...[
+          _buildLogCard(
+            avatarText: 'MUT',
+            title: 'Transaksi Mutasi #${latestMutation.ticketNumber}',
+            time: 'Aktif',
+            richDesc: RichText(
+              text: TextSpan(
+                style: _t(size: 12, color: _StitchColors.slate600, h: 1.3),
+                children: [
+                  const TextSpan(text: 'Aset '),
+                  TextSpan(
+                    text: latestMutation.asset.name,
+                    style: _t(
+                      size: 12,
+                      w: FontWeight.w700,
+                      color: _StitchColors.slate800,
+                    ),
+                  ),
+                  TextSpan(
+                    text: ' diajukan oleh ${latestMutation.applicantName} menuju ${latestMutation.targetLocation}.',
+                  ),
+                ],
+              ),
+            ),
+            tagCode: '#MUT-${latestMutation.id.replaceAll('mut_', '')}',
+            statusChip: Text(
+              latestMutation.status.displayName,
+              style: _t(
+                size: 10,
+                w: FontWeight.w600,
+                color: _StitchColors.forestTeal,
+              ),
+            ),
+          ),
+          const SizedBox(height: 10),
+        ],
+
         _buildLogCard(
-          avatarText: 'AP',
-          title: 'Pembaruan Node Cabang',
-          time: '12m lalu',
+          avatarText: locInitials,
+          title: 'Unit Kerja Terdaftar di Database',
+          time: 'Aktif',
           richDesc: RichText(
             text: TextSpan(
               style: _t(size: 12, color: _StitchColors.slate600, h: 1.3),
               children: [
                 const TextSpan(
-                  text: 'Node transit aset logistik regional ditambahkan ke ',
+                  text: 'Lokasi resmi terverifikasi: ',
                 ),
                 TextSpan(
-                  text: 'KCP Thamrin',
+                  text: latestLoc?.name ?? 'Kantor Pusat',
                   style: _t(
                     size: 12,
                     w: FontWeight.w700,
                     color: _StitchColors.slate800,
                   ),
                 ),
-                const TextSpan(text: '.'),
+                TextSpan(
+                  text: latestLoc != null && latestLoc.description != null && latestLoc.description!.isNotEmpty
+                      ? ' (${latestLoc.description}).'
+                      : '.',
+                ),
               ],
             ),
           ),
-          tagCode: '#LOC-1092',
+          tagCode: latestLoc != null ? '#LOC-${latestLoc.id}' : '#LOC-MASTER',
           statusChip: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
@@ -1356,7 +1585,7 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
               ),
               const SizedBox(width: 4),
               Text(
-                'Sukses Diterapkan',
+                latestLoc?.isActive == true ? 'Aktif Resmi' : 'Menunggu Konfirmasi',
                 style: _t(
                   size: 10,
                   w: FontWeight.w600,
@@ -1369,31 +1598,31 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
         const SizedBox(height: 10),
 
         _buildLogCard(
-          avatarText: 'DP',
-          title: 'Penugasan Role Pegawai',
-          time: '1j lalu',
+          avatarText: userInitials,
+          title: 'Penugasan Pengguna Sistem',
+          time: 'Aktif',
           richDesc: RichText(
             text: TextSpan(
               style: _t(size: 12, color: _StitchColors.slate600, h: 1.3),
               children: [
-                const TextSpan(text: 'User '),
+                const TextSpan(text: 'Pengguna '),
                 TextSpan(
-                  text: 'Dimas Pratama',
+                  text: latestUser?.name ?? 'Admin IT',
                   style: _t(
                     size: 12,
                     w: FontWeight.w700,
                     color: _StitchColors.slate800,
                   ),
                 ),
-                const TextSpan(
-                  text: ' dialokasikan hak akses Petugas Aset TI.',
+                TextSpan(
+                  text: ' dengan role ${latestUser?.role.displayName ?? "Administrator"} (${latestUser?.department ?? "Divisi TI"}).',
                 ),
               ],
             ),
           ),
-          tagCode: '#RBAC-441',
+          tagCode: latestUser != null ? '#USR-${latestUser.id}' : '#USR-MASTER',
           statusChip: Text(
-            'Oleh Admin Utama',
+            latestUser?.isActive == true ? 'User Aktif' : 'Nonaktif',
             style: _t(
               size: 10,
               w: FontWeight.w500,
@@ -1404,14 +1633,14 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
         const SizedBox(height: 10),
 
         _buildLogCard(
-          avatarText: 'SYS',
-          title: 'Sinkronisasi Basis Data Aset',
-          time: '3j lalu',
+          avatarText: 'API',
+          title: 'Sinkronisasi Master Data Backend',
+          time: 'Live',
           richDesc: Text(
-            'Validasi 6.302 entitas inventaris server selesai tanpa anomali data.',
+            'Sistem mengelola ${usersList.length} pengguna terdaftar, ${locationsList.length} unit lokasi fisik, dan ${categoriesList.length} kategori aset resmi.',
             style: _t(size: 12, color: _StitchColors.slate600, h: 1.3),
           ),
-          tagCode: '#SYNC-882',
+          tagCode: '#SYNC-OK',
           statusChip: Row(
             mainAxisSize: MainAxisSize.min,
             children: [

@@ -324,8 +324,8 @@ void main() {
         await tester.tap(dropdownFinder);
         await tester.pumpAndSettle();
 
-        expect(find.text('Cabang Bandung'), findsWidgets);
-        await tester.tap(find.text('Cabang Bandung').last);
+        expect(find.text('Cabang Donggala'), findsWidgets);
+        await tester.tap(find.text('Cabang Donggala').last);
         await tester.pumpAndSettle();
       },
     );

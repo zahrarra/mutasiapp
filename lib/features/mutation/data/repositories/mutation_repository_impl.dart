@@ -426,7 +426,12 @@ class MutationRepositoryImpl implements MutationRepository {
       assetIdInt ??= 1;
 
       // 2. Resolve destination_location_id (integer required by DB foreign key)
-      int? destLocationId = int.tryParse(targetLocation);
+      int? destLocationId;
+      if (params.destinationLocationId != null &&
+          params.destinationLocationId!.trim().isNotEmpty) {
+        destLocationId = int.tryParse(params.destinationLocationId!.trim());
+      }
+      destLocationId ??= int.tryParse(targetLocation);
       if (destLocationId == null) {
         final locsRes = await apiClient!.get('/api/v1/locations');
         if (locsRes is Success<Map<String, dynamic>>) {
@@ -1146,47 +1151,26 @@ class MutationRepositoryImpl implements MutationRepository {
       // 1. Resolve target_pic_id ke integer database yang valid
       int? targetPicId = int.tryParse(newPic ?? '');
       if (targetPicId == null && newPic != null && newPic.trim().isNotEmpty) {
-        final picLower = newPic.toLowerCase();
-        if (picLower.contains('admin') || picLower.contains('zahra')) {
-          targetPicId = 1;
-        } else if (picLower.contains('pemohon') ||
-            picLower.contains('dirly') ||
-            picLower.contains('rina')) {
-          targetPicId = 2;
-        } else if (picLower.contains('operator') ||
-            picLower.contains('marsya') ||
-            picLower.contains('budi')) {
-          targetPicId = 3;
-        } else if (picLower.contains('aset') ||
-            picLower.contains('akam') ||
-            picLower.contains('hendra') ||
-            picLower.contains('rizky')) {
-          targetPicId = 4;
-        } else if (picLower.contains('kadiv') ||
-            picLower.contains('pemimpin') ||
-            picLower.contains('jalil') ||
-            picLower.contains('dahlan')) {
-          targetPicId = 5;
-        } else {
-          try {
-            final usersRes = await apiClient!.get('/api/v1/admin/users');
-            if (usersRes is Success<Map<String, dynamic>>) {
-              final list = usersRes.data['data'] as List<dynamic>? ?? [];
-              for (final u in list) {
-                if (u is Map<String, dynamic>) {
-                  final id = int.tryParse(u['id']?.toString() ?? '');
-                  final name = u['name']?.toString().toLowerCase() ?? '';
-                  if (id != null &&
-                      (picLower.contains(name) || name.contains(picLower))) {
-                    targetPicId = id;
-                    break;
-                  }
+        final cleanPic = newPic.trim().toLowerCase();
+        try {
+          final usersRes = await apiClient!.get('/api/v1/admin/users');
+          if (usersRes is Success<Map<String, dynamic>>) {
+            final list = usersRes.data['data'] as List<dynamic>? ?? [];
+            for (final u in list) {
+              if (u is Map<String, dynamic>) {
+                final id = int.tryParse(u['id']?.toString() ?? '');
+                final name = u['name']?.toString().toLowerCase() ?? '';
+                if (id != null &&
+                    (cleanPic == name ||
+                        cleanPic.contains(name) ||
+                        name.contains(cleanPic))) {
+                  targetPicId = id;
+                  break;
                 }
               }
             }
-          } catch (_) {}
-          targetPicId ??= 3; // Fallback ke Marsya (Operator / Pool PIC)
-        }
+          }
+        } catch (_) {}
       }
 
       if (targetPicId != null) {
@@ -1517,23 +1501,100 @@ class MutationRepositoryImpl implements MutationRepository {
   }
 
   @override
+  Future<Result<Mutation>> reportDiscrepancy({
+    required String mutationId,
+    required String reason,
+  }) async {
+    if (apiClient != null) {
+      final cleanMutationId = mutationId.replaceAll('mut_', '');
+      final response = await apiClient!.post(
+        '/mutations/$cleanMutationId/report-discrepancy',
+        body: {'reason': reason.trim()},
+      );
+
+      switch (response) {
+        case Success(:final data):
+          final success = data['success'] as bool? ?? true;
+          if (!success) {
+            return Result.failure(
+              ServerFailure(
+                message:
+                    data['message'] as String? ??
+                    'Gagal melaporkan ketidaksesuaian pengajuan mutasi.',
+              ),
+            );
+          }
+          final mutationMap = data['data'] as Map<String, dynamic>?;
+          if (mutationMap == null) {
+            return const Result.failure(
+              ServerFailure(
+                message: 'Data response laporan ketidaksesuaian tidak valid.',
+              ),
+            );
+          }
+          try {
+            final updated = MutationModel.fromJson(mutationMap);
+            final index = _mutations.indexWhere((m) => m.id == mutationId);
+            if (index != -1) {
+              _mutations[index] = updated;
+            } else {
+              _mutations.insert(0, updated);
+            }
+            return Result.success(updated);
+          } catch (e) {
+            return Result.failure(
+              ServerFailure(message: 'Format data mutasi tidak valid: $e'),
+            );
+          }
+        case AppFailure(:final failure):
+          return Result.failure(failure);
+      }
+    }
+
+    await Future.delayed(const Duration(milliseconds: 300));
+    final index = _mutations.indexWhere((m) => m.id == mutationId);
+    if (index == -1) {
+      return const Result.failure(
+        NotFoundFailure(message: 'Pengajuan mutasi tidak ditemukan.'),
+      );
+    }
+    final existing = _mutations[index];
+    final updated = existing.copyWith(
+      status: MutationStatus.waitingAssetVerification,
+      confirmationReason: reason.trim(),
+      returnReason: reason.trim(),
+    );
+    _mutations[index] = updated;
+    return Result.success(updated);
+  }
+
+  @override
   Future<Result<Mutation>> confirmMutationResult({
     required String mutationId,
     required String confirmedBy,
     required bool isSesuai,
     String? reason,
   }) async {
+    if (!isSesuai) {
+      return reportDiscrepancy(
+        mutationId: mutationId,
+        reason: (reason != null && reason.trim().isNotEmpty)
+            ? reason.trim()
+            : 'Kondisi fisik aset tidak sesuai.',
+      );
+    }
+
     if (apiClient != null) {
       final cleanMutationId = mutationId.replaceAll('mut_', '');
       final body = <String, dynamic>{
-        'confirmation': isSesuai ? 'sesuai' : 'tidak_sesuai',
+        'confirmation': 'sesuai',
       };
-      if (!isSesuai && reason != null && reason.trim().isNotEmpty) {
+      if (reason != null && reason.trim().isNotEmpty) {
         body['reason'] = reason.trim();
       }
 
       final response = await apiClient!.post(
-        '/api/v1/mutations/$cleanMutationId/confirm',
+        '/mutations/$cleanMutationId/confirm',
         body: body,
       );
 
@@ -1575,6 +1636,7 @@ class MutationRepositoryImpl implements MutationRepository {
           return Result.failure(failure);
       }
     }
+
 
     await Future.delayed(const Duration(milliseconds: 300));
 

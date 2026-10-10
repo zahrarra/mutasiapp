@@ -16,10 +16,10 @@ import 'package:google_fonts/google_fonts.dart';
 import '../../../../app/router/route_names.dart';
 import '../../../../core/widgets/custom_floating_nav_bar.dart';
 import '../../../../core/widgets/inline_searchable_dropdown.dart';
+import '../../../auth/domain/entities/user.dart';
 import '../../../auth/domain/entities/user_role.dart';
 import '../../../auth/presentation/providers/auth_provider.dart';
 import '../../../mutation/domain/entities/mutation.dart';
-import '../../../mutation/presentation/providers/mutation_form_provider.dart';
 import '../../../notification/presentation/providers/notification_provider.dart';
 import '../providers/bagian_aset_verification_provider.dart';
 
@@ -296,7 +296,6 @@ class _BagianAsetDashboardScreenState
   // DIALOG: PENETAPAN PIC BARU & VERIFIKASI (PRD V1.1 §6.4)
   // ──────────────────────────────────────────────────────────────────────────
   void _openPicAssignmentDialog(BuildContext context, Mutation mutation) {
-    final availablePics = ref.read(availablePicsProvider);
     final picController = TextEditingController();
     final formKey = GlobalKey<FormState>();
     bool isSubmitting = false;
@@ -443,17 +442,82 @@ class _BagianAsetDashboardScreenState
                           ),
                         ),
                         const SizedBox(height: 6),
-                        InlineSearchableDropdown(
-                          fieldKey: const Key('input_pic_baru_dashboard'),
-                          labelText: 'Nama PIC Baru',
-                          hintText: 'Cari atau pilih nama PIC baru...',
-                          controller: picController,
-                          items: availablePics,
-                          validator: (value) {
-                            if (value == null || value.trim().isEmpty) {
-                              return 'Wajib memilih nama PIC baru';
+                        Consumer(
+                          builder: (context, modalRef, _) {
+                            final usersAsync = modalRef.watch(masterUsersProvider);
+                            final users = usersAsync.valueOrNull ?? [];
+                            final activeUsers = users.where((u) => u.isActive).toList();
+                            final availablePics = activeUsers
+                                .map((u) => '${u.name} (${u.role.displayName})')
+                                .toList();
+
+                            if (usersAsync.isLoading && activeUsers.isEmpty) {
+                              return const Padding(
+                                padding: EdgeInsets.symmetric(vertical: 12),
+                                child: Row(
+                                  children: [
+                                    SizedBox(
+                                      width: 16,
+                                      height: 16,
+                                      child: CircularProgressIndicator(strokeWidth: 2),
+                                    ),
+                                    SizedBox(width: 10),
+                                    Text('Memuat daftar PIC dari server...', style: TextStyle(fontSize: 12)),
+                                  ],
+                                ),
+                              );
                             }
-                            return null;
+
+                            if (usersAsync.hasError && activeUsers.isEmpty) {
+                              return Container(
+                                padding: const EdgeInsets.all(10),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFFFEF2F2),
+                                  borderRadius: BorderRadius.circular(8),
+                                  border: Border.all(color: const Color(0xFFFCA5A5)),
+                                ),
+                                child: Row(
+                                  children: [
+                                    const Icon(Icons.error_outline, size: 18, color: Color(0xFFDC2626)),
+                                    const SizedBox(width: 8),
+                                    Expanded(
+                                      child: Text(
+                                        'Gagal memuat daftar PIC dari server.',
+                                        style: _font(size: 11.5, color: const Color(0xFF991B1B)),
+                                      ),
+                                    ),
+                                    TextButton(
+                                      onPressed: () => modalRef.read(masterUsersProvider.notifier).loadUsers(),
+                                      child: const Text('Coba Lagi', style: TextStyle(fontSize: 11.5)),
+                                    ),
+                                  ],
+                                ),
+                              );
+                            }
+
+                            if (activeUsers.isEmpty) {
+                              return Padding(
+                                padding: const EdgeInsets.symmetric(vertical: 10),
+                                child: Text(
+                                  'Tidak ada data pengguna aktif yang tersedia untuk dijadikan PIC.',
+                                  style: _font(size: 12, color: _C.textSecondary),
+                                ),
+                              );
+                            }
+
+                            return InlineSearchableDropdown(
+                              fieldKey: const Key('input_pic_baru_dashboard'),
+                              labelText: 'Nama PIC Baru',
+                              hintText: 'Cari atau pilih nama PIC baru...',
+                              controller: picController,
+                              items: availablePics,
+                              validator: (value) {
+                                if (value == null || value.trim().isEmpty) {
+                                  return 'Wajib memilih nama PIC baru';
+                                }
+                                return null;
+                              },
+                            );
                           },
                         ),
                         const SizedBox(height: 20),
@@ -482,6 +546,22 @@ class _BagianAsetDashboardScreenState
                                       bottomSheetContext,
                                     );
 
+                                    // Resolve target_pic_id dari User ID database asli
+                                    final users = ref.read(masterUsersProvider).valueOrNull ?? [];
+                                    final activeUsers = users.where((u) => u.isActive).toList();
+                                    User? matchedUser;
+                                    for (final u in activeUsers) {
+                                      final fullLabel = '${u.name} (${u.role.displayName})';
+                                      if (fullLabel == selectedPic ||
+                                          u.name.toLowerCase() == selectedPic.toLowerCase() ||
+                                          u.id == selectedPic) {
+                                        matchedUser = u;
+                                        break;
+                                      }
+                                    }
+                                    final picIdToSubmit = matchedUser?.id ?? selectedPic;
+                                    final displayName = matchedUser?.name ?? selectedPic;
+
                                     final success = await ref
                                         .read(
                                           bagianAsetVerificationActionProvider
@@ -489,7 +569,7 @@ class _BagianAsetDashboardScreenState
                                         )
                                         .verifyAndForward(
                                           mutationId: mutation.id,
-                                          newPic: selectedPic,
+                                          newPic: picIdToSubmit,
                                         );
 
                                     if (!mounted) return;
@@ -500,7 +580,7 @@ class _BagianAsetDashboardScreenState
                                         SnackBar(
                                           backgroundColor: _C.teal,
                                           content: Text(
-                                            'PIC Baru ($selectedPic) berhasil ditetapkan & diteruskan ke Pemimpin Divisi.',
+                                            'PIC Baru ($displayName) berhasil ditetapkan & diteruskan ke Pemimpin Divisi.',
                                             style: _font(
                                               size: 13,
                                               color: Colors.white,

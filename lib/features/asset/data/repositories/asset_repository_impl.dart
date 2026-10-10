@@ -6,6 +6,7 @@
 import '../../../../core/errors/failures.dart';
 import '../../../../core/errors/result.dart';
 import '../../../../core/network/api_client.dart';
+import '../../../../core/storage/secure_storage.dart';
 import '../models/asset_model.dart';
 import '../../domain/entities/asset.dart';
 import '../../domain/entities/asset_category.dart';
@@ -307,9 +308,10 @@ class AssetRepositoryImpl implements AssetRepository {
           if (assetMap != null) {
             return Result.success(AssetModel.fromJson(assetMap));
           }
-          break;
-        case AppFailure():
-          // Jika gagal di network (misal testing sandbox atau offline), fallback ke mock assets
+        case AppFailure(:final failure):
+          if (!SecureStorage.isTestEnvironment) {
+            return Result.failure(failure);
+          }
           break;
       }
     }
@@ -328,8 +330,50 @@ class AssetRepositoryImpl implements AssetRepository {
 
   @override
   Future<Result<List<AssetHistoryItem>>> getAssetHistory(String assetId) async {
+    if (apiClient != null) {
+      final cleanId = assetId.replaceAll('ast_', '');
+      final res = await apiClient!.get('/assets/$cleanId/history');
+      if (res is Success<Map<String, dynamic>>) {
+        final rawList = res.data['data'] as List<dynamic>? ?? [];
+        final list = rawList.map((item) {
+          final map = item as Map<String, dynamic>;
+          final prevLoc = map['previous_location'] is Map
+              ? map['previous_location']['name']?.toString()
+              : map['previous_location_id']?.toString();
+          final newLoc = map['new_location'] is Map
+              ? map['new_location']['name']?.toString()
+              : map['new_location_id']?.toString();
+          final prevPic = map['previous_pic'] is Map
+              ? map['previous_pic']['name']?.toString()
+              : map['previous_pic_id']?.toString();
+          final newPic = map['new_pic'] is Map
+              ? map['new_pic']['name']?.toString()
+              : map['new_pic_id']?.toString();
+          final updater = map['updater'] is Map
+              ? map['updater']['name']?.toString()
+              : map['updated_by']?.toString();
+
+          return AssetHistoryItem(
+            id: (map['id'] ?? '').toString(),
+            ticketNumber: (map['ticket_number'] ?? '-').toString(),
+            date: DateTime.tryParse(map['date']?.toString() ?? '') ??
+                DateTime.tryParse(map['created_at']?.toString() ?? '') ??
+                DateTime.now(),
+            previousLocation: prevLoc ?? '-',
+            newLocation: newLoc ?? '-',
+            previousPic: prevPic ?? '-',
+            newPic: newPic ?? '-',
+            updatedBy: updater ?? 'System',
+          );
+        }).toList();
+        return Result.success(List.unmodifiable(list));
+      } else if (res is AppFailure<Map<String, dynamic>>) {
+        return Result.failure(res.failure);
+      }
+    }
+
     try {
-      final asset = _mockAssets.firstWhere((a) => a.id == assetId);
+      final asset = _mockAssets.firstWhere((a) => a.id == assetId || a.assetCode == assetId);
       return Result.success(asset.history);
     } catch (_) {
       return Result.failure(
@@ -338,8 +382,32 @@ class AssetRepositoryImpl implements AssetRepository {
     }
   }
 
+
   @override
   Future<Result<List<AssetCategory>>> getCategories() async {
+    if (apiClient != null) {
+      try {
+        final res = await apiClient!.get('/asset-categories');
+        if (res is Success<Map<String, dynamic>>) {
+          final rawList = res.data['data'] as List<dynamic>? ?? [];
+          final list = rawList.map((item) {
+            final map = item as Map<String, dynamic>;
+            return AssetCategory(
+              id: map['id'].toString(),
+              code: (map['code'] ?? '').toString(),
+              name: (map['name'] ?? '').toString(),
+              description: map['description']?.toString(),
+              isActive: map['is_active'] != false,
+            );
+          }).toList();
+          return Result.success(List.unmodifiable(list));
+        } else if (res is AppFailure<Map<String, dynamic>>) {
+          return Result.failure(res.failure);
+        }
+      } catch (e) {
+        return Result.failure(ServerFailure(message: e.toString()));
+      }
+    }
     return Result.success(List.unmodifiable(_mockCategories));
   }
 
@@ -352,6 +420,35 @@ class AssetRepositoryImpl implements AssetRepository {
         const ValidationFailure(message: 'Kode dan nama kategori wajib diisi.'),
       );
     }
+
+    if (apiClient != null) {
+      try {
+        final res = await apiClient!.post(
+          '/admin/asset-categories',
+          body: {
+            'name': cleanName,
+            'code': cleanCode,
+          },
+        );
+        if (res is Success<Map<String, dynamic>>) {
+          final map = res.data['data'] as Map<String, dynamic>;
+          final newCategory = AssetCategory(
+            id: map['id'].toString(),
+            code: (map['code'] ?? cleanCode).toString(),
+            name: (map['name'] ?? cleanName).toString(),
+            description: map['description']?.toString() ?? category.description?.trim(),
+            isActive: true,
+          );
+          _mockCategories.add(newCategory);
+          return Result.success(newCategory);
+        } else if (res is AppFailure<Map<String, dynamic>>) {
+          return Result.failure(res.failure);
+        }
+      } catch (e) {
+        return Result.failure(ServerFailure(message: e.toString()));
+      }
+    }
+
 
     final exists = _mockCategories.any(
       (c) =>
@@ -385,18 +482,48 @@ class AssetRepositoryImpl implements AssetRepository {
 
   @override
   Future<Result<AssetCategory>> updateCategory(AssetCategory category) async {
-    final index = _mockCategories.indexWhere((c) => c.id == category.id);
-    if (index == -1) {
-      return Result.failure(
-        const NotFoundFailure(message: 'Kategori tidak ditemukan.'),
-      );
-    }
-
     final cleanName = category.name.trim();
     final cleanCode = category.code.trim().toUpperCase();
     if (cleanName.isEmpty || cleanCode.isEmpty) {
       return Result.failure(
         const ValidationFailure(message: 'Kode dan nama kategori wajib diisi.'),
+      );
+    }
+
+    if (apiClient != null) {
+      try {
+        final res = await apiClient!.put(
+          '/admin/asset-categories/${category.id}',
+          body: {
+            'name': cleanName,
+            'code': cleanCode,
+          },
+        );
+        if (res is Success<Map<String, dynamic>>) {
+          final map = res.data['data'] as Map<String, dynamic>;
+          final updated = AssetCategory(
+            id: map['id'].toString(),
+            code: (map['code'] ?? cleanCode).toString(),
+            name: (map['name'] ?? cleanName).toString(),
+            description: map['description']?.toString() ?? category.description?.trim(),
+            isActive: true,
+          );
+          final idx = _mockCategories.indexWhere((c) => c.id == category.id);
+          if (idx != -1) _mockCategories[idx] = updated;
+          return Result.success(updated);
+        } else if (res is AppFailure<Map<String, dynamic>>) {
+          return Result.failure(res.failure);
+        }
+      } catch (e) {
+        return Result.failure(ServerFailure(message: e.toString()));
+      }
+    }
+
+
+    final index = _mockCategories.indexWhere((c) => c.id == category.id);
+    if (index == -1) {
+      return Result.failure(
+        const NotFoundFailure(message: 'Kategori tidak ditemukan.'),
       );
     }
 
@@ -441,13 +568,29 @@ class AssetRepositoryImpl implements AssetRepository {
 
   @override
   Future<Result<void>> deleteCategory(String id) async {
+    if (apiClient != null) {
+      try {
+        final res = await apiClient!.delete('/admin/asset-categories/$id');
+        if (res is Success<Map<String, dynamic>>) {
+          _mockCategories.removeWhere((c) => c.id == id);
+          return Result.success(null);
+        } else if (res is AppFailure<Map<String, dynamic>>) {
+          return Result.failure(res.failure);
+        }
+      } catch (e) {
+        return Result.failure(ValidationFailure(message: e.toString()));
+      }
+    }
+
+
     final isUsed = _mockAssets.any(
       (a) => a.category.id == id || a.category.code == id,
     );
     if (isUsed) {
       return Result.failure(
         const ValidationFailure(
-          message: 'Kategori tidak dapat dihapus permanen karena masih digunakan oleh aset terdaftar. Silakan nonaktifkan kategori.',
+          message:
+              'Kategori tidak dapat dihapus permanen karena masih digunakan oleh aset terdaftar. Silakan nonaktifkan kategori.',
         ),
       );
     }
@@ -577,31 +720,34 @@ class AssetRepositoryImpl implements AssetRepository {
       }
       locationId ??= 1;
 
-      // 3. Resolve pic_id (harus integer yang valid di tabel users)
+      // 3. Resolve pic_id (harus integer yang valid dan aktif di tabel users)
       int? picId = int.tryParse(params.picId);
       if (picId == null) {
-        final p = params.picId.toLowerCase();
-        if (p.contains('admin')) {
-          picId = 1;
-        } else if (p.contains('pemohon') ||
-            p.contains('dirly') ||
-            p.contains('rina')) {
-          picId = 2;
-        } else if (p.contains('operator') ||
-            p.contains('marsya') ||
-            p.contains('budi')) {
-          picId = 3;
-        } else if (p.contains('aset') ||
-            p.contains('akam') ||
-            p.contains('hendra')) {
-          picId = 4;
-        } else if (p.contains('kadiv') ||
-            p.contains('pemimpin') ||
-            p.contains('jalil')) {
-          picId = 5;
-        } else {
-          picId = 1;
-        }
+        try {
+          final usersRes = await apiClient!.get('/api/v1/admin/users');
+          if (usersRes is Success<Map<String, dynamic>>) {
+            final list = usersRes.data['data'] as List<dynamic>? ?? [];
+            final pLower = params.picId.toLowerCase().trim();
+            for (final item in list) {
+              if (item is Map<String, dynamic>) {
+                final id = int.tryParse(item['id']?.toString() ?? '');
+                final name = item['name']?.toString().toLowerCase() ?? '';
+                final email = item['email']?.toString().toLowerCase() ?? '';
+                final nip = item['nip']?.toString().toLowerCase() ?? '';
+                final isActive = item['is_active'] == true || item['is_active'] == 1;
+                if (id != null && isActive &&
+                    (name == pLower ||
+                        email == pLower ||
+                        nip == pLower ||
+                        pLower.contains(name) ||
+                        name.contains(pLower))) {
+                  picId = id;
+                  break;
+                }
+              }
+            }
+          }
+        } catch (_) {}
       }
 
       final body = <String, dynamic>{

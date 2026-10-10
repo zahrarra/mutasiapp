@@ -6,6 +6,9 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/errors/result.dart';
+import '../../../../core/providers/core_providers.dart';
+import '../../../auth/domain/entities/user.dart';
+import '../../../auth/presentation/providers/auth_provider.dart';
 import '../../../admin/data/repositories/location_repository_impl.dart';
 import '../../../admin/domain/entities/location_item.dart';
 import '../../../admin/domain/repositories/location_repository.dart';
@@ -192,7 +195,8 @@ final mutationFormProvider =
 
 /// Provider untuk [LocationRepository].
 final locationRepositoryProvider = Provider<LocationRepository>((ref) {
-  return LocationRepositoryImpl.instance;
+  final apiClient = ref.watch(apiClientProvider);
+  return LocationRepositoryImpl(apiClient: apiClient);
 });
 
 /// Notifier untuk manajemen master lokasi oleh Admin.
@@ -201,13 +205,18 @@ class MasterLocationsNotifier
   final LocationRepository _repository;
 
   MasterLocationsNotifier(this._repository)
-    : super(AsyncValue.data(_repository.currentLocations)) {
+    : super(_repository.currentLocations.isNotEmpty
+          ? AsyncValue.data(_repository.currentLocations)
+          : const AsyncValue.loading()) {
     loadLocations();
   }
 
   Future<void> loadLocations() async {
     state = const AsyncValue.loading();
-    final result = await _repository.getAllLocations();
+    var result = await _repository.getAllLocations();
+    if (result is AppFailure<List<LocationItem>>) {
+      result = await _repository.getActiveLocations();
+    }
     if (result is Success<List<LocationItem>>) {
       state = AsyncValue.data(result.data);
     } else if (result is AppFailure<List<LocationItem>>) {
@@ -266,30 +275,41 @@ final availableLocationsProvider = Provider<List<String>>((ref) {
   return locationsAsync.maybeWhen(
     data: (list) =>
         list.where((loc) => loc.isActive).map((loc) => loc.name).toList(),
-    orElse: () => [
-      'Lantai 1 — Lobby & Reception',
-      'Lantai 2 — Ruang Keuangan',
-      'Lantai 3 — Ruang IT Developer',
-      'Lantai 4 — Ruang Kadiv Aset',
-      'Lantai Server — Server Room B',
-      'Gedung A — Parkir Operasional',
-      'Cabang Surabaya',
-      'Cabang Bandung',
-      'Cabang Semarang',
-    ],
+    orElse: () => const [],
   );
 });
 
-/// Daftar PIC mock (production: dari API/master data).
+/// Daftar objek LocationItem aktif lengkap dengan ID database untuk formulir mutasi
+final availableActiveLocationItemsProvider = Provider<List<LocationItem>>((ref) {
+  final locationsAsync = ref.watch(masterLocationsProvider);
+  return locationsAsync.maybeWhen(
+    data: (list) => list.where((loc) => loc.isActive).toList(),
+    orElse: () => const [],
+  );
+});
+
+
+/// Provider daftar PIC pengguna aktif dari database (GET /admin/users).
+final availablePicUsersProvider = Provider<AsyncValue<List<User>>>((ref) {
+  final usersAsync = ref.watch(masterUsersProvider);
+  return usersAsync.whenData((users) {
+    return users.where((u) => u.isActive).toList();
+  });
+});
+
+/// Daftar nama PIC yang bersumber dari master data pengguna aktif di database.
+/// Menghapus seluruh nama palsu/mock hardcoded.
+/// Jika belum termuat atau gagal, mengembalikan list kosong tanpa fallback nama palsu.
 final availablePicsProvider = Provider<List<String>>((ref) {
-  return [
-    'Budi Santoso (IT Dept)',
-    'Siti Aminah (Finance)',
-    'Drs. Ahmad Dahlan (Kadiv)',
-    'Network Support Team',
-    'Driver Operasional General Affair',
-    'Bagian Aset — Rizky',
-    'Rina (HR Dept)',
-    'Procurement Team',
-  ];
+  final usersAsync = ref.watch(masterUsersProvider);
+  return usersAsync.maybeWhen(
+    data: (users) {
+      final activeUsers = users.where((u) => u.isActive).toList();
+      return activeUsers.map((u) {
+        final roleLabel = u.role.displayName;
+        return '${u.name} ($roleLabel)';
+      }).toList();
+    },
+    orElse: () => const <String>[],
+  );
 });
