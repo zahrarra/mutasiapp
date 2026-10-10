@@ -98,6 +98,157 @@ class Mutation extends Model
     }
 
     /**
+     * Resolusi nama petugas Operator yang memverifikasi pengajuan.
+     * Mengutamakan riwayat tindakan Operator atau relasi verifiedBy.
+     */
+    public function resolveVerifiedByName(): ?string
+    {
+        if ($this->relationLoaded('statusHistories')) {
+            $history = $this->statusHistories
+                ->where('role', 'operator')
+                ->whereIn('action', ['verify', 'forward'])
+                ->last();
+            if ($history?->user?->name) {
+                return $history->user->name;
+            }
+        } else {
+            $history = $this->statusHistories()
+                ->where('role', 'operator')
+                ->whereIn('action', ['verify', 'forward'])
+                ->with('user')
+                ->latest('id')
+                ->first();
+            if ($history?->user?->name) {
+                return $history->user->name;
+            }
+        }
+
+        if ($this->relationLoaded('verifiedBy') && $this->verifiedBy?->name) {
+            return $this->verifiedBy->name;
+        }
+
+        if ($this->verified_by) {
+            return User::find($this->verified_by)?->name;
+        }
+
+        return null;
+    }
+
+    /**
+     * Resolusi nama petugas Bagian Aset yang memverifikasi fisik/data aset.
+     * Mengutamakan riwayat tindakan bagian_aset.
+     */
+    public function resolveAssetVerifiedByName(): ?string
+    {
+        if ($this->relationLoaded('statusHistories')) {
+            $history = $this->statusHistories
+                ->where('role', 'bagian_aset')
+                ->whereIn('action', ['verify_asset', 'verify', 'update'])
+                ->last();
+            if ($history?->user?->name) {
+                return $history->user->name;
+            }
+        } else {
+            $history = $this->statusHistories()
+                ->where('role', 'bagian_aset')
+                ->whereIn('action', ['verify_asset', 'verify', 'update'])
+                ->with('user')
+                ->latest('id')
+                ->first();
+            if ($history?->user?->name) {
+                return $history->user->name;
+            }
+        }
+
+        if ($this->relationLoaded('approvedBy') && $this->approvedBy) {
+            if ($this->approvedBy->role?->name === 'bagian_aset') {
+                return $this->approvedBy->name;
+            }
+        } elseif ($this->approved_by) {
+            $user = User::with('role')->find($this->approved_by);
+            if ($user && $user->role?->name === 'bagian_aset') {
+                return $user->name;
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * Resolusi nama Kadiv / Pemimpin Divisi yang memberikan persetujuan (approval).
+     * Mengutamakan riwayat tindakan pemimpin_divisi dengan aksi approve.
+     */
+    public function resolveKadivApprovedByName(): ?string
+    {
+        if ($this->relationLoaded('statusHistories')) {
+            $history = $this->statusHistories
+                ->where('role', 'pemimpin_divisi')
+                ->where('action', 'approve')
+                ->last();
+            if ($history?->user?->name) {
+                return $history->user->name;
+            }
+        } else {
+            $history = $this->statusHistories()
+                ->where('role', 'pemimpin_divisi')
+                ->where('action', 'approve')
+                ->with('user')
+                ->latest('id')
+                ->first();
+            if ($history?->user?->name) {
+                return $history->user->name;
+            }
+        }
+
+        if ($this->relationLoaded('approvedBy') && $this->approvedBy) {
+            if ($this->approvedBy->role?->name === 'pemimpin_divisi') {
+                return $this->approvedBy->name;
+            }
+        } elseif ($this->approved_by) {
+            $user = User::with('role')->find($this->approved_by);
+            if ($user && $user->role?->name === 'pemimpin_divisi') {
+                return $user->name;
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * Resolusi nama peninjau yang menolak pengajuan mutasi.
+     */
+    public function resolveRejectedByName(): ?string
+    {
+        if ($this->relationLoaded('statusHistories')) {
+            $history = $this->statusHistories
+                ->where('action', 'reject')
+                ->last();
+            if ($history?->user?->name) {
+                return $history->user->name;
+            }
+        } else {
+            $history = $this->statusHistories()
+                ->where('action', 'reject')
+                ->with('user')
+                ->latest('id')
+                ->first();
+            if ($history?->user?->name) {
+                return $history->user->name;
+            }
+        }
+
+        if ($this->relationLoaded('rejectedBy') && $this->rejectedBy?->name) {
+            return $this->rejectedBy->name;
+        }
+
+        if ($this->rejected_by) {
+            return User::find($this->rejected_by)?->name;
+        }
+
+        return null;
+    }
+
+    /**
      * Scope a query to only include active mutations.
      */
     public function scopeActive(Builder $query): Builder

@@ -185,7 +185,8 @@ class MutationExplicitEndpointsTest extends TestCase
                 'data' => [
                     'status' => 'ditolak',
                     'rejection_reason' => 'Aset masih dibutuhkan di unit kerja asal.',
-                    'rejected_by' => $kadiv->id,
+                    'rejected_by' => $kadiv->name,
+                    'rejected_by_id' => $kadiv->id,
                 ],
             ]);
 

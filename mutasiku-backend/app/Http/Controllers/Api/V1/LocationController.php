@@ -17,6 +17,10 @@ class LocationController extends Controller
     {
         $locations = Location::where('is_active', true)->get();
 
+        if ($request->boolean('assignment_only') || $request->input('type') === 'assignment') {
+            $locations = $locations->filter(fn (Location $loc) => $loc->isAssignmentUnit())->values();
+        }
+
         return response()->json([
             'success' => true,
             'message' => 'Daftar lokasi berhasil diambil.',

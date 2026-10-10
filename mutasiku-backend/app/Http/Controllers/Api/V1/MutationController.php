@@ -47,6 +47,10 @@ class MutationController extends Controller
             'destinationLocation',
             'currentPic.role',
             'targetPic.role',
+            'verifiedBy',
+            'approvedBy',
+            'rejectedBy',
+            'statusHistories.user',
         ]);
 
         if ($view === 'all' || $request->boolean('all')) {
@@ -249,6 +253,10 @@ class MutationController extends Controller
             'destinationLocation',
             'currentPic.role',
             'targetPic.role',
+            'verifiedBy',
+            'approvedBy',
+            'rejectedBy',
+            'statusHistories.user',
         ]);
 
         return response()->json([
@@ -274,6 +282,10 @@ class MutationController extends Controller
             'destinationLocation',
             'currentPic.role',
             'targetPic.role',
+            'verifiedBy',
+            'approvedBy',
+            'rejectedBy',
+            'statusHistories.user',
         ])->find($id);
 
         if (! $mutation) {
@@ -1262,6 +1274,10 @@ class MutationController extends Controller
             'destinationLocation',
             'currentPic.role',
             'targetPic.role',
+            'verifiedBy',
+            'approvedBy',
+            'rejectedBy',
+            'statusHistories.user',
         ]);
     }
 

@@ -25,22 +25,24 @@ class LocationSeeder extends Seeder
             ['name' => 'Gudang Penyimpanan', 'code' => 'UMUM-GUDANG'],
             ['name' => 'Ruang Server', 'code' => 'UMUM-SERVER'],
 
-            // Lantai & Ruang Divisi
+            // Lantai Fasilitas Fisik
             ['name' => 'Lantai 1', 'code' => 'LT-1'],
             ['name' => 'Lantai 2', 'code' => 'LT-2'],
             ['name' => 'Lantai 3', 'code' => 'LT-3'],
             ['name' => 'Lantai 4', 'code' => 'LT-4'],
-            ['name' => 'Ruang Divisi TI', 'code' => 'RG-TI'],
-            ['name' => 'Ruang UKK Siber', 'code' => 'RG-SIBER'],
-            ['name' => 'Ruang Divisi Treasury', 'code' => 'RG-TRS'],
-            ['name' => 'Ruang Divisi Umum dan Aset', 'code' => 'RG-UMA'],
-            ['name' => 'Ruang Divisi SDM', 'code' => 'RG-SDM'],
-            ['name' => 'Ruang Divisi Operasional', 'code' => 'RG-OPS'],
-            ['name' => 'Ruang Divisi Kredit', 'code' => 'RG-KRD'],
-            ['name' => 'Ruang Divisi SKAI', 'code' => 'RG-SKAI'],
-            ['name' => 'Ruang Divisi Pemasaran', 'code' => 'RG-MKT'],
-            ['name' => 'Ruang Divisi Literasi', 'code' => 'RG-LIT'],
-            ['name' => 'Ruang Divisi Hukum', 'code' => 'RG-HKM'],
+
+            // Divisi / Unit Kerja Penugasan
+            ['name' => 'Divisi TI', 'code' => 'RG-TI'],
+            ['name' => 'UKK Siber', 'code' => 'RG-SIBER'],
+            ['name' => 'Divisi Treasury', 'code' => 'RG-TRS'],
+            ['name' => 'Divisi Umum dan Aset', 'code' => 'RG-UMA'],
+            ['name' => 'Divisi SDM', 'code' => 'RG-SDM'],
+            ['name' => 'Divisi Operasional', 'code' => 'RG-OPS'],
+            ['name' => 'Divisi Kredit', 'code' => 'RG-KRD'],
+            ['name' => 'Divisi SKAI', 'code' => 'RG-SKAI'],
+            ['name' => 'Divisi Pemasaran', 'code' => 'RG-MKT'],
+            ['name' => 'Divisi Literasi', 'code' => 'RG-LIT'],
+            ['name' => 'Divisi Hukum', 'code' => 'RG-HKM'],
 
             // Kantor / Cabang
             ['name' => 'KCU Palu', 'code' => 'CAB-PLU-KCU'],
