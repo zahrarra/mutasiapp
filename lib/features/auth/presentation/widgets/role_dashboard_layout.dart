@@ -233,49 +233,61 @@ class _TopBar extends StatelessWidget {
                 ],
               ),
 
-              // Center brand badge
-              Expanded(
-                child: Center(
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 12,
-                      vertical: 5,
-                    ),
-                    decoration: BoxDecoration(
-                      color: _LC.navy.withValues(alpha: 0.07),
-                      borderRadius: BorderRadius.circular(999),
-                      border: Border.all(
-                        color: _LC.navy.withValues(alpha: 0.12),
+              const SizedBox(width: 8),
+
+              // Separate Role Label
+              Flexible(
+                child: Text(
+                  roleLabel,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w600,
+                    color: _LC.textSecondary,
+                  ),
+                ),
+              ),
+
+              const SizedBox(width: 8),
+
+              // Center brand badge MUTASIKU
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 5,
+                ),
+                decoration: BoxDecoration(
+                  color: _LC.navy.withValues(alpha: 0.07),
+                  borderRadius: BorderRadius.circular(999),
+                  border: Border.all(
+                    color: _LC.navy.withValues(alpha: 0.12),
+                  ),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Container(
+                      width: 7,
+                      height: 7,
+                      decoration: const BoxDecoration(
+                        color: _LC.teal,
+                        shape: BoxShape.circle,
                       ),
                     ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Container(
-                          width: 7,
-                          height: 7,
-                          decoration: BoxDecoration(
-                            color: _LC.teal,
-                            shape: BoxShape.circle,
-                          ),
-                        ),
-                        const SizedBox(width: 6),
-                        Flexible(
-                          child: Text(
-                            roleLabel,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(
-                              fontSize: 11,
-                              fontWeight: FontWeight.w700,
-                              color: _LC.navy,
-                              letterSpacing: 0.3,
-                            ),
-                          ),
-                        ),
-                      ],
+                    const SizedBox(width: 6),
+                    const Text(
+                      'MUTASIKU',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w700,
+                        color: _LC.navy,
+                        letterSpacing: 0.3,
+                      ),
                     ),
-                  ),
+                  ],
                 ),
               ),
 

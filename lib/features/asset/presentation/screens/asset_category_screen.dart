@@ -1032,7 +1032,6 @@ class _AssetCategoryScreenState extends ConsumerState<AssetCategoryScreen> {
                     title: 'Kategori & Master Aset',
                     subtitle:
                         'Kelola Master Data & Tata Kelola Sistem MutasiKu',
-                    roleLabel: 'MUTASIKU ADMIN',
                     onBack: () {
                       if (Navigator.of(context).canPop()) {
                         Navigator.of(context).pop();

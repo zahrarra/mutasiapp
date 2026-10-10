@@ -58,7 +58,6 @@ class PemohonNotificationsScreen extends ConsumerWidget {
             child: MutasiKuPageHeader(
               title: 'Notifikasi',
               subtitle: 'Pusat informasi dan pembaruan mutasi aset Anda',
-              roleLabel: 'PEMOHON',
               onBack: () {
                 if (context.canPop()) {
                   context.pop();

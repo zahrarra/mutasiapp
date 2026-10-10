@@ -227,6 +227,7 @@ class _OperatorReturnFormScreenState
                                   backgroundColor: AppColors.error,
                                   foregroundColor: Colors.white,
                                   padding: const EdgeInsets.symmetric(
+                                    horizontal: 8,
                                     vertical: AppSpacing.md,
                                   ),
                                   shape: RoundedRectangleBorder(
@@ -246,6 +247,9 @@ class _OperatorReturnFormScreenState
                                       )
                                     : const Text(
                                         'Kembalikan Pengajuan',
+                                        maxLines: 1,
+                                        softWrap: false,
+                                        overflow: TextOverflow.ellipsis,
                                         style: TextStyle(
                                           fontWeight: FontWeight.bold,
                                           fontSize: 14,

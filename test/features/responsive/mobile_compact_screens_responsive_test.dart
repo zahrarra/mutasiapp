@@ -169,7 +169,71 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.text('Pemimpin Divisi'), findsOneWidget);
+      expect(find.text('MUTASIKU'), findsOneWidget);
       expect(find.text('Dashboard Content'), findsOneWidget);
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('Action buttons with Kembalikan render cleanly without overflow on ultra-compact mobile (320x568)', (
+      tester,
+    ) async {
+      tester.view.physicalSize = const Size(320, 568);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(() {
+        tester.view.resetPhysicalSize();
+        tester.view.resetDevicePixelRatio();
+      });
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            bottomNavigationBar: SafeArea(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                child: Row(
+                  children: [
+                    Expanded(
+                      flex: 2,
+                      child: OutlinedButton(
+                        onPressed: () {},
+                        style: OutlinedButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 12),
+                        ),
+                        child: const Text(
+                          'Kembalikan',
+                          maxLines: 1,
+                          softWrap: false,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      flex: 3,
+                      child: ElevatedButton(
+                        onPressed: () {},
+                        style: ElevatedButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 12),
+                        ),
+                        child: const Text(
+                          'Verifikasi Valid',
+                          maxLines: 1,
+                          softWrap: false,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('Kembalikan'), findsOneWidget);
+      expect(find.text('Verifikasi Valid'), findsOneWidget);
       expect(tester.takeException(), isNull);
     });
   });

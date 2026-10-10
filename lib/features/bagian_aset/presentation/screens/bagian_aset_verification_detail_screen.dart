@@ -456,7 +456,7 @@ class BagianAsetVerificationDetailScreen extends ConsumerWidget {
                 children: [
                   // Secondary Action: [ Kembalikan ]
                   Expanded(
-                    flex: 1,
+                    flex: 2,
                     child: OutlinedButton(
                       key: const Key('btn_tolak_approval'),
                       onPressed: actionState.isLoading
@@ -466,6 +466,7 @@ class BagianAsetVerificationDetailScreen extends ConsumerWidget {
                         foregroundColor: AppColors.error,
                         side: const BorderSide(color: AppColors.error),
                         padding: const EdgeInsets.symmetric(
+                          horizontal: 8,
                           vertical: AppSpacing.md,
                         ),
                         shape: RoundedRectangleBorder(
@@ -474,15 +475,18 @@ class BagianAsetVerificationDetailScreen extends ConsumerWidget {
                       ),
                       child: const Text(
                         'Kembalikan',
+                        maxLines: 1,
+                        softWrap: false,
+                        overflow: TextOverflow.ellipsis,
                         style: TextStyle(fontWeight: FontWeight.bold),
                       ),
                     ),
                   ),
-                  const SizedBox(width: AppSpacing.md),
+                  const SizedBox(width: AppSpacing.sm),
 
                   // Primary Action: [ Verifikasi & Teruskan ke Pemimpin Divisi ]
                   Expanded(
-                    flex: 2,
+                    flex: 3,
                     child: ElevatedButton(
                       key: const Key('btn_setujui_approval'),
                       onPressed: actionState.isLoading
@@ -496,6 +500,7 @@ class BagianAsetVerificationDetailScreen extends ConsumerWidget {
                         backgroundColor: AppColors.primary,
                         foregroundColor: Colors.white,
                         padding: const EdgeInsets.symmetric(
+                          horizontal: 8,
                           vertical: AppSpacing.md,
                         ),
                         shape: RoundedRectangleBorder(
@@ -513,9 +518,12 @@ class BagianAsetVerificationDetailScreen extends ConsumerWidget {
                             )
                           : const Text(
                               'Verifikasi & Teruskan',
+                              maxLines: 1,
+                              softWrap: false,
+                              overflow: TextOverflow.ellipsis,
                               style: TextStyle(
                                 fontWeight: FontWeight.bold,
-                                fontSize: 14,
+                                fontSize: 13,
                               ),
                             ),
                     ),

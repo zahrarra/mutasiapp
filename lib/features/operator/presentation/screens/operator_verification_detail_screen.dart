@@ -544,6 +544,7 @@ class OperatorVerificationDetailScreen extends ConsumerWidget {
                 children: [
                   // Button: [ Kembalikan ]
                   Expanded(
+                    flex: 2,
                     child: OutlinedButton.icon(
                       key: const Key('btn_kembalikan_pengajuan'),
                       onPressed: actionState.isLoading
@@ -552,6 +553,9 @@ class OperatorVerificationDetailScreen extends ConsumerWidget {
                       icon: const Icon(Icons.undo_rounded, size: 18),
                       label: const Text(
                         'Kembalikan',
+                        maxLines: 1,
+                        softWrap: false,
+                        overflow: TextOverflow.ellipsis,
                         style: TextStyle(
                           fontWeight: FontWeight.w600,
                           fontSize: 13,
@@ -563,18 +567,21 @@ class OperatorVerificationDetailScreen extends ConsumerWidget {
                         side: BorderSide(
                           color: _C.error.withValues(alpha: 0.3),
                         ),
-                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 14,
+                        ),
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(10),
                         ),
                       ),
                     ),
                   ),
-                  const SizedBox(width: 12),
+                  const SizedBox(width: 8),
 
                   // Button: [ Verifikasi Valid / Teruskan ]
                   Expanded(
-                    flex: 2,
+                    flex: 3,
                     child: ElevatedButton.icon(
                       key: const Key('btn_verifikasi_valid'),
                       onPressed: actionState.isLoading
@@ -592,6 +599,9 @@ class OperatorVerificationDetailScreen extends ConsumerWidget {
                           : const Icon(Icons.check_circle_rounded, size: 19),
                       label: const Text(
                         'Verifikasi Valid',
+                        maxLines: 1,
+                        softWrap: false,
+                        overflow: TextOverflow.ellipsis,
                         style: TextStyle(
                           fontWeight: FontWeight.w600,
                           fontSize: 13,

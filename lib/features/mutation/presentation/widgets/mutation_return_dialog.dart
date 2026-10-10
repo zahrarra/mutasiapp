@@ -432,6 +432,7 @@ class _MutationReturnDialogState extends State<MutationReturnDialog> {
                           style: ElevatedButton.styleFrom(
                             backgroundColor: const Color(0xFFB42318),
                             foregroundColor: Colors.white,
+                            padding: const EdgeInsets.symmetric(horizontal: 8),
                             minimumSize: Size(0, isCompact ? 40 : 44),
                             elevation: 0,
                             shape: RoundedRectangleBorder(
@@ -453,6 +454,9 @@ class _MutationReturnDialogState extends State<MutationReturnDialog> {
                                 ),
                           label: Text(
                             _isLoading ? 'Memproses...' : 'Kembalikan',
+                            maxLines: 1,
+                            softWrap: false,
+                            overflow: TextOverflow.ellipsis,
                             style: _m(
                               size: 13,
                               weight: FontWeight.w600,

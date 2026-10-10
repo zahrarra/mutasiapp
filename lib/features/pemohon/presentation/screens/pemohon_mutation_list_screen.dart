@@ -373,7 +373,6 @@ class _PemohonMutationListScreenState
       child: MutasiKuPageHeader(
         title: 'Mutasi Saya',
         subtitle: 'Daftar pengajuan mutasi aset internal',
-        roleLabel: 'PEMOHON',
         onBack: () {
           if (context.canPop()) {
             context.pop();

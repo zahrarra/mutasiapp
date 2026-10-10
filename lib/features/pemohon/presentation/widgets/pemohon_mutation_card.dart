@@ -367,16 +367,21 @@ class PemohonMutationCard extends StatelessWidget {
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        Text(
-                          mutation.asset.assetCode.isNotEmpty
-                              ? mutation.asset.assetCode
-                              : mutation.ticketNumber,
-                          style: const TextStyle(
-                            fontFamily: 'monospace',
-                            fontSize: 11,
-                            color: Color(0xFF52606D),
+                        Expanded(
+                          child: Text(
+                            mutation.asset.assetCode.isNotEmpty
+                                ? mutation.asset.assetCode
+                                : mutation.ticketNumber,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(
+                              fontFamily: 'monospace',
+                              fontSize: 11,
+                              color: Color(0xFF52606D),
+                            ),
                           ),
                         ),
+                        const SizedBox(width: 8),
                         InkWell(
                           onTap:
                               onConfirmTap ??
@@ -424,16 +429,21 @@ class PemohonMutationCard extends StatelessWidget {
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        Text(
-                          mutation.asset.assetCode.isNotEmpty
-                              ? mutation.asset.assetCode
-                              : mutation.ticketNumber,
-                          style: const TextStyle(
-                            fontFamily: 'monospace',
-                            fontSize: 11,
-                            color: Color(0xFF52606D),
+                        Expanded(
+                          child: Text(
+                            mutation.asset.assetCode.isNotEmpty
+                                ? mutation.asset.assetCode
+                                : mutation.ticketNumber,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(
+                              fontFamily: 'monospace',
+                              fontSize: 11,
+                              color: Color(0xFF52606D),
+                            ),
                           ),
                         ),
+                        const SizedBox(width: 8),
                         InkWell(
                           onTap:
                               onEditTap ??

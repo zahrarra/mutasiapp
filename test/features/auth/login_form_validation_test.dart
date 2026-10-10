@@ -85,7 +85,7 @@ void main() {
         await tester.pump(const Duration(milliseconds: 200));
 
         expect(find.text('Email tidak boleh kosong'), findsOneWidget);
-        expect(find.text('Password wajib diisi'), findsOneWidget);
+        expect(find.text('Kata sandi wajib diisi'), findsOneWidget);
       },
     );
 
@@ -120,7 +120,7 @@ void main() {
 
       expect(find.text('Format email tidak valid'), findsOneWidget);
       expect(find.text('Email tidak boleh kosong'), findsNothing);
-      expect(find.text('Password wajib diisi'), findsNothing);
+      expect(find.text('Kata sandi wajib diisi'), findsNothing);
     });
 
     testWidgets('input format email tidak valid lainnya ditolak', (
@@ -187,7 +187,7 @@ void main() {
       // Tidak ada error validasi format email atau required
       expect(find.text('Format email tidak valid'), findsNothing);
       expect(find.text('Email tidak boleh kosong'), findsNothing);
-      expect(find.text('Password wajib diisi'), findsNothing);
+      expect(find.text('Kata sandi wajib diisi'), findsNothing);
     });
   });
 }

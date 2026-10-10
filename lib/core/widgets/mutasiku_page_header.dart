@@ -57,14 +57,7 @@ class MutasiKuPageHeader extends ConsumerWidget {
   });
 
   static String formatRoleLabel(UserRole? role) {
-    if (role == null) return 'MUTASIKU';
-    return switch (role) {
-      UserRole.admin => 'MUTASIKU ADMIN',
-      UserRole.pemohon => 'MUTASIKU',
-      UserRole.operator => 'MUTASIKU OPERATOR',
-      UserRole.bagianAset => 'MUTASIKU BAGIAN ASET',
-      UserRole.kadiv => 'MUTASIKU PEMIMPIN DIVISI',
-    };
+    return 'MUTASIKU';
   }
 
   static String extractInitials(String? name) {

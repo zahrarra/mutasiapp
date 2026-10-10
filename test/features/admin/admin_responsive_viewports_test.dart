@@ -109,7 +109,7 @@ void main() {
             await tester.pumpAndSettle();
 
             // Check essential Stitch elements
-            expect(find.text('MUTASIKU ADMIN'), findsOneWidget);
+            expect(find.text('MUTASIKU'), findsOneWidget);
             expect(find.text('RINGKASAN MASTER DATA SISTEM'), findsOneWidget);
             expect(find.text('Daftar Modul Master Data'), findsOneWidget);
             expect(

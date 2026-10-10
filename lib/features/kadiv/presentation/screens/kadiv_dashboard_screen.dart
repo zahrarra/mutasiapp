@@ -463,6 +463,27 @@ class _KadivDashboardScreenState extends ConsumerState<KadivDashboardScreen> {
                       ),
                     ),
 
+                    // Center: Brand Identitas MUTASIKU
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 10,
+                        vertical: 4,
+                      ),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withValues(alpha: 0.15),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: const Text(
+                        'MUTASIKU',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 12,
+                          fontWeight: FontWeight.w800,
+                          letterSpacing: 1.2,
+                        ),
+                      ),
+                    ),
+
                     // Kanan: Notifications + Avatar Circle
                     Row(
                       mainAxisSize: MainAxisSize.min,
