@@ -152,14 +152,14 @@ void main() {
       );
       addTearDown(container.dispose);
 
-      const newLocName = 'Gedung Cyber 2 — Lantai 8 Data Center';
+      const newLocName = 'Divisi Digital & Cyber 2';
       final addResult = await container
           .read(masterLocationsProvider.notifier)
           .addLocation(
             const LocationItem(
               id: '',
               name: newLocName,
-              description: 'Fasilitas Disaster Recovery',
+              description: 'Unit Kerja Inovasi TI',
               isBranch: false,
               isActive: true,
             ),

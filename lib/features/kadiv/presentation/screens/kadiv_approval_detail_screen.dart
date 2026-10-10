@@ -251,7 +251,7 @@ class KadivApprovalDetailScreen extends ConsumerWidget {
                   ),
                   const Divider(height: AppSpacing.md, color: AppColors.border),
                   _buildDetailRow('Alasan Mutasi', mutation.reason),
-                  if (mutation.verifiedBy != null) ...[
+                  if (mutation.verifiedBy != null && !RegExp(r'^\d+$').hasMatch(mutation.verifiedBy!.trim())) ...[
                     const Divider(
                       height: AppSpacing.md,
                       color: AppColors.border,
@@ -295,7 +295,7 @@ class KadivApprovalDetailScreen extends ConsumerWidget {
                   _buildTimelineLine(),
                   _buildTimelineItem(
                     title: 'Verifikasi Operator',
-                    subtitle: mutation.verifiedBy != null
+                    subtitle: (mutation.verifiedBy != null && !RegExp(r'^\d+$').hasMatch(mutation.verifiedBy!.trim()))
                         ? 'Diverifikasi valid oleh ${mutation.verifiedBy}'
                         : 'Lolos verifikasi kelengkapan dokumen',
                     isCompleted: true,
@@ -304,11 +304,13 @@ class KadivApprovalDetailScreen extends ConsumerWidget {
                   _buildTimelineLine(),
                   _buildTimelineItem(
                     title: 'Verifikasi Bagian Aset',
-                    subtitle: mutation.assetVerifiedBy != null
-                        ? 'Diverifikasi oleh ${mutation.assetVerifiedBy}'
-                        : (mutation.approvedBy != null
-                              ? 'Diverifikasi oleh ${mutation.approvedBy}'
-                              : 'Telah diverifikasi valid oleh Bagian Aset'),
+                    subtitle: () {
+                      final name = mutation.assetVerifiedBy ?? mutation.approvedBy;
+                      if (name != null && !RegExp(r'^\d+$').hasMatch(name.trim())) {
+                        return 'Diverifikasi oleh ${name.trim()}';
+                      }
+                      return 'Telah diverifikasi valid oleh Bagian Aset';
+                    }(),
                     isCompleted: true,
                     isCurrent: false,
                   ),

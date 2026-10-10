@@ -1728,7 +1728,7 @@ class _AdminUsersScreenState extends ConsumerState<AdminUsersScreen> {
                                           crossAxisCount: gridColumns,
                                           crossAxisSpacing: 12,
                                           mainAxisSpacing: 12,
-                                          mainAxisExtent: 116,
+                                          mainAxisExtent: 124,
                                         ),
                                     itemCount: filtered.length,
                                     itemBuilder: (ctx, idx) =>
@@ -2097,7 +2097,7 @@ class _AdminUsersScreenState extends ConsumerState<AdminUsersScreen> {
   // ── USER CARD (Stitch 1:1) ────────────────────────────────────────────────
   Widget _buildUserCard(User user) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
@@ -2158,7 +2158,7 @@ class _AdminUsersScreenState extends ConsumerState<AdminUsersScreen> {
                 const SizedBox(height: 2),
                 Text(
                   '${user.role.displayName} • ${user.department ?? "Kantor"}',
-                  maxLines: 1,
+                  maxLines: 2,
                   overflow: TextOverflow.ellipsis,
                   style: _font(
                     size: 12,

@@ -49,6 +49,7 @@ dev_dependencies:
 
   # Code generation (required by mockito @GenerateMocks)
   build_runner: ^2.4.13
+  flutter_launcher_icons: ^0.14.4
 
 flutter:
   uses-material-design: true

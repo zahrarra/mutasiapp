@@ -824,33 +824,32 @@ class _MutationCard extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             // ── Row 1: Ticket + Status ──────────────────────────────────
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            Wrap(
+              alignment: WrapAlignment.spaceBetween,
+              crossAxisAlignment: WrapCrossAlignment.center,
+              spacing: 8,
+              runSpacing: 6,
               children: [
-                Flexible(
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 9,
-                      vertical: 4,
-                    ),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFF1F5F9),
-                      borderRadius: BorderRadius.circular(999),
-                    ),
-                    child: Text(
-                      m.ticketNumber,
-                      style: const TextStyle(
-                        fontSize: 10,
-                        fontWeight: FontWeight.w700,
-                        fontFamily: 'monospace',
-                        color: _C.navy,
-                        letterSpacing: 0.3,
-                      ),
-                      overflow: TextOverflow.ellipsis,
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 9,
+                    vertical: 4,
+                  ),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFF1F5F9),
+                    borderRadius: BorderRadius.circular(999),
+                  ),
+                  child: Text(
+                    m.ticketNumber,
+                    style: const TextStyle(
+                      fontSize: 10,
+                      fontWeight: FontWeight.w700,
+                      fontFamily: 'monospace',
+                      color: _C.navy,
+                      letterSpacing: 0.3,
                     ),
                   ),
                 ),
-                const SizedBox(width: 8),
                 // Status badge with dot
                 Container(
                   padding: const EdgeInsets.symmetric(
@@ -1019,7 +1018,7 @@ class _MutationCard extends StatelessWidget {
                             fontWeight: FontWeight.w500,
                             color: _C.textPrimary,
                           ),
-                          maxLines: 1,
+                          maxLines: 2,
                           overflow: TextOverflow.ellipsis,
                         ),
                       ),
@@ -1039,7 +1038,7 @@ class _MutationCard extends StatelessWidget {
                             fontWeight: FontWeight.w500,
                             color: _C.textPrimary,
                           ),
-                          maxLines: 1,
+                          maxLines: 2,
                           overflow: TextOverflow.ellipsis,
                           textAlign: TextAlign.end,
                         ),
@@ -1052,10 +1051,14 @@ class _MutationCard extends StatelessWidget {
             const SizedBox(height: 12),
 
             // ── Row 4: Doc info + CTA button ────────────────────────────
-            Row(
+            Wrap(
+              alignment: WrapAlignment.spaceBetween,
+              crossAxisAlignment: WrapCrossAlignment.center,
+              spacing: 8,
+              runSpacing: 8,
               children: [
                 // Doc chip
-                if (m.documentName != null && m.documentName!.isNotEmpty) ...[
+                if (m.documentName != null && m.documentName!.isNotEmpty)
                   Container(
                     padding: const EdgeInsets.symmetric(
                       horizontal: 8,
@@ -1085,10 +1088,9 @@ class _MutationCard extends StatelessWidget {
                         ),
                       ],
                     ),
-                  ),
-                  const Spacer(),
-                ] else
-                  const Spacer(),
+                  )
+                else
+                  const SizedBox.shrink(),
 
                 // Periksa Pengajuan button
                 GestureDetector(

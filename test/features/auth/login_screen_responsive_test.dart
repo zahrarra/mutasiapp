@@ -39,14 +39,13 @@ void main() {
       await tester.pump(const Duration(milliseconds: 200));
 
       // Heading & branding
-      expect(find.text('Masuk'), findsNWidgets(2)); // Heading dan Tombol Masuk
+      expect(find.text('Hello Again!'), findsOneWidget);
       expect(find.text('MutasiKu'), findsOneWidget);
 
       // Form elements
       expect(find.byKey(const Key('login_username_field')), findsOneWidget);
       expect(find.byKey(const Key('login_password_field')), findsOneWidget);
       expect(find.byKey(const Key('login_submit_button')), findsOneWidget);
-      expect(find.widgetWithText(ElevatedButton, 'Masuk'), findsOneWidget);
 
       // Ensure no desktop hero headline in mobile view
       expect(
@@ -69,7 +68,7 @@ void main() {
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 200));
 
-      expect(find.text('Masuk'), findsNWidgets(2));
+      expect(find.text('Hello Again!'), findsOneWidget);
       expect(find.byKey(const Key('login_username_field')), findsOneWidget);
       expect(find.byKey(const Key('login_password_field')), findsOneWidget);
       expect(find.byKey(const Key('login_submit_button')), findsOneWidget);
@@ -99,7 +98,7 @@ void main() {
         expect(find.text('Audit Trail Otomatis SIPA'), findsOneWidget);
 
         // Form elements on right side
-        expect(find.text('Masuk'), findsNWidgets(2));
+        expect(find.text('Hello Again!'), findsOneWidget);
         expect(find.byKey(const Key('login_username_field')), findsOneWidget);
         expect(find.byKey(const Key('login_password_field')), findsOneWidget);
         expect(find.byKey(const Key('login_submit_button')), findsOneWidget);

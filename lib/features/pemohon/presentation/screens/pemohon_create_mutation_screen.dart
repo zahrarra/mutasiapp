@@ -78,6 +78,9 @@ class _PemohonCreateMutationScreenState
   String? _selectedAssetId;
   String? _selectedTargetLocationId;
 
+  @visibleForTesting
+  String? get selectedTargetLocationId => _selectedTargetLocationId;
+
   static const _maxReason = 250;
 
   @override
@@ -1929,12 +1932,16 @@ class _PemohonCreateMutationScreenState
                           : Row(
                               mainAxisAlignment: MainAxisAlignment.center,
                               children: [
-                                Text(
-                                  'Kirim Pengajuan Mutasi',
-                                  style: _m(
-                                    size: 13,
-                                    weight: FontWeight.w600,
-                                    color: Colors.white,
+                                Flexible(
+                                  child: Text(
+                                    'Kirim Pengajuan Mutasi',
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: _m(
+                                      size: 13,
+                                      weight: FontWeight.w600,
+                                      color: Colors.white,
+                                    ),
                                   ),
                                 ),
                                 const SizedBox(width: 6),

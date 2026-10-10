@@ -484,7 +484,13 @@ class _PemohonConfirmationScreenState
                     const Icon(Icons.badge, size: 13, color: _C.textSecondary),
                     const SizedBox(width: 4),
                     Text(
-                      'Oleh: ${m.staffUpdatedBy ?? m.assetVerifiedBy ?? m.approvedBy ?? 'Bagian Aset'}',
+                      'Oleh: ${() {
+                        final raw = m.staffUpdatedBy ?? m.assetVerifiedBy ?? m.approvedBy;
+                        if (raw != null && !RegExp(r'^\d+$').hasMatch(raw.trim()) && raw.trim() != 'null') {
+                          return raw.trim();
+                        }
+                        return 'Bagian Aset';
+                      }()}',
                       style: _t(size: 11, color: _C.textSecondary),
                     ),
                   ],

@@ -269,21 +269,26 @@ final masterLocationsProvider =
       return MasterLocationsNotifier(repo);
     });
 
-/// Daftar lokasi aktif untuk formulir pengajuan mutasi dan filter
+/// Daftar unit / cabang penugasan aktif untuk formulir pengajuan mutasi.
+/// Menyaring hanya divisi dan kantor cabang penugasan resmi yang valid,
+/// dan mengecualikan fasilitas fisik aset (toilet, parkiran, lobby, lantai, ruang tunggu, dll.).
 final availableLocationsProvider = Provider<List<String>>((ref) {
   final locationsAsync = ref.watch(masterLocationsProvider);
   return locationsAsync.maybeWhen(
-    data: (list) =>
-        list.where((loc) => loc.isActive).map((loc) => loc.name).toList(),
+    data: (list) => list
+        .where((loc) => loc.isActive && loc.isAssignmentUnit)
+        .map((loc) => loc.name)
+        .toList(),
     orElse: () => const [],
   );
 });
 
-/// Daftar objek LocationItem aktif lengkap dengan ID database untuk formulir mutasi
+/// Daftar objek LocationItem aktif unit / cabang penugasan lengkap dengan ID database untuk formulir mutasi.
 final availableActiveLocationItemsProvider = Provider<List<LocationItem>>((ref) {
   final locationsAsync = ref.watch(masterLocationsProvider);
   return locationsAsync.maybeWhen(
-    data: (list) => list.where((loc) => loc.isActive).toList(),
+    data: (list) =>
+        list.where((loc) => loc.isActive && loc.isAssignmentUnit).toList(),
     orElse: () => const [],
   );
 });

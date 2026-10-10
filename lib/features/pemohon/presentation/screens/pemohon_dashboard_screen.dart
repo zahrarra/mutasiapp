@@ -547,7 +547,7 @@ class _PemohonDashboardScreenState
               ],
             ),
           ),
-          const SizedBox(width: 10),
+          const SizedBox(width: 8),
           Material(
             color: _C.tealAccent,
             borderRadius: BorderRadius.circular(12),
@@ -556,7 +556,7 @@ class _PemohonDashboardScreenState
               borderRadius: BorderRadius.circular(12),
               child: Padding(
                 padding: const EdgeInsets.symmetric(
-                  horizontal: 12,
+                  horizontal: 10,
                   vertical: 9,
                 ),
                 child: Row(
@@ -709,15 +709,19 @@ class _PemohonDashboardScreenState
                 overflow: TextOverflow.ellipsis,
               ),
               const SizedBox(height: 2),
-              Text(
-                title,
-                style: _font(
-                  size: 11,
-                  weight: FontWeight.w600,
-                  color: _C.textSecondary,
+              SizedBox(
+                height: 28,
+                child: Text(
+                  title,
+                  style: _font(
+                    size: 11,
+                    weight: FontWeight.w600,
+                    color: _C.textSecondary,
+                    height: 1.25,
+                  ),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
                 ),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
               ),
             ],
           ),

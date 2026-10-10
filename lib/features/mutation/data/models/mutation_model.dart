@@ -172,22 +172,30 @@ class MutationModel extends Mutation {
         'Pemohon';
 
     // 2. Ekstraksi nested Location (.name)
-    final originLocMap = json['origin_location'] as Map<String, dynamic>?;
+    final originLocMap = json['origin_location'] is Map<String, dynamic>
+        ? json['origin_location'] as Map<String, dynamic>
+        : null;
     final currentLocation =
         originLocMap?['name']?.toString() ??
         json['current_location']?.toString() ??
         json['currentLocation']?.toString() ??
+        (json['origin_location'] is String ? json['origin_location'] as String : null) ??
         'Lokasi Asal';
 
-    final destLocMap = json['destination_location'] as Map<String, dynamic>?;
+    final destLocMap = json['destination_location'] is Map<String, dynamic>
+        ? json['destination_location'] as Map<String, dynamic>
+        : null;
     final targetLocation =
         destLocMap?['name']?.toString() ??
         json['target_location']?.toString() ??
         json['targetLocation']?.toString() ??
+        (json['destination_location'] is String ? json['destination_location'] as String : null) ??
         'Lokasi Tujuan';
 
     // 3. Ekstraksi nested PIC (.name)
-    final currentPicMap = json['current_pic'] as Map<String, dynamic>?;
+    final currentPicMap = json['current_pic'] is Map<String, dynamic>
+        ? json['current_pic'] as Map<String, dynamic>
+        : null;
     final currentPic =
         currentPicMap?['name']?.toString() ??
         json['current_pic_name']?.toString() ??
@@ -197,7 +205,9 @@ class MutationModel extends Mutation {
         json['currentPic']?.toString() ??
         '-';
 
-    final targetPicMap = json['target_pic'] as Map<String, dynamic>?;
+    final targetPicMap = json['target_pic'] is Map<String, dynamic>
+        ? json['target_pic'] as Map<String, dynamic>
+        : null;
     final targetPic =
         targetPicMap?['name']?.toString() ??
         json['target_pic_name']?.toString() ??
@@ -207,7 +217,9 @@ class MutationModel extends Mutation {
 
     // 4. Ekstraksi nested Asset
     Asset? assetEntity;
-    final assetMap = json['asset'] as Map<String, dynamic>?;
+    final assetMap = json['asset'] is Map<String, dynamic>
+        ? json['asset'] as Map<String, dynamic>
+        : null;
     if (assetMap != null) {
       final catMap = assetMap['category'] as Map<String, dynamic>?;
       final category = AssetCategory(
@@ -314,15 +326,17 @@ class MutationModel extends Mutation {
     final verifiedAt = _parseDateTime(
       json['verified_at'] ?? json['verifiedAt'],
     );
-    final verifiedBy =
-        json['verified_by']?.toString() ?? json['verifiedBy']?.toString();
+    final verifiedBy = _parsePersonName(
+      json['verified_by'] ?? json['verifiedBy'],
+      json['verified_by_user'],
+    );
 
     final assetVerifiedAt = _parseDateTime(
       json['asset_verified_at'] ?? json['assetVerifiedAt'],
     );
-    final assetVerifiedBy =
-        json['asset_verified_by']?.toString() ??
-        json['assetVerifiedBy']?.toString();
+    final assetVerifiedBy = _parsePersonName(
+      json['asset_verified_by'] ?? json['assetVerifiedBy'],
+    );
     final assetReturnReason =
         json['asset_return_reason']?.toString() ??
         json['assetReturnReason']?.toString();
@@ -330,28 +344,32 @@ class MutationModel extends Mutation {
     final approvedAt = _parseDateTime(
       json['approved_at'] ?? json['approvedAt'],
     );
-    final approvedBy =
-        json['approved_by']?.toString() ?? json['approvedBy']?.toString();
+    final approvedBy = _parsePersonName(
+      json['approved_by'] ?? json['approvedBy'],
+      json['approved_by_user'],
+    );
 
     final rejectedAt = _parseDateTime(
       json['rejected_at'] ?? json['rejectedAt'],
     );
-    final rejectedBy =
-        json['rejected_by']?.toString() ?? json['rejectedBy']?.toString();
+    final rejectedBy = _parsePersonName(
+      json['rejected_by'] ?? json['rejectedBy'],
+      json['rejected_by_user'],
+    );
 
     final kadivApprovedAt = _parseDateTime(
       json['kadiv_approved_at'] ?? json['kadivApprovedAt'],
     );
-    final kadivApprovedBy =
-        json['kadiv_approved_by']?.toString() ??
-        json['kadivApprovedBy']?.toString();
+    final kadivApprovedBy = _parsePersonName(
+      json['kadiv_approved_by'] ?? json['kadivApprovedBy'],
+    );
 
     final kadivRejectedAt = _parseDateTime(
       json['kadiv_rejected_at'] ?? json['kadivRejectedAt'],
     );
-    final kadivRejectedBy =
-        json['kadiv_rejected_by']?.toString() ??
-        json['kadivRejectedBy']?.toString();
+    final kadivRejectedBy = _parsePersonName(
+      json['kadiv_rejected_by'] ?? json['kadivRejectedBy'],
+    );
     final kadivRejectionReason =
         json['kadiv_rejection_reason']?.toString() ??
         json['kadivRejectionReason']?.toString() ??
@@ -360,9 +378,9 @@ class MutationModel extends Mutation {
     final staffUpdatedAt = _parseDateTime(
       json['staff_updated_at'] ?? json['staffUpdatedAt'],
     );
-    final staffUpdatedBy =
-        json['staff_updated_by']?.toString() ??
-        json['staffUpdatedBy']?.toString();
+    final staffUpdatedBy = _parsePersonName(
+      json['staff_updated_by'] ?? json['staffUpdatedBy'],
+    );
 
     final requiresKadivApproval =
         json['requires_kadiv_approval'] as bool? ??
@@ -454,6 +472,27 @@ class MutationModel extends Mutation {
       return DateTime.tryParse(value);
     }
     return null;
+  }
+
+  /// Helper parsing nama petugas secara aman.
+  /// Memastikan ID numerik (seperti integer 2, 3 atau string "2", "3")
+  /// tidak pernah salah ditafsirkan sebagai nama petugas.
+  static String? _parsePersonName(dynamic value, [dynamic userObj]) {
+    if (userObj is Map<String, dynamic> && userObj['name'] != null) {
+      final name = userObj['name'].toString().trim();
+      if (name.isNotEmpty) return name;
+    }
+    if (value is Map<String, dynamic> && value['name'] != null) {
+      final name = value['name'].toString().trim();
+      if (name.isNotEmpty) return name;
+    }
+    if (value == null) return null;
+    final str = value.toString().trim();
+    if (str.isEmpty || str == 'null') return null;
+    if (RegExp(r'^\d+$').hasMatch(str)) {
+      return null;
+    }
+    return str;
   }
 
   /// Mengembalikan instance domain entity [Mutation].

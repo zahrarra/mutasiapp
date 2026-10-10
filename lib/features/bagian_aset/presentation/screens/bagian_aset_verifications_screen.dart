@@ -406,8 +406,11 @@ class _VerificationCard extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 // Row 1: Nomor Tiket & Status Badge
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                Wrap(
+                  alignment: WrapAlignment.spaceBetween,
+                  crossAxisAlignment: WrapCrossAlignment.center,
+                  spacing: 8,
+                  runSpacing: 6,
                   children: [
                     Text(
                       mutation.ticketNumber,
@@ -470,6 +473,7 @@ class _VerificationCard extends StatelessWidget {
 
                 // Row 2: Nama Aset & Kategori
                 Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Expanded(
                       child: Text(
@@ -479,7 +483,7 @@ class _VerificationCard extends StatelessWidget {
                           fontWeight: FontWeight.w700,
                           color: _C.textPrimary,
                         ),
-                        maxLines: 1,
+                        maxLines: 2,
                         overflow: TextOverflow.ellipsis,
                       ),
                     ),
@@ -516,14 +520,18 @@ class _VerificationCard extends StatelessWidget {
                       color: _C.textSecondary,
                     ),
                     const SizedBox(width: 4),
-                    Text(
-                      mutation.applicantName,
-                      style: const TextStyle(
-                        fontSize: 11,
-                        color: _C.textSecondary,
+                    Flexible(
+                      child: Text(
+                        mutation.applicantName,
+                        style: const TextStyle(
+                          fontSize: 11,
+                          color: _C.textSecondary,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
                       ),
                     ),
-                    const SizedBox(width: 12),
+                    const SizedBox(width: 8),
                     const Icon(
                       Icons.arrow_forward_rounded,
                       size: 12,
@@ -538,7 +546,7 @@ class _VerificationCard extends StatelessWidget {
                           fontWeight: FontWeight.w600,
                           color: _C.textPrimary,
                         ),
-                        maxLines: 1,
+                        maxLines: 2,
                         overflow: TextOverflow.ellipsis,
                       ),
                     ),
@@ -549,10 +557,14 @@ class _VerificationCard extends StatelessWidget {
                 const SizedBox(height: 8),
 
                 // Row 4: Aset Ikut Pemohon & Action
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                Wrap(
+                  alignment: WrapAlignment.spaceBetween,
+                  crossAxisAlignment: WrapCrossAlignment.center,
+                  spacing: 8,
+                  runSpacing: 6,
                   children: [
                     Row(
+                      mainAxisSize: MainAxisSize.min,
                       children: [
                         Icon(
                           mutation.isAssetMovingWithApplicant
@@ -579,6 +591,7 @@ class _VerificationCard extends StatelessWidget {
                       ],
                     ),
                     Row(
+                      mainAxisSize: MainAxisSize.min,
                       children: [
                         Text(
                           isWaiting ? 'Verifikasi' : 'Lihat Detail',

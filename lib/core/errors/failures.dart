@@ -5,11 +5,7 @@ sealed class Failure {
 
   String get userMessage {
     if (this is NetworkFailure) {
-      final msg = message?.toLowerCase() ?? '';
-      if (msg.contains('timeout')) {
-        return 'Waktu permintaan habis. Silakan periksa koneksi Anda dan coba lagi.';
-      }
-      return 'Koneksi ke server tidak tersedia. Periksa koneksi Anda, lalu coba lagi.';
+      return 'Koneksi internet tidak tersedia. Periksa koneksi Anda.';
     }
 
     if (this is UnauthorizedFailure) {
@@ -17,14 +13,8 @@ sealed class Failure {
     }
 
     if (this is ForbiddenFailure) {
-      final raw = message?.trim();
-      if (raw != null &&
-          raw.isNotEmpty &&
-          !raw.contains('403') &&
-          !raw.toLowerCase().contains('forbidden')) {
-        return raw;
-      }
-      return 'Akun Anda telah dinonaktifkan atau Anda tidak memiliki izin.';
+      return message ??
+          'Anda tidak memiliki izin untuk melakukan tindakan ini.';
     }
 
     if (this is ValidationFailure) {
@@ -40,10 +30,10 @@ sealed class Failure {
     }
 
     if (this is ServerFailure) {
-      return 'Terjadi kesalahan pada server. Silakan coba lagi.';
+      return 'Terjadi kesalahan pada server. Coba lagi beberapa saat.';
     }
 
-    return 'Terjadi kesalahan pada server. Silakan coba lagi.';
+    return 'Terjadi kesalahan. Coba lagi.';
   }
 }
 

@@ -37,7 +37,7 @@ class AuthRepositoryImpl implements AuthRepository {
     if (username.trim().isEmpty || password.isEmpty) {
       return Result.failure(
         const ValidationFailure(
-          message: 'Silakan masukkan alamat email dan kata sandi.',
+          message: 'Email dan password tidak boleh kosong',
         ),
       );
     }
@@ -56,7 +56,7 @@ class AuthRepositoryImpl implements AuthRepository {
             return Result.failure(
               UnauthorizedFailure(
                 message:
-                    data['message'] as String? ?? 'Email atau kata sandi salah.',
+                    data['message'] as String? ?? 'Email atau password salah.',
               ),
             );
           }
@@ -81,9 +81,11 @@ class AuthRepositoryImpl implements AuthRepository {
                   as String?;
           final role = UserRole.fromApiValue(roleStr) ?? UserRole.pemohon;
 
-          final mustChangePassword = (data['must_change_password'] ??
-                  userMap['must_change_password'] ??
-                  data['data']?['must_change_password']) as bool? ??
+          final mustChangePassword =
+              (data['must_change_password'] ??
+                      userMap['must_change_password'] ??
+                      data['data']?['must_change_password'])
+                  as bool? ??
               false;
 
           final user = User(
@@ -92,7 +94,8 @@ class AuthRepositoryImpl implements AuthRepository {
             name: userMap['name'] as String? ?? '',
             email: userMap['email'] as String? ?? username,
             role: role,
-            department: userMap['department'] as String? ??
+            department:
+                userMap['department'] as String? ??
                 MasterDepartments.defaultDepartment,
             isActive: userMap['is_active'] as bool? ?? true,
             mustChangePassword: mustChangePassword,
@@ -133,7 +136,7 @@ class AuthRepositoryImpl implements AuthRepository {
     }
 
     return Result.failure(
-      const UnauthorizedFailure(message: 'Email atau kata sandi salah.'),
+      const UnauthorizedFailure(message: 'Email atau password salah.'),
     );
   }
 
@@ -193,7 +196,8 @@ class AuthRepositoryImpl implements AuthRepository {
               name: userMap['name'] as String? ?? '',
               email: userMap['email'] as String? ?? '',
               role: role,
-              department: userMap['department'] as String? ??
+              department:
+                  userMap['department'] as String? ??
                   MasterDepartments.defaultDepartment,
               isActive: true,
               mustChangePassword: mustChangePassword,

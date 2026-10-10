@@ -178,15 +178,19 @@ void main() {
         await tester.tap(targetLocFinder);
         await tester.pumpAndSettle();
 
-        // BUKTI 1: Nama lokasi acuan pengguna tampil di dropdown menu
+        // BUKTI 1: Nama divisi & kantor cabang acuan pengguna tampil di dropdown menu
         expect(find.text('KCU Palu').hitTestable(), findsOneWidget);
         expect(find.text('Cabang Donggala').hitTestable(), findsOneWidget);
         expect(find.text('Cabang Sigi').hitTestable(), findsOneWidget);
         expect(find.text('Cabang Poso').hitTestable(), findsOneWidget);
         expect(find.text('Cabang Luwuk').hitTestable(), findsOneWidget);
         expect(find.text('Cabang Makassar').hitTestable(), findsOneWidget);
+        expect(find.text('Divisi TI').hitTestable(), findsOneWidget);
 
-        // BUKTI 2: 7 lokasi lama yang ditolak TIDAK ADA dalam pilihan dropdown
+        // BUKTI 2: Fasilitas fisik aset (Lobby) TIDAK TAMPIL di dropdown tujuan penugasan
+        expect(find.text('Lobby'), findsNothing);
+
+        // BUKTI 3: 7 lokasi lama yang ditolak TIDAK ADA dalam pilihan dropdown
         expect(find.text('Kantor Pusat'), findsNothing);
         expect(find.text('Gedung A'), findsNothing);
         expect(find.text('Gedung B'), findsNothing);
@@ -328,6 +332,165 @@ void main() {
         expect(find.text('Cabang Surabaya'), findsNothing);
         expect(find.text('Cabang Bandung'), findsNothing);
         expect(find.text('Cabang Semarang'), findsNothing);
+      },
+    );
+
+    testWidgets(
+      '4. Dropdown target lokasi HANYA menampilkan divisi dan cabang, serta mengecualikan fasilitas fisik aset (toilet, parkiran, lobby, lantai, ruang tunggu, pantry, server)',
+      (tester) async {
+        tester.view.physicalSize = const Size(1080, 2400);
+        tester.view.devicePixelRatio = 1.0;
+        addTearDown(() => tester.view.resetPhysicalSize());
+
+        final mockClient = MockClient((request) async {
+          if (request.url.path == '/api/v1/locations' ||
+              request.url.path == '/api/v1/admin/locations') {
+            return http.Response(
+              jsonEncode({
+                'success': true,
+                'data': [
+                  // Unit Penugasan Sah (Divisi & Cabang)
+                  {'id': 26, 'name': 'Divisi TI', 'code': 'RG-TI', 'is_active': true},
+                  {'id': 30, 'name': 'Divisi SDM', 'code': 'RG-SDM', 'is_active': true},
+                  {'id': 37, 'name': 'KCU Palu', 'code': 'CAB-PLU-KCU', 'is_active': true},
+                  {'id': 39, 'name': 'Cabang Sigi', 'code': 'CAB-SIGI', 'is_active': true},
+
+                  // Fasilitas Fisik Aset (Harus disaring keluar)
+                  {'id': 10, 'name': 'Parkiran Basement', 'code' : 'UMUM-PKB', 'is_active': true},
+                  {'id': 12, 'name': 'Lobby', 'code': 'UMUM-LOBBY', 'is_active': true},
+                  {'id': 14, 'name': 'Ruang Tunggu Nasabah', 'code': 'UMUM-TUNGGU', 'is_active': true},
+                  {'id': 16, 'name': 'Toilet', 'code': 'UMUM-TOILET', 'is_active': true},
+                  {'id': 17, 'name': 'Pantry', 'code': 'UMUM-PANTRY', 'is_active': true},
+                  {'id': 21, 'name': 'Ruang Server', 'code': 'UMUM-SERVER', 'is_active': true},
+                  {'id': 23, 'name': 'Lantai 2', 'code': 'LT-2', 'is_active': true},
+                  {'id': 24, 'name': 'Lantai 3', 'code': 'LT-3', 'is_active': true},
+                ],
+              }),
+              200,
+              headers: {'content-type': 'application/json'},
+            );
+          }
+          return http.Response('Not Found', 404);
+        });
+
+        final apiClient = ApiClient(
+          baseUrl: 'http://127.0.0.1:8000',
+          httpClient: mockClient,
+        );
+        apiClient.setAuthToken('valid_test_token');
+
+        await tester.pumpWidget(createWidgetUnderTest(apiClient: apiClient));
+        await tester.pumpAndSettle();
+
+        final targetLocFinder = find.byKey(const Key('dropdown_target_location'));
+        await tester.ensureVisible(targetLocFinder);
+        await tester.tap(targetLocFinder);
+        await tester.pumpAndSettle();
+
+        // 1. Verifikasi divisi & cabang SAH muncul di dropdown
+        expect(find.text('Divisi TI').hitTestable(), findsOneWidget);
+        expect(find.text('Divisi SDM').hitTestable(), findsOneWidget);
+        expect(find.text('KCU Palu').hitTestable(), findsOneWidget);
+        expect(find.text('Cabang Sigi').hitTestable(), findsOneWidget);
+
+        // 2. Verifikasi fasilitas fisik aset TIDAK MUNCUL sama sekali
+        expect(find.text('Toilet'), findsNothing);
+        expect(find.text('Parkiran Basement'), findsNothing);
+        expect(find.text('Lobby'), findsNothing);
+        expect(find.text('Ruang Tunggu Nasabah'), findsNothing);
+        expect(find.text('Pantry'), findsNothing);
+        expect(find.text('Ruang Server'), findsNothing);
+        expect(find.text('Lantai 2'), findsNothing);
+        expect(find.text('Lantai 3'), findsNothing);
+      },
+    );
+
+    testWidgets(
+      '5. ID unit/cabang penugasan baru yang dipilih tersimpan dengan benar pada state formulir mutasi',
+      (tester) async {
+        tester.view.physicalSize = const Size(1080, 2400);
+        tester.view.devicePixelRatio = 1.0;
+        addTearDown(() => tester.view.resetPhysicalSize());
+
+        final mockClient = MockClient((request) async {
+          if (request.url.path == '/api/v1/locations' ||
+              request.url.path == '/api/v1/admin/locations') {
+            return http.Response(
+              jsonEncode({
+                'success': true,
+                'data': [
+                  {'id': 26, 'name': 'Divisi TI', 'code': 'RG-TI', 'is_active': true},
+                  {'id': 40, 'name': 'Cabang Donggala', 'code': 'CAB-DGL', 'is_active': true},
+                ],
+              }),
+              200,
+              headers: {'content-type': 'application/json'},
+            );
+          }
+          return http.Response('Not Found', 404);
+        });
+
+        final apiClient = ApiClient(
+          baseUrl: 'http://127.0.0.1:8000',
+          httpClient: mockClient,
+        );
+        apiClient.setAuthToken('valid_test_token');
+
+        await tester.pumpWidget(createWidgetUnderTest(apiClient: apiClient));
+        await tester.pumpAndSettle();
+
+        final targetLocFinder = find.byKey(const Key('dropdown_target_location'));
+        await tester.ensureVisible(targetLocFinder);
+        await tester.tap(targetLocFinder);
+        await tester.pumpAndSettle();
+
+        // Pilih 'Divisi TI' (ID: 26)
+        await tester.tap(find.text('Divisi TI').hitTestable());
+        await tester.pumpAndSettle();
+
+        // Pastikan opsi 'Divisi TI' terpilih
+        expect(find.text('Divisi TI'), findsOneWidget);
+
+        // Ambil state widget untuk memastikan _selectedTargetLocationId terisi '26'
+        final state = tester.state(find.byType(PemohonCreateMutationScreen)) as dynamic;
+        expect(state.selectedTargetLocationId, equals('26'));
+      },
+    );
+
+    testWidgets(
+      '6. Jika API gagal, menampilkan pesan error yang jelas dan TIDAK memunculkan daftar fallback palsu / hardcoded (Lantai 1, Lantai 2, Lantai 3)',
+      (tester) async {
+        tester.view.physicalSize = const Size(1080, 2400);
+        tester.view.devicePixelRatio = 1.0;
+        addTearDown(() => tester.view.resetPhysicalSize());
+
+        final mockClient = MockClient((request) async {
+          return http.Response(
+            jsonEncode({'message': 'Internal Server Error'}),
+            500,
+            headers: {'content-type': 'application/json'},
+          );
+        });
+
+        final apiClient = ApiClient(
+          baseUrl: 'http://127.0.0.1:8000',
+          httpClient: mockClient,
+        );
+        apiClient.setAuthToken('valid_test_token');
+
+        await tester.pumpWidget(createWidgetUnderTest(apiClient: apiClient));
+        await tester.pumpAndSettle();
+
+        // Pesan error dari server tampil
+        expect(
+          find.text('Gagal memuat master lokasi dari server.'),
+          findsOneWidget,
+        );
+
+        // Daftar palsu hardcode (Lantai 1, Lantai 2, Lantai 3) TIDAK MUNCUL
+        expect(find.text('Lantai 1'), findsNothing);
+        expect(find.text('Lantai 2'), findsNothing);
+        expect(find.text('Lantai 3'), findsNothing);
       },
     );
   });

@@ -12,64 +12,7 @@ import '../../domain/repositories/location_repository.dart';
 class LocationRepositoryImpl implements LocationRepository {
   final ApiClient? apiClient;
   // Cache in-memory lokasi yang diperoleh dari backend API atau ditambahkan saat test
-  static final List<LocationItem> _locations = [
-    const LocationItem(
-      id: '22',
-      name: 'Lantai 1',
-      description: 'LT-1',
-      isBranch: false,
-      isActive: true,
-    ),
-    const LocationItem(
-      id: '23',
-      name: 'Lantai 2',
-      description: 'LT-2',
-      isBranch: false,
-      isActive: true,
-    ),
-    const LocationItem(
-      id: '24',
-      name: 'Lantai 3',
-      description: 'LT-3',
-      isBranch: false,
-      isActive: true,
-    ),
-    const LocationItem(
-      id: '26',
-      name: 'Ruang Divisi TI',
-      description: 'RG-TI',
-      isBranch: false,
-      isActive: true,
-    ),
-    const LocationItem(
-      id: '37',
-      name: 'KCU Palu',
-      description: 'CAB-PLU-KCU',
-      isBranch: true,
-      isActive: true,
-    ),
-    const LocationItem(
-      id: '40',
-      name: 'Cabang Donggala',
-      description: 'CAB-DGL',
-      isBranch: true,
-      isActive: true,
-    ),
-    const LocationItem(
-      id: '39',
-      name: 'Cabang Sigi',
-      description: 'CAB-SIGI',
-      isBranch: true,
-      isActive: true,
-    ),
-    const LocationItem(
-      id: '43',
-      name: 'Cabang Poso',
-      description: 'CAB-POSO',
-      isBranch: true,
-      isActive: true,
-    ),
-  ];
+  static final List<LocationItem> _locations = [];
 
   static const Set<String> _protectedLocationIds = {
     '1',
@@ -110,19 +53,27 @@ class LocationRepositoryImpl implements LocationRepository {
             final rawList = data['data'] as List<dynamic>? ?? [];
             final locations = rawList.map((item) {
               final map = item as Map<String, dynamic>;
-              final name = (map['name'] ?? '').toString();
+              var name = (map['name'] ?? '').toString();
+              if (name.startsWith('Ruang Divisi ')) {
+                name = name.replaceFirst('Ruang ', '');
+              } else if (name.startsWith('Ruang UKK ')) {
+                name = name.replaceFirst('Ruang ', '');
+              }
               final code = map['code']?.toString();
               final isBranch = (code != null && code.toUpperCase().contains('CAB')) ||
-                  name.toLowerCase().contains('cabang');
+                  name.toLowerCase().contains('cabang') ||
+                  map['is_branch'] == true;
               final isActive = map['is_active'] == true ||
                   map['is_active'] == 1 ||
                   map['is_active'] == null;
+              final isAssignmentUnitExplicit = map['is_assignment_unit'] as bool?;
               return LocationItem(
                 id: map['id'].toString(),
                 name: name,
                 description: code ?? map['description']?.toString(),
                 isBranch: isBranch,
                 isActive: isActive,
+                isAssignmentUnitExplicit: isAssignmentUnitExplicit,
               );
             }).toList();
 
@@ -130,15 +81,9 @@ class LocationRepositoryImpl implements LocationRepository {
             _locations.addAll(locations);
             return Result.success(List.unmodifiable(locations));
           case AppFailure(:final failure):
-            if (_locations.isNotEmpty) {
-              return Result.success(List.unmodifiable(_locations));
-            }
             return Result.failure(failure);
         }
       } catch (e) {
-        if (_locations.isNotEmpty) {
-          return Result.success(List.unmodifiable(_locations));
-        }
         return Result.failure(ServerFailure(message: e.toString()));
       }
     }
@@ -155,36 +100,33 @@ class LocationRepositoryImpl implements LocationRepository {
             final rawList = data['data'] as List<dynamic>? ?? [];
             final locations = rawList.map((item) {
               final map = item as Map<String, dynamic>;
-              final name = (map['name'] ?? '').toString();
+              var name = (map['name'] ?? '').toString();
+              if (name.startsWith('Ruang Divisi ')) {
+                name = name.replaceFirst('Ruang ', '');
+              } else if (name.startsWith('Ruang UKK ')) {
+                name = name.replaceFirst('Ruang ', '');
+              }
               final code = map['code']?.toString();
               final isBranch = (code != null && code.toUpperCase().contains('CAB')) ||
-                  name.toLowerCase().contains('cabang');
+                  name.toLowerCase().contains('cabang') ||
+                  map['is_branch'] == true;
+              final isAssignmentUnitExplicit = map['is_assignment_unit'] as bool?;
               return LocationItem(
                 id: map['id'].toString(),
                 name: name,
                 description: code ?? map['description']?.toString(),
                 isBranch: isBranch,
                 isActive: true,
+                isAssignmentUnitExplicit: isAssignmentUnitExplicit,
               );
             }).toList();
             _locations.clear();
             _locations.addAll(locations);
             return Result.success(List.unmodifiable(locations));
           case AppFailure(:final failure):
-            if (failure is UnauthorizedFailure) {
-              return Result.failure(failure);
-            }
-            if (_locations.isNotEmpty) {
-              final active = _locations.where((l) => l.isActive).toList();
-              return Result.success(List.unmodifiable(active));
-            }
             return Result.failure(failure);
         }
       } catch (e) {
-        if (_locations.isNotEmpty) {
-          final active = _locations.where((l) => l.isActive).toList();
-          return Result.success(List.unmodifiable(active));
-        }
         return Result.failure(ServerFailure(message: e.toString()));
       }
     }

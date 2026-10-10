@@ -260,13 +260,17 @@ class _TopBar extends StatelessWidget {
                           ),
                         ),
                         const SizedBox(width: 6),
-                        Text(
-                          roleLabel,
-                          style: const TextStyle(
-                            fontSize: 11,
-                            fontWeight: FontWeight.w700,
-                            color: _LC.navy,
-                            letterSpacing: 0.3,
+                        Flexible(
+                          child: Text(
+                            roleLabel,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(
+                              fontSize: 11,
+                              fontWeight: FontWeight.w700,
+                              color: _LC.navy,
+                              letterSpacing: 0.3,
+                            ),
                           ),
                         ),
                       ],

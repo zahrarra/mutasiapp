@@ -309,22 +309,22 @@ class _KadivApprovalCard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            // ── Row 1: Ticket + Status Badge ─────────────────────────
+            Wrap(
+              alignment: WrapAlignment.spaceBetween,
+              crossAxisAlignment: WrapCrossAlignment.center,
+              spacing: 8,
+              runSpacing: 6,
               children: [
-                Expanded(
-                  child: Text(
-                    mutation.ticketNumber,
-                    style: const TextStyle(
-                      fontSize: 11,
-                      fontWeight: FontWeight.w700,
-                      fontFamily: 'monospace',
-                      color: _C.navy,
-                    ),
-                    overflow: TextOverflow.ellipsis,
+                Text(
+                  mutation.ticketNumber,
+                  style: const TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w700,
+                    fontFamily: 'monospace',
+                    color: _C.navy,
                   ),
                 ),
-                const SizedBox(width: 8),
                 Container(
                   padding: const EdgeInsets.symmetric(
                     horizontal: 8,
@@ -353,16 +353,20 @@ class _KadivApprovalCard extends StatelessWidget {
                 fontWeight: FontWeight.w600,
                 color: _C.textPrimary,
               ),
-              maxLines: 1,
+              maxLines: 2,
               overflow: TextOverflow.ellipsis,
             ),
             const SizedBox(height: 4),
             Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Icon(
-                  Icons.place_outlined,
-                  size: 13,
-                  color: _C.textSecondary,
+                const Padding(
+                  padding: EdgeInsets.only(top: 2),
+                  child: Icon(
+                    Icons.place_outlined,
+                    size: 13,
+                    color: _C.textSecondary,
+                  ),
                 ),
                 const SizedBox(width: 4),
                 Expanded(
@@ -372,18 +376,23 @@ class _KadivApprovalCard extends StatelessWidget {
                       fontSize: 11,
                       color: _C.textSecondary,
                     ),
+                    maxLines: 2,
                     overflow: TextOverflow.ellipsis,
                   ),
                 ),
               ],
             ),
-            const SizedBox(height: 2),
+            const SizedBox(height: 4),
             Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Icon(
-                  Icons.person_outline_rounded,
-                  size: 13,
-                  color: _C.textSecondary,
+                const Padding(
+                  padding: EdgeInsets.only(top: 2),
+                  child: Icon(
+                    Icons.person_outline_rounded,
+                    size: 13,
+                    color: _C.textSecondary,
+                  ),
                 ),
                 const SizedBox(width: 4),
                 Expanded(
@@ -393,14 +402,19 @@ class _KadivApprovalCard extends StatelessWidget {
                       fontSize: 11,
                       color: _C.textSecondary,
                     ),
+                    maxLines: 2,
                     overflow: TextOverflow.ellipsis,
                   ),
                 ),
               ],
             ),
             // Bagian Aset verification badge
-            if (mutation.assetVerifiedBy != null ||
-                mutation.approvedBy != null) ...[
+            if ((mutation.assetVerifiedBy != null &&
+                    !RegExp(r'^\d+$').hasMatch(mutation.assetVerifiedBy!.trim())) ||
+                (mutation.approvedBy != null &&
+                    !RegExp(r'^\d+$').hasMatch(mutation.approvedBy!.trim())) ||
+                mutation.assetVerifiedAt != null ||
+                mutation.approvedAt != null) ...[
               const SizedBox(height: 8),
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
@@ -418,12 +432,22 @@ class _KadivApprovalCard extends StatelessWidget {
                       color: _C.success,
                     ),
                     const SizedBox(width: 4),
-                    Text(
-                      'Verifikasi Bagian Aset: ${mutation.assetVerifiedBy ?? mutation.approvedBy}',
-                      style: const TextStyle(
-                        fontSize: 11,
-                        fontWeight: FontWeight.w600,
-                        color: _C.success,
+                    Flexible(
+                      child: Text(
+                        'Verifikasi Bagian Aset: ${() {
+                          final name = mutation.assetVerifiedBy ?? mutation.approvedBy;
+                          if (name != null && !RegExp(r'^\d+$').hasMatch(name.trim()) && name.trim() != 'null') {
+                            return name.trim();
+                          }
+                          return 'Valid';
+                        }()}',
+                        style: const TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w600,
+                          color: _C.success,
+                        ),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
                       ),
                     ),
                   ],

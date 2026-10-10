@@ -13,8 +13,8 @@ void main() {
     });
 
     test('email validator', () {
-      expect(FormValidators.email(null), 'Silakan masukkan alamat email.');
-      expect(FormValidators.email('invalid_email'), 'Format alamat email tidak valid.');
+      expect(FormValidators.email(null), 'Email tidak boleh kosong');
+      expect(FormValidators.email('invalid_email'), 'Format email tidak valid');
       expect(FormValidators.email('user@example.com'), isNull);
     });
 

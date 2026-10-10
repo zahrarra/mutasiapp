@@ -184,50 +184,47 @@ class PemohonMutationCard extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 // ── Card Header (Ticket & Status Badge) ─────────────
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                Wrap(
+                  alignment: WrapAlignment.spaceBetween,
+                  crossAxisAlignment: WrapCrossAlignment.center,
+                  spacing: 8,
+                  runSpacing: 6,
                   children: [
-                    Expanded(
-                      child: Row(
-                        children: [
-                          Flexible(
-                            child: Text(
-                              mutation.ticketNumber,
-                              style: TextStyle(
-                                fontFamily: 'monospace',
-                                fontWeight: FontWeight.bold,
-                                fontSize: 12,
-                                color:
-                                    status == MutationStatus.pendingConfirmation
-                                    ? const Color(0xFF175CD3)
-                                    : (status == MutationStatus.returned
-                                          ? const Color(0xFFB45309)
-                                          : const Color(0xFF00273A)),
-                              ),
-                              overflow: TextOverflow.ellipsis,
-                            ),
+                    Wrap(
+                      crossAxisAlignment: WrapCrossAlignment.center,
+                      spacing: 6,
+                      runSpacing: 2,
+                      children: [
+                        Text(
+                          mutation.ticketNumber,
+                          style: TextStyle(
+                            fontFamily: 'monospace',
+                            fontWeight: FontWeight.bold,
+                            fontSize: 12,
+                            color: status == MutationStatus.pendingConfirmation
+                                ? const Color(0xFF175CD3)
+                                : (status == MutationStatus.returned
+                                      ? const Color(0xFFB45309)
+                                      : const Color(0xFF00273A)),
                           ),
-                          const SizedBox(width: 6),
-                          const Text(
-                            '•',
-                            style: TextStyle(
-                              color: Color(0xFF52606D),
-                              fontSize: 11,
-                            ),
+                        ),
+                        const Text(
+                          '•',
+                          style: TextStyle(
+                            color: Color(0xFF52606D),
+                            fontSize: 11,
                           ),
-                          const SizedBox(width: 6),
-                          Text(
-                            _formatDate(mutation.createdAt),
-                            style: const TextStyle(
-                              fontSize: 11,
-                              color: Color(0xFF52606D),
-                              fontWeight: FontWeight.w500,
-                            ),
+                        ),
+                        Text(
+                          _formatDate(mutation.createdAt),
+                          style: const TextStyle(
+                            fontSize: 11,
+                            color: Color(0xFF52606D),
+                            fontWeight: FontWeight.w500,
                           ),
-                        ],
-                      ),
+                        ),
+                      ],
                     ),
-                    const SizedBox(width: 8),
                     Container(
                       padding: const EdgeInsets.symmetric(
                         horizontal: 8,
@@ -279,8 +276,9 @@ class PemohonMutationCard extends StatelessWidget {
 
                 // ── Movement Route (Current → Target) ───────────────
                 Row(
+                  crossAxisAlignment: CrossAxisAlignment.center,
                   children: [
-                    Flexible(
+                    Expanded(
                       child: Text(
                         mutation.currentLocation,
                         style: const TextStyle(
@@ -288,6 +286,7 @@ class PemohonMutationCard extends StatelessWidget {
                           fontWeight: FontWeight.w500,
                           color: Color(0xFF172B4D),
                         ),
+                        maxLines: 2,
                         overflow: TextOverflow.ellipsis,
                       ),
                     ),
@@ -299,7 +298,7 @@ class PemohonMutationCard extends StatelessWidget {
                         color: Color(0xFF52606D),
                       ),
                     ),
-                    Flexible(
+                    Expanded(
                       child: Text(
                         mutation.targetLocation,
                         style: const TextStyle(
@@ -307,6 +306,7 @@ class PemohonMutationCard extends StatelessWidget {
                           fontWeight: FontWeight.w500,
                           color: Color(0xFF172B4D),
                         ),
+                        maxLines: 2,
                         overflow: TextOverflow.ellipsis,
                       ),
                     ),
@@ -517,55 +517,50 @@ class PemohonMutationCard extends StatelessWidget {
                       ],
                     )
                   else
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    Wrap(
+                      alignment: WrapAlignment.spaceBetween,
+                      crossAxisAlignment: WrapCrossAlignment.center,
+                      spacing: 8,
+                      runSpacing: 4,
                       children: [
-                        Expanded(
-                          child: Text.rich(
-                            TextSpan(
-                              text: '${_getStageText(status).split(':')[0]}: ',
-                              style: const TextStyle(
-                                fontSize: 11,
-                                color: Color(0xFF52606D),
-                              ),
-                              children: [
-                                TextSpan(
-                                  text: _getStageText(status).contains(':')
-                                      ? _getStageText(status)
-                                            .split(':')[1]
-                                            .trim()
-                                      : _getStageText(status),
-                                  style: const TextStyle(
-                                    fontWeight: FontWeight.bold,
-                                    color: Color(0xFF172B4D),
-                                  ),
-                                ),
-                              ],
+                        Text.rich(
+                          TextSpan(
+                            text: '${_getStageText(status).split(':')[0]}: ',
+                            style: const TextStyle(
+                              fontSize: 11,
+                              color: Color(0xFF52606D),
                             ),
-                            overflow: TextOverflow.ellipsis,
+                            children: [
+                              TextSpan(
+                                text: _getStageText(status).contains(':')
+                                    ? _getStageText(status)
+                                          .split(':')[1]
+                                          .trim()
+                                    : _getStageText(status),
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  color: Color(0xFF172B4D),
+                                ),
+                              ),
+                            ],
                           ),
                         ),
-                        const SizedBox(width: 8),
-                        Flexible(
-                          child: Text.rich(
-                            TextSpan(
-                              text: 'PIC: ',
-                              style: const TextStyle(
-                                fontSize: 11,
-                                color: Color(0xFF52606D),
-                              ),
-                              children: [
-                                TextSpan(
-                                  text: mutation.targetPic,
-                                  style: const TextStyle(
-                                    fontWeight: FontWeight.bold,
-                                    color: Color(0xFF172B4D),
-                                  ),
-                                ),
-                              ],
+                        Text.rich(
+                          TextSpan(
+                            text: 'PIC: ',
+                            style: const TextStyle(
+                              fontSize: 11,
+                              color: Color(0xFF52606D),
                             ),
-                            overflow: TextOverflow.ellipsis,
-                            textAlign: TextAlign.right,
+                            children: [
+                              TextSpan(
+                                text: mutation.targetPic,
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  color: Color(0xFF172B4D),
+                                ),
+                              ),
+                            ],
                           ),
                         ),
                       ],

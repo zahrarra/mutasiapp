@@ -405,14 +405,19 @@ class _AdminLocationsScreenState extends ConsumerState<AdminLocationsScreen> {
                       child: Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          Text(
-                            'Total ${filtered.length} Lokasi (${filtered.where((l) => l.isActive).length} Aktif di Form)',
-                            style: const TextStyle(
-                              fontSize: 12,
-                              fontWeight: FontWeight.w600,
-                              color: AppColors.textSecondary,
+                          Expanded(
+                            child: Text(
+                              'Total ${filtered.length} Lokasi (${filtered.where((l) => l.isActive).length} Aktif di Form)',
+                              style: const TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w600,
+                                color: AppColors.textSecondary,
+                              ),
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
                             ),
                           ),
+                          const SizedBox(width: 8),
                           Container(
                             padding: const EdgeInsets.symmetric(
                               horizontal: 8,
@@ -424,9 +429,9 @@ class _AdminLocationsScreenState extends ConsumerState<AdminLocationsScreen> {
                                 AppRadius.pill,
                               ),
                             ),
-                            child: Text(
+                            child: const Text(
                               'Master Lokasi Aktif',
-                              style: const TextStyle(
+                              style: TextStyle(
                                 fontSize: 11,
                                 fontWeight: FontWeight.bold,
                                 color: AppColors.primary,

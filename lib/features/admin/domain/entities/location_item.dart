@@ -9,6 +9,7 @@ class LocationItem {
   final String? description;
   final bool isBranch;
   final bool isActive;
+  final bool? isAssignmentUnitExplicit;
 
   const LocationItem({
     required this.id,
@@ -16,7 +17,58 @@ class LocationItem {
     this.description,
     this.isBranch = false,
     this.isActive = true,
+    this.isAssignmentUnitExplicit,
   });
+
+  /// Menentukan apakah lokasi ini merupakan unit penugasan resmi (divisi atau cabang),
+  /// dan BUKAN fasilitas fisik aset (toilet, parkiran, lobby, lantai, ruang tunggu, dll.).
+  bool get isAssignmentUnit {
+    if (isAssignmentUnitExplicit != null) {
+      return isAssignmentUnitExplicit!;
+    }
+
+    final code = (description ?? '').toUpperCase();
+    final n = name.toLowerCase();
+
+    // Eksklusi kode fasilitas umum, lantai gedung, dan dummy audit
+    if (code.startsWith('UMUM-') || code.startsWith('LT-') || code.startsWith('AUD_')) {
+      return false;
+    }
+
+    const physicalKeywords = [
+      'toilet',
+      'parkir',
+      'lobby',
+      'lantai',
+      'ruang tunggu',
+      'teller',
+      'atm',
+      'pantry',
+      'mushola',
+      'musholla',
+      'ruang rapat',
+      'gudang',
+      'ruang server',
+      'kantin',
+      'pos satpam',
+      'koridor',
+      'taman',
+    ];
+
+    for (final kw in physicalKeywords) {
+      if (n.contains(kw)) return false;
+    }
+
+    // Whitelist cabang atau divisi
+    if (isBranch || code.startsWith('CAB-') || code.startsWith('RG-') || code.startsWith('DIV-')) {
+      return true;
+    }
+
+    return n.contains('divisi') ||
+        n.contains('cabang') ||
+        n.contains('kcu') ||
+        n.contains('siber');
+  }
 
   LocationItem copyWith({
     String? id,
@@ -24,6 +76,7 @@ class LocationItem {
     String? description,
     bool? isBranch,
     bool? isActive,
+    bool? isAssignmentUnitExplicit,
   }) {
     return LocationItem(
       id: id ?? this.id,
@@ -31,6 +84,8 @@ class LocationItem {
       description: description ?? this.description,
       isBranch: isBranch ?? this.isBranch,
       isActive: isActive ?? this.isActive,
+      isAssignmentUnitExplicit:
+          isAssignmentUnitExplicit ?? this.isAssignmentUnitExplicit,
     );
   }
 

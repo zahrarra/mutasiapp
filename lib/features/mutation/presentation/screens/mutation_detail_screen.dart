@@ -1701,27 +1701,35 @@ class MutationDetailScreen extends ConsumerWidget {
   // HELPER METHODS
   // ─────────────────────────────────────────────────────────────────────────
   String _getReviewerName(Mutation mutation) {
+    String? cleanName(String? name) {
+      if (name == null || name.trim().isEmpty || name.trim() == 'null') return null;
+      if (RegExp(r'^\d+$').hasMatch(name.trim())) return null;
+      return name.trim();
+    }
+
     return switch (mutation.status) {
       MutationStatus.submitted ||
-      MutationStatus.waitingSync => mutation.verifiedBy ?? 'Operator',
+      MutationStatus.waitingSync => cleanName(mutation.verifiedBy) ?? 'Operator',
       MutationStatus.returned =>
         (mutation.assetReturnReason != null &&
                 mutation.assetReturnReason!.isNotEmpty)
-            ? (mutation.approvedBy ?? 'Bagian Aset')
-            : (mutation.verifiedBy ?? 'Operator'),
+            ? (cleanName(mutation.approvedBy) ?? cleanName(mutation.assetVerifiedBy) ?? 'Bagian Aset')
+            : (cleanName(mutation.verifiedBy) ?? 'Operator'),
       MutationStatus.waitingAssetVerification ||
-      MutationStatus.verified => mutation.approvedBy ?? 'Bagian Aset',
+      MutationStatus.verified =>
+        cleanName(mutation.assetVerifiedBy) ?? cleanName(mutation.approvedBy) ?? 'Bagian Aset',
       MutationStatus.waitingDivisionHeadApproval ||
       MutationStatus.waitingKadivApproval =>
-        mutation.kadivApprovedBy ?? 'Pemimpin Divisi',
-      MutationStatus.approved => mutation.staffUpdatedBy ?? 'Bagian Aset',
+        cleanName(mutation.kadivApprovedBy) ?? cleanName(mutation.approvedBy) ?? 'Pemimpin Divisi',
+      MutationStatus.approved =>
+        cleanName(mutation.staffUpdatedBy) ?? cleanName(mutation.assetVerifiedBy) ?? cleanName(mutation.approvedBy) ?? 'Bagian Aset',
       MutationStatus.pendingConfirmation ||
       MutationStatus.waitingConfirmation =>
         mutation.applicantName.isNotEmpty ? mutation.applicantName : 'Pemohon',
       MutationStatus.completed => 'Sistem MutasiKu',
       MutationStatus.rejected =>
-        mutation.kadivRejectedBy ??
-            (mutation.rejectedBy ??
+        cleanName(mutation.kadivRejectedBy) ??
+            (cleanName(mutation.rejectedBy) ??
                 (mutation.kadivRejectionReason != null
                     ? 'Pemimpin Divisi'
                     : 'Peninjau Mutasi')),
