@@ -38,6 +38,7 @@ class UpdateUserRequest extends FormRequest
             'password' => ['nullable', 'string', 'min:6'],
             'role_id' => ['sometimes', 'required', 'integer', 'exists:roles,id'],
             'role' => ['nullable', 'string'],
+            'department' => ['nullable', 'string', 'max:255'],
             'nip' => ['nullable', 'string', 'max:50', Rule::unique('users', 'nip')->ignore($userId)],
             'is_active' => ['nullable', 'boolean'],
         ];

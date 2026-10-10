@@ -82,6 +82,7 @@ class AuthController extends Controller
             'id' => $user->id,
             'name' => $user->name,
             'email' => $user->email,
+            'department' => $user->department,
             'nip' => $user->nip,
             'role' => $roleName,
             'is_active' => (bool) $user->is_active,
