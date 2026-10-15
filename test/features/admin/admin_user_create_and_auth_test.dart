@@ -65,7 +65,7 @@ void main() {
         name: 'Surya Saputra',
         username: 'surya_operator',
         email: 'surya@mutasiku.test',
-        department: 'Operasional',
+        department: 'Umum & Aset',
         role: UserRole.operator,
         isActive: true,
       );

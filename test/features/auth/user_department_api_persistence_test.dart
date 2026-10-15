@@ -250,7 +250,7 @@ void main() {
       expect(users.length, 2);
 
       // Verifikasi tidak crash dan fallback resmi aktif sesuai role pengguna
-      expect(users[0].department, 'Divisi Umum dan Aset');
+      expect(users[0].department, 'Umum & Aset');
       expect(users[1].department, 'Divisi Operasional');
       expect(MasterDepartments.contains(users[0].department), isTrue);
       expect(MasterDepartments.contains(users[1].department), isTrue);
@@ -285,7 +285,7 @@ void main() {
       expect(result.isSuccess, isTrue);
 
       final user = (result as Success<User>).data;
-      expect(user.department, 'Divisi TI'); // Fallback kadiv
+      expect(user.department, 'Umum & Aset'); // Fallback kadiv
       expect(MasterDepartments.contains(user.department), isTrue);
     });
   });

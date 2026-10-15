@@ -107,7 +107,7 @@ void main() {
     username: 'pegawai',
     role: UserRole.operator,
     email: 'pegawai@mutasiku.id',
-    department: 'Divisi Operasional',
+    department: 'Umum & Aset',
     isActive: true,
   );
 
