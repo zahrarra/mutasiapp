@@ -17,6 +17,7 @@ abstract class AssetRepository {
     String? location,
     AssetStatus? status,
     bool? mine,
+    bool? available,
   });
 
   /// Ambil detail satu aset berdasarkan ID.

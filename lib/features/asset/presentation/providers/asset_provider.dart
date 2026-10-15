@@ -236,17 +236,17 @@ final userResponsibleAssetsProvider = FutureProvider<List<Asset>>((ref) async {
     } catch (_) {}
   }
 
-  // 1. Jalur Production / Live API: Ambil dari Laravel API dengan scope ?mine=true
+  // 1. Jalur Production / Live API: Ambil dari Laravel API dengan scope ?mine=true&available=true
   try {
     final apiRepo = ref.watch(apiAssetRepositoryProvider);
-    final apiResult = await apiRepo.getAssets(mine: true);
+    final apiResult = await apiRepo.getAssets(mine: true, available: true);
     if (apiResult is Success<List<Asset>>) {
-      return apiResult.data;
+      return apiResult.data.where((a) => !a.hasActiveMutation).toList();
     }
     if (apiResult is AppFailure<List<Asset>>) {
       // Coba fallback mock untuk kompatibilitas unit/widget test
       final fallbackRepo = AssetRepositoryImpl();
-      final fallbackResult = await fallbackRepo.getAssets();
+      final fallbackResult = await fallbackRepo.getAssets(available: true);
       if (fallbackResult is Success<List<Asset>>) {
         final filtered = _filterAssetsByUser(fallbackResult.data, user);
         if (filtered.isNotEmpty) {
@@ -279,8 +279,8 @@ List<Asset> _filterAssetsByUser(List<Asset> assets, dynamic user) {
       user.role?.toString().toLowerCase().contains('pemohon') ?? false;
 
   final filtered = assets.where((asset) {
-    // Hanya aset aktif yang belum dihapus/disposisi
-    if (asset.status == AssetStatus.disposed) return false;
+    // Hanya aset yang belum dihapus/disposisi dan tidak memiliki mutasi aktif
+    if (asset.status == AssetStatus.disposed || asset.hasActiveMutation) return false;
 
     final pic = asset.pic.toLowerCase().trim();
     if (userName.isNotEmpty &&
@@ -305,7 +305,7 @@ List<Asset> _filterAssetsByUser(List<Asset> assets, dynamic user) {
   }).toList();
 
   if (filtered.isEmpty && (isPemohon || userId == 'usr_pemohon')) {
-    return assets.where((a) => a.status != AssetStatus.disposed).toList();
+    return assets.where((a) => a.status != AssetStatus.disposed && !a.hasActiveMutation).toList();
   }
   return filtered;
 }

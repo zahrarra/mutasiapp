@@ -229,11 +229,15 @@ class AssetRepositoryImpl implements AssetRepository {
     String? location,
     AssetStatus? status,
     bool? mine,
+    bool? available,
   }) async {
     if (apiClient != null) {
       final queryParams = <String, String>{};
       if (mine == true) {
         queryParams['mine'] = 'true';
+      }
+      if (available == true) {
+        queryParams['available'] = 'true';
       }
       final response = await apiClient!.get(
         '/api/v1/assets',
@@ -246,6 +250,10 @@ class AssetRepositoryImpl implements AssetRepository {
               .whereType<Map<String, dynamic>>()
               .map(AssetModel.fromJson)
               .toList();
+
+          if (available == true) {
+            assets = assets.where((asset) => !asset.hasActiveMutation).toList();
+          }
 
           if (query != null && query.trim().isNotEmpty) {
             final q = query.toLowerCase().trim();
@@ -274,6 +282,10 @@ class AssetRepositoryImpl implements AssetRepository {
     }
 
     List<Asset> filtered = List.from(_mockAssets);
+
+    if (available == true) {
+      filtered = filtered.where((asset) => !asset.hasActiveMutation).toList();
+    }
 
     if (query != null && query.trim().isNotEmpty) {
       final q = query.toLowerCase().trim();

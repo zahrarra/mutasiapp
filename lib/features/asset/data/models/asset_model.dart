@@ -41,7 +41,7 @@ class AssetModel extends Asset {
     final location =
         locMap?['name']?.toString() ??
         (json['location'] is String ? json['location'] as String : null) ??
-        'Kantor Pusat';
+        '-';
 
     // 3. Ekstraksi PIC
     final picObj = json['pic'] as Map<String, dynamic>?;
