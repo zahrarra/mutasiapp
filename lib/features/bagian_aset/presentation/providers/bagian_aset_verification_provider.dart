@@ -17,6 +17,7 @@ import '../../../auth/presentation/providers/auth_provider.dart';
 import '../../../mutation/domain/entities/mutation.dart';
 import '../../../mutation/domain/entities/mutation_status.dart';
 import '../../../mutation/domain/usecases/get_bagian_aset_verifications_usecase.dart';
+import '../../../mutation/domain/usecases/reject_mutation_bagian_aset_usecase.dart';
 import '../../../mutation/domain/usecases/return_mutation_bagian_aset_usecase.dart';
 import '../../../mutation/domain/usecases/verify_and_forward_mutation_usecase.dart';
 import '../../../mutation/presentation/providers/mutation_provider.dart';
@@ -29,6 +30,12 @@ final verifyAndForwardMutationUseCaseProvider =
     Provider<VerifyAndForwardMutationUseCase>((ref) {
       final repo = ref.watch(apiMutationRepositoryProvider);
       return VerifyAndForwardMutationUseCase(repository: repo);
+    });
+
+final rejectMutationBagianAsetUseCaseProvider =
+    Provider<RejectMutationBagianAsetUseCase>((ref) {
+      final repo = ref.watch(apiMutationRepositoryProvider);
+      return RejectMutationBagianAsetUseCase(repository: repo);
     });
 
 final returnMutationBagianAsetUseCaseProvider =
@@ -65,7 +72,7 @@ enum BagianAsetStatusFilter {
   all,
   processing,
   allocated,
-  returned,
+  cancelled,
   completed,
   rejected,
   // Legacy / specific queue aliases
@@ -77,7 +84,7 @@ enum BagianAsetStatusFilter {
     BagianAsetStatusFilter.all => 'Semua',
     BagianAsetStatusFilter.processing => 'Diproses',
     BagianAsetStatusFilter.allocated => 'Dialokasikan',
-    BagianAsetStatusFilter.returned => 'Dikembalikan',
+    BagianAsetStatusFilter.cancelled => 'Batal',
     BagianAsetStatusFilter.completed => 'Selesai',
     BagianAsetStatusFilter.rejected => 'Ditolak',
     // Legacy compatibility labels
@@ -94,7 +101,7 @@ final bagianAsetSortOrderProvider = StateProvider<BagianAsetSortOrder>(
 );
 
 final bagianAsetStatusFilterProvider = StateProvider<BagianAsetStatusFilter>(
-  (ref) => BagianAsetStatusFilter.waiting,
+  (ref) => BagianAsetStatusFilter.all,
 );
 
 // ─── Mutations Data Providers ────────────────────────────────────────────────
@@ -121,17 +128,19 @@ final kabagAllMutationsProvider = bagianAsetAllMutationsProvider;
 class BagianAsetVerificationStats {
   final int waitingVerificationCount;
   final int verifiedCount;
-  final int returnedCount;
+  final int cancelledCount;
+  final int rejectedCount;
 
   const BagianAsetVerificationStats({
     required this.waitingVerificationCount,
     required this.verifiedCount,
-    required this.returnedCount,
+    required this.cancelledCount,
+    this.rejectedCount = 0,
   });
 
+  int get returnedCount => cancelledCount;
   int get waitingApprovalCount => waitingVerificationCount;
   int get approvedCount => verifiedCount;
-  int get rejectedCount => returnedCount;
 }
 
 final bagianAsetStatsProvider = Provider<BagianAsetVerificationStats>((ref) {
@@ -148,26 +157,31 @@ final bagianAsetStatsProvider = Provider<BagianAsetVerificationStats>((ref) {
             m.status == MutationStatus.completed ||
             m.assetVerifiedBy != null;
       }).length;
-      final returned = mutations.where((m) {
-        return m.status == MutationStatus.returned ||
-            m.status == MutationStatus.rejected;
+      final cancelled = mutations.where((m) {
+        return m.status.apiValue == 'dibatalkan' || m.status.apiValue == 'batal';
+      }).length;
+      final rejected = mutations.where((m) {
+        return m.status == MutationStatus.rejected;
       }).length;
 
       return BagianAsetVerificationStats(
         waitingVerificationCount: waiting,
         verifiedCount: verified,
-        returnedCount: returned,
+        cancelledCount: cancelled,
+        rejectedCount: rejected,
       );
     },
     loading: () => const BagianAsetVerificationStats(
       waitingVerificationCount: 0,
       verifiedCount: 0,
-      returnedCount: 0,
+      cancelledCount: 0,
+      rejectedCount: 0,
     ),
     error: (_, _) => const BagianAsetVerificationStats(
       waitingVerificationCount: 0,
       verifiedCount: 0,
-      returnedCount: 0,
+      cancelledCount: 0,
+      rejectedCount: 0,
     ),
   );
 });
@@ -191,8 +205,8 @@ final filteredBagianAsetVerificationsProvider =
               m.status.historyCategory == MutationHistoryCategory.processing,
             BagianAsetStatusFilter.allocated =>
               m.status.historyCategory == MutationHistoryCategory.allocated,
-            BagianAsetStatusFilter.returned =>
-              m.status.historyCategory == MutationHistoryCategory.returned,
+            BagianAsetStatusFilter.cancelled =>
+              m.status.apiValue == 'dibatalkan' || m.status.apiValue == 'batal',
             BagianAsetStatusFilter.completed =>
               m.status.historyCategory == MutationHistoryCategory.completed,
             BagianAsetStatusFilter.rejected =>
@@ -281,11 +295,13 @@ class BagianAsetVerificationActionState {
 class BagianAsetVerificationActionNotifier
     extends StateNotifier<BagianAsetVerificationActionState> {
   final VerifyAndForwardMutationUseCase verifyAndForwardUseCase;
+  final RejectMutationBagianAsetUseCase rejectUseCase;
   final ReturnMutationBagianAsetUseCase returnUseCase;
   final Ref ref;
 
   BagianAsetVerificationActionNotifier({
     required this.verifyAndForwardUseCase,
+    required this.rejectUseCase,
     required this.returnUseCase,
     required this.ref,
   }) : super(const BagianAsetVerificationActionState());
@@ -294,6 +310,7 @@ class BagianAsetVerificationActionNotifier
   Future<bool> verifyAndForward({
     required String mutationId,
     String? newPic,
+    String? notes,
   }) async {
     final authState = ref.read(authStateProvider);
     final verifierName = authState.user?.name ?? 'Bagian Aset';
@@ -308,6 +325,7 @@ class BagianAsetVerificationActionNotifier
       mutationId: mutationId,
       verifierName: verifierName,
       newPic: newPic,
+      notes: notes,
     );
 
     if (result is Success<Mutation>) {
@@ -347,8 +365,8 @@ class BagianAsetVerificationActionNotifier
     return false;
   }
 
-  /// Eksekusi Kembalikan Pengajuan ke Pemohon oleh Bagian Aset (PRD V1.1 §6.4)
-  Future<bool> returnToApplicant({
+  /// Eksekusi Penolakan Pengajuan oleh Bagian Aset (PRD V1.1 §6.4)
+  Future<bool> reject({
     required String mutationId,
     required String reason,
   }) async {
@@ -361,7 +379,7 @@ class BagianAsetVerificationActionNotifier
       clearSuccess: true,
     );
 
-    final result = await returnUseCase(
+    final result = await rejectUseCase(
       mutationId: mutationId,
       reason: reason,
       verifierName: verifierName,
@@ -370,7 +388,7 @@ class BagianAsetVerificationActionNotifier
     if (result is Success<Mutation>) {
       state = BagianAsetVerificationActionState(
         isLoading: false,
-        successMessage: 'Pengajuan mutasi berhasil dikembalikan ke Pemohon.',
+        successMessage: 'Pengajuan mutasi berhasil ditolak.',
         result: result.data,
       );
       invalidateAllRoleMutationProviders(ref, mutationId);
@@ -380,10 +398,10 @@ class BagianAsetVerificationActionNotifier
             .read(notificationProvider.notifier)
             .notifyRole(
               targetRole: UserRole.pemohon,
-              title: 'Pengajuan Dikembalikan Bagian Aset',
+              title: 'Pengajuan Ditolak',
               message:
-                  'Pengajuan mutasi ${result.data.ticketNumber} dikembalikan: $reason',
-              type: NotificationType.warning,
+                  'Pengajuan mutasi ${result.data.ticketNumber} (${result.data.asset.name}) telah ditolak oleh Bagian Aset dengan alasan: $reason.',
+              type: NotificationType.action,
               relatedMutationId: mutationId,
             );
       } catch (_) {}
@@ -398,7 +416,20 @@ class BagianAsetVerificationActionNotifier
 
     state = const BagianAsetVerificationActionState(
       isLoading: false,
-      error: 'Terjadi kesalahan sistem saat mengembalikan mutasi.',
+      error: 'Terjadi kesalahan sistem saat menolak mutasi.',
+    );
+    return false;
+  }
+
+  /// Eksekusi Kembalikan Pengajuan ke Pemohon oleh Bagian Aset sudah tidak aktif
+  Future<bool> returnToApplicant({
+    required String mutationId,
+    required String reason,
+  }) async {
+    state = const BagianAsetVerificationActionState(
+      isLoading: false,
+      error:
+          'Bagian Aset tidak memiliki kewenangan untuk mengembalikan atau menolak pengajuan mutasi.',
     );
     return false;
   }
@@ -410,14 +441,6 @@ class BagianAsetVerificationActionNotifier
     String? newPic,
   }) async {
     return verifyAndForward(mutationId: mutationId, newPic: newPic);
-  }
-
-  /// Compatibility alias untuk pemanggilan reject legacy (memetakan ke pengembalian berkas)
-  Future<bool> reject({
-    required String mutationId,
-    required String reason,
-  }) async {
-    return returnToApplicant(mutationId: mutationId, reason: reason);
   }
 
   void reset() {
@@ -433,9 +456,11 @@ final bagianAsetVerificationActionProvider =
       final verifyAndForwardUseCase = ref.watch(
         verifyAndForwardMutationUseCaseProvider,
       );
+      final rejectUseCase = ref.watch(rejectMutationBagianAsetUseCaseProvider);
       final returnUseCase = ref.watch(returnMutationBagianAsetUseCaseProvider);
       return BagianAsetVerificationActionNotifier(
         verifyAndForwardUseCase: verifyAndForwardUseCase,
+        rejectUseCase: rejectUseCase,
         returnUseCase: returnUseCase,
         ref: ref,
       );

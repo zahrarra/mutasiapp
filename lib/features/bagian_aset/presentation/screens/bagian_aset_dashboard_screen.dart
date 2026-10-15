@@ -15,13 +15,12 @@ import 'package:google_fonts/google_fonts.dart';
 
 import '../../../../app/router/route_names.dart';
 import '../../../../core/widgets/custom_floating_nav_bar.dart';
-import '../../../../core/widgets/inline_searchable_dropdown.dart';
-import '../../../auth/domain/entities/user.dart';
 import '../../../auth/domain/entities/user_role.dart';
 import '../../../auth/presentation/providers/auth_provider.dart';
 import '../../../mutation/domain/entities/mutation.dart';
 import '../../../notification/presentation/providers/notification_provider.dart';
 import '../providers/bagian_aset_verification_provider.dart';
+import '../widgets/bagian_aset_verification_modal.dart';
 
 /// Design tokens persis sesuai Stitch screen 771bf0516fe94eed81fee36dbcb8cc09
 abstract final class _C {
@@ -124,12 +123,7 @@ class _BagianAsetDashboardScreenState
     if (_selectedCategoryFilter != null) {
       switch (_selectedCategoryFilter) {
         case 'pic':
-          list = list.where(
-            (m) =>
-                !m.isAssetMovingWithApplicant ||
-                m.targetPic.trim().isEmpty ||
-                m.targetPic.trim() == '-',
-          );
+          list = list.where((m) => m.needsNewPic);
           break;
         case 'ti':
           list = list.where(_isITAsset);
@@ -293,541 +287,22 @@ class _BagianAsetDashboardScreenState
   }
 
   // ──────────────────────────────────────────────────────────────────────────
-  // DIALOG: PENETAPAN PIC BARU & VERIFIKASI (PRD V1.1 §6.4)
+  // DIALOG VERIFIKASI BAGIAN ASET (Alur 2-Langkah: PIC -> Verifikasi)
   // ──────────────────────────────────────────────────────────────────────────
   void _openPicAssignmentDialog(BuildContext context, Mutation mutation) {
-    final picController = TextEditingController();
-    final formKey = GlobalKey<FormState>();
-    bool isSubmitting = false;
-
-    showModalBottomSheet<void>(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (bottomSheetContext) {
-        return StatefulBuilder(
-          builder: (dialogCtx, setModalState) {
-            final bottomInset = MediaQuery.of(dialogCtx).viewInsets.bottom;
-
-            return Material(
-              color: Colors.white,
-              borderRadius: const BorderRadius.vertical(
-                top: Radius.circular(24),
-              ),
-              child: Padding(
-                padding: EdgeInsets.fromLTRB(20, 16, 20, 24 + bottomInset),
-                child: Form(
-                  key: formKey,
-                  child: SingleChildScrollView(
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Center(
-                          child: Container(
-                            width: 36,
-                            height: 4,
-                            decoration: BoxDecoration(
-                              color: _C.border,
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                          ),
-                        ),
-                        const SizedBox(height: 16),
-                        Row(
-                          children: [
-                            Container(
-                              width: 36,
-                              height: 36,
-                              decoration: BoxDecoration(
-                                color: const Color(0xFFFEF3C7),
-                                borderRadius: BorderRadius.circular(10),
-                              ),
-                              child: const Icon(
-                                Icons.person_add_rounded,
-                                color: Color(0xFFB45309),
-                                size: 20,
-                              ),
-                            ),
-                            const SizedBox(width: 10),
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    'Penetapan PIC Baru',
-                                    style: _font(
-                                      size: 16,
-                                      weight: FontWeight.w700,
-                                    ),
-                                  ),
-                                  Text(
-                                    'Tiket: ${mutation.ticketNumber}',
-                                    style: _font(
-                                      size: 11,
-                                      color: _C.textSecondary,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                            IconButton(
-                              icon: const Icon(Icons.close, size: 20),
-                              onPressed: () =>
-                                  Navigator.pop(bottomSheetContext),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 14),
-
-                        // Asset Brief Card
-                        Container(
-                          padding: const EdgeInsets.all(12),
-                          decoration: BoxDecoration(
-                            color: _C.bg,
-                            borderRadius: BorderRadius.circular(12),
-                            border: Border.all(color: _C.borderLight),
-                          ),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                mutation.asset.name,
-                                style: _font(
-                                  size: 13,
-                                  weight: FontWeight.w700,
-                                  color: _C.navy,
-                                ),
-                              ),
-                              const SizedBox(height: 2),
-                              Text(
-                                'SN: ${mutation.displaySerialNumber} • Pemohon: ${mutation.applicantName}',
-                                style: _font(size: 11, color: _C.textSecondary),
-                              ),
-                              const SizedBox(height: 6),
-                              Container(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 8,
-                                  vertical: 4,
-                                ),
-                                decoration: BoxDecoration(
-                                  color: const Color(0xFFFFFBEB),
-                                  borderRadius: BorderRadius.circular(6),
-                                  border: Border.all(
-                                    color: const Color(0xFFFDE68A),
-                                  ),
-                                ),
-                                child: Text(
-                                  'Aset fisik ditinggalkan / masuk pool unit asal. Tentukan penanggung jawab baru sebelum diteruskan ke Pemimpin Divisi.',
-                                  style: _font(
-                                    size: 10.5,
-                                    color: const Color(0xFF92400E),
-                                    weight: FontWeight.w500,
-                                    height: 1.3,
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                        const SizedBox(height: 16),
-
-                        // Searchable Dropdown PIC
-                        Text(
-                          'Pilih PIC Baru dari Master Data *',
-                          style: _font(
-                            size: 12,
-                            weight: FontWeight.w700,
-                            color: _C.textPrimary,
-                          ),
-                        ),
-                        const SizedBox(height: 6),
-                        Consumer(
-                          builder: (context, modalRef, _) {
-                            final usersAsync = modalRef.watch(masterUsersProvider);
-                            final users = usersAsync.valueOrNull ?? [];
-                            final activeUsers = users.where((u) => u.isActive).toList();
-                            final availablePics = activeUsers
-                                .map((u) => '${u.name} (${u.role.displayName})')
-                                .toList();
-
-                            if (usersAsync.isLoading && activeUsers.isEmpty) {
-                              return const Padding(
-                                padding: EdgeInsets.symmetric(vertical: 12),
-                                child: Row(
-                                  children: [
-                                    SizedBox(
-                                      width: 16,
-                                      height: 16,
-                                      child: CircularProgressIndicator(strokeWidth: 2),
-                                    ),
-                                    SizedBox(width: 10),
-                                    Text('Memuat daftar PIC dari server...', style: TextStyle(fontSize: 12)),
-                                  ],
-                                ),
-                              );
-                            }
-
-                            if (usersAsync.hasError && activeUsers.isEmpty) {
-                              return Container(
-                                padding: const EdgeInsets.all(10),
-                                decoration: BoxDecoration(
-                                  color: const Color(0xFFFEF2F2),
-                                  borderRadius: BorderRadius.circular(8),
-                                  border: Border.all(color: const Color(0xFFFCA5A5)),
-                                ),
-                                child: Row(
-                                  children: [
-                                    const Icon(Icons.error_outline, size: 18, color: Color(0xFFDC2626)),
-                                    const SizedBox(width: 8),
-                                    Expanded(
-                                      child: Text(
-                                        'Gagal memuat daftar PIC dari server.',
-                                        style: _font(size: 11.5, color: const Color(0xFF991B1B)),
-                                      ),
-                                    ),
-                                    TextButton(
-                                      onPressed: () => modalRef.read(masterUsersProvider.notifier).loadUsers(),
-                                      child: const Text('Coba Lagi', style: TextStyle(fontSize: 11.5)),
-                                    ),
-                                  ],
-                                ),
-                              );
-                            }
-
-                            if (activeUsers.isEmpty) {
-                              return Padding(
-                                padding: const EdgeInsets.symmetric(vertical: 10),
-                                child: Text(
-                                  'Tidak ada data pengguna aktif yang tersedia untuk dijadikan PIC.',
-                                  style: _font(size: 12, color: _C.textSecondary),
-                                ),
-                              );
-                            }
-
-                            return InlineSearchableDropdown(
-                              fieldKey: const Key('input_pic_baru_dashboard'),
-                              labelText: 'Nama PIC Baru',
-                              hintText: 'Cari atau pilih nama PIC baru...',
-                              controller: picController,
-                              items: availablePics,
-                              validator: (value) {
-                                if (value == null || value.trim().isEmpty) {
-                                  return 'Wajib memilih nama PIC baru';
-                                }
-                                return null;
-                              },
-                            );
-                          },
-                        ),
-                        const SizedBox(height: 20),
-
-                        // Submit Button
-                        SizedBox(
-                          width: double.infinity,
-                          height: 46,
-                          child: ElevatedButton.icon(
-                            key: const Key('btn_submit_pic_verifikasi'),
-                            onPressed: isSubmitting
-                                ? null
-                                : () async {
-                                    if (!formKey.currentState!.validate()) {
-                                      return;
-                                    }
-                                    final selectedPic = picController.text
-                                        .trim();
-                                    if (selectedPic.isEmpty) return;
-
-                                    setModalState(() => isSubmitting = true);
-                                    final messenger = ScaffoldMessenger.of(
-                                      context,
-                                    );
-                                    final nav = Navigator.of(
-                                      bottomSheetContext,
-                                    );
-
-                                    // Resolve target_pic_id dari User ID database asli
-                                    final users = ref.read(masterUsersProvider).valueOrNull ?? [];
-                                    final activeUsers = users.where((u) => u.isActive).toList();
-                                    User? matchedUser;
-                                    for (final u in activeUsers) {
-                                      final fullLabel = '${u.name} (${u.role.displayName})';
-                                      if (fullLabel == selectedPic ||
-                                          u.name.toLowerCase() == selectedPic.toLowerCase() ||
-                                          u.id == selectedPic) {
-                                        matchedUser = u;
-                                        break;
-                                      }
-                                    }
-                                    final picIdToSubmit = matchedUser?.id ?? selectedPic;
-                                    final displayName = matchedUser?.name ?? selectedPic;
-
-                                    final success = await ref
-                                        .read(
-                                          bagianAsetVerificationActionProvider
-                                              .notifier,
-                                        )
-                                        .verifyAndForward(
-                                          mutationId: mutation.id,
-                                          newPic: picIdToSubmit,
-                                        );
-
-                                    if (!mounted) return;
-                                    nav.pop();
-
-                                    if (success) {
-                                      messenger.showSnackBar(
-                                        SnackBar(
-                                          backgroundColor: _C.teal,
-                                          content: Text(
-                                            'PIC Baru ($displayName) berhasil ditetapkan & diteruskan ke Pemimpin Divisi.',
-                                            style: _font(
-                                              size: 13,
-                                              color: Colors.white,
-                                              weight: FontWeight.w500,
-                                            ),
-                                          ),
-                                        ),
-                                      );
-                                    } else {
-                                      final err = ref
-                                          .read(
-                                            bagianAsetVerificationActionProvider,
-                                          )
-                                          .error;
-                                      messenger.showSnackBar(
-                                        SnackBar(
-                                          backgroundColor: const Color(
-                                            0xFFEF4444,
-                                          ),
-                                          content: Text(
-                                            err ??
-                                                'Gagal memverifikasi pengajuan.',
-                                            style: _font(
-                                              size: 13,
-                                              color: Colors.white,
-                                            ),
-                                          ),
-                                        ),
-                                      );
-                                    }
-                                  },
-                            icon: isSubmitting
-                                ? const SizedBox(
-                                    width: 18,
-                                    height: 18,
-                                    child: CircularProgressIndicator(
-                                      strokeWidth: 2,
-                                      color: Colors.white,
-                                    ),
-                                  )
-                                : const Icon(
-                                    Icons.check_circle_outline,
-                                    size: 18,
-                                  ),
-                            label: Text(
-                              isSubmitting
-                                  ? 'Memproses...'
-                                  : 'Tetapkan PIC & Teruskan ke Kadiv',
-                              style: _font(
-                                size: 13,
-                                weight: FontWeight.w700,
-                                color: Colors.white,
-                              ),
-                            ),
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: _C.navy,
-                              foregroundColor: Colors.white,
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                              elevation: 0,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ),
-            );
-          },
-        );
-      },
-    );
+    startBagianAsetVerificationFlow(context, mutation: mutation).then((verified) {
+      if (verified == true && mounted) {
+        ref.invalidate(bagianAsetAllMutationsProvider);
+      }
+    });
   }
 
-  // ──────────────────────────────────────────────────────────────────────────
-  // DIALOG: KONFIRMASI VERIFIKASI LANGSUNG (BAWA SENDIRI)
-  // ──────────────────────────────────────────────────────────────────────────
   void _openDirectVerificationDialog(BuildContext context, Mutation mutation) {
-    bool isSubmitting = false;
-
-    showDialog<void>(
-      context: context,
-      builder: (dialogContext) {
-        return StatefulBuilder(
-          builder: (dCtx, setDialogState) {
-            return AlertDialog(
-              backgroundColor: Colors.white,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(20),
-              ),
-              title: Row(
-                children: [
-                  Container(
-                    width: 36,
-                    height: 36,
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFCCFBF1),
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                    child: const Icon(
-                      Icons.verified_outlined,
-                      color: _C.teal,
-                      size: 20,
-                    ),
-                  ),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: Text(
-                      'Verifikasi Data Aset',
-                      style: _font(size: 16, weight: FontWeight.w700),
-                    ),
-                  ),
-                ],
-              ),
-              content: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Apakah Anda yakin keabsahan data aset pada tiket ${mutation.ticketNumber} (${mutation.asset.name}) telah sesuai dan siap diteruskan ke Pemimpin Divisi?',
-                    style: _font(size: 13, height: 1.4, color: _C.textPrimary),
-                  ),
-                  const SizedBox(height: 12),
-                  Container(
-                    padding: const EdgeInsets.all(10),
-                    decoration: BoxDecoration(
-                      color: _C.bg,
-                      borderRadius: BorderRadius.circular(10),
-                      border: Border.all(color: _C.borderLight),
-                    ),
-                    child: Row(
-                      children: [
-                        const Icon(
-                          Icons.badge_outlined,
-                          size: 16,
-                          color: _C.teal,
-                        ),
-                        const SizedBox(width: 6),
-                        Expanded(
-                          child: Text(
-                            'Status PIC: Bawa Sendiri (${mutation.applicantName})',
-                            style: _font(
-                              size: 11,
-                              weight: FontWeight.w600,
-                              color: _C.navy,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-              actionsPadding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-              actions: [
-                TextButton(
-                  onPressed: isSubmitting
-                      ? null
-                      : () => Navigator.pop(dialogContext),
-                  child: Text(
-                    'Batal',
-                    style: _font(size: 13, color: _C.textSecondary),
-                  ),
-                ),
-                ElevatedButton(
-                  onPressed: isSubmitting
-                      ? null
-                      : () async {
-                          setDialogState(() => isSubmitting = true);
-                          final messenger = ScaffoldMessenger.of(context);
-                          final nav = Navigator.of(dialogContext);
-
-                          final success = await ref
-                              .read(
-                                bagianAsetVerificationActionProvider.notifier,
-                              )
-                              .verifyAndForward(mutationId: mutation.id);
-
-                          if (!mounted) return;
-                          nav.pop();
-
-                          if (success) {
-                            messenger.showSnackBar(
-                              SnackBar(
-                                backgroundColor: _C.teal,
-                                content: Text(
-                                  'Aset ${mutation.ticketNumber} diverifikasi dan diteruskan ke Pemimpin Divisi.',
-                                  style: _font(
-                                    size: 13,
-                                    color: Colors.white,
-                                    weight: FontWeight.w500,
-                                  ),
-                                ),
-                              ),
-                            );
-                          } else {
-                            final err = ref
-                                .read(
-                                  bagianAsetVerificationActionProvider,
-                                )
-                                .error;
-                            messenger.showSnackBar(
-                              SnackBar(
-                                backgroundColor: const Color(0xFFEF4444),
-                                content: Text(
-                                  err ?? 'Gagal memverifikasi pengajuan.',
-                                  style: _font(size: 13, color: Colors.white),
-                                ),
-                              ),
-                            );
-                          }
-                        },
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: _C.navy,
-                    foregroundColor: Colors.white,
-                    minimumSize: const Size(100, 38),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                    elevation: 0,
-                  ),
-                  child: isSubmitting
-                      ? const SizedBox(
-                          width: 16,
-                          height: 16,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2,
-                            color: Colors.white,
-                          ),
-                        )
-                      : Text(
-                          'Verifikasi & Teruskan',
-                          style: _font(
-                            size: 13,
-                            weight: FontWeight.w700,
-                            color: Colors.white,
-                          ),
-                        ),
-                ),
-              ],
-            );
-          },
-        );
-      },
-    );
+    startBagianAsetVerificationFlow(context, mutation: mutation).then((verified) {
+      if (verified == true && mounted) {
+        ref.invalidate(bagianAsetAllMutationsProvider);
+      }
+    });
   }
 
   // ──────────────────────────────────────────────────────────────────────────
@@ -1463,14 +938,7 @@ class _BagianAsetDashboardScreenState
     );
 
     final countLolos = list.length;
-    final countNeedsPic = list
-        .where(
-          (m) =>
-              !m.isAssetMovingWithApplicant ||
-              m.targetPic.trim().isEmpty ||
-              m.targetPic.trim() == '-',
-        )
-        .length;
+    final countNeedsPic = list.where((m) => m.needsNewPic).length;
     final countTI = list.where(_isITAsset).length;
     final countUmum = list.where((m) => !_isITAsset(m)).length;
 
@@ -1850,10 +1318,7 @@ class _BagianAsetDashboardScreenState
   Widget _buildTicketCard(Mutation mutation) {
     final isMovingWithApplicant = mutation.isAssetMovingWithApplicant;
     final isIT = _isITAsset(mutation);
-    final needsPic =
-        !isMovingWithApplicant ||
-        mutation.targetPic.trim().isEmpty ||
-        mutation.targetPic.trim() == '-';
+    final needsPic = mutation.needsNewPic;
 
     return Container(
       decoration: BoxDecoration(
@@ -2256,7 +1721,7 @@ class _BagianAsetDashboardScreenState
                       children: [
                         Text(
                           needsPic
-                              ? 'Tentukan PIC & Verifikasi'
+                              ? 'Pilih PIC & Verifikasi'
                               : 'Verifikasi & Teruskan ke Kadiv',
                           style: _font(
                             size: 13,

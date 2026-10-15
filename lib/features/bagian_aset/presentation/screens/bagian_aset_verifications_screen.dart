@@ -15,6 +15,7 @@ import '../../../auth/presentation/providers/auth_provider.dart';
 import '../../../mutation/domain/entities/mutation.dart';
 import '../../../mutation/domain/entities/mutation_status.dart';
 import '../providers/bagian_aset_verification_provider.dart';
+import '../widgets/bagian_aset_verification_modal.dart';
 
 class _C {
   static const navy = Color(0xFF0F3D56);
@@ -61,7 +62,7 @@ class _BagianAsetVerificationsScreenState
     final title = switch (statusFilter) {
       BagianAsetStatusFilter.processing => 'Diproses',
       BagianAsetStatusFilter.allocated => 'Dialokasikan',
-      BagianAsetStatusFilter.returned => 'Dikembalikan',
+      BagianAsetStatusFilter.cancelled => 'Batal',
       BagianAsetStatusFilter.completed => 'Selesai',
       BagianAsetStatusFilter.rejected => 'Ditolak',
       BagianAsetStatusFilter.waiting => 'Menunggu Verifikasi',
@@ -140,12 +141,12 @@ class _BagianAsetVerificationsScreenState
                             items:
                                 [
                                       BagianAsetStatusFilter.all,
+                                      BagianAsetStatusFilter.waiting,
                                       BagianAsetStatusFilter.processing,
                                       BagianAsetStatusFilter.allocated,
-                                      BagianAsetStatusFilter.returned,
+                                      BagianAsetStatusFilter.cancelled,
                                       BagianAsetStatusFilter.completed,
                                       BagianAsetStatusFilter.rejected,
-                                      BagianAsetStatusFilter.waiting,
                                     ]
                                     .map(
                                       (s) => DropdownMenuItem(
@@ -242,6 +243,20 @@ class _BagianAsetVerificationsScreenState
                                 .replaceFirst(':id', list[i].id),
                           );
                         },
+                        onQuickVerify: list[i].status.isWaitingAssetVerification
+                            ? () async {
+                                final verified =
+                                    await startBagianAsetVerificationFlow(
+                                  context,
+                                  mutation: list[i],
+                                );
+                                if (verified == true && mounted) {
+                                  ref.invalidate(
+                                    bagianAsetAllMutationsProvider,
+                                  );
+                                }
+                              }
+                            : null,
                       );
                     },
                   ),
@@ -354,11 +369,13 @@ class _SearchField extends StatelessWidget {
 class _VerificationCard extends StatelessWidget {
   final Mutation mutation;
   final VoidCallback onTap;
+  final VoidCallback? onQuickVerify;
 
   const _VerificationCard({
     super.key,
     required this.mutation,
     required this.onTap,
+    this.onQuickVerify,
   });
 
   @override
@@ -590,25 +607,60 @@ class _VerificationCard extends StatelessWidget {
                         ),
                       ],
                     ),
-                    Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Text(
-                          isWaiting ? 'Verifikasi' : 'Lihat Detail',
-                          style: const TextStyle(
-                            fontSize: 11,
-                            fontWeight: FontWeight.w700,
+                    if (isWaiting && onQuickVerify != null)
+                      ElevatedButton(
+                        onPressed: onQuickVerify,
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFF7C3AED),
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 10,
+                            vertical: 5,
+                          ),
+                          minimumSize: Size.zero,
+                          tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(6),
+                          ),
+                          elevation: 0,
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(
+                              mutation.needsNewPic
+                                  ? 'Pilih PIC & Verifikasi'
+                                  : 'Verifikasi',
+                              style: const TextStyle(
+                                fontSize: 10,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                            const SizedBox(width: 2),
+                            const Icon(Icons.arrow_forward_rounded, size: 12),
+                          ],
+                        ),
+                      )
+                    else
+                      Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                            isWaiting ? 'Verifikasi' : 'Lihat Detail',
+                            style: const TextStyle(
+                              fontSize: 11,
+                              fontWeight: FontWeight.w700,
+                              color: _C.navy,
+                            ),
+                          ),
+                          const SizedBox(width: 2),
+                          const Icon(
+                            Icons.chevron_right_rounded,
+                            size: 14,
                             color: _C.navy,
                           ),
-                        ),
-                        const SizedBox(width: 2),
-                        const Icon(
-                          Icons.chevron_right_rounded,
-                          size: 14,
-                          color: _C.navy,
-                        ),
-                      ],
-                    ),
+                        ],
+                      ),
                   ],
                 ),
               ],
@@ -652,7 +704,7 @@ class _EmptyState extends StatelessWidget {
     final title = switch (statusFilter) {
       BagianAsetStatusFilter.processing => 'Tidak Ada Pengajuan Diproses',
       BagianAsetStatusFilter.allocated => 'Tidak Ada Pengajuan Dialokasikan',
-      BagianAsetStatusFilter.returned => 'Belum Ada Pengajuan Dikembalikan',
+      BagianAsetStatusFilter.cancelled => 'Tidak Ada Pengajuan Batal',
       BagianAsetStatusFilter.completed => 'Belum Ada Pengajuan Selesai',
       BagianAsetStatusFilter.rejected => 'Belum Ada Pengajuan Ditolak',
       BagianAsetStatusFilter.waiting => 'Tidak Ada Pengajuan Menunggu',
@@ -668,8 +720,8 @@ class _EmptyState extends StatelessWidget {
               'Pengajuan yang sedang diproses akan muncul di sini.',
             BagianAsetStatusFilter.allocated =>
               'Pengajuan yang sedang dialokasikan akan muncul di sini.',
-            BagianAsetStatusFilter.returned =>
-              'Pengajuan yang dikembalikan akan muncul di sini.',
+            BagianAsetStatusFilter.cancelled =>
+              'Pengajuan yang dibatalkan akan muncul di sini.',
             BagianAsetStatusFilter.completed =>
               'Pengajuan yang telah selesai akan muncul di sini.',
             BagianAsetStatusFilter.rejected =>
