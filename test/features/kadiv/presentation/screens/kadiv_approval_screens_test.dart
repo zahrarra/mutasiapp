@@ -157,8 +157,19 @@ void main() {
       expect(find.text('Disetujui'), findsNothing);
       expect(find.text('Ditolak'), findsNothing);
 
-      // Verifikasi kategori aset
+      // Verifikasi kategori aset: tab/card Prioritas dan Pindah Cabang dihapus, kategori lain tetap ada
       expect(find.text('Kategori Aset'), findsOneWidget);
+      expect(find.text('Aset TI'), findsOneWidget);
+      expect(find.text('Aset Umum'), findsOneWidget);
+      expect(find.text('Pindah Cabang'), findsNothing);
+      expect(find.text('Prioritas Kadiv'), findsNothing);
+      expect(find.text('Prioritas'), findsNothing);
+
+      // Verifikasi filter kategori dapat dipilih dan dibatalkan tanpa error
+      await tester.tap(find.text('Aset TI'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Aset TI'));
+      await tester.pumpAndSettle();
 
       // Verifikasi section pengajuan terbaru
       expect(find.text('Pengajuan Terbaru'), findsOneWidget);
@@ -187,9 +198,23 @@ void main() {
     );
     expect(find.byKey(const Key('dropdown_filter_kadiv_sort')), findsOneWidget);
 
+    // Verifikasi filter aktif default adalah Semua
+    expect(find.text('Semua Pengajuan'), findsOneWidget);
+
     // Verifikasi adanya item mut_005 yang berstatus Menunggu Approval Pemimpin Divisi
     expect(find.text('Menunggu Approval Pemimpin Divisi'), findsWidgets);
     expect(find.text('ELEKTRONIK-2026-00088'), findsOneWidget);
+
+    // Verifikasi opsi filter "Menunggu Otorisasi" tetap tersedia dan dapat dipilih secara manual
+    await tester.tap(find.byKey(const Key('dropdown_filter_kadiv_status')));
+    await tester.pumpAndSettle();
+
+    // Pilih opsi "Menunggu Otorisasi" di dalam dropdown menu
+    await tester.tap(find.text('Menunggu Otorisasi').last);
+    await tester.pumpAndSettle();
+
+    // Verifikasi subtitle berubah sesuai filter "Menunggu Otorisasi"
+    expect(find.text('Menunggu Otorisasi'), findsWidgets);
   });
 
   testWidgets(
@@ -240,12 +265,14 @@ void main() {
       await tester.tap(find.text('Tutup'));
       await tester.pumpAndSettle();
 
-      // Verifikasi Action Buttons [ Tolak ] dan [ Setujui ]
-      expect(find.byKey(const Key('btn_tolak_approval_kadiv')), findsOneWidget);
+      // Verifikasi Action Button: Tombol tunggal Verifikasi hanya teks tanpa icon palu/emoji
+      expect(find.byKey(const Key('btn_tolak_approval_kadiv')), findsNothing);
       expect(
-        find.byKey(const Key('btn_setujui_approval_kadiv')),
+        find.byKey(const Key('btn_berikan_keputusan_kadiv')),
         findsOneWidget,
       );
+      expect(find.text('Verifikasi'), findsOneWidget);
+      expect(find.byIcon(Icons.gavel_rounded), findsNothing);
     },
   );
 
@@ -393,7 +420,7 @@ void main() {
 
     // Empty state muncul
     expect(find.text('ELEKTRONIK-2026-00088'), findsNothing);
-    expect(find.text('Tidak Ada Mutasi Menunggu Approval'), findsOneWidget);
+    expect(find.text('Tidak Ada Pengajuan Ditemukan'), findsOneWidget);
 
     // Bersihkan pencarian -> item muncul lagi
     await tester.enterText(searchInput, '');

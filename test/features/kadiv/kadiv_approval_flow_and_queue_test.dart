@@ -379,13 +379,13 @@ void main() {
         expect(find.text('Verifikasi Operator'), findsWidgets);
         expect(find.text('Diverifikasi oleh Operator Aset'), findsOneWidget);
 
-        // Action buttons are visible for waitingKadivApproval
+        // Action button is visible for waitingKadivApproval (Tolak & Setujui berada di modal)
         expect(
           find.byKey(const Key('btn_tolak_approval_kadiv')),
-          findsOneWidget,
+          findsNothing,
         );
         expect(
-          find.byKey(const Key('btn_setujui_approval_kadiv')),
+          find.byKey(const Key('btn_berikan_keputusan_kadiv')),
           findsOneWidget,
         );
       },
