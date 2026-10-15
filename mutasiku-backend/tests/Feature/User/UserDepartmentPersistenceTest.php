@@ -29,7 +29,7 @@ class UserDepartmentPersistenceTest extends TestCase
             'email' => 'admin@mutasiku.test',
             'password' => bcrypt('password123'),
             'role_id' => $role->id,
-            'department' => 'Divisi TI',
+            'department' => 'Umum & Aset',
             'is_active' => true,
         ]);
     }
@@ -46,21 +46,21 @@ class UserDepartmentPersistenceTest extends TestCase
                 'email' => 'budi.ops@mutasiku.test',
                 'password' => 'secret123',
                 'role_id' => $operatorRole->id,
-                'department' => 'Divisi Operasional',
+                'department' => 'Umum & Aset',
                 'nip' => '198501012010011001',
                 'is_active' => true,
             ]);
 
         $response->assertStatus(201)
             ->assertJsonPath('data.name', 'Budi Santoso')
-            ->assertJsonPath('data.department', 'Divisi Operasional');
+            ->assertJsonPath('data.department', 'Umum & Aset');
 
         $userId = $response->json('data.id');
 
         // Buktikan tersimpan permanen di database
         $this->assertDatabaseHas('users', [
             'id' => $userId,
-            'department' => 'Divisi Operasional',
+            'department' => 'Umum & Aset',
         ]);
     }
 

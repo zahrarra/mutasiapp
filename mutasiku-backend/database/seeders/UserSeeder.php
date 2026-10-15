@@ -16,6 +16,7 @@ class UserSeeder extends Seeder
                 'email' => 'admin@mutasiku.test',
                 'nip' => '100001',
                 'role' => 'admin',
+                'department' => 'Umum & Aset',
             ],
             [
                 'name' => 'Zahra Aya',
@@ -28,18 +29,21 @@ class UserSeeder extends Seeder
                 'email' => 'operator@mutasiku.test',
                 'nip' => '100003',
                 'role' => 'operator',
+                'department' => 'Umum & Aset',
             ],
             [
                 'name' => 'Atalya Rara',
                 'email' => 'aset@mutasiku.test',
                 'nip' => '100004',
                 'role' => 'bagian_aset',
+                'department' => 'Umum & Aset',
             ],
             [
                 'name' => 'Nadia Nad',
                 'email' => 'pemimpin@mutasiku.test',
                 'nip' => '100005',
                 'role' => 'pemimpin_divisi',
+                'department' => 'Umum & Aset',
             ],
             [
                 'name' => 'Budi Santoso',
@@ -94,7 +98,10 @@ class UserSeeder extends Seeder
             if ($existing) {
                 // Pengguna sudah ada: pertahankan seluruh data yang sudah ada
                 // (nama, email, role, password, status aktif, must_change_password)
-                // Jangan menimpa data pengguna yang sudah ada tanpa alasan dan persetujuan yang jelas.
+                // Sinkronkan divisi pengujian jika ditentukan pada seeder dan berbeda
+                if (isset($data['department']) && $existing->department !== $data['department']) {
+                    $existing->update(['department' => $data['department']]);
+                }
                 continue;
             }
 
@@ -105,6 +112,7 @@ class UserSeeder extends Seeder
                 'nip' => $data['nip'],
                 'role_id' => $role->id,
                 'password' => 'password',
+                'department' => $data['department'] ?? null,
                 'is_active' => true,
                 'must_change_password' => true,
             ]);

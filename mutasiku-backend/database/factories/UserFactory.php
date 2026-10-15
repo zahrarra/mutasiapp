@@ -42,4 +42,48 @@ class UserFactory extends Factory
             'email_verified_at' => null,
         ]);
     }
+
+    public function configure(): static
+    {
+        return $this->afterCreating(function (User $user) {
+            if ($user->department === null && $user->role_id) {
+                $role = \App\Models\Role::find($user->role_id);
+                if ($role && in_array($role->name, ['admin', 'operator', 'bagian_aset', 'pemimpin_divisi'])) {
+                    $user->update(['department' => 'Umum & Aset']);
+                }
+            }
+        });
+    }
+
+    public function admin(): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'role_id' => \App\Models\Role::where('name', 'admin')->value('id'),
+            'department' => 'Umum & Aset',
+        ]);
+    }
+
+    public function operator(): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'role_id' => \App\Models\Role::where('name', 'operator')->value('id'),
+            'department' => 'Umum & Aset',
+        ]);
+    }
+
+    public function bagianAset(): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'role_id' => \App\Models\Role::where('name', 'bagian_aset')->value('id'),
+            'department' => 'Umum & Aset',
+        ]);
+    }
+
+    public function kadiv(): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'role_id' => \App\Models\Role::where('name', 'pemimpin_divisi')->value('id'),
+            'department' => 'Umum & Aset',
+        ]);
+    }
 }

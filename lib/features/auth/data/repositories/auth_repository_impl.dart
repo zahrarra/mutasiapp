@@ -95,8 +95,14 @@ class AuthRepositoryImpl implements AuthRepository {
             email: userMap['email'] as String? ?? username,
             role: role,
             department:
-                userMap['department'] as String? ??
-                MasterDepartments.defaultDepartment,
+                (userMap['department'] as String?)?.trim().isNotEmpty == true
+                    ? (userMap['department'] as String).trim()
+                    : (role == UserRole.admin ||
+                            role == UserRole.operator ||
+                            role == UserRole.bagianAset ||
+                            role == UserRole.kadiv)
+                        ? 'Umum & Aset'
+                        : MasterDepartments.defaultDepartment,
             isActive: userMap['is_active'] as bool? ?? true,
             mustChangePassword: mustChangePassword,
           );
@@ -197,8 +203,14 @@ class AuthRepositoryImpl implements AuthRepository {
               email: userMap['email'] as String? ?? '',
               role: role,
               department:
-                  userMap['department'] as String? ??
-                  MasterDepartments.defaultDepartment,
+                  (userMap['department'] as String?)?.trim().isNotEmpty == true
+                      ? (userMap['department'] as String).trim()
+                      : (role == UserRole.admin ||
+                              role == UserRole.operator ||
+                              role == UserRole.bagianAset ||
+                              role == UserRole.kadiv)
+                          ? 'Umum & Aset'
+                          : MasterDepartments.defaultDepartment,
               isActive: true,
               mustChangePassword: mustChangePassword,
             );

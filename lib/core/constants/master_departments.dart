@@ -25,6 +25,20 @@ abstract final class MasterDepartments {
   /// Cek apakah suatu nama divisi terdaftar dalam master data
   static bool contains(String? name) {
     if (name == null || name.trim().isEmpty) return false;
-    return all.contains(name.trim());
+    final trimmed = name.trim();
+    if (trimmed == 'Umum & Aset' || trimmed == 'Divisi Umum & Aset') {
+      return true;
+    }
+    return all.contains(trimmed);
+  }
+
+  /// Normalisasi variasi penamaan divisi testing/UI ke nilai kanonikal
+  static String canonical(String? name) {
+    if (name == null || name.trim().isEmpty) return defaultDepartment;
+    final trimmed = name.trim();
+    if (trimmed == 'Umum & Aset' || trimmed == 'Divisi Umum & Aset') {
+      return 'Divisi Umum dan Aset';
+    }
+    return trimmed;
   }
 }

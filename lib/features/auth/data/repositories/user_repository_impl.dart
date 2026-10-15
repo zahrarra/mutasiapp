@@ -30,14 +30,13 @@ class UserRepositoryImpl implements UserRepository {
     if (apiDept != null && apiDept.trim().isNotEmpty) {
       return apiDept.trim();
     }
-    // Mapping fallback resmi sesuai role ke 11 divisi untuk akun lama null
+    // Mapping fallback resmi sesuai role untuk data testing / akun lama null
     switch (role) {
       case UserRole.admin:
-      case UserRole.kadiv:
-        return 'Divisi TI';
-      case UserRole.bagianAset:
-        return 'Divisi Umum dan Aset';
       case UserRole.operator:
+      case UserRole.bagianAset:
+      case UserRole.kadiv:
+        return 'Umum & Aset';
       case UserRole.pemohon:
         return 'Divisi Operasional';
     }
@@ -60,7 +59,7 @@ class UserRepositoryImpl implements UserRepository {
       name: 'Budi Santoso (Operator)',
       role: UserRole.operator,
       email: 'operator@mutasiku.id',
-      department: 'Divisi Operasional',
+      department: 'Umum & Aset',
       isActive: true,
     ),
     const User(
@@ -69,7 +68,7 @@ class UserRepositoryImpl implements UserRepository {
       name: 'Hendra Setiawan (Bagian Aset)',
       role: UserRole.bagianAset,
       email: 'aset@mutasiku.id',
-      department: 'Divisi Umum dan Aset',
+      department: 'Umum & Aset',
       isActive: true,
     ),
     const User(
@@ -78,7 +77,7 @@ class UserRepositoryImpl implements UserRepository {
       name: 'Drs. Ahmad Dahlan (Pemimpin Divisi)',
       role: UserRole.kadiv,
       email: 'kadiv@mutasiku.id',
-      department: 'Divisi Umum dan Aset',
+      department: 'Umum & Aset',
       isActive: true,
     ),
     const User(
@@ -87,7 +86,7 @@ class UserRepositoryImpl implements UserRepository {
       name: 'System Administrator',
       role: UserRole.admin,
       email: 'admin@mutasiku.id',
-      department: 'Divisi TI',
+      department: 'Umum & Aset',
       isActive: true,
     ),
   ];

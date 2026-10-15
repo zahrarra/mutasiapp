@@ -822,7 +822,7 @@ class _AdminUsersScreenState extends ConsumerState<AdminUsersScreen> {
     final lastNameCtrl = TextEditingController(text: initialLast);
     final emailCtrl = TextEditingController(text: user.email ?? '');
     final initialDept = MasterDepartments.contains(user.department?.trim())
-        ? user.department!.trim()
+        ? MasterDepartments.canonical(user.department)
         : MasterDepartments.defaultDepartment;
     final deptCtrl = TextEditingController(text: initialDept);
     String selectedDivision = initialDept;
