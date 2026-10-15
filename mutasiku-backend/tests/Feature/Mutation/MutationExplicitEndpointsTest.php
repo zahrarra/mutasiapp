@@ -114,7 +114,7 @@ class MutationExplicitEndpointsTest extends TestCase
         ]);
     }
 
-    public function test_operator_return_endpoint_success(): void
+    public function test_operator_return_endpoint_forbidden(): void
     {
         $pemohon = $this->createUser('pemohon');
         $operator = $this->createUser('operator');
@@ -127,17 +127,8 @@ class MutationExplicitEndpointsTest extends TestCase
                 'reason' => 'Dokumen lampiran SK kurang jelas.',
             ]);
 
-        $response->assertStatus(200)
-            ->assertJson([
-                'success' => true,
-                'data' => [
-                    'status' => 'dikembalikan_ke_pemohon',
-                    'return_reason' => 'Dokumen lampiran SK kurang jelas.',
-                ],
-            ]);
-
-        $this->assertEquals('dikembalikan_ke_pemohon', $mutation->fresh()->status);
-        $this->assertEquals('Dokumen lampiran SK kurang jelas.', $mutation->fresh()->return_reason);
+        $response->assertStatus(403);
+        $this->assertEquals('diajukan', $mutation->fresh()->status);
     }
 
     public function test_bagian_aset_return_endpoint_success(): void
@@ -223,7 +214,7 @@ class MutationExplicitEndpointsTest extends TestCase
         $this->assertEquals('Kondisi barang rusak di layar saat diterima.', $fresh->discrepancy_reason);
     }
 
-    public function test_put_update_mutation_resubmit_success(): void
+    public function test_put_update_mutation_endpoint_is_removed_and_returns_404_or_405(): void
     {
         $pemohon = $this->createUser('pemohon');
         $newLoc = $this->createLocation('Gedung Baru', 'GB_NEW');
@@ -237,18 +228,10 @@ class MutationExplicitEndpointsTest extends TestCase
                 'reason' => 'Perbaikan data lokasi tujuan mutasi.',
             ]);
 
-        $response->assertStatus(200)
-            ->assertJson([
-                'success' => true,
-                'data' => [
-                    'status' => 'menunggu_verifikasi_bagian_aset',
-                    'destination_location_id' => $newLoc->id,
-                ],
-            ]);
+        $this->assertTrue(in_array($response->status(), [404, 405]));
 
         $fresh = $mutation->fresh();
-        $this->assertEquals('menunggu_verifikasi_bagian_aset', $fresh->status);
-        $this->assertEquals($newLoc->id, $fresh->destination_location_id);
+        $this->assertEquals('dikembalikan_ke_pemohon', $fresh->status);
     }
 
     public function test_explicit_endpoints_wrong_role_returns_403(): void
@@ -292,8 +275,15 @@ class MutationExplicitEndpointsTest extends TestCase
             ->postJson("/api/v1/mutations/{$mutation->id}/forward")
             ->assertStatus(409);
 
+        // Operator return is forbidden (403)
         $this->withHeader('Authorization', 'Bearer '.$token)
             ->postJson("/api/v1/mutations/{$mutation->id}/return-by-operator", ['reason' => 'Alasan'])
+            ->assertStatus(403);
+
+        // Bagian Aset tries return on selesai -> 409
+        $bagianAset = $this->createUser('bagian_aset');
+        $this->actingAs($bagianAset)
+            ->postJson("/api/v1/mutations/{$mutation->id}/return-by-asset", ['reason' => 'Alasan'])
             ->assertStatus(409);
     }
 }

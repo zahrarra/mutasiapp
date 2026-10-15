@@ -186,7 +186,7 @@ class MutationInvalidTransitionTest extends TestCase
         }
     }
 
-    public function test_pemohon_resubmit_rejected_for_all_non_returned_statuses(): void
+    public function test_pemohon_resubmit_rejected_for_all_statuses_including_returned(): void
     {
         $pemohon = $this->createUser('pemohon');
         $token = $pemohon->createToken('test')->plainTextToken;
@@ -196,6 +196,7 @@ class MutationInvalidTransitionTest extends TestCase
             'menunggu_verifikasi_bagian_aset',
             'menunggu_approval_pemimpin_divisi',
             'menunggu_konfirmasi_pemohon',
+            'dikembalikan_ke_pemohon',
             'ditolak',
             'selesai',
         ];
@@ -206,7 +207,7 @@ class MutationInvalidTransitionTest extends TestCase
             $response = $this->withHeader('Authorization', 'Bearer '.$token)
                 ->postJson("/api/v1/mutations/{$mutation->id}/resubmit", ['reason' => 'Perbaikan']);
 
-            $response->assertStatus(409);
+            $response->assertStatus(404);
         }
     }
 }

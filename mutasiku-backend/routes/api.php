@@ -45,8 +45,6 @@ Route::prefix('v1')->group(function () {
         Route::post('/mutations', [MutationController::class, 'store']);
         Route::get('/mutations/{id}', [MutationController::class, 'show']);
         Route::get('/mutations/{id}/document', [MutationController::class, 'downloadDocument']);
-        Route::put('/mutations/{id}', [MutationController::class, 'update']);
-        Route::post('/mutations/{id}/resubmit', [MutationController::class, 'resubmit']);
 
         // Operator
         Route::post('/mutations/{id}/forward', [MutationController::class, 'forward']);

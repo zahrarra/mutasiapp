@@ -31,6 +31,8 @@ class MutationResource extends JsonResource
             'document_name' => $this->sk_document_name ?? ($this->sk_document ? basename($this->sk_document) : null),
             'status' => $this->status,
             'return_reason' => $this->return_reason,
+            'asset_return_reason' => $this->status === 'dikembalikan_ke_pemohon' ? $this->return_reason : null,
+            'asset_returned_by' => $this->resolveAssetReturnedByName(),
             'rejection_reason' => $this->rejection_reason,
             'discrepancy_reason' => $this->discrepancy_reason,
             'verified_at' => $this->verified_at?->toISOString() ?? (string) $this->verified_at,

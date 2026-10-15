@@ -19,11 +19,21 @@ class AssetController extends Controller
         $user = $request->user()->loadMissing('role');
         $roleName = $user->role?->name;
 
-        $query = Asset::with(['category', 'location', 'pic.role']);
+        $query = Asset::with([
+            'category',
+            'location',
+            'pic.role',
+            'mutations' => fn ($q) => $q->active(),
+        ]);
 
         // Role scoping: Pemohon can scope to own assets via ?mine=true
         if ($roleName === 'pemohon' && $request->boolean('mine')) {
             $query->where('pic_id', $user->id);
+        }
+
+        // Filter out assets with active mutation if available=true
+        if ($request->boolean('available') || $request->boolean('available_for_mutation')) {
+            $query->whereDoesntHave('mutations', fn ($q) => $q->active());
         }
 
         $assets = $query->get();

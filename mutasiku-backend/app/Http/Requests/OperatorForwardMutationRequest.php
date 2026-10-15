@@ -15,6 +15,8 @@ class OperatorForwardMutationRequest extends FormRequest
 
     public function rules(): array
     {
-        return [];
+        return [
+            'reason' => ['nullable', 'string', 'max:1000'],
+        ];
     }
 }

@@ -175,6 +175,35 @@ class Mutation extends Model
     }
 
     /**
+     * Resolusi nama petugas Bagian Aset yang mengembalikan/menolak pengajuan.
+     * Mengutamakan riwayat tindakan bagian_aset dengan aksi return.
+     */
+    public function resolveAssetReturnedByName(): ?string
+    {
+        if ($this->relationLoaded('statusHistories')) {
+            $history = $this->statusHistories
+                ->where('role', 'bagian_aset')
+                ->where('action', 'return')
+                ->last();
+            if ($history?->user?->name) {
+                return $history->user->name;
+            }
+        } else {
+            $history = $this->statusHistories()
+                ->where('role', 'bagian_aset')
+                ->where('action', 'return')
+                ->with('user')
+                ->latest('id')
+                ->first();
+            if ($history?->user?->name) {
+                return $history->user->name;
+            }
+        }
+
+        return null;
+    }
+
+    /**
      * Resolusi nama Kadiv / Pemimpin Divisi yang memberikan persetujuan (approval).
      * Mengutamakan riwayat tindakan pemimpin_divisi dengan aksi approve.
      */
@@ -249,10 +278,21 @@ class Mutation extends Model
     }
 
     /**
+     * Check if the mutation status is terminal/final.
+     * Terminal statuses (selesai, ditolak, dikembalikan_ke_pemohon) conclude the ticket.
+     * Any new mutation for the asset must be submitted as a new ticket.
+     */
+    public function isFinalStatus(): bool
+    {
+        return in_array($this->status, ['selesai', 'ditolak', 'dikembalikan_ke_pemohon'], true);
+    }
+
+    /**
      * Scope a query to only include active mutations.
+     * Terminal statuses (selesai, ditolak, dikembalikan_ke_pemohon) are not active.
      */
     public function scopeActive(Builder $query): Builder
     {
-        return $query->whereNotIn('status', ['selesai', 'ditolak']);
+        return $query->whereNotIn('status', ['selesai', 'ditolak', 'dikembalikan_ke_pemohon']);
     }
 }

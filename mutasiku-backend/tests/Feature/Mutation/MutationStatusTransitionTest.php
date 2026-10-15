@@ -115,7 +115,7 @@ class MutationStatusTransitionTest extends TestCase
         $this->assertEquals('menunggu_verifikasi_bagian_aset', $mutation->fresh()->status);
     }
 
-    public function test_operator_return_requires_reason(): void
+    public function test_operator_cannot_return_mutation(): void
     {
         $operator = $this->createUser('operator');
         $pemohon = $this->createUser('pemohon');
@@ -123,33 +123,25 @@ class MutationStatusTransitionTest extends TestCase
 
         $token = $operator->createToken('test')->plainTextToken;
 
-        // Return tanpa reason
-        $response = $this->withHeader('Authorization', 'Bearer '.$token)
+        // Operator attempts return via /verify with action=return -> 403 Forbidden
+        $responseVerifyReturn = $this->withHeader('Authorization', 'Bearer '.$token)
             ->postJson("/api/v1/mutations/{$mutation->id}/verify", [
                 'action' => 'return',
-                'reason' => '',
+                'reason' => 'Dokumen SK SDM buram.',
             ]);
 
-        $response->assertStatus(422)
-            ->assertJsonValidationErrors(['reason']);
+        $responseVerifyReturn->assertStatus(403);
 
-        // Return dengan reason
-        $responseSuccess = $this->withHeader('Authorization', 'Bearer '.$token)
-            ->postJson("/api/v1/mutations/{$mutation->id}/verify", [
-                'action' => 'return',
-                'reason' => 'Dokumen SK SDM buram dan tidak terbaca.',
+        // Operator attempts return via /return-by-operator -> 403 Forbidden
+        $responseDirectReturn = $this->withHeader('Authorization', 'Bearer '.$token)
+            ->postJson("/api/v1/mutations/{$mutation->id}/return-by-operator", [
+                'reason' => 'Dokumen SK SDM buram.',
             ]);
 
-        $responseSuccess->assertStatus(200)
-            ->assertJson([
-                'success' => true,
-                'data' => [
-                    'status' => 'dikembalikan_ke_pemohon',
-                    'return_reason' => 'Dokumen SK SDM buram dan tidak terbaca.',
-                ],
-            ]);
+        $responseDirectReturn->assertStatus(403);
 
-        $this->assertEquals('dikembalikan_ke_pemohon', $mutation->fresh()->status);
+        // Status mutation tetap 'diajukan'
+        $this->assertEquals('diajukan', $mutation->fresh()->status);
     }
 
     // ─── 2. Bagian Aset Verify Tests ────────────────────────────────────────
@@ -440,7 +432,7 @@ class MutationStatusTransitionTest extends TestCase
 
     // ─── 5. Pemohon Resubmit Tests ──────────────────────────────────────────
 
-    public function test_pemohon_resubmit_moves_directly_to_bagian_aset(): void
+    public function test_pemohon_resubmit_fails_because_returned_status_is_final(): void
     {
         $pemohon = $this->createUser('pemohon');
         $mutation = $this->createMutation($pemohon, 'dikembalikan_ke_pemohon', [
@@ -454,67 +446,27 @@ class MutationStatusTransitionTest extends TestCase
                 'reason' => 'Alasan mutasi sudah diperbaiki secara lengkap.',
             ]);
 
-        $response->assertStatus(200)
-            ->assertJson([
-                'success' => true,
-                'data' => [
-                    'status' => 'menunggu_verifikasi_bagian_aset',
-                    'reason' => 'Alasan mutasi sudah diperbaiki secara lengkap.',
-                    'return_reason' => null,
-                ],
-            ]);
+        $response->assertStatus(404);
 
-        $this->assertEquals('menunggu_verifikasi_bagian_aset', $mutation->fresh()->status);
+        $this->assertEquals('dikembalikan_ke_pemohon', $mutation->fresh()->status);
     }
 
-    public function test_pemohon_resubmit_after_operator_return_moves_to_diajukan_and_appears_in_operator_queue(): void
+    public function test_operator_return_attempt_is_rejected_and_cannot_bypass_via_direct_endpoint(): void
     {
         $pemohon = $this->createUser('pemohon');
         $operator = $this->createUser('operator');
-        $bagianAset = $this->createUser('bagian_aset');
         $mutation = $this->createMutation($pemohon, 'diajukan');
 
-        // 1. Operator returns the mutation
+        // Operator attempts return via /return-by-operator
         $returnRes = $this->actingAs($operator)
             ->postJson("/api/v1/mutations/{$mutation->id}/return-by-operator", [
                 'reason' => 'Mohon perjelas alasan mutasi barang TI ini.',
             ]);
-        $returnRes->assertStatus(200);
-        $this->assertEquals('dikembalikan_ke_pemohon', $mutation->fresh()->status);
-
-        // 2. Pemohon edits and resubmits
-        $resubmitRes = $this->actingAs($pemohon)
-            ->postJson("/api/v1/mutations/{$mutation->id}/resubmit", [
-                'reason' => 'Alasan mutasi telah dilengkapi sesuai permintaan Operator.',
-            ]);
-
-        $resubmitRes->assertStatus(200)
-            ->assertJson([
-                'success' => true,
-                'data' => [
-                    'status' => 'diajukan',
-                    'reason' => 'Alasan mutasi telah dilengkapi sesuai permintaan Operator.',
-                    'return_reason' => null,
-                ],
-            ]);
-
+        $returnRes->assertStatus(403);
         $this->assertEquals('diajukan', $mutation->fresh()->status);
-
-        // 3. Queue assertions: Muncul di antrean Operator, TIDAK muncul di antrean Bagian Aset
-        $operatorQueue = $this->actingAs($operator)
-            ->getJson('/api/v1/mutations?view=queue');
-        $operatorQueue->assertStatus(200);
-        $operatorIds = collect($operatorQueue->json('data'))->pluck('id')->all();
-        $this->assertContains($mutation->id, $operatorIds);
-
-        $assetQueue = $this->actingAs($bagianAset)
-            ->getJson('/api/v1/mutations?view=queue');
-        $assetQueue->assertStatus(200);
-        $assetIds = collect($assetQueue->json('data'))->pluck('id')->all();
-        $this->assertNotContains($mutation->id, $assetIds);
     }
 
-    public function test_pemohon_resubmit_after_bagian_aset_return_moves_to_menunggu_verifikasi_bagian_aset_and_appears_in_asset_queue(): void
+    public function test_bagian_aset_return_marks_mutation_final_and_resubmit_is_rejected(): void
     {
         $pemohon = $this->createUser('pemohon');
         $operator = $this->createUser('operator');
@@ -535,30 +487,22 @@ class MutationStatusTransitionTest extends TestCase
         $returnRes->assertStatus(200);
         $this->assertEquals('dikembalikan_ke_pemohon', $mutation->fresh()->status);
 
-        // 3. Pemohon edits and resubmits
+        // 3. Pemohon attempts to resubmit -> Route removed (404)
         $resubmitRes = $this->actingAs($pemohon)
             ->postJson("/api/v1/mutations/{$mutation->id}/resubmit", [
                 'reason' => 'Lokasi tujuan dan deskripsi sudah disesuaikan.',
             ]);
 
-        $resubmitRes->assertStatus(200)
-            ->assertJson([
-                'success' => true,
-                'data' => [
-                    'status' => 'menunggu_verifikasi_bagian_aset',
-                    'reason' => 'Lokasi tujuan dan deskripsi sudah disesuaikan.',
-                    'return_reason' => null,
-                ],
-            ]);
+        $resubmitRes->assertStatus(404);
 
-        $this->assertEquals('menunggu_verifikasi_bagian_aset', $mutation->fresh()->status);
+        $this->assertEquals('dikembalikan_ke_pemohon', $mutation->fresh()->status);
 
-        // 4. Queue assertions: Muncul di antrean Bagian Aset, TIDAK muncul di antrean Operator
+        // 4. Queue assertions: Mutasi yang dikembalikan TIDAK boleh muncul di antrean aktif Bagian Aset maupun Operator
         $assetQueue = $this->actingAs($bagianAset)
             ->getJson('/api/v1/mutations?view=queue');
         $assetQueue->assertStatus(200);
         $assetIds = collect($assetQueue->json('data'))->pluck('id')->all();
-        $this->assertContains($mutation->id, $assetIds);
+        $this->assertNotContains($mutation->id, $assetIds);
 
         $operatorQueue = $this->actingAs($operator)
             ->getJson('/api/v1/mutations?view=queue');
@@ -578,7 +522,7 @@ class MutationStatusTransitionTest extends TestCase
                 'reason' => 'Mencoba submit pengajuan orang lain.',
             ]);
 
-        $response->assertStatus(403);
+        $response->assertStatus(404);
     }
 
     // ─── 6. Role & Status Error Tests ───────────────────────────────────────

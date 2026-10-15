@@ -14,6 +14,10 @@ class AssetResource extends JsonResource
      */
     public function toArray(Request $request): array
     {
+        $activeMutation = $this->relationLoaded('mutations')
+            ? $this->mutations->first()
+            : $this->mutations()->active()->first();
+
         return [
             'id' => $this->id,
             'asset_code' => $this->asset_code,
@@ -29,6 +33,8 @@ class AssetResource extends JsonResource
             'acquisition_year' => $this->acquisition_year,
             'usage_year' => $this->usage_year,
             'is_active' => (bool) $this->is_active,
+            'has_active_mutation' => $activeMutation !== null,
+            'active_mutation_ticket' => $activeMutation?->ticket_number,
             'created_at' => $this->created_at,
             'updated_at' => $this->updated_at,
         ];

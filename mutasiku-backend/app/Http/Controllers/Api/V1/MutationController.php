@@ -12,7 +12,6 @@ use App\Http\Requests\OperatorForwardMutationRequest;
 use App\Http\Requests\OperatorReturnMutationRequest;
 use App\Http\Requests\OperatorVerifyMutationRequest;
 use App\Http\Requests\ReportDiscrepancyMutationRequest;
-use App\Http\Requests\ResubmitMutationRequest;
 use App\Http\Requests\StoreMutationRequest;
 use App\Http\Resources\MutationResource;
 use App\Models\Asset;
@@ -207,6 +206,19 @@ class MutationController extends Controller
             $request,
             $skDocument
         ) {
+            // Lock asset and re-verify no concurrent active mutation exists
+            Asset::where('id', $asset->id)->lockForUpdate()->first();
+            $hasActiveMutation = Mutation::where('asset_id', $asset->id)
+                ->active()
+                ->lockForUpdate()
+                ->exists();
+
+            if ($hasActiveMutation) {
+                throw \Illuminate\Validation\ValidationException::withMessages([
+                    'asset_id' => ['Aset ini sedang dalam proses mutasi aktif dan tidak dapat diajukan kembali.'],
+                ]);
+            }
+
             $ticketNumber = $this->generateTicketNumber($asset);
 
             $newMutation = Mutation::create([
@@ -430,10 +442,19 @@ class MutationController extends Controller
             ], 409);
         }
 
+        // Operator hanya boleh meneruskan jika data dan dokumen SK SDM lengkap
+        if (empty($mutation->sk_document) || empty($mutation->destination_location_id) || empty($mutation->asset_id) || empty($mutation->reason)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Dokumen SK SDM atau data pengajuan belum lengkap sehingga tidak dapat diteruskan ke Bagian Aset.',
+            ], 422);
+        }
+
         $user = $request->user()->loadMissing('role');
         $statusBefore = $mutation->status;
+        $notes = (string) ($request->input('reason') ?: 'Diteruskan ke Bagian Aset oleh Operator.');
 
-        DB::transaction(function () use ($mutation, $user, $statusBefore) {
+        DB::transaction(function () use ($mutation, $user, $statusBefore, $notes) {
             $mutation->status = 'menunggu_verifikasi_bagian_aset';
             $mutation->return_reason = null;
             $mutation->verified_at = now();
@@ -447,7 +468,7 @@ class MutationController extends Controller
                 'action' => 'forward',
                 'status_from' => $statusBefore,
                 'status_to' => $mutation->status,
-                'notes' => 'Diteruskan ke Bagian Aset oleh Operator.',
+                'notes' => $notes,
             ]);
 
             $this->notifyRole('bagian_aset', new MutationStatusChangedNotification(
@@ -469,68 +490,19 @@ class MutationController extends Controller
     }
 
     /**
-     * Operator return: transitions from 'diajukan' to 'dikembalikan_ke_pemohon'.
+     * Operator return: Dilarang (Opsi A). Mengembalikan HTTP 403 Forbidden.
      */
     public function returnByOperator(OperatorReturnMutationRequest $request, string|int $id): JsonResponse
     {
-        $mutation = Mutation::find($id);
-
-        if (! $mutation) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Pengajuan mutasi tidak ditemukan.',
-            ], 404);
-        }
-
-        if ($mutation->status !== 'diajukan') {
-            return response()->json([
-                'success' => false,
-                'message' => "Status pengajuan saat ini ({$mutation->status}) tidak valid untuk pengembalian Operator.",
-            ], 409);
-        }
-
-        $user = $request->user()->loadMissing('role');
-        $statusBefore = $mutation->status;
-        $reason = (string) $request->input('reason');
-
-        DB::transaction(function () use ($mutation, $reason, $user, $statusBefore) {
-            $mutation->status = 'dikembalikan_ke_pemohon';
-            $mutation->return_reason = $reason;
-            $mutation->save();
-
-            MutationStatusHistory::create([
-                'mutation_id' => $mutation->id,
-                'user_id' => $user->id,
-                'role' => $user->role?->name ?? 'operator',
-                'action' => 'return',
-                'status_from' => $statusBefore,
-                'status_to' => $mutation->status,
-                'notes' => $reason,
-            ]);
-
-            $applicant = $mutation->applicant ?? User::find($mutation->applicant_id);
-            if ($applicant) {
-                $this->notifyUser($applicant, new MutationStatusChangedNotification(
-                    mutation: $mutation,
-                    title: 'Pengajuan Mutasi Dikembalikan',
-                    message: "Pengajuan mutasi {$mutation->ticket_number} dikembalikan oleh Operator: {$reason}",
-                    action: 'return',
-                    status: 'dikembalikan_ke_pemohon'
-                ));
-            }
-        });
-
-        $this->loadMutationRelations($mutation);
-
         return response()->json([
-            'success' => true,
-            'message' => 'Pengajuan mutasi berhasil dikembalikan ke Pemohon.',
-            'data' => new MutationResource($mutation),
-        ], 200);
+            'success' => false,
+            'message' => 'Operator tidak memiliki kewenangan untuk mengembalikan atau menolak pengajuan mutasi.',
+        ], 403);
     }
 
     /**
-     * Operator verify: transitions from 'diajukan' to 'menunggu_verifikasi_bagian_aset' or 'dikembalikan_ke_pemohon'.
+     * Operator verify: transitions from 'diajukan' to 'menunggu_verifikasi_bagian_aset'.
+     * Aksi 'return' dilarang dan mengembalikan HTTP 403.
      */
     public function verify(OperatorVerifyMutationRequest $request, string|int $id): JsonResponse
     {
@@ -551,58 +523,53 @@ class MutationController extends Controller
         }
 
         $isReturn = $request->isReturn();
+        if ($isReturn) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Operator tidak memiliki kewenangan untuk mengembalikan atau menolak pengajuan mutasi.',
+            ], 403);
+        }
+
+        // Operator hanya boleh meneruskan jika data dan dokumen SK SDM lengkap
+        if (empty($mutation->sk_document) || empty($mutation->destination_location_id) || empty($mutation->asset_id) || empty($mutation->reason)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Dokumen SK SDM atau data pengajuan belum lengkap sehingga tidak dapat diteruskan ke Bagian Aset.',
+            ], 422);
+        }
+
         $user = $request->user()->loadMissing('role');
         $statusBefore = $mutation->status;
 
-        DB::transaction(function () use ($mutation, $isReturn, $request, $user, $statusBefore) {
-            if ($isReturn) {
-                $mutation->status = 'dikembalikan_ke_pemohon';
-                $mutation->return_reason = (string) $request->input('reason');
-            } else {
-                $mutation->status = 'menunggu_verifikasi_bagian_aset';
-                $mutation->return_reason = null;
-                $mutation->verified_at = now();
-                $mutation->verified_by = $user->id;
-            }
+        DB::transaction(function () use ($mutation, $request, $user, $statusBefore) {
+            $mutation->status = 'menunggu_verifikasi_bagian_aset';
+            $mutation->return_reason = null;
+            $mutation->verified_at = now();
+            $mutation->verified_by = $user->id;
             $mutation->save();
 
             MutationStatusHistory::create([
                 'mutation_id' => $mutation->id,
                 'user_id' => $user->id,
                 'role' => $user->role?->name ?? 'operator',
-                'action' => $isReturn ? 'return' : 'verify',
+                'action' => 'verify',
                 'status_from' => $statusBefore,
                 'status_to' => $mutation->status,
-                'notes' => (string) $request->input('reason'),
+                'notes' => (string) $request->input('reason', 'Dinyatakan lengkap oleh Operator.'),
             ]);
 
-            if ($isReturn) {
-                $applicant = $mutation->applicant ?? User::find($mutation->applicant_id);
-                if ($applicant) {
-                    $this->notifyUser($applicant, new MutationStatusChangedNotification(
-                        mutation: $mutation,
-                        title: 'Pengajuan Mutasi Dikembalikan',
-                        message: "Pengajuan mutasi {$mutation->ticket_number} dikembalikan oleh Operator: {$request->input('reason')}",
-                        action: 'return',
-                        status: 'dikembalikan_ke_pemohon'
-                    ));
-                }
-            } else {
-                $this->notifyRole('bagian_aset', new MutationStatusChangedNotification(
-                    mutation: $mutation,
-                    title: 'Menunggu Verifikasi Bagian Aset',
-                    message: "Pengajuan mutasi {$mutation->ticket_number} telah diverifikasi oleh Operator dan memerlukan pemeriksaan Bagian Aset.",
-                    action: 'verify',
-                    status: 'menunggu_verifikasi_bagian_aset'
-                ));
-            }
+            $this->notifyRole('bagian_aset', new MutationStatusChangedNotification(
+                mutation: $mutation,
+                title: 'Menunggu Verifikasi Bagian Aset',
+                message: "Pengajuan mutasi {$mutation->ticket_number} telah diverifikasi oleh Operator dan memerlukan pemeriksaan Bagian Aset.",
+                action: 'verify',
+                status: 'menunggu_verifikasi_bagian_aset'
+            ));
         });
 
         $this->loadMutationRelations($mutation);
 
-        $message = $isReturn
-            ? 'Pengajuan mutasi berhasil dikembalikan ke Pemohon.'
-            : 'Pengajuan mutasi berhasil diverifikasi dan diteruskan ke Bagian Aset.';
+        $message = 'Pengajuan mutasi berhasil diverifikasi dan diteruskan ke Bagian Aset.';
 
         return response()->json([
             'success' => true,
@@ -657,7 +624,7 @@ class MutationController extends Controller
                     $this->notifyUser($applicant, new MutationStatusChangedNotification(
                         mutation: $mutation,
                         title: 'Pengajuan Mutasi Dikembalikan',
-                        message: "Pengajuan mutasi {$mutation->ticket_number} dikembalikan oleh Bagian Aset: {$request->input('reason')}",
+                        message: "Pengajuan mutasi {$mutation->ticket_number} dikembalikan oleh Bagian Aset dan proses telah selesai: {$request->input('reason')}",
                         action: 'return',
                         status: 'dikembalikan_ke_pemohon'
                     ));
@@ -668,7 +635,7 @@ class MutationController extends Controller
 
             return response()->json([
                 'success' => true,
-                'message' => 'Pengajuan mutasi berhasil dikembalikan ke Pemohon.',
+                'message' => 'Pengajuan mutasi berhasil dikembalikan ke Pemohon dan proses telah selesai.',
                 'data' => new MutationResource($mutation),
             ], 200);
         }
@@ -766,7 +733,7 @@ class MutationController extends Controller
                 $this->notifyUser($applicant, new MutationStatusChangedNotification(
                     mutation: $mutation,
                     title: 'Pengajuan Mutasi Dikembalikan',
-                    message: "Pengajuan mutasi {$mutation->ticket_number} dikembalikan oleh Bagian Aset: {$reason}",
+                    message: "Pengajuan mutasi {$mutation->ticket_number} dikembalikan oleh Bagian Aset dan proses telah selesai: {$reason}",
                     action: 'return',
                     status: 'dikembalikan_ke_pemohon'
                 ));
@@ -777,7 +744,7 @@ class MutationController extends Controller
 
         return response()->json([
             'success' => true,
-            'message' => 'Pengajuan mutasi berhasil dikembalikan ke Pemohon.',
+            'message' => 'Pengajuan mutasi berhasil dikembalikan ke Pemohon dan proses telah selesai.',
             'data' => new MutationResource($mutation),
         ], 200);
     }
@@ -1123,118 +1090,6 @@ class MutationController extends Controller
         return response()->json([
             'success' => true,
             'message' => 'Laporan ketidaksesuaian berhasil dikirim. Pengajuan dikembalikan ke Bagian Aset.',
-            'data' => new MutationResource($mutation),
-        ], 200);
-    }
-
-    /**
-     * Update/resubmit mutation (PUT /mutations/{id}).
-     */
-    public function update(ResubmitMutationRequest $request, string|int $id): JsonResponse
-    {
-        return $this->resubmit($request, $id);
-    }
-
-    /**
-     * Pemohon resubmit: transitions from 'dikembalikan_ke_pemohon' directly to 'menunggu_verifikasi_bagian_aset'.
-     */
-    public function resubmit(ResubmitMutationRequest $request, string|int $id): JsonResponse
-    {
-        $user = $request->user()->loadMissing('role');
-        $mutation = Mutation::find($id);
-
-        if (! $mutation) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Pengajuan mutasi tidak ditemukan.',
-            ], 404);
-        }
-
-        // Ownership check: hanya pemohon pemilik mutation
-        if ($mutation->applicant_id !== $user->id) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Anda tidak memiliki hak akses untuk mengajukan ulang mutasi ini.',
-            ], 403);
-        }
-
-        if ($mutation->status !== 'dikembalikan_ke_pemohon') {
-            return response()->json([
-                'success' => false,
-                'message' => "Status pengajuan saat ini ({$mutation->status}) tidak valid untuk pengajuan ulang.",
-            ], 409);
-        }
-
-        // Ambil riwayat pengembalian yang relevan dan terbaru untuk pengajuan tersebut
-        $lastReturnHistory = $mutation->statusHistories()
-            ->where('action', 'return')
-            ->latest('id')
-            ->first();
-
-        // Tentukan jalur alur bisnis berdasarkan riwayat pengembalian
-        $isReturnedByOperator = $lastReturnHistory && (
-            $lastReturnHistory->role === 'operator' ||
-            $lastReturnHistory->status_from === 'diajukan'
-        );
-
-        $newStatus = $isReturnedByOperator ? 'diajukan' : 'menunggu_verifikasi_bagian_aset';
-        $targetRole = $isReturnedByOperator ? 'operator' : 'bagian_aset';
-        $targetRoleLabel = $isReturnedByOperator ? 'Operator' : 'Bagian Aset';
-
-        $statusBefore = $mutation->status;
-
-        DB::transaction(function () use (
-            $mutation,
-            $request,
-            $user,
-            $statusBefore,
-            $newStatus,
-            $targetRole,
-            $targetRoleLabel
-        ) {
-            if ($request->filled('destination_location_id')) {
-                $mutation->destination_location_id = (int) $request->input('destination_location_id');
-            }
-            if ($request->filled('reason')) {
-                $mutation->reason = (string) $request->input('reason');
-            }
-            if ($newSkDocument = $request->getSkDocument()) {
-                $mutation->sk_document = $newSkDocument;
-                $mutation->sk_document_name = $request->getSkDocumentOriginalName() ?? basename($newSkDocument);
-            }
-
-            $mutation->status = $newStatus;
-            $mutation->return_reason = null;
-            $mutation->save();
-
-            MutationStatusHistory::create([
-                'mutation_id' => $mutation->id,
-                'user_id' => $user->id,
-                'role' => $user->role?->name ?? 'pemohon',
-                'action' => 'resubmit',
-                'status_from' => $statusBefore,
-                'status_to' => $mutation->status,
-                'notes' => (string) $request->input('reason'),
-            ]);
-
-            $this->notifyRole($targetRole, new MutationStatusChangedNotification(
-                mutation: $mutation,
-                title: 'Pengajuan Ulang Mutasi',
-                message: "Pengajuan mutasi {$mutation->ticket_number} telah diajukan ulang oleh Pemohon dan siap diverifikasi oleh {$targetRoleLabel}.",
-                action: 'resubmit',
-                status: $newStatus
-            ));
-        });
-
-        $this->loadMutationRelations($mutation);
-
-        $successMsg = $isReturnedByOperator
-            ? 'Pengajuan mutasi berhasil diperbaiki dan dikembalikan ke antrean Operator.'
-            : 'Pengajuan mutasi berhasil diperbaiki dan diteruskan ke Bagian Aset.';
-
-        return response()->json([
-            'success' => true,
-            'message' => $successMsg,
             'data' => new MutationResource($mutation),
         ], 200);
     }

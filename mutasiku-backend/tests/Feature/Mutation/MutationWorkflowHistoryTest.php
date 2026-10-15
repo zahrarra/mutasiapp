@@ -165,7 +165,7 @@ class MutationWorkflowHistoryTest extends TestCase
         ]);
     }
 
-    public function test_pemohon_resubmit_records_pemohon_status_history(): void
+    public function test_pemohon_resubmit_on_returned_mutation_is_rejected_with_404(): void
     {
         $pemohon = $this->createUser('pemohon');
         $mutation = $this->createMutation($pemohon, 'dikembalikan_ke_pemohon');
@@ -177,16 +177,11 @@ class MutationWorkflowHistoryTest extends TestCase
                 'reason' => 'Perbaikan data dan dokumen pendukung',
             ]);
 
-        $response->assertStatus(200);
+        $response->assertStatus(404);
 
-        $this->assertDatabaseHas('mutation_status_histories', [
+        $this->assertDatabaseMissing('mutation_status_histories', [
             'mutation_id' => $mutation->id,
-            'user_id' => $pemohon->id,
-            'role' => 'pemohon',
             'action' => 'resubmit',
-            'status_from' => 'dikembalikan_ke_pemohon',
-            'status_to' => 'menunggu_verifikasi_bagian_aset',
-            'notes' => 'Perbaikan data dan dokumen pendukung',
         ]);
     }
 

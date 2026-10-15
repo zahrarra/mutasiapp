@@ -154,7 +154,7 @@ class AutomaticMutationNotificationTest extends TestCase
         $this->assertEquals(0, $operator->notifications()->count());
     }
 
-    public function test_operator_return_notifies_pemohon(): void
+    public function test_operator_cannot_return_so_no_notification_sent(): void
     {
         $operator = $this->createUser('operator');
         $bagianAset = $this->createUser('bagian_aset');
@@ -169,18 +169,10 @@ class AutomaticMutationNotificationTest extends TestCase
                 'reason' => 'Lampiran SK tidak terbaca',
             ]);
 
-        $response->assertStatus(200);
+        $response->assertStatus(403);
 
-        // Pemohon menerima notifikasi
-        $this->assertEquals(1, $pemohon->notifications()->count());
-        $notif = $pemohon->notifications()->first();
-        $this->assertEquals('Pengajuan Mutasi Dikembalikan', $notif->data['title']);
-        $this->assertEquals($mutation->id, $notif->data['mutation_id']);
-        $this->assertEquals('dikembalikan_ke_pemohon', $notif->data['status']);
-        $this->assertEquals('return', $notif->data['action']);
-        $this->assertStringContainsString('Lampiran SK tidak terbaca', $notif->data['message']);
-
-        // Bagian aset tidak menerima
+        // Tidak ada notifikasi yang terkirim
+        $this->assertEquals(0, $pemohon->notifications()->count());
         $this->assertEquals(0, $bagianAset->notifications()->count());
     }
 
@@ -346,7 +338,7 @@ class AutomaticMutationNotificationTest extends TestCase
         $this->assertEquals(0, $pemohon->notifications()->count());
     }
 
-    public function test_pemohon_resubmit_notifies_bagian_aset(): void
+    public function test_pemohon_resubmit_fails_and_does_not_send_notification(): void
     {
         $bagianAset = $this->createUser('bagian_aset');
         $pemohon = $this->createUser('pemohon');
@@ -361,17 +353,10 @@ class AutomaticMutationNotificationTest extends TestCase
                 'reason' => 'Sudah diperbaiki lokasi tujuan',
             ]);
 
-        $response->assertStatus(200);
+        $response->assertStatus(404);
 
-        // Bagian aset menerima notifikasi pengajuan ulang
-        $this->assertEquals(1, $bagianAset->notifications()->count());
-        $notif = $bagianAset->notifications()->first();
-        $this->assertEquals('Pengajuan Ulang Mutasi', $notif->data['title']);
-        $this->assertEquals($mutation->id, $notif->data['mutation_id']);
-        $this->assertEquals('menunggu_verifikasi_bagian_aset', $notif->data['status']);
-        $this->assertEquals('resubmit', $notif->data['action']);
-
-        // Pemohon tidak menerima
+        // Tidak ada notifikasi yang dikirim karena route resubmit tidak ada
+        $this->assertEquals(0, $bagianAset->notifications()->count());
         $this->assertEquals(0, $pemohon->notifications()->count());
     }
 

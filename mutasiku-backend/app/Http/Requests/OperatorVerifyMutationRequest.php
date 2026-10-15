@@ -11,7 +11,16 @@ class OperatorVerifyMutationRequest extends FormRequest
     {
         $user = $this->user()?->loadMissing('role');
 
-        return $user?->role?->name === 'operator';
+        if ($user?->role?->name !== 'operator') {
+            return false;
+        }
+
+        // Operator tidak berwenang mengembalikan atau menolak tiket (Opsi A)
+        if ($this->isReturn()) {
+            return false;
+        }
+
+        return true;
     }
 
     public function rules(): array
