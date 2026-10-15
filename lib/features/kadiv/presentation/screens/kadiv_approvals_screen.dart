@@ -13,6 +13,7 @@ import '../../../auth/domain/entities/user_role.dart';
 import '../../../../core/widgets/custom_floating_nav_bar.dart';
 import '../../../mutation/domain/entities/mutation.dart';
 import '../providers/kadiv_approval_provider.dart';
+import '../widgets/kadiv_approval_modal.dart';
 import '../../../../core/widgets/mutasiku_page_header.dart';
 
 class _C {
@@ -72,17 +73,20 @@ class _KadivApprovalsScreenState extends ConsumerState<KadivApprovalsScreen> {
       extendBody: true,
       body: Column(
         children: [
-          // ── Custom Top Bar ──────────────────────────────────────────
-          _ApprovalsTopBar(
-            title: 'Approval Kadiv',
-            subtitle: title,
-            onBack: () {
-              if (Navigator.of(context).canPop()) {
-                Navigator.of(context).pop();
-              } else {
-                context.go(RouteNames.kadivDashboardPath);
-              }
-            },
+          // ── Header Baseline ──────────────────────────────────────────
+          SafeArea(
+            bottom: false,
+            child: MutasiKuPageHeader(
+              title: 'Approval Kadiv',
+              subtitle: title,
+              onBack: () {
+                if (Navigator.of(context).canPop()) {
+                  Navigator.of(context).pop();
+                } else {
+                  context.go(RouteNames.kadivDashboardPath);
+                }
+              },
+            ),
           ),
 
           // ── Search & Filter ─────────────────────────────────────────
@@ -133,12 +137,11 @@ class _KadivApprovalsScreenState extends ConsumerState<KadivApprovalsScreen> {
                             items:
                                 [
                                       KadivStatusFilter.all,
+                                      KadivStatusFilter.waiting,
                                       KadivStatusFilter.processing,
                                       KadivStatusFilter.allocated,
-                                      KadivStatusFilter.returned,
                                       KadivStatusFilter.completed,
                                       KadivStatusFilter.rejected,
-                                      KadivStatusFilter.waiting,
                                     ]
                                     .map(
                                       (s) => DropdownMenuItem(
@@ -210,26 +213,34 @@ class _KadivApprovalsScreenState extends ConsumerState<KadivApprovalsScreen> {
                   return _buildEmptyState(statusFilter);
                 }
                 return RefreshIndicator(
-                  color: _C.teal,
+                  color: _C.navy,
                   onRefresh: () async =>
                       ref.invalidate(kadivAllMutationsProvider),
                   child: ListView.separated(
-                    padding: const EdgeInsets.fromLTRB(16, 16, 16, 100),
+                    padding: const EdgeInsets.fromLTRB(16, 12, 16, 100),
                     itemCount: mutations.length,
                     separatorBuilder: (_, _) => const SizedBox(height: 10),
                     itemBuilder: (context, i) => _KadivApprovalCard(
                       mutation: mutations[i],
                       onTap: () =>
                           context.push('/kadiv/approvals/${mutations[i].id}'),
+                      onQuickApprove: mutations[i].status.isWaitingDivisionApproval
+                          ? () async {
+                              final approved = await startKadivApprovalFlow(
+                                context,
+                                mutation: mutations[i],
+                              );
+                              if (approved == true && mounted) {
+                                ref.invalidate(kadivAllMutationsProvider);
+                              }
+                            }
+                          : null,
                     ),
                   ),
                 );
               },
               loading: () => const Center(
-                child: CircularProgressIndicator(
-                  strokeWidth: 2,
-                  color: _C.teal,
-                ),
+                child: CircularProgressIndicator(color: _C.navy),
               ),
               error: (err, _) => _ErrorState(
                 message: '$err',
@@ -241,6 +252,8 @@ class _KadivApprovalsScreenState extends ConsumerState<KadivApprovalsScreen> {
       ),
       bottomNavigationBar: CustomFloatingNavBar.scaffoldBottomBar(
         items: RoleNavConfig.getNavItemsForRole(UserRole.kadiv),
+        currentRoute: RouteNames.kadivApprovalsPath,
+        onItemTap: (item) => context.go(item.route),
       ),
     );
   }
@@ -282,169 +295,160 @@ class _KadivApprovalsScreenState extends ConsumerState<KadivApprovalsScreen> {
 class _KadivApprovalCard extends StatelessWidget {
   final Mutation mutation;
   final VoidCallback? onTap;
+  final VoidCallback? onQuickApprove;
 
-  const _KadivApprovalCard({required this.mutation, this.onTap});
+  const _KadivApprovalCard({
+    required this.mutation,
+    this.onTap,
+    this.onQuickApprove,
+  });
 
   @override
   Widget build(BuildContext context) {
-    final (fg, bg) = _statusColors(mutation.status.name);
+    final status = mutation.status;
+    final isWaiting = status.isWaitingDivisionApproval;
+    final (badgeColor, badgeBg) = _statusColors(status.name);
 
-    return GestureDetector(
-      key: Key('card_approval_kadiv_${mutation.id}'),
-      onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.all(14),
-        decoration: BoxDecoration(
-          color: _C.surface,
-          borderRadius: BorderRadius.circular(14),
-          border: Border.all(color: _C.border),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.04),
-              blurRadius: 8,
-              offset: const Offset(0, 2),
-            ),
-          ],
+    return Container(
+      decoration: BoxDecoration(
+        color: _C.surface,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: isWaiting ? _C.navy.withValues(alpha: 0.25) : _C.border,
+          width: isWaiting ? 1.5 : 1,
         ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // ── Row 1: Ticket + Status Badge ─────────────────────────
-            Wrap(
-              alignment: WrapAlignment.spaceBetween,
-              crossAxisAlignment: WrapCrossAlignment.center,
-              spacing: 8,
-              runSpacing: 6,
-              children: [
-                Text(
-                  mutation.ticketNumber,
-                  style: const TextStyle(
-                    fontSize: 11,
-                    fontWeight: FontWeight.w700,
-                    fontFamily: 'monospace',
-                    color: _C.navy,
-                  ),
-                ),
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 8,
-                    vertical: 3,
-                  ),
-                  decoration: BoxDecoration(
-                    color: bg,
-                    borderRadius: BorderRadius.circular(999),
-                  ),
-                  child: Text(
-                    mutation.status.displayName,
-                    style: TextStyle(
-                      fontSize: 10,
-                      fontWeight: FontWeight.w600,
-                      color: fg,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 6),
-            Text(
-              mutation.asset.name,
-              style: const TextStyle(
-                fontSize: 14,
-                fontWeight: FontWeight.w600,
-                color: _C.textPrimary,
-              ),
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
-            ),
-            const SizedBox(height: 4),
-            Row(
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.03),
+            blurRadius: 6,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Material(
+        color: Colors.transparent,
+        borderRadius: BorderRadius.circular(12),
+        child: InkWell(
+          key: Key('card_approval_kadiv_${mutation.id}'),
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(12),
+          child: Padding(
+            padding: const EdgeInsets.all(14),
+            child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Padding(
-                  padding: EdgeInsets.only(top: 2),
-                  child: Icon(
-                    Icons.place_outlined,
-                    size: 13,
-                    color: _C.textSecondary,
-                  ),
-                ),
-                const SizedBox(width: 4),
-                Expanded(
-                  child: Text(
-                    '${mutation.currentLocation} → ${mutation.targetLocation}',
-                    style: const TextStyle(
-                      fontSize: 11,
-                      color: _C.textSecondary,
+                // ── Row 1: Ticket + Status Badge ─────────────────────────
+                Wrap(
+                  alignment: WrapAlignment.spaceBetween,
+                  crossAxisAlignment: WrapCrossAlignment.center,
+                  spacing: 8,
+                  runSpacing: 6,
+                  children: [
+                    Text(
+                      mutation.ticketNumber,
+                      style: const TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w700,
+                        color: _C.navy,
+                        letterSpacing: 0.3,
+                      ),
                     ),
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 4),
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Padding(
-                  padding: EdgeInsets.only(top: 2),
-                  child: Icon(
-                    Icons.person_outline_rounded,
-                    size: 13,
-                    color: _C.textSecondary,
-                  ),
-                ),
-                const SizedBox(width: 4),
-                Expanded(
-                  child: Text(
-                    'Pemohon: ${mutation.applicantName}  •  PIC: ${mutation.targetPic}',
-                    style: const TextStyle(
-                      fontSize: 11,
-                      color: _C.textSecondary,
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 3,
+                      ),
+                      decoration: BoxDecoration(
+                        color: badgeBg,
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                      child: Text(
+                        mutation.status.displayName,
+                        style: TextStyle(
+                          fontSize: 10,
+                          fontWeight: FontWeight.w700,
+                          color: badgeColor,
+                        ),
+                      ),
                     ),
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                  ),
+                  ],
                 ),
-              ],
-            ),
-            // Bagian Aset verification badge
-            if ((mutation.assetVerifiedBy != null &&
-                    !RegExp(r'^\d+$').hasMatch(mutation.assetVerifiedBy!.trim())) ||
-                (mutation.approvedBy != null &&
-                    !RegExp(r'^\d+$').hasMatch(mutation.approvedBy!.trim())) ||
-                mutation.assetVerifiedAt != null ||
-                mutation.approvedAt != null) ...[
-              const SizedBox(height: 8),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                decoration: BoxDecoration(
-                  color: _C.successLight,
-                  borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: _C.success.withValues(alpha: 0.3)),
+                const SizedBox(height: 8),
+
+                // ── Row 2: Asset Name & Category Chip ────────────────────
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Expanded(
+                      child: Text(
+                        mutation.asset.name,
+                        style: const TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w700,
+                          color: _C.textPrimary,
+                        ),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                    const SizedBox(width: 6),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 6,
+                        vertical: 2,
+                      ),
+                      decoration: BoxDecoration(
+                        color: _C.background,
+                        borderRadius: BorderRadius.circular(4),
+                        border: Border.all(color: _C.border),
+                      ),
+                      child: Text(
+                        mutation.asset.category.name,
+                        style: const TextStyle(
+                          fontSize: 10,
+                          fontWeight: FontWeight.w500,
+                          color: _C.textSecondary,
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
+                const SizedBox(height: 6),
+
+                // ── Row 3: Pemohon & Lokasi Tujuan ───────────────────────
+                Row(
                   children: [
                     const Icon(
-                      Icons.verified_rounded,
-                      size: 12,
-                      color: _C.success,
+                      Icons.person_outline_rounded,
+                      size: 13,
+                      color: _C.textSecondary,
                     ),
                     const SizedBox(width: 4),
                     Flexible(
                       child: Text(
-                        'Verifikasi Bagian Aset: ${() {
-                          final name = mutation.assetVerifiedBy ?? mutation.approvedBy;
-                          if (name != null && !RegExp(r'^\d+$').hasMatch(name.trim()) && name.trim() != 'null') {
-                            return name.trim();
-                          }
-                          return 'Valid';
-                        }()}',
+                        mutation.applicantName,
+                        style: const TextStyle(
+                          fontSize: 11,
+                          color: _C.textSecondary,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    const Icon(
+                      Icons.arrow_forward_rounded,
+                      size: 12,
+                      color: _C.textSecondary,
+                    ),
+                    const SizedBox(width: 4),
+                    Expanded(
+                      child: Text(
+                        mutation.targetLocation,
                         style: const TextStyle(
                           fontSize: 11,
                           fontWeight: FontWeight.w600,
-                          color: _C.success,
+                          color: _C.textPrimary,
                         ),
                         maxLines: 2,
                         overflow: TextOverflow.ellipsis,
@@ -452,9 +456,150 @@ class _KadivApprovalCard extends StatelessWidget {
                     ),
                   ],
                 ),
-              ),
-            ],
-          ],
+
+                // ── Row 4: Bagian Aset verification badge ────────────────
+                if ((mutation.assetVerifiedBy != null &&
+                        !RegExp(r'^\d+$').hasMatch(mutation.assetVerifiedBy!.trim())) ||
+                    (mutation.approvedBy != null &&
+                        !RegExp(r'^\d+$').hasMatch(mutation.approvedBy!.trim())) ||
+                    mutation.assetVerifiedAt != null ||
+                    mutation.approvedAt != null) ...[
+                  const SizedBox(height: 8),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: _C.successLight,
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: _C.success.withValues(alpha: 0.3)),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Icon(
+                          Icons.verified_rounded,
+                          size: 12,
+                          color: _C.success,
+                        ),
+                        const SizedBox(width: 4),
+                        Flexible(
+                          child: Text(
+                            'Verifikasi Bagian Aset: ${() {
+                              final name = mutation.assetVerifiedBy ?? mutation.approvedBy;
+                              if (name != null && !RegExp(r'^\d+$').hasMatch(name.trim()) && name.trim() != 'null') {
+                                return name.trim();
+                              }
+                              return 'Valid';
+                            }()}',
+                            style: const TextStyle(
+                              fontSize: 11,
+                              fontWeight: FontWeight.w600,
+                              color: _C.success,
+                            ),
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+
+                const SizedBox(height: 8),
+                const Divider(height: 1, color: _C.border),
+                const SizedBox(height: 8),
+
+                // ── Row 5: Action Bottom Row ─────────────────────────────
+                Wrap(
+                  alignment: WrapAlignment.spaceBetween,
+                  crossAxisAlignment: WrapCrossAlignment.center,
+                  spacing: 8,
+                  runSpacing: 6,
+                  children: [
+                    Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          mutation.isAssetMovingWithApplicant
+                              ? Icons.check_circle_outline
+                              : Icons.assignment_late_outlined,
+                          size: 13,
+                          color: mutation.isAssetMovingWithApplicant
+                              ? _C.success
+                              : _C.warning,
+                        ),
+                        const SizedBox(width: 4),
+                        Text(
+                          mutation.isAssetMovingWithApplicant
+                              ? 'Aset dibawa pemohon'
+                              : 'Penetapan PIC baru',
+                          style: TextStyle(
+                            fontSize: 11,
+                            fontWeight: FontWeight.w500,
+                            color: mutation.isAssetMovingWithApplicant
+                                ? _C.success
+                                : _C.warning,
+                          ),
+                        ),
+                      ],
+                    ),
+                    if (isWaiting && onQuickApprove != null)
+                      ElevatedButton(
+                        key: Key('btn_quick_approve_${mutation.id}'),
+                        onPressed: onQuickApprove,
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: _C.navy,
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 10,
+                            vertical: 5,
+                          ),
+                          minimumSize: Size.zero,
+                          tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(6),
+                          ),
+                          elevation: 0,
+                        ),
+                        child: const Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(
+                              'Persetujuan',
+                              style: TextStyle(
+                                fontSize: 10,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                            SizedBox(width: 2),
+                            Icon(Icons.arrow_forward_rounded, size: 12),
+                          ],
+                        ),
+                      )
+                    else
+                      const Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                            'Lihat Detail',
+                            style: TextStyle(
+                              fontSize: 11,
+                              fontWeight: FontWeight.w700,
+                              color: _C.navy,
+                            ),
+                          ),
+                          SizedBox(width: 2),
+                          Icon(
+                            Icons.chevron_right_rounded,
+                            size: 14,
+                            color: _C.navy,
+                          ),
+                        ],
+                      ),
+                  ],
+                ),
+              ],
+            ),
+          ),
         ),
       ),
     );
@@ -477,32 +622,8 @@ class _KadivApprovalCard extends StatelessWidget {
 
 // ── Shared Private Widgets ───────────────────────────────────────────────────
 
-class _ApprovalsTopBar extends StatelessWidget {
-  final String title;
-  final String subtitle;
-  final VoidCallback onBack;
-
-  const _ApprovalsTopBar({
-    required this.title,
-    required this.subtitle,
-    required this.onBack,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return SafeArea(
-      bottom: false,
-      child: MutasiKuPageHeader(
-        title: title,
-        subtitle: subtitle,
-        onBack: onBack,
-      ),
-    );
-  }
-}
-
 class _SearchField extends StatelessWidget {
-  final Key searchKey;
+  final Key? searchKey;
   final TextEditingController controller;
   final String hintText;
   final ValueChanged<String> onChanged;
@@ -510,51 +631,49 @@ class _SearchField extends StatelessWidget {
   final bool showClear;
 
   const _SearchField({
-    required this.searchKey,
+    this.searchKey,
     required this.controller,
     required this.hintText,
     required this.onChanged,
     required this.onClear,
-    required this.showClear,
+    this.showClear = false,
   });
 
   @override
   Widget build(BuildContext context) {
     return Container(
+      height: 40,
       decoration: BoxDecoration(
         color: _C.background,
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(10),
         border: Border.all(color: _C.border),
       ),
       child: TextField(
         key: searchKey,
         controller: controller,
+        onChanged: onChanged,
         style: const TextStyle(fontSize: 13, color: _C.textPrimary),
         decoration: InputDecoration(
           hintText: hintText,
-          hintStyle: const TextStyle(fontSize: 13, color: _C.textSecondary),
+          hintStyle: const TextStyle(fontSize: 12, color: _C.textSecondary),
           prefixIcon: const Icon(
             Icons.search_rounded,
             size: 18,
             color: _C.textSecondary,
           ),
-          suffixIcon: showClear
+          suffixIcon: controller.text.isNotEmpty || showClear
               ? GestureDetector(
                   onTap: onClear,
                   child: const Icon(
-                    Icons.clear_rounded,
+                    Icons.close_rounded,
                     size: 16,
                     color: _C.textSecondary,
                   ),
                 )
               : null,
           border: InputBorder.none,
-          contentPadding: const EdgeInsets.symmetric(
-            horizontal: 16,
-            vertical: 12,
-          ),
+          contentPadding: const EdgeInsets.symmetric(vertical: 10),
         ),
-        onChanged: onChanged,
       ),
     );
   }
@@ -638,55 +757,33 @@ class _ErrorState extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(32),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Container(
-              width: 64,
-              height: 64,
-              decoration: BoxDecoration(
-                color: _C.errorLight,
-                borderRadius: BorderRadius.circular(18),
-              ),
-              child: const Icon(
-                Icons.error_outline_rounded,
-                size: 32,
-                color: _C.error,
-              ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const Icon(
+            Icons.error_outline_rounded,
+            size: 40,
+            color: _C.error,
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'Gagal memuat data: $message',
+            style: const TextStyle(
+              color: _C.textSecondary,
+              fontSize: 13,
             ),
-            const SizedBox(height: 16),
-            const Text(
-              'Gagal Memuat Data',
-              style: TextStyle(
-                fontSize: 15,
-                fontWeight: FontWeight.w700,
-                color: _C.textPrimary,
-              ),
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: 12),
+          ElevatedButton(
+            onPressed: onRetry,
+            style: ElevatedButton.styleFrom(
+              backgroundColor: _C.navy,
+              foregroundColor: Colors.white,
             ),
-            const SizedBox(height: 6),
-            Text(
-              message,
-              textAlign: TextAlign.center,
-              style: const TextStyle(fontSize: 12, color: _C.textSecondary),
-            ),
-            const SizedBox(height: 20),
-            ElevatedButton.icon(
-              onPressed: onRetry,
-              icon: const Icon(Icons.refresh_rounded, size: 16),
-              label: const Text('Coba Lagi'),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: _C.teal,
-                foregroundColor: Colors.white,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                elevation: 0,
-              ),
-            ),
-          ],
-        ),
+            child: const Text('Coba Lagi'),
+          ),
+        ],
       ),
     );
   }

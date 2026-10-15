@@ -35,8 +35,6 @@ abstract final class _C {
   static const borderLight = Color(0xFFE2E8F0);
   static const mintAccent = Color(0xFF9CF2E8);
   static const success = Color(0xFF15803D);
-  static const warning = Color(0xFFB45309);
-  static const warningLight = Color(0xFFFEF3C7);
   static const error = Color(0xFFB42318);
   static const cardBlue = Color(0xFFECF4FF);
 }
@@ -52,7 +50,7 @@ class KadivDashboardScreen extends ConsumerStatefulWidget {
 class _KadivDashboardScreenState extends ConsumerState<KadivDashboardScreen> {
   final _searchController = TextEditingController();
   String _query = '';
-  String? _selectedCategoryFilter; // null, 'ti', 'umum', 'prioritas', 'cabang'
+  String? _selectedCategoryFilter; // null, 'ti', 'umum'
 
   @override
   void initState() {
@@ -123,7 +121,7 @@ class _KadivDashboardScreenState extends ConsumerState<KadivDashboardScreen> {
     // Antrean Kadiv: hanya yang sedang menunggu otorisasi Kadiv
     var list = all.where(isWaitingKadivApproval);
 
-    // Filter kategori dari 4 Kategori Aset
+    // Filter kategori dari Kategori Aset
     if (_selectedCategoryFilter != null) {
       switch (_selectedCategoryFilter) {
         case 'ti':
@@ -131,17 +129,6 @@ class _KadivDashboardScreenState extends ConsumerState<KadivDashboardScreen> {
           break;
         case 'umum':
           list = list.where((m) => !_isITAsset(m));
-          break;
-        case 'prioritas':
-          // Prioritas: semua yang menunggu otorisasi Kadiv
-          list = list.where(isWaitingKadivApproval);
-          break;
-        case 'cabang':
-          list = list.where(
-            (m) =>
-                m.currentLocation.trim().toLowerCase() !=
-                m.targetLocation.trim().toLowerCase(),
-          );
           break;
       }
     }
@@ -823,9 +810,9 @@ class _KadivDashboardScreenState extends ConsumerState<KadivDashboardScreen> {
   }
 
   // ──────────────────────────────────────────────────────────────────────────
-  // KATEGORI ASET (Grid 2x2 — Stitch 1:1)
+  // KATEGORI ASET (Grid — Stitch 1:1)
   // ──────────────────────────────────────────────────────────────────────────
-  Widget _buildCategoryGrid(KadivApprovalStats stats) {
+  Widget _buildCategoryGrid([KadivApprovalStats? stats]) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -871,46 +858,6 @@ class _KadivDashboardScreenState extends ConsumerState<KadivDashboardScreen> {
                     _selectedCategoryFilter = _selectedCategoryFilter == 'umum'
                         ? null
                         : 'umum';
-                  });
-                },
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 12),
-        Row(
-          children: [
-            Expanded(
-              child: _buildCategoryCard(
-                title: 'Prioritas Kadiv',
-                subtitle: 'Nilai Tinggi (${stats.waitingApprovalCount})',
-                icon: Icons.verified_user_rounded,
-                iconBg: _C.warningLight,
-                iconColor: _C.warning,
-                isSelected: _selectedCategoryFilter == 'prioritas',
-                onTap: () {
-                  setState(() {
-                    _selectedCategoryFilter =
-                        _selectedCategoryFilter == 'prioritas'
-                        ? null
-                        : 'prioritas';
-                  });
-                },
-              ),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: _buildCategoryCard(
-                title: 'Pindah Cabang',
-                subtitle: 'Antar Wilayah',
-                icon: Icons.swap_horiz_rounded,
-                iconBg: _C.cardBlue,
-                iconColor: _C.navy,
-                isSelected: _selectedCategoryFilter == 'cabang',
-                onTap: () {
-                  setState(() {
-                    _selectedCategoryFilter =
-                        _selectedCategoryFilter == 'cabang' ? null : 'cabang';
                   });
                 },
               ),

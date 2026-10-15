@@ -85,7 +85,7 @@ final kadivSortOrderProvider = StateProvider<KadivSortOrder>(
 );
 
 final kadivStatusFilterProvider = StateProvider<KadivStatusFilter>(
-  (ref) => KadivStatusFilter.waiting,
+  (ref) => KadivStatusFilter.all,
 );
 
 // ─── Mutations Data Providers ────────────────────────────────────────────────
