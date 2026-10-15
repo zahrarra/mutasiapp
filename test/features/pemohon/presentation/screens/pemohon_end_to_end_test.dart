@@ -31,7 +31,6 @@ import 'package:mutasiku/features/notification/presentation/providers/notificati
 import 'package:mutasiku/features/pemohon/presentation/screens/pemohon_confirmation_screen.dart';
 import 'package:mutasiku/features/pemohon/presentation/screens/pemohon_create_mutation_screen.dart';
 import 'package:mutasiku/features/pemohon/presentation/screens/pemohon_dashboard_screen.dart';
-import 'package:mutasiku/features/pemohon/presentation/screens/pemohon_edit_mutation_screen.dart';
 import 'package:mutasiku/features/pemohon/presentation/screens/pemohon_mutation_detail_screen.dart';
 import 'package:mutasiku/features/pemohon/presentation/screens/pemohon_mutation_list_screen.dart';
 import 'package:mutasiku/features/pemohon/presentation/screens/pemohon_notifications_screen.dart';
@@ -116,28 +115,6 @@ class _FakeFullMutationRepository implements MutationRepository {
   }
 
   @override
-  Future<Result<Mutation>> updateMutation({
-    required String mutationId,
-    required String targetLocation,
-    required String targetPic,
-    required String reason,
-    String? documentName,
-  }) async {
-    final current = _mutations[mutationId];
-    if (current == null) {
-      return const Result.failure(NotFoundFailure(message: 'Not found'));
-    }
-    final updated = current.copyWith(
-      targetLocation: targetLocation,
-      targetPic: targetPic,
-      reason: reason,
-      status: MutationStatus.submitted,
-    );
-    _mutations[mutationId] = updated;
-    return Result.success(updated);
-  }
-
-  @override
   Future<Result<List<Mutation>>> getMutationsByUser(String userId) async {
     final list = _mutations.values
         .where((m) => m.applicantId == userId)
@@ -162,6 +139,7 @@ class _FakeFullMutationRepository implements MutationRepository {
   @override
   Future<Result<Mutation>> verifyMutation({
     required String mutationId,
+    String? notes,
     required String operatorName,
     bool requiresKadivApproval = false,
   }) async {
@@ -542,7 +520,7 @@ void main() {
         await tester.pumpAndSettle();
 
         expect(find.text('Mutasi Saya'), findsWidgets);
-        expect(find.text('Monitor LG ActionNeeded'), findsOneWidget);
+        expect(find.text('Monitor LG ActionNeeded'), findsNothing);
         expect(find.text('Laptop Dell InProgress'), findsNothing);
         expect(find.text('Printer Epson Completed'), findsNothing);
 
@@ -556,8 +534,8 @@ void main() {
 
         expect(find.text('Mutasi Saya'), findsWidgets);
         expect(find.text('Printer Epson Completed'), findsOneWidget);
-        expect(find.text('Laptop Dell InProgress'), findsNothing);
         expect(find.text('Monitor LG ActionNeeded'), findsNothing);
+        expect(find.text('Laptop Dell InProgress'), findsNothing);
 
         // Manual switch filter to 'Semua'
         await tester.tap(find.widgetWithText(InkWell, 'Semua').first);
@@ -911,7 +889,7 @@ void main() {
         // Check ticket and status
         expect(find.text('RET-2026-001'), findsOneWidget);
         expect(
-          find.text('Pengajuan Dikembalikan untuk Diperbaiki'),
+          find.text('Dikembalikan oleh Bagian Aset — Pengajuan Telah Selesai'),
           findsOneWidget,
         );
         expect(
@@ -923,71 +901,10 @@ void main() {
         expect(find.text('Pengajuan'), findsOneWidget);
         expect(find.textContaining('Verifikasi Aset'), findsOneWidget);
 
-        // Edit & Ajukan Ulang button should be visible
-        expect(find.text('Edit & Ajukan Ulang'), findsOneWidget);
-      },
-    );
-
-    testWidgets(
-      'Edit & Ajukan Ulang: edits mutation, saves, resets status to submitted',
-      (tester) async {
-        tester.view.physicalSize = const Size(1080, 2400);
-        tester.view.devicePixelRatio = 1.0;
-        addTearDown(() => tester.view.resetPhysicalSize());
-
-        final returnedMutation = createTestMutation(
-          id: 'mut_edit',
-          ticketNumber: 'EDT-2026-001',
-          status: MutationStatus.returned,
-          returnReason: 'Mohon update PIC baru.',
-        );
-        final repo = _FakeFullMutationRepository([returnedMutation]);
-
-        await tester.pumpWidget(
-          ProviderScope(
-            overrides: [
-              mutationRepositoryProvider.overrideWithValue(repo),
-              apiMutationRepositoryProvider.overrideWithValue(repo),
-              authStateProvider.overrideWith(
-                (ref) => FakePemohonAuthNotifier(testUser),
-              ),
-            ],
-            child: const MaterialApp(
-              home: PemohonEditMutationScreen(mutationId: 'mut_edit'),
-            ),
-          ),
-        );
-
-        await tester.pumpAndSettle();
-
-        // Shows original returnReason
-        expect(find.text('Mohon update PIC baru.'), findsOneWidget);
-
-        // Edit fields using explicit keys
-        await tester.enterText(
-          find.byKey(const Key('input_edit_target_location')),
-          'Cabang Medan',
-        );
-        await tester.enterText(
-          find.byKey(const Key('input_edit_target_pic')),
-          'Rian Hidayat',
-        );
-        await tester.enterText(
-          find.byKey(const Key('input_edit_reason')),
-          'Alasan revisi lengkap',
-        );
-        await tester.pumpAndSettle();
-
-        // Tap Ajukan Ulang
-        await tester.ensureVisible(find.byKey(const Key('btn_ajukan_ulang')));
-        await tester.tap(find.byKey(const Key('btn_ajukan_ulang')));
-        await tester.pumpAndSettle();
-
-        // Verify status in repository became submitted
-        final check = await repo.getMutationById('mut_edit');
-        expect(check.dataOrNull!.status, MutationStatus.submitted);
-        expect(check.dataOrNull!.targetLocation, 'Cabang Medan');
-        expect(check.dataOrNull!.targetPic, 'Rian Hidayat');
+        // Edit & Ajukan Ulang button should NOT be visible on returned mutation
+        expect(find.text('Edit & Ajukan Ulang'), findsNothing);
+        // Instead, Ajukan Mutasi Baru button is visible
+        expect(find.byKey(const Key('btn_ajukan_mutasi_baru')), findsOneWidget);
       },
     );
 
