@@ -203,19 +203,30 @@ void main() {
   });
 
   group('B. PENGUJIAN INTEGRASI LANGSUNG (LIVE) KE LARAVEL SERVER', () {
+    final liveBaseUrl = Platform.environment['API_BASE_URL'] ??
+        const String.fromEnvironment('API_BASE_URL', defaultValue: 'http://127.0.0.1:8001');
+
     test('1. LIVE: GET /api/v1/locations tanpa token menghasilkan HTTP 401 Unauthenticated', () async {
       final client = http.Client();
       try {
         final response = await client.get(
-          Uri.parse('http://127.0.0.1:8000/api/v1/locations'),
+          Uri.parse('$liveBaseUrl/api/v1/locations'),
           headers: {'Accept': 'application/json'},
-        ).timeout(const Duration(seconds: 4));
+        ).timeout(const Duration(seconds: 5));
 
-        expect(response.statusCode, equals(401));
+        expect(
+          response.statusCode,
+          equals(401),
+          reason: 'Endpoint /locations harus mengembalikan HTTP 401 Unauthorized dari backend MutasiKu, didapat: ${response.statusCode}',
+        );
         final body = jsonDecode(response.body) as Map<String, dynamic>;
-        expect(body['message'], equals('Unauthenticated.'));
-      } on SocketException {
-        // Abaikan jika live server sedang tidak aktif di CI
+        expect(
+          body['message'],
+          equals('Unauthenticated.'),
+          reason: 'Pesan kegagalan autentikasi Sanctum harus "Unauthenticated."',
+        );
+      } catch (e) {
+        fail('Gagal terhubung atau menerima respons autentikasi dari live backend MutasiKu di $liveBaseUrl: $e');
       } finally {
         client.close();
       }
@@ -225,8 +236,8 @@ void main() {
       final client = http.Client();
       try {
         // 1. Login terlebih dahulu untuk mendapatkan token pemohon yang valid
-        final loginResponse = await client.post(
-          Uri.parse('http://127.0.0.1:8000/api/v1/auth/login'),
+        var loginResponse = await client.post(
+          Uri.parse('$liveBaseUrl/api/v1/auth/login'),
           headers: {
             'Content-Type': 'application/json',
             'Accept': 'application/json',
@@ -235,57 +246,97 @@ void main() {
             'email': 'pemohon@mutasiku.test',
             'password': 'password',
           }),
-        ).timeout(const Duration(seconds: 4));
+        ).timeout(const Duration(seconds: 5));
 
-        String? token;
-        if (loginResponse.statusCode == 200) {
-          final loginBody = jsonDecode(loginResponse.body) as Map<String, dynamic>;
-          final data = loginBody['data'] as Map<String, dynamic>?;
-          token = data?['token'] ?? loginBody['token'];
-        }
-
-        if (token != null) {
-          final response = await client.get(
-            Uri.parse('http://127.0.0.1:8000/api/v1/locations'),
+        // Jika akun pemohon telah melakukan ganti password awal, coba password updated atau akun pemohon demo budi
+        if (loginResponse.statusCode != 200) {
+          loginResponse = await client.post(
+            Uri.parse('$liveBaseUrl/api/v1/auth/login'),
             headers: {
+              'Content-Type': 'application/json',
               'Accept': 'application/json',
-              'Authorization': 'Bearer $token',
             },
-          ).timeout(const Duration(seconds: 4));
-
-          expect(response.statusCode, equals(200));
-          final body = jsonDecode(response.body) as Map<String, dynamic>;
-          expect(body['success'], isTrue);
-          final list = body['data'] as List<dynamic>;
-
-          // BUKTI 1: Tepat 37 lokasi aktif sesuai daftar acuan pengguna
-          expect(list.length, equals(37));
-
-          final names = list.map((item) => item['name'].toString()).toList();
-
-          // BUKTI 2: Memuat cabang-cabang resmi acuan pengguna
-          expect(names, contains('KCU Palu'));
-          expect(names, contains('Cabang Tawaeli'));
-          expect(names, contains('Cabang Sigi'));
-          expect(names, contains('Cabang Donggala'));
-          expect(names, contains('Cabang Palu Barat'));
-          expect(names, contains('Cabang Tinombala'));
-          expect(names, contains('Cabang Poso'));
-          expect(names, contains('Cabang Luwuk'));
-          expect(names, contains('Cabang Jakarta'));
-          expect(names, contains('Cabang Makassar'));
-
-          // BUKTI 3: TIDAK memuat 7 lokasi lama yang ditolak
-          expect(names, isNot(contains('Kantor Pusat')));
-          expect(names, isNot(contains('Gedung A')));
-          expect(names, isNot(contains('Gedung B')));
-          expect(names, isNot(contains('Ruang Divisi Umum')));
-          expect(names, isNot(contains('Cabang Surabaya')));
-          expect(names, isNot(contains('Cabang Bandung')));
-          expect(names, isNot(contains('Cabang Semarang')));
+            body: jsonEncode({
+              'email': 'pemohon@mutasiku.test',
+              'password': '12345678',
+            }),
+          ).timeout(const Duration(seconds: 5));
         }
-      } on SocketException {
-        // Abaikan jika live server tidak aktif
+
+        if (loginResponse.statusCode != 200) {
+          loginResponse = await client.post(
+            Uri.parse('$liveBaseUrl/api/v1/auth/login'),
+            headers: {
+              'Content-Type': 'application/json',
+              'Accept': 'application/json',
+            },
+            body: jsonEncode({
+              'email': 'budi.santoso@mutasiku.test',
+              'password': 'password',
+            }),
+          ).timeout(const Duration(seconds: 5));
+        }
+
+        expect(
+          loginResponse.statusCode,
+          equals(200),
+          reason: 'Login pemohon ke live backend di $liveBaseUrl harus berhasil dengan HTTP 200, didapat: ${loginResponse.statusCode}',
+        );
+
+        final loginBody = jsonDecode(loginResponse.body) as Map<String, dynamic>;
+        final data = loginBody['data'] as Map<String, dynamic>?;
+        final token = data?['token'] ?? loginBody['token'];
+
+        expect(
+          token,
+          isNotNull,
+          reason: 'Token autentikasi pemohon tidak boleh null setelah login.',
+        );
+
+        final response = await client.get(
+          Uri.parse('$liveBaseUrl/api/v1/locations'),
+          headers: {
+            'Accept': 'application/json',
+            'Authorization': 'Bearer $token',
+          },
+        ).timeout(const Duration(seconds: 5));
+
+        expect(
+          response.statusCode,
+          equals(200),
+          reason: 'Request lokasi dengan token valid harus mengembalikan HTTP 200 OK, didapat: ${response.statusCode}',
+        );
+        final body = jsonDecode(response.body) as Map<String, dynamic>;
+        expect(body['success'], isTrue);
+        final list = body['data'] as List<dynamic>;
+
+        // BUKTI 1: Tepat 37 lokasi aktif sesuai daftar acuan pengguna
+        expect(list.length, equals(37));
+
+        final names = list.map((item) => item['name'].toString()).toList();
+
+        // BUKTI 2: Memuat cabang-cabang resmi acuan pengguna
+        expect(names, contains('KCU Palu'));
+        expect(names, contains('Cabang Tawaeli'));
+        expect(names, contains('Cabang Sigi'));
+        expect(names, contains('Cabang Donggala'));
+        expect(names, contains('Cabang Palu Barat'));
+        expect(names, contains('Cabang Tinombala'));
+        expect(names, contains('Cabang Poso'));
+        expect(names, contains('Cabang Luwuk'));
+        expect(names, contains('Cabang Jakarta'));
+        expect(names, contains('Cabang Makassar'));
+
+        // BUKTI 3: TIDAK memuat 7 lokasi lama yang ditolak
+        expect(names, isNot(contains('Kantor Pusat')));
+        expect(names, isNot(contains('Gedung A')));
+        expect(names, isNot(contains('Gedung B')));
+        expect(names, isNot(contains('Ruang Divisi Umum')));
+        expect(names, isNot(contains('Cabang Surabaya')));
+        expect(names, isNot(contains('Cabang Bandung')));
+        expect(names, isNot(contains('Cabang Semarang')));
+      } catch (e) {
+        fail('Gagal mengeksekusi live integrasi lokasi di $liveBaseUrl: $e');
       } finally {
         client.close();
       }

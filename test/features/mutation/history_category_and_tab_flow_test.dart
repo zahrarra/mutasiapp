@@ -244,11 +244,11 @@ void main() {
   });
 
   group('4. Bagian Aset Status Filter (Single Source of Truth)', () {
-    test('BagianAsetStatusFilter mencakup semua 5 status history dan konsisten', () {
+    test('BagianAsetStatusFilter mencakup status history dengan tab Batal', () {
       expect(BagianAsetStatusFilter.all.displayName, 'Semua');
       expect(BagianAsetStatusFilter.processing.displayName, 'Diproses');
       expect(BagianAsetStatusFilter.allocated.displayName, 'Dialokasikan');
-      expect(BagianAsetStatusFilter.returned.displayName, 'Dikembalikan');
+      expect(BagianAsetStatusFilter.cancelled.displayName, 'Batal');
       expect(BagianAsetStatusFilter.completed.displayName, 'Selesai');
       expect(BagianAsetStatusFilter.rejected.displayName, 'Ditolak');
     });

@@ -237,11 +237,10 @@ void main() {
       var listAllocated = container.read(filteredBagianAsetVerificationsProvider).value!;
       expect(listAllocated, isEmpty, reason: 'Tab Dialokasikan harus bersih');
 
-      // Di tab Dikembalikan -> ada itemA
-      container.read(bagianAsetStatusFilterProvider.notifier).state = BagianAsetStatusFilter.returned;
-      var listReturned = container.read(filteredBagianAsetVerificationsProvider).value!;
-      expect(listReturned.length, 1);
-      expect(listReturned.first.id, 'ba-1');
+      // Di tab Batal -> tidak menampilkan status returned/dikembalikan_ke_pemohon
+      container.read(bagianAsetStatusFilterProvider.notifier).state = BagianAsetStatusFilter.cancelled;
+      var listCancelled = container.read(filteredBagianAsetVerificationsProvider).value!;
+      expect(listCancelled, isEmpty, reason: 'Tab Batal tidak memetakan status returned');
 
       container.dispose();
     });
@@ -298,16 +297,16 @@ void main() {
       final container = ProviderContainer();
 
       expect(container.read(operatorStatusFilterProvider), OperatorStatusFilter.submitted);
-      expect(container.read(bagianAsetStatusFilterProvider), BagianAsetStatusFilter.waiting);
-      expect(container.read(kadivStatusFilterProvider), KadivStatusFilter.waiting);
+      expect(container.read(bagianAsetStatusFilterProvider), BagianAsetStatusFilter.all);
+      expect(container.read(kadivStatusFilterProvider), KadivStatusFilter.all);
 
       // Panggil invalidate cross role
       invalidateAllRoleMutationProviders(container);
 
       // State filter tetap terjaga dan provider siap fetch status terbaru
       expect(container.read(operatorStatusFilterProvider), OperatorStatusFilter.submitted);
-      expect(container.read(bagianAsetStatusFilterProvider), BagianAsetStatusFilter.waiting);
-      expect(container.read(kadivStatusFilterProvider), KadivStatusFilter.waiting);
+      expect(container.read(bagianAsetStatusFilterProvider), BagianAsetStatusFilter.all);
+      expect(container.read(kadivStatusFilterProvider), KadivStatusFilter.all);
 
       container.dispose();
     });

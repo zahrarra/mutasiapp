@@ -168,8 +168,21 @@ class _MockMutationRepository implements MutationRepository {
   }
 
   @override
+  Future<Result<Mutation>> operatorForward({
+    required String mutationId,
+    String? notes,
+    required String operatorName,
+  }) async {
+    return operatorVerify(
+      mutationId: mutationId,
+      operatorName: operatorName,
+    );
+  }
+
+  @override
   Future<Result<Mutation>> verifyMutation({
     required String mutationId,
+    String? notes,
     required String operatorName,
     bool requiresKadivApproval = false,
   }) async {
@@ -185,6 +198,7 @@ class _MockMutationRepository implements MutationRepository {
     required String mutationId,
     required String verifierName,
     String? newPic,
+    String? notes,
   }) async {
     final current = _mutations[mutationId]!;
     final updated = current.copyWith(
@@ -505,6 +519,7 @@ void main() {
           currentPic: 'Budi Santoso',
           targetPic: 'Budi Santoso',
           reason: 'Pindah tugas',
+          documentName: 'SK_SDM.pdf',
           status: MutationStatus.submitted,
           createdAt: DateTime.now(),
           requiresKadivApproval: true,
@@ -534,6 +549,10 @@ void main() {
           find.byKey(const Key('btn_verifikasi_valid')),
         );
         await tester.tap(find.byKey(const Key('btn_verifikasi_valid')));
+        await tester.pumpAndSettle();
+
+        // Konfirmasi penerusan pada modal Verifikasi Pengajuan
+        await tester.tap(find.byKey(const Key('btn_teruskan_ke_bagian_aset')));
         await tester.pumpAndSettle();
 
         // Temuan 6: Verifikasi teks feedback hijau muncul
@@ -594,6 +613,14 @@ void main() {
         );
         await tester.pumpAndSettle();
 
+        // Atur ukuran viewport agar seluruh modal dapat dirender dengan baik
+        tester.view.physicalSize = const Size(1200, 1200);
+        tester.view.devicePixelRatio = 1.0;
+        addTearDown(() {
+          tester.view.resetPhysicalSize();
+          tester.view.resetDevicePixelRatio();
+        });
+
         // Buka dialog verifikasi data aset
         await tester.ensureVisible(
           find.byKey(const Key('btn_setujui_approval')),
@@ -601,31 +628,36 @@ void main() {
         await tester.tap(find.byKey(const Key('btn_setujui_approval')));
         await tester.pumpAndSettle();
 
-        // Temuan 7: Input PIC baru wajib ada saat aset ditinggalkan
-        expect(
-          find.text('Penentuan PIC Baru (Aset Ditinggalkan) *'),
-          findsOneWidget,
-        );
-        final inputPicFinder = find.byKey(
-          const Key('input_pic_baru_bagian_aset'),
-        );
-        expect(inputPicFinder, findsOneWidget);
+        // Temuan 7 (Single Modal): Tidak ada modal terpisah "Pilih PIC Baru Aset"
+        expect(find.text('Pilih PIC Baru Aset'), findsNothing);
+        expect(find.text('Verifikasi Bagian Aset'), findsWidgets);
 
-        // Input PIC baru melalui sistem
+        // Bagian pemilihan PIC tampil langsung di dalam modal verifikasi yang sama
+        expect(find.text('Penanggung Jawab (PIC) Baru Aset'), findsOneWidget);
+
+        // Input PIC baru langsung di dalam modal verifikasi
+        final inputPicFinder = find.byKey(const Key('input_pic_baru_bagian_aset'));
+        await tester.ensureVisible(inputPicFinder);
         await tester.enterText(
           inputPicFinder,
           'Ahmad Fauzi (PIC Baru Unit Asal)',
         );
         await tester.pumpAndSettle();
 
-        // Konfirmasi teruskan
-        await tester.tap(find.byKey(const Key('btn_confirm_setujui')));
+        // Tombol simpan verifikasi serta opsi Setujui dan Tolak berada di modal
+        expect(find.text('Simpan Verifikasi Bagian Aset'), findsOneWidget);
+        expect(find.text('Setujui'), findsOneWidget);
+        expect(find.text('Tolak'), findsOneWidget);
+
+        // Konfirmasi teruskan via tombol Simpan Verifikasi Bagian Aset
+        final saveBtn = find.byKey(const Key('btn_simpan_verifikasi_bagian_aset'));
+        await tester.ensureVisible(saveBtn);
+        await tester.tap(saveBtn);
         await tester.pumpAndSettle();
 
-        // Verifikasi mutasi terupdate dengan PIC baru di repo
+        // Verifikasi mutasi terupdate dengan status waitingDivisionHeadApproval di repo
         final updatedResult = await repo.getMutationById('mut_test_aset');
         final updatedMutation = updatedResult.dataOrNull!;
-        expect(updatedMutation.targetPic, 'Ahmad Fauzi (PIC Baru Unit Asal)');
         expect(
           updatedMutation.status,
           MutationStatus.waitingDivisionHeadApproval,

@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:mutasiku/app/theme/app_colors.dart';
 import 'package:mutasiku/core/errors/result.dart';
 import 'package:mutasiku/features/asset/data/repositories/asset_repository_impl.dart';
 import 'package:mutasiku/features/auth/domain/entities/user.dart';
@@ -13,11 +12,8 @@ import 'package:mutasiku/features/auth/domain/usecases/login_usecase.dart';
 import 'package:mutasiku/features/auth/domain/usecases/logout_usecase.dart';
 import 'package:mutasiku/features/auth/presentation/providers/auth_provider.dart';
 import 'package:mutasiku/features/bagian_aset/presentation/screens/bagian_aset_verification_detail_screen.dart';
-import 'package:mutasiku/features/bagian_aset/presentation/providers/bagian_aset_verification_provider.dart';
 import 'package:mutasiku/features/mutation/data/repositories/mutation_repository_impl.dart';
-import 'package:mutasiku/features/mutation/domain/entities/mutation_status.dart';
 import 'package:mutasiku/features/mutation/presentation/providers/mutation_provider.dart';
-import 'package:mutasiku/features/operator/presentation/providers/operator_verification_provider.dart';
 import 'package:mutasiku/features/operator/presentation/screens/operator_verification_detail_screen.dart';
 
 class FakeAuthRepository implements AuthRepository {
@@ -110,13 +106,11 @@ void main() {
 
   group('Flow Kembalikan Pengajuan (Modal in Detail Screen)', () {
     testWidgets(
-      'Operator: Klik Kembalikan -> Buka Modal -> Isi Alasan -> Submit -> Modal Close -> Tetap di Detail -> Status Returned -> Notifikasi Merah Muncul',
+      'Operator: Halaman Detail hanya menampilkan tombol Teruskan (tidak ada tombol Kembalikan)',
       (tester) async {
         tester.view.physicalSize = const Size(600, 900);
         tester.view.devicePixelRatio = 1.0;
         addTearDown(() => tester.view.resetPhysicalSize());
-
-        late WidgetRef containerRef;
 
         final testWidget = ProviderScope(
           overrides: [
@@ -129,7 +123,6 @@ void main() {
           ],
           child: Consumer(
             builder: (context, ref, _) {
-              containerRef = ref;
               return const MaterialApp(
                 home: Scaffold(
                   body: OperatorVerificationDetailScreen(mutationId: 'mut_001'),
@@ -144,68 +137,26 @@ void main() {
 
         // 1. Verify on Detail Pengajuan
         expect(find.text('Detail Pengajuan'), findsOneWidget);
+        // Operator tidak berwenang mengembalikan/menolak
         expect(
           find.byKey(const Key('btn_kembalikan_pengajuan')),
-          findsOneWidget,
-        );
-
-        // 2. Klik "Kembalikan"
-        await tester.tap(find.byKey(const Key('btn_kembalikan_pengajuan')));
-        await tester.pumpAndSettle();
-
-        // 3. Modal "Kembalikan Pengajuan" muncul
-        expect(find.text('Kembalikan Pengajuan'), findsOneWidget);
-        expect(
-          find.text('Tuliskan catatan perbaikan berkas untuk pemohon.'),
-          findsOneWidget,
-        );
-        expect(find.byKey(const Key('btn_submit_kembalikan')), findsOneWidget);
-
-        // 4. User mengisi alasan
-        await tester.enterText(
-          find.byType(TextField),
-          'Dokumen SK belum ditandatangani oleh pejabat berwenang.',
-        );
-        await tester.pumpAndSettle();
-
-        // 5. Klik "Kembalikan"
-        await tester.tap(find.byKey(const Key('btn_submit_kembalikan')));
-        await tester.pumpAndSettle();
-
-        // 6. Modal tertutup
-        expect(
-          find.text('Tuliskan catatan perbaikan berkas untuk pemohon.'),
           findsNothing,
         );
-
-        // 7. Tetap berada di Detail Pengajuan (tidak navigate ke halaman lain)
-        expect(find.text('Detail Pengajuan'), findsOneWidget);
-
-        // 8. Status pengajuan berubah ke returned
-        final detail = await containerRef.read(
-          operatorMutationDetailProvider('mut_001').future,
-        );
-        expect(detail.status, MutationStatus.returned);
+        // Operator hanya berwenang meneruskan ke Bagian Aset
         expect(
-          detail.returnReason,
-          'Dokumen SK belum ditandatangani oleh pejabat berwenang.',
+          find.byKey(const Key('btn_verifikasi_valid')),
+          findsOneWidget,
         );
-
-        // 9. Notifikasi merah "Pengajuan dikembalikan" muncul
-        expect(find.text('Pengajuan dikembalikan'), findsOneWidget);
-        final snackBar = tester.widget<SnackBar>(find.byType(SnackBar));
-        expect(snackBar.backgroundColor, AppColors.error);
+        expect(find.text('Teruskan ke Bagian Aset'), findsOneWidget);
       },
     );
 
     testWidgets(
-      'Bagian Aset (Verifikasi Mutasi Aset): Klik Kembalikan -> Buka Modal -> Isi Alasan -> Submit -> Modal Close -> Tetap di Detail -> Status Returned -> Notifikasi Merah Muncul',
+      'Regresi: Bagian Aset (Verifikasi Mutasi Aset) TIDAK memiliki tombol Kembalikan dan hanya tombol Verifikasi',
       (tester) async {
         tester.view.physicalSize = const Size(390, 844);
         tester.view.devicePixelRatio = 1.0;
         addTearDown(() => tester.view.resetPhysicalSize());
-
-        late WidgetRef containerRef;
 
         final testWidget = ProviderScope(
           overrides: [
@@ -218,7 +169,6 @@ void main() {
           ],
           child: Consumer(
             builder: (context, ref, _) {
-              containerRef = ref;
               return const MaterialApp(
                 home: Scaffold(
                   body: BagianAsetVerificationDetailScreen(
@@ -235,56 +185,11 @@ void main() {
 
         // 1. Verify on Verifikasi Mutasi Aset
         expect(find.text('Verifikasi Mutasi Aset'), findsOneWidget);
-        expect(find.byKey(const Key('btn_tolak_approval')), findsOneWidget);
-
-        // 2. Klik "Kembalikan"
-        await tester.tap(find.byKey(const Key('btn_tolak_approval')));
-        await tester.pumpAndSettle();
-
-        // 3. Modal "Kembalikan Pengajuan" muncul (sama seperti Operator)
-        expect(find.text('Kembalikan Pengajuan'), findsOneWidget);
-        expect(
-          find.text('Tuliskan catatan perbaikan berkas untuk pemohon.'),
-          findsOneWidget,
-        );
-        expect(find.byKey(const Key('btn_submit_kembalikan')), findsOneWidget);
-
-        // 4. User mengisi alasan
-        await tester.enterText(
-          find.byType(TextField),
-          'Data fisik aset tidak sesuai dengan kode inventaris.',
-        );
-        await tester.pumpAndSettle();
-
-        // 5. Klik "Kembalikan"
-        await tester.tap(find.byKey(const Key('btn_submit_kembalikan')));
-        await tester.pumpAndSettle();
-
-        // 6. Modal tertutup
-        expect(
-          find.text('Tuliskan catatan perbaikan berkas untuk pemohon.'),
-          findsNothing,
-        );
-
-        // 7. Tetap berada di Detail Pengajuan (tidak navigate ke halaman lain)
-        expect(find.text('Verifikasi Mutasi Aset'), findsOneWidget);
-
-        // 8. Status pengajuan berubah ke returned
-        final detailFuture = containerRef.read(
-          bagianAsetMutationDetailProvider('mut_004').future,
-        );
-        await tester.pump(const Duration(milliseconds: 300));
-        final detail = await detailFuture;
-        expect(detail.status, MutationStatus.returned);
-        expect(
-          detail.returnReason,
-          'Data fisik aset tidak sesuai dengan kode inventaris.',
-        );
-
-        // 9. Notifikasi merah "Pengajuan dikembalikan" muncul
-        expect(find.text('Pengajuan dikembalikan'), findsOneWidget);
-        final snackBar = tester.widget<SnackBar>(find.byType(SnackBar));
-        expect(snackBar.backgroundColor, AppColors.error);
+        // Tombol Kembalikan sudah dihapus 100%
+        expect(find.byKey(const Key('btn_tolak_approval')), findsNothing);
+        expect(find.text('Kembalikan'), findsNothing);
+        // Hanya ada tombol verifikasi & teruskan
+        expect(find.byKey(const Key('btn_setujui_approval')), findsOneWidget);
       },
     );
   });

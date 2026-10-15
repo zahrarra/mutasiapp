@@ -758,38 +758,9 @@ void main() {
         );
       });
 
-      test('15. assetSectionReturn memanggil POST /api/v1/mutations/{id}/verify-asset dengan action return dan reason', () async {
-        final mockClient = MockClient((request) async {
-          expect(request.method, equals('POST'));
-          expect(
-            request.url.path,
-            equals('/api/v1/mutations/101/verify-asset'),
-          );
-          final body = jsonDecode(request.body) as Map<String, dynamic>;
-          expect(body['action'], equals('return'));
-          expect(
-            body['reason'],
-            equals('Kondisi fisik aset rusak dan perlu perbaikan'),
-          );
-
-          return http.Response(
-            jsonEncode({
-              'success': true,
-              'message': 'Pengajuan mutasi berhasil dikembalikan ke Pemohon.',
-              'data': {
-                ...sampleMutationJson,
-                'id': 101,
-                'status': 'dikembalikan_ke_pemohon',
-                'return_reason': 'Kondisi fisik aset rusak dan perlu perbaikan',
-              },
-            }),
-            200,
-            headers: {'content-type': 'application/json'},
-          );
-        });
-
+      test('15. Regresi: assetSectionReturn ditolak dan mengembalikan ForbiddenFailure', () async {
         final apiClient = ApiClient(
-          httpClient: mockClient,
+          httpClient: MockClient((_) async => http.Response('Forbidden', 403)),
           baseUrl: 'http://test.local',
         );
         final repoWithApi = MutationRepositoryImpl(
@@ -803,13 +774,10 @@ void main() {
           verifierName: 'Staff Bagian Aset',
         );
 
-        expect(result.isSuccess, isTrue);
-        final updated = result.dataOrNull!;
-        expect(updated.id, equals('101'));
-        expect(updated.status, equals(MutationStatus.returned));
+        expect(result.isSuccess, isFalse);
         expect(
-          updated.returnReason,
-          equals('Kondisi fisik aset rusak dan perlu perbaikan'),
+          result.failureOrNull?.userMessage,
+          'Bagian Aset tidak memiliki kewenangan untuk mengembalikan atau menolak pengajuan mutasi.',
         );
       });
 

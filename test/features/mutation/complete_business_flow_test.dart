@@ -320,7 +320,7 @@ void main() {
     );
   });
 
-  test('Flow 4: Bagian Aset Returns Mutation with Mandatory Reason', () async {
+  test('Flow 4: Bagian Aset Reject succeeds (ditolak) & Return is Blocked', () async {
     final submitResult = await mutationRepo.submitMutation(
       const SubmitMutationParams(
         applicantId: 'usr_pemohon',
@@ -344,21 +344,34 @@ void main() {
     final bagianAsetContainer = createContainer(currentUser: bagianAsetUser);
     addTearDown(bagianAsetContainer.dispose);
 
+    // Alur return ke pemohon dilarang / diblokir
+    final returnSuccess = await bagianAsetContainer
+        .read(bagianAsetVerificationActionProvider.notifier)
+        .returnToApplicant(
+          mutationId: mutation.id,
+          reason: 'Anggaran pemindahan belum disetujui.',
+        );
+    expect(returnSuccess, isFalse);
+
+    // Alur penolakan oleh Bagian Aset berfungsi dan menghasilkan status ditolak
     final rejectSuccess = await bagianAsetContainer
         .read(bagianAsetVerificationActionProvider.notifier)
         .reject(
           mutationId: mutation.id,
-          reason: 'Anggaran pemindahan belum disetujui.',
+          reason: 'Fisik aset rusak berat dan tidak layak dimutasi.',
         );
     expect(rejectSuccess, isTrue);
 
-    final rejectedMutation = (await mutationRepo.getMutationById(
+    final currentMutation = (await mutationRepo.getMutationById(
       mutation.id,
     ) as Success<Mutation>).data;
-    expect(rejectedMutation.status, equals(MutationStatus.returned));
     expect(
-      rejectedMutation.returnReason,
-      equals('Anggaran pemindahan belum disetujui.'),
+      currentMutation.status,
+      equals(MutationStatus.rejected),
+    );
+    expect(
+      currentMutation.rejectionReason,
+      equals('Fisik aset rusak berat dan tidak layak dimutasi.'),
     );
   });
 

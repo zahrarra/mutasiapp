@@ -223,16 +223,10 @@ void main() {
       expect(find.textContaining('MUT-ALLOCATED-02'), findsOneWidget);
       expect(find.textContaining('MUT-SUBMITTED-01'), findsNothing);
 
-      // Klik Chip 'Dikembalikan'
-      final dikembalikanChip = find.text('Dikembalikan');
-      expect(dikembalikanChip, findsWidgets);
-      await tester.tap(dikembalikanChip.first);
-      await tester.pumpAndSettle();
+      // Verifikasi Chip 'Dikembalikan' tidak lagi ditampilkan pada Pemohon
+      expect(find.text('Dikembalikan'), findsNothing);
 
-      expect(find.textContaining('MUT-RETURNED-03'), findsOneWidget);
-      expect(find.textContaining('MUT-ALLOCATED-02'), findsNothing);
-
-      // Klik Chip 'Selesai'
+      // Klik Chip 'Selesai': Hanya menampilkan yang benar-benar Selesai (MUT-COMPLETED-04), tidak menggabungkan data pengembalian
       final selesaiChip = find.text('Selesai');
       expect(selesaiChip, findsWidgets);
       await tester.tap(selesaiChip.first);
@@ -241,7 +235,7 @@ void main() {
       expect(find.textContaining('MUT-COMPLETED-04'), findsOneWidget);
       expect(find.textContaining('MUT-RETURNED-03'), findsNothing);
 
-      // Klik Chip 'Ditolak'
+      // Klik Chip 'Ditolak': Menampilkan pengajuan yang Ditolak secara terpisah
       final ditolakChip = find.text('Ditolak');
       expect(ditolakChip, findsWidgets);
       await tester.tap(ditolakChip.first);
@@ -249,6 +243,7 @@ void main() {
 
       expect(find.textContaining('MUT-REJECTED-05'), findsOneWidget);
       expect(find.textContaining('MUT-COMPLETED-04'), findsNothing);
+      expect(find.textContaining('MUT-RETURNED-03'), findsNothing);
     });
   });
 
@@ -289,17 +284,15 @@ void main() {
       expect(find.text('MUT-SUBMITTED-01'), findsNothing);
       expect(find.text('MUT-RETURNED-03'), findsNothing);
 
-      // Pindah ke tab Dikembalikan
-      final returnedTab = find.textContaining('Dikembalikan');
-      expect(returnedTab, findsWidgets);
-      await tester.tap(returnedTab.first);
+      // Tab 'Dikembalikan' tidak lagi ditampilkan pada antrean Operator
+      expect(find.textContaining('Dikembalikan'), findsNothing);
+
+      // Pindah ke tab Selesai: Hanya menampilkan status selesai, bukan dikembalikan
+      final completedTab = find.textContaining('Selesai');
+      expect(completedTab, findsWidgets);
+      await tester.tap(completedTab.first);
       await tester.pumpAndSettle();
 
-      expect(find.text('MUT-RETURNED-03'), findsOneWidget);
-      expect(find.text('MUT-ALLOCATED-02'), findsNothing);
-
-      // Pindah ke tab Selesai
-      final completedTab = find.textContaining('Selesai');
       expect(completedTab, findsWidgets);
       await tester.tap(completedTab.first);
       await tester.pumpAndSettle();
@@ -310,7 +303,7 @@ void main() {
       // Pindah ke tab Ditolak
       final rejectedTab = find.textContaining('Ditolak');
       expect(rejectedTab, findsWidgets);
-      await tester.tap(rejectedTab.first);
+      await tester.tap(rejectedTab.first, warnIfMissed: false);
       await tester.pumpAndSettle();
 
       expect(find.text('MUT-REJECTED-05'), findsOneWidget);
@@ -319,7 +312,7 @@ void main() {
       // Pindah ke tab Aset TI
       final tiTab = find.textContaining('Aset TI');
       expect(tiTab, findsWidgets);
-      await tester.tap(tiTab.first);
+      await tester.tap(tiTab.first, warnIfMissed: false);
       await tester.pumpAndSettle();
 
       expect(find.text('MUT-SUBMITTED-01'), findsOneWidget);
@@ -362,9 +355,9 @@ void main() {
 
       await tester.pumpAndSettle();
 
-      // Default adalah Menunggu Verifikasi (waitingAssetVerification -> MUT-ALLOCATED-02)
+      // Default adalah Semua
+      expect(find.text('Semua'), findsOneWidget);
       expect(find.text('MUT-ALLOCATED-02'), findsOneWidget);
-      expect(find.text('MUT-SUBMITTED-01'), findsNothing);
 
       // Buka dropdown status
       final dropdown = find.byKey(const Key('dropdown_filter_bagian_aset_status'));
@@ -372,13 +365,17 @@ void main() {
       await tester.tap(dropdown);
       await tester.pumpAndSettle();
 
-      // Pilih 'Dikembalikan'
-      final returnedItem = find.text('Dikembalikan').last;
-      await tester.tap(returnedItem);
+      // Pilihan 'Dikembalikan' tidak lagi ada di dropdown filter Bagian Aset
+      expect(find.text('Dikembalikan'), findsNothing);
+
+      // Pilih 'Ditolak'
+      final rejectedItem = find.text('Ditolak').last;
+      await tester.tap(rejectedItem);
       await tester.pumpAndSettle();
 
-      expect(find.text('MUT-RETURNED-03'), findsOneWidget);
+      expect(find.text('MUT-REJECTED-05'), findsOneWidget);
       expect(find.text('MUT-ALLOCATED-02'), findsNothing);
+      expect(find.text('MUT-COMPLETED-04'), findsNothing);
     });
   });
 
@@ -408,6 +405,9 @@ void main() {
       await tester.tap(dropdown);
       await tester.pumpAndSettle();
 
+      // Pilihan 'Dikembalikan' tidak ada di dropdown filter Kadiv
+      expect(find.text('Dikembalikan'), findsNothing);
+
       // Pilih 'Ditolak'
       final rejectedItem = find.text('Ditolak').last;
       await tester.tap(rejectedItem);
@@ -416,6 +416,7 @@ void main() {
       expect(find.text('MUT-REJECTED-05'), findsOneWidget);
       expect(find.text('MUT-SUBMITTED-01'), findsNothing);
       expect(find.text('MUT-ALLOCATED-02'), findsNothing);
+      expect(find.text('MUT-COMPLETED-04'), findsNothing);
     });
   });
 }
