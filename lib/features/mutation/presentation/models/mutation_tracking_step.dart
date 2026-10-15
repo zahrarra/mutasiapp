@@ -64,6 +64,7 @@ abstract final class MutationTrackingHelper {
     String? returnReason,
     String? assetVerifiedBy,
     String? assetReturnReason,
+    String? assetRejectedBy,
     String? approvedBy,
     String? rejectedBy,
     String? rejectionReason,
@@ -151,8 +152,15 @@ abstract final class MutationTrackingHelper {
     );
 
     // ── 3. Step: Verifikasi Data Aset (Bagian Aset) ───────────────────────
+    final isKadivRejected = isRejected &&
+        assetRejectedBy == null &&
+        (kadivRejectedBy != null ||
+            kadivRejectionReason != null ||
+            kadivApprovedBy != null);
+    final isAssetRejected = isRejected && !isKadivRejected;
+
     final step3State = () {
-      if (isAssetReturned) {
+      if (isAssetReturned || isAssetRejected) {
         return TrackingStepState.alert;
       }
       if (isWaitingOperator || isOperatorReturned) {
@@ -162,16 +170,29 @@ abstract final class MutationTrackingHelper {
       return TrackingStepState.completed;
     }();
     final step3Badge = () {
+      if (isAssetRejected) {
+        return 'Ditolak';
+      }
       if (isAssetReturned) {
-        return 'Tidak Valid';
+        return 'Dikembalikan';
       }
       if (isWaitingAsset) return 'Sedang Diverifikasi';
       if (isWaitingOperator || isOperatorReturned) return 'Menunggu';
       return 'Valid';
     }();
     final step3Subtitle = () {
+      if (isAssetRejected) {
+        final reason = rejectionReason ?? 'Pengajuan ditolak oleh Bagian Aset';
+        final by = assetRejectedBy ?? rejectedBy ?? 'Bagian Aset';
+        return 'Ditolak oleh $by: $reason';
+      }
       if (isAssetReturned) {
-        return 'Dikembalikan oleh Bagian Aset: $assetReturnReason';
+        final reason = assetReturnReason.isNotEmpty
+            ? assetReturnReason
+            : ((returnReason?.isNotEmpty == true)
+                ? returnReason!
+                : 'Aset tidak sesuai');
+        return 'Dikembalikan oleh Bagian Aset: $reason — pengajuan telah selesai.';
       }
       if (isWaitingAsset) {
         return 'Verifikasi keabsahan aset, lokasi, SK SDM, dan penentuan PIC baru';
@@ -185,7 +206,11 @@ abstract final class MutationTrackingHelper {
     steps.add(
       MutationTrackingStep(
         key: 'assetVerification',
-        title: 'Verifikasi Bagian Aset',
+        title: isAssetRejected
+            ? 'Verifikasi Bagian Aset (Ditolak)'
+            : isAssetReturned
+            ? 'Verifikasi Bagian Aset (Dikembalikan)'
+            : 'Verifikasi Bagian Aset',
         shortLabel: 'Verifikasi Aset',
         subtitle: step3Subtitle,
         badgeText: step3Badge,
@@ -193,9 +218,15 @@ abstract final class MutationTrackingHelper {
       ),
     );
 
+    // Jika pengajuan dikembalikan / ditolak oleh Bagian Aset, alur berakhir di sini secara terminal.
+    // Tidak diteruskan ke Pemimpin Divisi, tidak looping ke Operator atau Pemohon.
+    if (isAssetReturned || isAssetRejected) {
+      return steps;
+    }
+
     // ── 4. Step: Approval Final (Pemimpin Divisi) ─────────────────────────
     final step4State = () {
-      if (isRejected) return TrackingStepState.alert;
+      if (isKadivRejected) return TrackingStepState.alert;
       if (isWaitingDivision) return TrackingStepState.current;
       if (isWaitingOperator || isWaitingAsset || isReturned) {
         return TrackingStepState.upcoming;
@@ -203,13 +234,13 @@ abstract final class MutationTrackingHelper {
       return TrackingStepState.completed;
     }();
     final step4Badge = () {
-      if (isRejected) return 'Ditolak';
+      if (isKadivRejected) return 'Ditolak';
       if (isWaitingDivision) return 'Menunggu Approval';
       if (isWaitingOperator || isWaitingAsset || isReturned) return 'Menunggu';
       return 'Disetujui';
     }();
     final step4Subtitle = () {
-      if (isRejected) {
+      if (isKadivRejected) {
         final reason =
             kadivRejectionReason ?? rejectionReason ?? 'Pengajuan ditolak';
         final by = kadivRejectedBy ?? rejectedBy ?? 'Pemimpin Divisi';
@@ -235,6 +266,12 @@ abstract final class MutationTrackingHelper {
         state: step4State,
       ),
     );
+
+    // Jika pengajuan ditolak oleh Pemimpin Divisi, alur berakhir di sini secara terminal.
+    // Tidak diteruskan ke Konfirmasi Pemohon atau Pembaruan Data Aset.
+    if (isKadivRejected) {
+      return steps;
+    }
 
     // ── 5. Step: Konfirmasi Pemohon ──────────────────────────────────────
     final step5State = () {
@@ -308,6 +345,7 @@ abstract final class MutationTrackingHelper {
       returnReason: mutation?.returnReason,
       assetVerifiedBy: mutation?.assetVerifiedBy,
       assetReturnReason: mutation?.assetReturnReason,
+      assetRejectedBy: mutation?.assetRejectedBy,
       approvedBy: mutation?.approvedBy,
       rejectedBy: mutation?.rejectedBy,
       rejectionReason: mutation?.rejectionReason,

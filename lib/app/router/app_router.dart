@@ -21,7 +21,6 @@ import '../../features/auth/presentation/screens/login_screen.dart';
 import '../../features/auth/presentation/screens/unauthorized_screen.dart';
 import '../../features/dashboard/presentation/screens/dashboard_screen.dart';
 import '../../features/bagian_aset/presentation/screens/bagian_aset_dashboard_screen.dart';
-import '../../features/bagian_aset/presentation/screens/bagian_aset_return_form_screen.dart';
 import '../../features/bagian_aset/presentation/screens/bagian_aset_verification_detail_screen.dart';
 import '../../features/bagian_aset/presentation/screens/bagian_aset_verifications_screen.dart';
 import '../../features/kadiv/presentation/screens/kadiv_approval_detail_screen.dart';
@@ -36,7 +35,6 @@ import '../../features/operator/presentation/screens/operator_verification_detai
 import '../../features/pemohon/presentation/screens/pemohon_confirmation_screen.dart';
 import '../../features/pemohon/presentation/screens/pemohon_create_mutation_screen.dart';
 import '../../features/pemohon/presentation/screens/pemohon_dashboard_screen.dart';
-import '../../features/pemohon/presentation/screens/pemohon_edit_mutation_screen.dart';
 import '../../features/pemohon/presentation/screens/pemohon_mutation_detail_screen.dart';
 import '../../features/pemohon/presentation/screens/pemohon_mutation_list_screen.dart';
 import '../../features/profile/presentation/screens/profile_screen.dart';
@@ -238,14 +236,6 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         },
       ),
       GoRoute(
-        path: RouteNames.pemohonMutasiEditPath,
-        name: RouteNames.pemohonMutasiEditName,
-        builder: (context, state) {
-          final id = state.pathParameters['id'] ?? '';
-          return PemohonEditMutationScreen(mutationId: id);
-        },
-      ),
-      GoRoute(
         path: RouteNames.pemohonMutasiDetailPath,
         name: RouteNames.pemohonMutasiDetailName,
         builder: (context, state) {
@@ -324,9 +314,12 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: RouteNames.bagianAsetReturnFormPath,
         name: RouteNames.bagianAsetReturnFormName,
-        builder: (context, state) {
+        redirect: (context, state) {
           final id = state.pathParameters['id'] ?? '';
-          return BagianAsetReturnFormScreen(mutationId: id);
+          return RouteNames.bagianAsetVerificationDetailPath.replaceFirst(
+            ':id',
+            id,
+          );
         },
       ),
       GoRoute(

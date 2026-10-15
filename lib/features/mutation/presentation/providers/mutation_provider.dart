@@ -22,7 +22,6 @@ import '../../domain/repositories/mutation_repository.dart';
 import '../../domain/usecases/get_mutation_detail_usecase.dart';
 import '../../domain/usecases/get_mutations_usecase.dart';
 import '../../domain/usecases/submit_mutation_usecase.dart';
-import '../../domain/usecases/update_mutation_usecase.dart';
 import '../../../operator/presentation/providers/operator_verification_provider.dart';
 import '../../../bagian_aset/presentation/providers/bagian_aset_verification_provider.dart';
 import '../../../kadiv/presentation/providers/kadiv_approval_provider.dart';
@@ -97,13 +96,6 @@ final apiGetMutationDetailUseCaseProvider = Provider<GetMutationDetailUseCase>((
   final repo = ref.watch(apiMutationRepositoryProvider);
 
   return GetMutationDetailUseCase(repository: repo);
-});
-
-/// Provider untuk [UpdateMutationUseCase].
-final updateMutationUseCaseProvider = Provider<UpdateMutationUseCase>((ref) {
-  final repo = ref.watch(apiMutationRepositoryProvider);
-
-  return UpdateMutationUseCase(repository: repo);
 });
 
 // ─── Eligible Assets Provider ────────────────────────────────────────────────
@@ -338,108 +330,6 @@ final submitMutationProvider =
       final useCase = ref.watch(submitMutationUseCaseProvider);
 
       return SubmitMutationNotifier(useCase: useCase, ref: ref);
-    });
-
-// ─── Update (Edit) Mutation Provider ─────────────────────────────────────────
-
-/// State untuk proses edit pengajuan mutasi (REQ-008).
-class UpdateMutationState {
-  final bool isLoading;
-  final Mutation? result;
-  final String? error;
-
-  const UpdateMutationState({this.isLoading = false, this.result, this.error});
-
-  UpdateMutationState copyWith({
-    bool? isLoading,
-    Mutation? result,
-    String? error,
-    bool clearError = false,
-    bool clearResult = false,
-  }) {
-    return UpdateMutationState(
-      isLoading: isLoading ?? this.isLoading,
-      result: clearResult ? null : (result ?? this.result),
-      error: clearError ? null : (error ?? this.error),
-    );
-  }
-}
-
-/// Notifier untuk mengelola proses edit pengajuan mutasi
-/// yang dikembalikan.
-class UpdateMutationNotifier extends StateNotifier<UpdateMutationState> {
-  final UpdateMutationUseCase useCase;
-  final Ref ref;
-
-  UpdateMutationNotifier({required this.useCase, required this.ref})
-    : super(const UpdateMutationState());
-
-  Future<Mutation?> submit(UpdateMutationParams params) async {
-    state = state.copyWith(
-      isLoading: true,
-      clearError: true,
-      clearResult: true,
-    );
-
-    final result = await useCase(params);
-
-    if (result is Success<Mutation>) {
-      state = UpdateMutationState(isLoading: false, result: result.data);
-
-      // Refresh list & detail untuk semua role
-      invalidateAllRoleMutationProviders(ref, params.mutationId);
-
-      return result.data;
-    }
-
-    // Fallback ke mutationRepositoryProvider (misal di widget test atau offline mock)
-    try {
-      final fallbackRepo = ref.read(mutationRepositoryProvider);
-      final fallbackResult = await fallbackRepo.updateMutation(
-        mutationId: params.mutationId,
-        targetLocation: params.targetLocation,
-        targetPic: params.targetPic,
-        reason: params.reason,
-        documentName: params.documentName,
-      );
-      if (fallbackResult is Success<Mutation>) {
-        state = UpdateMutationState(
-          isLoading: false,
-          result: fallbackResult.data,
-        );
-        invalidateAllRoleMutationProviders(ref, params.mutationId);
-        return fallbackResult.data;
-      }
-    } catch (_) {}
-
-    if (result is AppFailure<Mutation>) {
-      state = UpdateMutationState(
-        isLoading: false,
-        error: result.failure.userMessage,
-      );
-
-      return null;
-    }
-
-    state = const UpdateMutationState(
-      isLoading: false,
-      error: 'Terjadi kesalahan. Coba lagi.',
-    );
-
-    return null;
-  }
-
-  void reset() {
-    state = const UpdateMutationState();
-  }
-}
-
-/// Provider untuk [UpdateMutationNotifier].
-final updateMutationProvider =
-    StateNotifierProvider<UpdateMutationNotifier, UpdateMutationState>((ref) {
-      final useCase = ref.watch(updateMutationUseCaseProvider);
-
-      return UpdateMutationNotifier(useCase: useCase, ref: ref);
     });
 
 /// Invalidate seluruh provider daftar dan detail mutasi di SEMUA role

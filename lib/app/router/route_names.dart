@@ -167,9 +167,6 @@ abstract final class RouteNames {
   static const String pemohonMutasiDetailPath = '/pemohon/mutasi/:id';
   static const String pemohonMutasiDetailName = 'pemohonMutasiDetail';
 
-  static const String pemohonMutasiEditPath = '/pemohon/mutasi/:id/edit';
-  static const String pemohonMutasiEditName = 'pemohonMutasiEdit';
-
   static const String pemohonProfilePath = '/pemohon/profile';
   static const String pemohonProfileName = 'pemohonProfile';
 

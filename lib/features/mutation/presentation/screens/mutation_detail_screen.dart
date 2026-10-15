@@ -137,20 +137,17 @@ class MutationDetailScreen extends ConsumerWidget {
           const SizedBox(height: 24),
 
           // 8. Bottom Action Buttons
-          if (mutation.status == MutationStatus.returned) ...[
+          if ((mutation.status == MutationStatus.returned ||
+                  mutation.status == MutationStatus.rejected) &&
+              isApplicantOwner) ...[
             ElevatedButton.icon(
-              onPressed: () async {
-                await context.push(
-                  RouteNames.pemohonMutasiEditPath.replaceFirst(
-                    ':id',
-                    mutation.id,
-                  ),
-                );
-                ref.invalidate(mutationDetailProvider(mutationId));
+              key: const Key('btn_ajukan_mutasi_baru'),
+              onPressed: () {
+                context.push(RouteNames.pemohonMutasiCreatePath);
               },
-              icon: const Icon(Icons.edit_outlined, color: Colors.white),
+              icon: const Icon(Icons.add_circle_outline, color: Colors.white),
               label: const Text(
-                'Edit & Ajukan Ulang',
+                'Ajukan Mutasi Baru',
                 style: TextStyle(
                   fontSize: 14,
                   fontWeight: FontWeight.bold,
@@ -158,7 +155,7 @@ class MutationDetailScreen extends ConsumerWidget {
                 ),
               ),
               style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.warning,
+                backgroundColor: AppColors.primary,
                 minimumSize: const Size.fromHeight(48),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(12),
@@ -1728,11 +1725,13 @@ class MutationDetailScreen extends ConsumerWidget {
         mutation.applicantName.isNotEmpty ? mutation.applicantName : 'Pemohon',
       MutationStatus.completed => 'Sistem MutasiKu',
       MutationStatus.rejected =>
-        cleanName(mutation.kadivRejectedBy) ??
-            (cleanName(mutation.rejectedBy) ??
-                (mutation.kadivRejectionReason != null
-                    ? 'Pemimpin Divisi'
-                    : 'Peninjau Mutasi')),
+        mutation.isAssetRejected
+            ? (cleanName(mutation.assetRejectedBy) ??
+                cleanName(mutation.rejectedBy) ??
+                'Bagian Aset')
+            : (cleanName(mutation.kadivRejectedBy) ??
+                cleanName(mutation.rejectedBy) ??
+                'Pemimpin Divisi'),
     };
   }
 
@@ -1753,7 +1752,9 @@ class MutationDetailScreen extends ConsumerWidget {
       MutationStatus.pendingConfirmation ||
       MutationStatus.waitingConfirmation => 'Konfirmasi Pemohon',
       MutationStatus.completed => 'Siklus Mutasi Selesai',
-      MutationStatus.rejected => 'Pengajuan Ditolak',
+      MutationStatus.rejected => mutation.isAssetRejected
+          ? 'Penolakan oleh Bagian Aset'
+          : 'Penolakan oleh Pemimpin Divisi',
     };
   }
 
