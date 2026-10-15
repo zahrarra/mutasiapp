@@ -57,9 +57,9 @@ class LocationSeeder extends Seeder
             ['name' => 'Cabang Makassar', 'code' => 'CAB-MKS'],
         ];
 
-        // Seed / perbarui seluruh lokasi acuan pengguna agar berstatus is_active = true
+        // Seed lokasi acuan jika belum ada tanpa menimpa data yang sudah ada
         foreach ($officialLocations as $location) {
-            Location::updateOrCreate(
+            Location::firstOrCreate(
                 ['code' => $location['code']],
                 [
                     'name' => $location['name'],

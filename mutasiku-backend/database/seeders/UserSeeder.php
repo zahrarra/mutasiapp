@@ -12,31 +12,31 @@ class UserSeeder extends Seeder
     {
         $users = [
             [
-                'name' => 'Admin MutasiKu',
+                'name' => 'Dirly Dwi',
                 'email' => 'admin@mutasiku.test',
                 'nip' => '100001',
                 'role' => 'admin',
             ],
             [
-                'name' => 'Pemohon MutasiKu',
+                'name' => 'Zahra Aya',
                 'email' => 'pemohon@mutasiku.test',
                 'nip' => '100002',
                 'role' => 'pemohon',
             ],
             [
-                'name' => 'Operator MutasiKu',
+                'name' => 'Alifa Marsya',
                 'email' => 'operator@mutasiku.test',
                 'nip' => '100003',
                 'role' => 'operator',
             ],
             [
-                'name' => 'Bagian Aset MutasiKu',
+                'name' => 'Atalya Rara',
                 'email' => 'aset@mutasiku.test',
                 'nip' => '100004',
                 'role' => 'bagian_aset',
             ],
             [
-                'name' => 'Pemimpin Divisi MutasiKu',
+                'name' => 'Nadia Nad',
                 'email' => 'pemimpin@mutasiku.test',
                 'nip' => '100005',
                 'role' => 'pemimpin_divisi',
@@ -71,30 +71,43 @@ class UserSeeder extends Seeder
                 'nip' => '100010',
                 'role' => 'pemohon',
             ],
+            [
+                'name' => 'Anisa Aulia',
+                'email' => 'anisa.aulia@mutasiku.test',
+                'nip' => '100011',
+                'role' => 'pemohon',
+            ],
         ];
 
         foreach ($users as $data) {
             $role = Role::where('name', $data['role'])->firstOrFail();
 
-            $existing = User::where('email', $data['email'])->first();
-            if ($existing) {
-                // Pertahankan password, is_active, dan must_change_password yang sudah ada
-                $existing->update([
-                    'name' => $data['name'],
-                    'nip' => $data['nip'],
-                    'role_id' => $role->id,
-                ]);
-            } else {
-                User::create([
-                    'name' => $data['name'],
-                    'email' => $data['email'],
-                    'nip' => $data['nip'],
-                    'role_id' => $role->id,
-                    'password' => 'password',
-                    'is_active' => true,
-                    'must_change_password' => true,
-                ]);
+            // Cari pengguna berdasarkan identitas unik: NIP terlebih dahulu, lalu email
+            $existing = null;
+            if (! empty($data['nip'])) {
+                $existing = User::where('nip', $data['nip'])->first();
             }
+            if (! $existing && ! empty($data['email'])) {
+                $existing = User::where('email', $data['email'])->first();
+            }
+
+            if ($existing) {
+                // Pengguna sudah ada: pertahankan seluruh data yang sudah ada
+                // (nama, email, role, password, status aktif, must_change_password)
+                // Jangan menimpa data pengguna yang sudah ada tanpa alasan dan persetujuan yang jelas.
+                continue;
+            }
+
+            // Pengguna contoh belum ada: buat pengguna baru
+            User::create([
+                'name' => $data['name'],
+                'email' => $data['email'],
+                'nip' => $data['nip'],
+                'role_id' => $role->id,
+                'password' => 'password',
+                'is_active' => true,
+                'must_change_password' => true,
+            ]);
         }
     }
 }

@@ -35,11 +35,11 @@ class AssetDummySeederTest extends TestCase
             ->unique()
             ->values();
 
-        $this->assertGreaterThan(1, $pics->count(), 'PIC aset harus bervariasi, tidak boleh hanya 1 nama.');
-        $this->assertContains('Pemohon MutasiKu', $pics->all());
+        $pemohonName = \App\Models\User::where('email', 'pemohon@mutasiku.test')->value('name') ?? 'Zahra Aya';
+        $this->assertContains($pemohonName, $pics->all());
         $this->assertTrue(
-            $pics->contains(fn ($name) => $name !== 'Pemohon MutasiKu'),
-            'Harus ada PIC selain Pemohon MutasiKu.'
+            $pics->contains(fn ($name) => $name !== $pemohonName),
+            'Harus ada PIC selain pemohon.'
         );
     }
 
@@ -116,5 +116,47 @@ class AssetDummySeederTest extends TestCase
 
         // Aset nyata harus tetap ada di database
         $this->assertDatabaseHas('assets', ['asset_code' => 'KANTOR-PUSAT-001']);
+    }
+
+    public function test_dummy_assets_have_realistic_and_logical_location_assignments(): void
+    {
+        $this->seed(DatabaseSeeder::class);
+
+        // 1. Verifikasi Laptop TI berada di unit kerja/divisi
+        $laptopTi = Asset::with('location')->where('asset_code', 'AST-TI-2026-001')->firstOrFail();
+        $this->assertEquals('RG-TI', $laptopTi->location->code);
+        $this->assertEquals('Divisi TI', $laptopTi->location->name);
+
+        // 2. Verifikasi PC Desktop berada di area operasional/teller
+        $desktop = Asset::with('location')->where('asset_code', 'AST-TI-2026-004')->firstOrFail();
+        $this->assertEquals('UMUM-TELLER', $desktop->location->code);
+
+        // 3. Verifikasi Proyektor berada di ruang rapat
+        $proyektor = Asset::with('location')->where('asset_code', 'AST-TI-2026-009')->firstOrFail();
+        $this->assertEquals('UMUM-RAPAT', $proyektor->location->code);
+
+        // 4. Verifikasi UPS berada di ruang server
+        $ups = Asset::with('location')->where('asset_code', 'AST-TI-2026-010')->firstOrFail();
+        $this->assertEquals('UMUM-SERVER', $ups->location->code);
+
+        // 5. Verifikasi Sofa Tamu berada di lobby
+        $sofa = Asset::with('location')->where('asset_code', 'AST-UM-2026-006')->firstOrFail();
+        $this->assertEquals('UMUM-LOBBY', $sofa->location->code);
+
+        // 6. Verifikasi TV Display berada di ruang tunggu nasabah
+        $tv = Asset::with('location')->where('asset_code', 'AST-UM-2026-008')->firstOrFail();
+        $this->assertEquals('UMUM-TUNGGU', $tv->location->code);
+
+        // 7. Verifikasi CCTV berada di area ATM
+        $cctv = Asset::with('location')->where('asset_code', 'AST-UM-2026-009')->firstOrFail();
+        $this->assertEquals('UMUM-ATM', $cctv->location->code);
+
+        // 8. Verifikasi Kendaraan Operasional berada di parkiran
+        $mobil = Asset::with('location')->where('asset_code', 'AST-UM-2026-010')->firstOrFail();
+        $this->assertEquals('UMUM-PKB', $mobil->location->code);
+
+        // 9. Pastikan aset tersebar secara realistis, bukan semuanya di Parkiran Basement
+        $locationCodes = Asset::with('location')->get()->pluck('location.code')->unique();
+        $this->assertGreaterThanOrEqual(10, $locationCodes->count(), 'Aset harus tersebar di minimal 10 lokasi realistis.');
     }
 }
