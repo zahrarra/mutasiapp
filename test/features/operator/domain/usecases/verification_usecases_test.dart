@@ -30,36 +30,6 @@ class FakeMutationRepository implements MutationRepository {
   }
 
   @override
-  Future<Result<Mutation>> updateMutation({
-    required String mutationId,
-    required String targetLocation,
-    required String targetPic,
-    required String reason,
-    String? documentName,
-  }) async {
-    final index = mutations.indexWhere((m) => m.id == mutationId);
-
-    if (index == -1) {
-      return const Result.failure(
-        NotFoundFailure(message: 'Pengajuan mutasi tidak ditemukan.'),
-      );
-    }
-
-    final current = mutations[index];
-
-    final updated = current.copyWith(
-      targetLocation: targetLocation,
-      targetPic: targetPic,
-      reason: reason,
-      status: MutationStatus.submitted,
-    );
-
-    mutations[index] = updated;
-
-    return Result.success(updated);
-  }
-
-  @override
   Future<Result<List<Mutation>>> getMutationsByUser(String userId) async {
     return Result.success(mutations);
   }
@@ -84,6 +54,7 @@ class FakeMutationRepository implements MutationRepository {
   @override
   Future<Result<Mutation>> verifyMutation({
     required String mutationId,
+    String? notes,
     required String operatorName,
     bool requiresKadivApproval = false,
   }) async {
