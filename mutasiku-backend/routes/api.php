@@ -52,6 +52,7 @@ Route::prefix('v1')->group(function () {
 
         // Bagian Aset
         Route::post('/mutations/{id}/verify-asset', [MutationController::class, 'verifyAsset']);
+        Route::post('/mutations/{id}/reject-by-asset', [MutationController::class, 'rejectByAsset']);
         Route::post('/mutations/{id}/return-by-asset', [MutationController::class, 'returnByAsset']);
 
         // Pemimpin Divisi

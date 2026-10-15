@@ -51,4 +51,9 @@ class Asset extends Model
     {
         return $this->hasMany(MutationHistory::class);
     }
+
+    public function getHasActiveMutationAttribute(): bool
+    {
+        return $this->mutations()->active()->exists();
+    }
 }

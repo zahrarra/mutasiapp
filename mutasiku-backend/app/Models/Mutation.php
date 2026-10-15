@@ -278,6 +278,115 @@ class Mutation extends Model
     }
 
     /**
+     * Resolusi nama petugas Bagian Aset yang menolak pengajuan.
+     */
+    public function resolveAssetRejectedByName(): ?string
+    {
+        if ($this->relationLoaded('statusHistories')) {
+            $history = $this->statusHistories
+                ->where('role', 'bagian_aset')
+                ->where('action', 'reject')
+                ->last();
+            if ($history?->user?->name) {
+                return $history->user->name;
+            }
+        } else {
+            $history = $this->statusHistories()
+                ->where('role', 'bagian_aset')
+                ->where('action', 'reject')
+                ->with('user')
+                ->latest('id')
+                ->first();
+            if ($history?->user?->name) {
+                return $history->user->name;
+            }
+        }
+
+        if ($this->relationLoaded('rejectedBy') && $this->rejectedBy) {
+            if ($this->rejectedBy->role?->name === 'bagian_aset') {
+                return $this->rejectedBy->name;
+            }
+        } elseif ($this->rejected_by) {
+            $user = User::with('role')->find($this->rejected_by);
+            if ($user && $user->role?->name === 'bagian_aset') {
+                return $user->name;
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * Resolusi nama Kadiv / Pemimpin Divisi yang menolak pengajuan.
+     */
+    public function resolveKadivRejectedByName(): ?string
+    {
+        if ($this->relationLoaded('statusHistories')) {
+            $history = $this->statusHistories
+                ->where('role', 'pemimpin_divisi')
+                ->where('action', 'reject')
+                ->last();
+            if ($history?->user?->name) {
+                return $history->user->name;
+            }
+        } else {
+            $history = $this->statusHistories()
+                ->where('role', 'pemimpin_divisi')
+                ->where('action', 'reject')
+                ->with('user')
+                ->latest('id')
+                ->first();
+            if ($history?->user?->name) {
+                return $history->user->name;
+            }
+        }
+
+        if ($this->relationLoaded('rejectedBy') && $this->rejectedBy) {
+            if ($this->rejectedBy->role?->name === 'pemimpin_divisi') {
+                return $this->rejectedBy->name;
+            }
+        } elseif ($this->rejected_by) {
+            $user = User::with('role')->find($this->rejected_by);
+            if ($user && $user->role?->name === 'pemimpin_divisi') {
+                return $user->name;
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * Resolusi role dari peninjau yang menolak pengajuan.
+     */
+    public function resolveRejectedByRole(): ?string
+    {
+        if ($this->relationLoaded('statusHistories')) {
+            $history = $this->statusHistories
+                ->where('action', 'reject')
+                ->last();
+            if ($history?->role) {
+                return $history->role;
+            }
+        } else {
+            $history = $this->statusHistories()
+                ->where('action', 'reject')
+                ->latest('id')
+                ->first();
+            if ($history?->role) {
+                return $history->role;
+            }
+        }
+
+        if ($this->relationLoaded('rejectedBy') && $this->rejectedBy) {
+            return $this->rejectedBy->role?->name;
+        } elseif ($this->rejected_by) {
+            return User::with('role')->find($this->rejected_by)?->role?->name;
+        }
+
+        return null;
+    }
+
+    /**
      * Check if the mutation status is terminal/final.
      * Terminal statuses (selesai, ditolak, dikembalikan_ke_pemohon) conclude the ticket.
      * Any new mutation for the asset must be submitted as a new ticket.
