@@ -448,5 +448,61 @@ void main() {
         expect(find.text('Coba lagi'), findsOneWidget);
       },
     );
+
+    testWidgets(
+      'Aset dengan mutasi aktif (hasActiveMutation: true) tidak muncul dalam dropdown pengajuan baru',
+      (tester) async {
+        tester.view.physicalSize = const Size(1080, 2400);
+        tester.view.devicePixelRatio = 1.0;
+        addTearDown(() => tester.view.resetPhysicalSize());
+
+        final mutationRepo = _FakeMutationRepository();
+        final mixedAssets = [
+          const Asset(
+            id: 'asset_active',
+            assetCode: 'AST-ELK-ACTIVE',
+            name: 'Laptop Sedang Mutasi',
+            category: AssetCategory(id: '1', code: 'ELK', name: 'Elektronik'),
+            location: 'Ruang TI',
+            pic: 'User Pemohon',
+            status: AssetStatus.inMutation,
+            condition: 'Baik',
+            acquisitionYear: 2024,
+            hasActiveMutation: true,
+          ),
+          const Asset(
+            id: 'asset_available',
+            assetCode: 'AST-ELK-AVAILABLE',
+            name: 'Laptop Siap Mutasi',
+            category: AssetCategory(id: '1', code: 'ELK', name: 'Elektronik'),
+            location: 'Ruang TI',
+            pic: 'User Pemohon',
+            status: AssetStatus.available,
+            condition: 'Baik',
+            acquisitionYear: 2024,
+            hasActiveMutation: false,
+          ),
+        ];
+
+        await tester.pumpWidget(
+          buildTestWidget(
+            mutationRepo: mutationRepo,
+            userAssets: mixedAssets,
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        final assetDropdown = find.byKey(const Key('dropdown_select_asset'));
+        expect(assetDropdown, findsOneWidget);
+        await tester.ensureVisible(assetDropdown);
+        await tester.tap(assetDropdown);
+        await tester.pumpAndSettle();
+
+        // Dropdown aset harus menampilkan aset yang siap mutasi
+        expect(find.textContaining('Laptop Siap Mutasi'), findsWidgets);
+        // Aset dengan hasActiveMutation: true TIDAK boleh muncul
+        expect(find.textContaining('Laptop Sedang Mutasi'), findsNothing);
+      },
+    );
   });
 }
