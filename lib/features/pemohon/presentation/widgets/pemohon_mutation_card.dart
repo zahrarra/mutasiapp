@@ -41,8 +41,8 @@ class PemohonMutationCard extends StatelessWidget {
     return '$day ${months[dt.month - 1]} ${dt.year}';
   }
 
-  String _getStageText(MutationStatus status) {
-    switch (status) {
+  String _getStageText(Mutation m) {
+    switch (m.status) {
       case MutationStatus.submitted:
         return 'Tahap 2/6: Pemeriksaan Operator';
       case MutationStatus.verified:
@@ -60,9 +60,11 @@ class PemohonMutationCard extends StatelessWidget {
       case MutationStatus.completed:
         return 'Tahap 6/6: Selesai';
       case MutationStatus.returned:
-        return 'Perlu Perbaikan';
+        return 'Dikembalikan';
       case MutationStatus.rejected:
-        return 'Ditolak';
+        return m.isAssetRejected
+            ? 'Tahap 3/3: Ditolak Bagian Aset'
+            : 'Tahap 4/4: Ditolak Pemimpin Divisi';
       case MutationStatus.waitingSync:
         return 'Menunggu Sinkronisasi';
     }
@@ -98,7 +100,7 @@ class PemohonMutationCard extends StatelessWidget {
         statusBgColor = const Color(0xFFFEF0C7);
         statusTextColor = const Color(0xFFB45309);
         statusBorderColor = const Color(0xFFFEDF89);
-        statusBadgeLabel = 'Perlu Perbaikan';
+        statusBadgeLabel = 'Dikembalikan';
         break;
       case MutationStatus.completed:
         borderColor = const Color(0xFFD1FADF);
@@ -112,7 +114,7 @@ class PemohonMutationCard extends StatelessWidget {
         statusBgColor = const Color(0xFFFEF3F2);
         statusTextColor = const Color(0xFFB42318);
         statusBorderColor = const Color(0xFFFECDCA);
-        statusBadgeLabel = 'Ditolak';
+        statusBadgeLabel = mutation.isAssetRejected ? 'Ditolak Bagian Aset' : 'Ditolak Pemimpin Divisi';
         break;
       case MutationStatus.waitingAssetVerification:
         statusBgColor = const Color(0xFFFEF0C7);
@@ -340,10 +342,52 @@ class PemohonMutationCard extends StatelessWidget {
                           child: Text(
                             mutation.returnReason?.isNotEmpty == true
                                 ? mutation.returnReason!
-                                : 'Foto serial number buram atau data perlu diperbaiki.',
+                                : 'Dikembalikan oleh Bagian Aset — pengajuan telah selesai.',
                             style: const TextStyle(
                               fontSize: 11,
                               color: Color(0xFFB45309),
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+
+                // ── Rejection Reason Notice (if rejected) ───────────
+                if (status == MutationStatus.rejected) ...[
+                  const SizedBox(height: 10),
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 10,
+                      vertical: 8,
+                    ),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFFEF3F2),
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: const Color(0xFFFECDCA)),
+                    ),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Icon(
+                          Icons.cancel_outlined,
+                          size: 14,
+                          color: Color(0xFFB42318),
+                        ),
+                        const SizedBox(width: 6),
+                        Expanded(
+                          child: Text(
+                            mutation.rejectionReason?.isNotEmpty == true
+                                ? '${mutation.isAssetRejected ? "Ditolak Bagian Aset: " : "Ditolak Kadiv: "}${mutation.rejectionReason!}'
+                                : (mutation.isAssetRejected
+                                    ? 'Ditolak oleh Bagian Aset — pengajuan telah selesai.'
+                                    : 'Ditolak oleh Pemimpin Divisi — pengajuan telah selesai.'),
+                            style: const TextStyle(
+                              fontSize: 11,
+                              color: Color(0xFFB42318),
                               fontWeight: FontWeight.w500,
                             ),
                           ),
@@ -444,48 +488,36 @@ class PemohonMutationCard extends StatelessWidget {
                           ),
                         ),
                         const SizedBox(width: 8),
-                        InkWell(
-                          onTap:
-                              onEditTap ??
-                              () => _safePush(
-                                context,
-                                RouteNames.pemohonMutasiEditPath.replaceFirst(
-                                  ':id',
-                                  mutation.id,
-                                ),
-                              ),
-                          borderRadius: BorderRadius.circular(8),
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 12,
-                              vertical: 6,
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 10,
+                            vertical: 4,
+                          ),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFFEF0C7),
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(
+                              color: const Color(0xFFFEDF89),
                             ),
-                            decoration: BoxDecoration(
-                              color: const Color(0xFFFEF0C7),
-                              borderRadius: BorderRadius.circular(8),
-                              border: Border.all(
-                                color: const Color(0xFFFEDF89),
+                          ),
+                          child: const Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(
+                                Icons.history,
+                                size: 13,
+                                color: Color(0xFFB45309),
                               ),
-                            ),
-                            child: const Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Text(
-                                  'Perbaiki Berkas',
-                                  style: TextStyle(
-                                    color: Color(0xFFB45309),
-                                    fontSize: 11,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                                SizedBox(width: 4),
-                                Icon(
-                                  Icons.arrow_forward,
-                                  size: 13,
+                              SizedBox(width: 4),
+                              Text(
+                                'Pengajuan Berakhir',
+                                style: TextStyle(
                                   color: Color(0xFFB45309),
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.bold,
                                 ),
-                              ],
-                            ),
+                              ),
+                            ],
                           ),
                         ),
                       ],
@@ -526,6 +558,61 @@ class PemohonMutationCard extends StatelessWidget {
                         ),
                       ],
                     )
+                  else if (status == MutationStatus.rejected)
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Expanded(
+                          child: Text(
+                            mutation.asset.assetCode.isNotEmpty
+                                ? mutation.asset.assetCode
+                                : mutation.ticketNumber,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(
+                              fontFamily: 'monospace',
+                              fontSize: 11,
+                              color: Color(0xFF52606D),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 10,
+                            vertical: 4,
+                          ),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFFEF3F2),
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(
+                              color: const Color(0xFFFECDCA),
+                            ),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              const Icon(
+                                Icons.cancel_outlined,
+                                size: 13,
+                                color: Color(0xFFB42318),
+                              ),
+                              const SizedBox(width: 4),
+                              Text(
+                                mutation.isAssetRejected
+                                    ? 'Berakhir di Bagian Aset'
+                                    : 'Berakhir di Kadiv',
+                                style: const TextStyle(
+                                  color: Color(0xFFB42318),
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    )
                   else
                     Wrap(
                       alignment: WrapAlignment.spaceBetween,
@@ -535,18 +622,18 @@ class PemohonMutationCard extends StatelessWidget {
                       children: [
                         Text.rich(
                           TextSpan(
-                            text: '${_getStageText(status).split(':')[0]}: ',
+                            text: '${_getStageText(mutation).split(':')[0]}: ',
                             style: const TextStyle(
                               fontSize: 11,
                               color: Color(0xFF52606D),
                             ),
                             children: [
                               TextSpan(
-                                text: _getStageText(status).contains(':')
-                                    ? _getStageText(status)
+                                text: _getStageText(mutation).contains(':')
+                                    ? _getStageText(mutation)
                                           .split(':')[1]
                                           .trim()
-                                    : _getStageText(status),
+                                    : _getStageText(mutation),
                                 style: const TextStyle(
                                   fontWeight: FontWeight.bold,
                                   color: Color(0xFF172B4D),

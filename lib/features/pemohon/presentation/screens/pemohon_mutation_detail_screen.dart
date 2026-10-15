@@ -183,25 +183,19 @@ class PemohonMutationDetailScreen extends ConsumerWidget {
                         const SizedBox(height: 24),
 
                         // 8. Bottom Action Buttons
-                        if (m.status == MutationStatus.returned) ...[
+                        if (m.status == MutationStatus.returned ||
+                            m.status == MutationStatus.rejected) ...[
                           ElevatedButton.icon(
-                            onPressed: () async {
-                              await context.push(
-                                RouteNames.pemohonMutasiEditPath.replaceFirst(
-                                  ':id',
-                                  m.id,
-                                ),
-                              );
-                              ref.invalidate(
-                                pemohonMutationDetailProvider(mutationId),
-                              );
+                            key: const Key('btn_ajukan_mutasi_baru'),
+                            onPressed: () {
+                              context.push(RouteNames.pemohonMutasiCreatePath);
                             },
                             icon: const Icon(
-                              Icons.edit_outlined,
+                              Icons.add_circle_outline,
                               color: Colors.white,
                             ),
                             label: const Text(
-                              'Edit & Ajukan Ulang',
+                              'Ajukan Mutasi Baru',
                               style: TextStyle(
                                 fontSize: 14,
                                 fontWeight: FontWeight.bold,
@@ -209,7 +203,7 @@ class PemohonMutationDetailScreen extends ConsumerWidget {
                               ),
                             ),
                             style: ElevatedButton.styleFrom(
-                              backgroundColor: AppColors.warning,
+                              backgroundColor: AppColors.primary,
                               minimumSize: const Size.fromHeight(48),
                               shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(12),
@@ -577,7 +571,7 @@ class PemohonMutationDetailScreen extends ConsumerWidget {
                       const SizedBox(width: 4),
                       Text(
                         mutation.status == MutationStatus.returned
-                            ? 'Perlu Perbaikan'
+                            ? 'Dikembalikan'
                             : (mutation.status == MutationStatus.submitted
                                   ? 'Pemeriksaan Operator'
                                   : 'Meninjau'),
@@ -650,9 +644,7 @@ class PemohonMutationDetailScreen extends ConsumerWidget {
           ),
           const SizedBox(width: 5),
           Text(
-            status == MutationStatus.returned
-                ? 'Perlu Perbaikan'
-                : status.displayName,
+            status.displayName,
             style: TextStyle(
               fontSize: 11,
               fontWeight: FontWeight.bold,
@@ -1722,16 +1714,13 @@ class PemohonMutationDetailScreen extends ConsumerWidget {
   }
 
   Widget _buildReturnedAlertBanner(Mutation mutation) {
-    final isAssetReturn =
-        mutation.assetReturnReason != null &&
-        mutation.assetReturnReason!.trim().isNotEmpty;
-    final actorLabel = isAssetReturn ? 'Bagian Aset' : 'Operator';
-    final reasonText = isAssetReturn
-        ? mutation.assetReturnReason!.trim()
-        : ((mutation.returnReason != null &&
-                  mutation.returnReason!.trim().isNotEmpty)
-              ? mutation.returnReason!.trim()
-              : 'Harap periksa catatan pengembalian dan perbaiki pengajuan Anda.');
+    final reasonText = (mutation.returnReason != null &&
+            mutation.returnReason!.trim().isNotEmpty)
+        ? mutation.returnReason!.trim()
+        : ((mutation.assetReturnReason != null &&
+                mutation.assetReturnReason!.trim().isNotEmpty)
+            ? mutation.assetReturnReason!.trim()
+            : 'Dokumen atau verifikasi fisik aset tidak sesuai.');
 
     return Container(
       padding: const EdgeInsets.all(14),
@@ -1753,17 +1742,19 @@ class PemohonMutationDetailScreen extends ConsumerWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Row(
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 4,
+                  crossAxisAlignment: WrapCrossAlignment.center,
                   children: [
                     const Text(
-                      'Pengajuan Dikembalikan untuk Diperbaiki',
+                      'Dikembalikan oleh Bagian Aset — Pengajuan Telah Selesai',
                       style: TextStyle(
                         fontSize: 13,
                         fontWeight: FontWeight.bold,
                         color: Color(0xFF9A3412),
                       ),
                     ),
-                    const SizedBox(width: 8),
                     Container(
                       padding: const EdgeInsets.symmetric(
                         horizontal: 6,
@@ -1773,9 +1764,9 @@ class PemohonMutationDetailScreen extends ConsumerWidget {
                         color: const Color(0xFFEA580C).withValues(alpha: 0.15),
                         borderRadius: BorderRadius.circular(4),
                       ),
-                      child: Text(
-                        'Oleh: $actorLabel',
-                        style: const TextStyle(
+                      child: const Text(
+                        'Oleh: Bagian Aset',
+                        style: TextStyle(
                           fontSize: 10,
                           fontWeight: FontWeight.w600,
                           color: Color(0xFFEA580C),
@@ -1784,12 +1775,22 @@ class PemohonMutationDetailScreen extends ConsumerWidget {
                     ),
                   ],
                 ),
-                const SizedBox(height: 4),
+                const SizedBox(height: 6),
                 Text(
                   reasonText,
                   style: const TextStyle(
                     fontSize: 12,
+                    fontWeight: FontWeight.w600,
                     color: Color(0xFFC2410C),
+                  ),
+                ),
+                const SizedBox(height: 6),
+                const Text(
+                  'Pengajuan ini tidak diterima dan tiket telah ditutup. Tiket ini tidak dapat diedit atau diajukan ulang. Jika masih diperlukan, silakan buat pengajuan mutasi baru.',
+                  style: TextStyle(
+                    fontSize: 11,
+                    color: Color(0xFF9A3412),
+                    height: 1.3,
                   ),
                 ),
               ],
@@ -1857,10 +1858,7 @@ class PemohonMutationDetailScreen extends ConsumerWidget {
       MutationStatus.submitted ||
       MutationStatus.waitingSync => cleanName(mutation.verifiedBy) ?? 'Operator',
       MutationStatus.returned =>
-        (mutation.assetReturnReason != null &&
-                mutation.assetReturnReason!.isNotEmpty)
-            ? (cleanName(mutation.approvedBy) ?? cleanName(mutation.assetVerifiedBy) ?? 'Bagian Aset')
-            : (cleanName(mutation.verifiedBy) ?? 'Operator'),
+        cleanName(mutation.assetVerifiedBy) ?? cleanName(mutation.approvedBy) ?? 'Bagian Aset',
       MutationStatus.waitingAssetVerification ||
       MutationStatus.verified =>
         cleanName(mutation.assetVerifiedBy) ?? cleanName(mutation.approvedBy) ?? 'Bagian Aset',
@@ -1874,11 +1872,13 @@ class PemohonMutationDetailScreen extends ConsumerWidget {
         mutation.applicantName.isNotEmpty ? mutation.applicantName : 'Pemohon',
       MutationStatus.completed => 'Sistem MutasiKu',
       MutationStatus.rejected =>
-        cleanName(mutation.kadivRejectedBy) ??
-            (cleanName(mutation.rejectedBy) ??
-                (mutation.kadivRejectionReason != null
-                    ? 'Pemimpin Divisi'
-                    : 'Peninjau Mutasi')),
+        mutation.isAssetRejected
+            ? (cleanName(mutation.assetRejectedBy) ??
+                cleanName(mutation.rejectedBy) ??
+                'Bagian Aset')
+            : (cleanName(mutation.kadivRejectedBy) ??
+                cleanName(mutation.rejectedBy) ??
+                'Pemimpin Divisi'),
     };
   }
 
@@ -1886,11 +1886,7 @@ class PemohonMutationDetailScreen extends ConsumerWidget {
     return switch (mutation.status) {
       MutationStatus.submitted ||
       MutationStatus.waitingSync => 'Pemeriksaan Kelengkapan',
-      MutationStatus.returned =>
-        (mutation.assetReturnReason != null &&
-                mutation.assetReturnReason!.isNotEmpty)
-            ? 'Pengembalian oleh Bagian Aset'
-            : 'Pengembalian oleh Operator',
+      MutationStatus.returned => 'Pengembalian oleh Bagian Aset',
       MutationStatus.waitingAssetVerification ||
       MutationStatus.verified => 'Verifikasi Bagian Aset',
       MutationStatus.waitingDivisionHeadApproval ||
@@ -1899,7 +1895,9 @@ class PemohonMutationDetailScreen extends ConsumerWidget {
       MutationStatus.waitingConfirmation ||
       MutationStatus.pendingConfirmation => 'Konfirmasi Pemohon',
       MutationStatus.completed => 'Siklus Mutasi Selesai',
-      MutationStatus.rejected => 'Pengajuan Ditolak',
+      MutationStatus.rejected => mutation.isAssetRejected
+          ? 'Penolakan oleh Bagian Aset'
+          : 'Penolakan oleh Pemimpin Divisi',
     };
   }
 

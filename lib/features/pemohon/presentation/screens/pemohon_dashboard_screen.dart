@@ -637,7 +637,7 @@ class _PemohonDashboardScreenState
     // 2. Perlu Tindakan: Hanya mutasi yang butuh tindakan Pemohon (konfirmasi / revisi)
     final actionCount = list.where(_needsAction).length;
 
-    // 3. Selesai: Mutasi yang sudah benar-benar Selesai dari data Mutasi Saya
+    // 3. Selesai: Hanya pengajuan yang benar-benar selesai secara alur bisnis (completed)
     final completedCount = list
         .where((m) => m.status == MutationStatus.completed)
         .length;
@@ -666,15 +666,10 @@ class _PemohonDashboardScreenState
             borderColor: actionCount > 0 ? _C.warningBorder : null,
             title: 'Perlu Tindakan',
             value: '$actionCount Tiket',
-            onTap: () {
-              final hasReturned =
-                  list.any((m) => m.status == MutationStatus.returned);
-              final targetFilter = hasReturned ? 'returned' : 'allocated';
-              context.go(
-                '${RouteNames.pemohonMutasiPath}?filter=$targetFilter',
-                extra: targetFilter,
-              );
-            },
+            onTap: () => context.go(
+              '${RouteNames.pemohonMutasiPath}?filter=allocated',
+              extra: 'allocated',
+            ),
           ),
         ),
         const SizedBox(width: 8),
@@ -1501,7 +1496,8 @@ class _PemohonDashboardScreenState
 
   bool _isActive(Mutation m) =>
       m.status != MutationStatus.completed &&
-      m.status != MutationStatus.rejected;
+      m.status != MutationStatus.rejected &&
+      m.status != MutationStatus.returned;
 
   bool _isInProcess(Mutation m) {
     return m.status == MutationStatus.submitted ||
@@ -1515,8 +1511,7 @@ class _PemohonDashboardScreenState
 
   bool _needsAction(Mutation m) {
     return m.status == MutationStatus.waitingConfirmation ||
-        m.status == MutationStatus.pendingConfirmation ||
-        m.status == MutationStatus.returned;
+        m.status == MutationStatus.pendingConfirmation;
   }
 
   bool _matchesSearch(Mutation m) {

@@ -24,10 +24,6 @@ const List<FilterStatusItem> mutationFilterOptions = [
     label: 'Pemeriksaan Operator',
   ),
   FilterStatusItem(
-    status: MutationStatus.returned,
-    label: 'Dikembalikan ke Pemohon',
-  ),
-  FilterStatusItem(
     status: MutationStatus.waitingAssetVerification,
     label: 'Menunggu Verifikasi Bagian Aset',
   ),

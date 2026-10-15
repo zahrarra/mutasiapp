@@ -763,7 +763,8 @@ class _PemohonCreateMutationScreenState
     List<String> locations,
     AsyncValue<List<Asset>> assetsAsync,
   ) {
-    final userAssets = assetsAsync.valueOrNull ?? [];
+    final rawAssets = assetsAsync.valueOrNull ?? [];
+    final userAssets = rawAssets.where((a) => !a.hasActiveMutation).toList();
     final assetOptions = userAssets
         .map((a) => '${a.name} (${a.assetCode})')
         .toList();

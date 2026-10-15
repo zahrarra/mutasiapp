@@ -189,7 +189,8 @@ class _PemohonMutationListScreenState
         result = result
             .where(
               (m) =>
-                  m.status.historyCategory == MutationHistoryCategory.completed,
+                  m.status.historyCategory ==
+                  MutationHistoryCategory.completed,
             )
             .toList();
         break;
@@ -255,7 +256,8 @@ class _PemohonMutationListScreenState
         return list
             .where(
               (m) =>
-                  m.status.historyCategory == MutationHistoryCategory.completed,
+                  m.status.historyCategory ==
+                  MutationHistoryCategory.completed,
             )
             .length;
       case _QuickFilter.rejected:
@@ -580,27 +582,6 @@ class _PemohonMutationListScreenState
                   ListTile(
                     contentPadding: EdgeInsets.zero,
                     leading: const Icon(
-                      Icons.replay_rounded,
-                      color: _C.warning,
-                    ),
-                    title: Text(
-                      'Dikembalikan',
-                      style: _inter(size: 14, weight: FontWeight.w600),
-                    ),
-                    trailing: _filter == _QuickFilter.returned
-                        ? const Icon(
-                            Icons.check_circle_rounded,
-                            color: _C.secondary,
-                          )
-                        : null,
-                    onTap: () {
-                      setState(() => _filter = _QuickFilter.returned);
-                      Navigator.pop(sheetContext);
-                    },
-                  ),
-                  ListTile(
-                    contentPadding: EdgeInsets.zero,
-                    leading: const Icon(
                       Icons.verified_rounded,
                       color: _C.success,
                     ),
@@ -764,8 +745,6 @@ class _PemohonMutationListScreenState
           const SizedBox(width: 8),
           chip('Dialokasikan', _QuickFilter.allocated),
           const SizedBox(width: 8),
-          chip('Dikembalikan', _QuickFilter.returned),
-          const SizedBox(width: 8),
           chip('Selesai', _QuickFilter.completed),
           const SizedBox(width: 8),
           chip('Ditolak', _QuickFilter.rejected),
@@ -927,31 +906,13 @@ class _MutationCard extends StatelessWidget {
                         pathParameters: {'id': m.id},
                       ),
                     )
-                  else if (status == MutationStatus.returned &&
-                      m.staffUpdatedAt == null)
-                    // Operator mengembalikan pengajuan di tahap awal
-                    // (sebelum verifikasi Bagian Aset) → pemohon memang perlu
-                    // memperbaiki data pengajuannya.
-                    _actionBtn(
-                      context,
-                      'Perbaiki Berkas',
-                      filled: false,
-                      onTap: () => context.pushNamed(
-                        RouteNames.pemohonMutasiEditName,
-                        pathParameters: {'id': m.id},
-                      ),
-                    )
-                  else if (status == MutationStatus.returned &&
-                      m.staffUpdatedAt != null)
-                    // Pemohon sudah melaporkan ketidaksesuaian; tidak ada
-                    // tindakan lain yang perlu ia lakukan — tinggal menunggu
-                    // Bagian Aset memperbaiki data.
+                  else if (status == MutationStatus.returned)
                     Text(
-                      'Menunggu perbaikan Bagian Aset',
+                      'Pengajuan Berakhir',
                       style: style(
                         size: 11,
-                        weight: FontWeight.w500,
-                        color: const Color(0xFF175CD3),
+                        weight: FontWeight.w600,
+                        color: const Color(0xFFB45309),
                       ),
                     )
                   else if (status == MutationStatus.completed)
@@ -997,7 +958,7 @@ class _MutationCard extends StatelessWidget {
       MutationStatus.returned => (
         _C.warning.withValues(alpha: 0.15),
         _C.warning,
-        'Perlu Perbaikan',
+        'Dikembalikan',
       ),
       MutationStatus.completed => (
         _C.success.withValues(alpha: 0.15),
@@ -1117,7 +1078,7 @@ class _MutationCard extends StatelessWidget {
       case MutationStatus.submitted:
         return 'Pemeriksaan Operator';
       case MutationStatus.returned:
-        return 'Perlu Perbaikan';
+        return 'Dikembalikan';
       case MutationStatus.verified:
         return 'Verifikasi';
       case MutationStatus.waitingAssetVerification:
