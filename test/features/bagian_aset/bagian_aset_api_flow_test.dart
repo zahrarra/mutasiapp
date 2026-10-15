@@ -614,9 +614,8 @@ void main() {
       ); // Step 5: Konfirmasi Pemohon Upcoming
     });
 
-    test('9. Bagian Aset Return Action: POST /api/v1/mutations/{id}/verify-asset dengan action: return & reason -> status transition ke dikembalikan_ke_pemohon', () async {
+    test('9. Regresi: Aksi Pengembalian ke Pemohon oleh Bagian Aset dilarang dan dicegah oleh sistem', () async {
       String? returnEndpoint;
-      Map<String, dynamic>? returnBody;
       var currentStatus = 'menunggu_verifikasi_bagian_aset';
 
       const expectedReason =
@@ -645,19 +644,12 @@ void main() {
         if (request.method == 'POST' &&
             request.url.path == '/api/v1/mutations/301/verify-asset') {
           returnEndpoint = request.url.path;
-          returnBody = jsonDecode(request.body) as Map<String, dynamic>;
-          currentStatus = 'dikembalikan_ke_pemohon';
           return http.Response(
             jsonEncode({
-              'success': true,
-              'message': 'Pengajuan mutasi berhasil dikembalikan ke Pemohon.',
-              'data': {
-                ...baseJson,
-                'status': currentStatus,
-                'return_reason': expectedReason,
-              },
+              'success': false,
+              'message': 'Bagian Aset tidak memiliki kewenangan untuk mengembalikan atau menolak pengajuan mutasi.',
             }),
-            200,
+            403,
             headers: {'content-type': 'application/json'},
           );
         }
@@ -669,9 +661,6 @@ void main() {
               'data': {
                 ...baseJson,
                 'status': currentStatus,
-                if (currentStatus == 'dikembalikan_ke_pemohon') ...{
-                  'return_reason': expectedReason,
-                },
               },
             }),
             200,
@@ -700,25 +689,24 @@ void main() {
       );
       addTearDown(container.dispose);
 
-      // Eksekusi aksi Bagian Aset return
+      // Eksekusi aksi Bagian Aset return dicegah
       final success = await container
           .read(bagianAsetVerificationActionProvider.notifier)
           .returnToApplicant(mutationId: '301', reason: expectedReason);
 
-      expect(success, isTrue);
-      expect(returnEndpoint, equals('/api/v1/mutations/301/verify-asset'));
+      expect(success, isFalse);
       expect(
-        returnBody,
-        equals({'action': 'return', 'reason': expectedReason}),
+        container.read(bagianAsetVerificationActionProvider).error,
+        'Bagian Aset tidak memiliki kewenangan untuk mengembalikan atau menolak pengajuan mutasi.',
       );
+      expect(returnEndpoint, isNull);
 
-      // Pemohon membaca detail
-      final returnedDetail = await container.read(
+      // Mutasi tetap pada status asalnya
+      final detail = await container.read(
         apiMutationDetailProvider('301').future,
       );
 
-      expect(returnedDetail.status, equals(MutationStatus.returned));
-      expect(returnedDetail.returnReason, equals(expectedReason));
+      expect(detail.status, equals(MutationStatus.waitingAssetVerification));
     });
 
     test('10. Kasus Pemohon Konfirmasi Fisik Tidak Sesuai: Mutasi kembali berstatus menunggu_verifikasi_bagian_aset dengan return_reason, muncul di queue dan terbaca di detail Bagian Aset', () async {

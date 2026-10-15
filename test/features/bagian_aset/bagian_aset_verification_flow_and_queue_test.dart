@@ -245,9 +245,9 @@ void main() {
     });
   });
 
-  group('Bagian Aset Return action with preserved return reason', () {
+  group('Regresi: Bagian Aset Return action dilarang 100% dan Tab Batal', () {
     test(
-      'Returns waitingAssetVerification and preserves return reason',
+      'Bagian Aset returnToApplicant gagal dan mengembalikan error kewenangan',
       () async {
         final element = ProviderContainer(
           overrides: [
@@ -267,31 +267,30 @@ void main() {
               reason:
                   'Alokasi anggaran belum tersedia untuk relokasi aset ini.',
             );
-        expect(returnSuccess, true);
+        expect(returnSuccess, false);
 
+        final actionState = element.read(bagianAsetVerificationActionProvider);
+        expect(
+          actionState.error,
+          'Bagian Aset tidak memiliki kewenangan untuk mengembalikan atau menolak pengajuan mutasi.',
+        );
+
+        // Status mutasi tetap waitingAssetVerification (tidak berubah)
         final detailAfter = await element.read(
           mutationDetailProvider('mut_004').future,
         );
-        expect(detailAfter.status, MutationStatus.returned);
         expect(
-          detailAfter.returnReason,
-          'Alokasi anggaran belum tersedia untuk relokasi aset ini.',
+          detailAfter.status,
+          MutationStatus.waitingAssetVerification,
         );
 
-        // Removed from "Menunggu Verifikasi"
+        // Tab Batal tidak memetakan status returned/dikembalikan_ke_pemohon
         await element.read(bagianAsetAllMutationsProvider.future);
         element.read(bagianAsetStatusFilterProvider.notifier).state =
-            BagianAsetStatusFilter.waiting;
-        final waitingAfter =
+            BagianAsetStatusFilter.cancelled;
+        final cancelledList =
             element.read(filteredBagianAsetVerificationsProvider).value ?? [];
-        expect(waitingAfter.any((m) => m.id == 'mut_004'), false);
-
-        // Present in "Dikembalikan" and "Semua"
-        element.read(bagianAsetStatusFilterProvider.notifier).state =
-            BagianAsetStatusFilter.returned;
-        final returnedAfter =
-            element.read(filteredBagianAsetVerificationsProvider).value ?? [];
-        expect(returnedAfter.any((m) => m.id == 'mut_004'), true);
+        expect(cancelledList.isEmpty, true);
       },
     );
   });

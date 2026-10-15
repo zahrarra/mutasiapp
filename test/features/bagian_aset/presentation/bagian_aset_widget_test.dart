@@ -193,15 +193,16 @@ void main() {
   );
 
   testWidgets(
-    'BagianAsetVerificationsScreen renders search bar, filters, and cards',
+    'BagianAsetVerificationsScreen renders search bar, filters, and cards with default filter Semua',
     (tester) async {
       await tester.pumpWidget(
         createTestWidget(const BagianAsetVerificationsScreen()),
       );
       await tester.pumpAndSettle();
 
-      // Verifikasi appbar & filter
-      expect(find.text('Menunggu Verifikasi'), findsWidgets);
+      // Verifikasi filter default adalah 'Semua'
+      expect(find.text('Semua'), findsOneWidget);
+      expect(find.text('Semua Pengajuan'), findsOneWidget);
 
       // Verifikasi search input
       expect(find.byKey(const Key('input_search_approvals')), findsOneWidget);
@@ -216,7 +217,16 @@ void main() {
         findsOneWidget,
       );
 
-      // Verifikasi badge status tampil
+      // Buka dropdown status dan pilih 'Menunggu Verifikasi'
+      await tester.tap(
+        find.byKey(const Key('dropdown_filter_bagian_aset_status')),
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Menunggu Verifikasi').last);
+      await tester.pumpAndSettle();
+
+      // Filter Menunggu Verifikasi aktif dan badge status tampil
+      expect(find.text('Menunggu Verifikasi'), findsWidgets);
       expect(find.text('Menunggu Verifikasi Bagian Aset'), findsWidgets);
     },
   );
@@ -224,12 +234,19 @@ void main() {
   testWidgets('BagianAsetVerificationsScreen search filters list correctly', (
     tester,
   ) async {
+    tester.view.physicalSize = const Size(800, 1200);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(() {
+      tester.view.resetPhysicalSize();
+      tester.view.resetDevicePixelRatio();
+    });
+
     await tester.pumpWidget(
       createTestWidget(const BagianAsetVerificationsScreen()),
     );
     await tester.pumpAndSettle();
 
-    // mut_004 ada di antrean Bagian Aset (Dewi Lestari, FURNITUR-2026-00018)
+    // mut_004 ada di daftar (Dewi Lestari, FURNITUR-2026-00018)
     expect(find.text('FURNITUR-2026-00018'), findsOneWidget);
 
     // Cari tiket yang tidak ada
@@ -240,7 +257,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('FURNITUR-2026-00018'), findsNothing);
-    expect(find.text('Tidak Ada Pengajuan Menunggu'), findsOneWidget);
+    expect(find.text('Tidak Ada Pengajuan Ditemukan'), findsOneWidget);
 
     // Hapus pencarian
     await tester.enterText(find.byKey(const Key('input_search_approvals')), '');
@@ -278,8 +295,8 @@ void main() {
       // Dokumen
       expect(find.text('Nota_Dinas.pdf'), findsOneWidget);
 
-      // Buttons
-      expect(find.byKey(const Key('btn_tolak_approval')), findsOneWidget);
+      // Buttons: Hanya tombol verifikasi yang tersedia, tombol tolak/kembalikan sudah dihapus
+      expect(find.byKey(const Key('btn_tolak_approval')), findsNothing);
       expect(find.byKey(const Key('btn_setujui_approval')), findsOneWidget);
     },
   );
@@ -315,11 +332,11 @@ void main() {
       await tester.tap(find.byKey(const Key('btn_setujui_approval')));
       await tester.pumpAndSettle();
 
-      // Dialog konfirmasi muncul (Verifikasi Data Aset)
-      expect(find.text('Verifikasi Data Aset'), findsOneWidget);
+      // Dialog verifikasi Bagian Aset muncul
+      expect(find.text('Verifikasi Bagian Aset'), findsWidgets);
 
-      // Tap Ya, Teruskan
-      await tester.tap(find.byKey(const Key('btn_confirm_setujui')));
+      // Tap Simpan Verifikasi Bagian Aset
+      await tester.tap(find.byKey(const Key('btn_simpan_verifikasi_bagian_aset')));
       await tester.pumpAndSettle();
 
       // Cek status mutasi terupdate ke waitingDivisionHeadApproval
@@ -364,11 +381,11 @@ void main() {
       await tester.tap(find.byKey(const Key('btn_setujui_approval')));
       await tester.pumpAndSettle();
 
-      // Dialog konfirmasi muncul
-      expect(find.text('Verifikasi Data Aset'), findsOneWidget);
+      // Dialog verifikasi Bagian Aset muncul
+      expect(find.text('Verifikasi Bagian Aset'), findsWidgets);
 
-      // Tap Ya, Teruskan
-      await tester.tap(find.byKey(const Key('btn_confirm_setujui')));
+      // Tap Simpan Verifikasi Bagian Aset
+      await tester.tap(find.byKey(const Key('btn_simpan_verifikasi_bagian_aset')));
       await tester.pumpAndSettle();
 
       // Cek status mutasi terupdate ke waitingKadivApproval
@@ -382,7 +399,7 @@ void main() {
   );
 
   testWidgets(
-    'Bagian Aset return flow requires reason and sets status to returned with reason saved',
+    'Regresi: Bagian Aset return form ditolak dan status mutasi tidak berubah',
     (tester) async {
       late WidgetRef containerRef;
 
@@ -417,29 +434,31 @@ void main() {
 
       expect(find.text('Alasan penolakan wajib diisi.'), findsOneWidget);
 
-      // Enter valid reason
+      // Enter reason
       await tester.enterText(
         find.byKey(const Key('input_alasan_penolakan')),
         'Anggaran relokasi furnitur belum dialokasikan untuk cabang ini.',
       );
       await tester.pumpAndSettle();
 
-      // Submit return
+      // Submit return -> Harus gagal dan ditolak
       await tester.tap(find.byKey(const Key('btn_submit_tolak')));
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 500));
 
-      // Cek status mutasi terupdate ke returned
-      final detailFuture = containerRef.read(
+      // Feedback error muncul bahwa Bagian Aset tidak berwenang mengembalikan
+      expect(
+        find.text(
+          'Bagian Aset tidak memiliki kewenangan untuk mengembalikan atau menolak pengajuan mutasi.',
+        ),
+        findsOneWidget,
+      );
+
+      // Cek status mutasi tetap waitingAssetVerification
+      final detail = await containerRef.read(
         bagianAsetMutationDetailProvider('mut_004').future,
       );
-      await tester.pump(const Duration(milliseconds: 300));
-      final detail = await detailFuture;
-      expect(detail.status, MutationStatus.returned);
-      expect(
-        detail.returnReason,
-        'Anggaran relokasi furnitur belum dialokasikan untuk cabang ini.',
-      );
+      expect(detail.status, MutationStatus.waitingAssetVerification);
     },
   );
 
