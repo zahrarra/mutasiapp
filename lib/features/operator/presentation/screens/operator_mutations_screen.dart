@@ -114,7 +114,7 @@ class _OperatorMutationsScreenState
       return _Tab.allocated;
     }
     if (f == 'returned' || f == 'dikembalikan') {
-      return _Tab.returned;
+      return _Tab.all;
     }
     if (f == 'completed' || f == 'selesai' || f == 'done') {
       return _Tab.completed;
@@ -344,7 +344,9 @@ class _OperatorMutationsScreenState
                   child: DropdownButtonHideUnderline(
                     child: DropdownButton<OperatorStatusFilter>(
                       key: const Key('dropdown_filter_operator_status'),
-                      value: statusFilter,
+                      value: statusFilter == OperatorStatusFilter.returned
+                          ? OperatorStatusFilter.all
+                          : statusFilter,
                       isDense: true,
                       isExpanded: true,
                       icon: const Icon(
@@ -358,6 +360,7 @@ class _OperatorMutationsScreenState
                         color: _C.textPrimary,
                       ),
                       items: OperatorStatusFilter.values
+                          .where((s) => s != OperatorStatusFilter.returned)
                           .map(
                             (s) => DropdownMenuItem(
                               value: s,
@@ -500,7 +503,9 @@ class _OperatorMutationsScreenState
       child: SingleChildScrollView(
         scrollDirection: Axis.horizontal,
         child: Row(
-          children: _Tab.values.map((tab) {
+          children: _Tab.values
+              .where((tab) => tab != _Tab.returned)
+              .map((tab) {
             final active = _activeTab == tab;
             return Padding(
               padding: const EdgeInsets.only(right: 8),

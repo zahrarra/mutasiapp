@@ -340,6 +340,7 @@ class VerificationActionNotifier
   Future<bool> verify({
     required String mutationId,
     bool requiresKadivApproval = false,
+    String? notes,
   }) async {
     final authState = ref.read(authStateProvider);
     final operatorName = authState.user?.name ?? 'Operator';
@@ -354,6 +355,7 @@ class VerificationActionNotifier
       mutationId: mutationId,
       operatorName: operatorName,
       requiresKadivApproval: requiresKadivApproval,
+      notes: notes,
     );
 
     if (result is Success<Mutation>) {

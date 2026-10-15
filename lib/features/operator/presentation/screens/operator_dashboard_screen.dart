@@ -891,13 +891,13 @@ class _OperatorDashboardScreenState
             const SizedBox(width: 10),
             Expanded(
               child: _buildCategoryCard(
-                icon: Icons.assignment_return_outlined,
-                iconColor: const Color(0xFFD97706),
-                iconBg: const Color(0xFFFFFBEB),
-                title: 'Pengajuan Dikembalikan',
-                subtitle: '${stats.returnedCount} Berkas Cek',
+                icon: Icons.send_rounded,
+                iconColor: _C.teal,
+                iconBg: const Color(0xFFF0FDFA),
+                title: 'Diteruskan ke Aset',
+                subtitle: '${stats.waitingAssetCount} Berkas Terverifikasi',
                 onTap: () => context.push(
-                  '${RouteNames.operatorMutationsPath}?filter=returned',
+                  '${RouteNames.operatorMutationsPath}?filter=allocated',
                 ),
               ),
             ),

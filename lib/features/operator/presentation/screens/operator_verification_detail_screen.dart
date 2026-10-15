@@ -14,22 +14,17 @@ import '../../../../app/router/route_names.dart';
 import '../../../../app/theme/app_colors.dart';
 import '../../../../app/theme/app_spacing.dart';
 import '../../../../core/utils/sla_wita_helper.dart';
-import '../../../../core/widgets/app_feedback.dart';
 import '../../../../core/widgets/document_preview_dialog.dart';
 import '../../../../core/widgets/sla_live_badge.dart';
 import '../../../../core/providers/core_providers.dart';
 import '../../../asset/domain/entities/asset.dart';
-import '../../../auth/domain/entities/user_role.dart';
 import '../../../auth/presentation/providers/auth_provider.dart';
 import '../../../mutation/domain/entities/mutation.dart';
 import '../../../mutation/domain/entities/mutation_status.dart';
-import '../../../mutation/presentation/providers/mutation_provider.dart';
-import '../../../notification/domain/entities/notification_item.dart';
-import '../../../notification/presentation/providers/notification_provider.dart';
 import '../../../mutation/presentation/models/mutation_tracking_step.dart';
 import '../providers/operator_verification_provider.dart';
+import '../widgets/operator_verification_modal.dart';
 import '../widgets/operator_verification_success_dialog.dart';
-import '../../../mutation/presentation/widgets/mutation_return_dialog.dart';
 import '../../../../core/widgets/mutasiku_page_header.dart';
 
 // ── Stitch Design Tokens ─────────────────────────────────────────────────────
@@ -524,8 +519,15 @@ class OperatorVerificationDetailScreen extends ConsumerWidget {
         ),
 
         // ── 7. STICKY BOTTOM ACTIONS (Stitch Baseline) ──────────────
-        if (isSubmitted)
-          Container(
+        if (isSubmitted) () {
+          final hasDocument = (mutation.documentName != null && mutation.documentName!.trim().isNotEmpty) ||
+              (mutation.documentPath != null && mutation.documentPath!.trim().isNotEmpty) ||
+              (mutation.documentBytes != null && mutation.documentBytes!.isNotEmpty);
+          final hasLocation = mutation.targetLocation.trim().isNotEmpty && mutation.targetLocation.trim() != '-';
+          final hasReason = mutation.reason.trim().isNotEmpty && mutation.reason.trim() != '-';
+          final isDataComplete = hasDocument && hasLocation && hasReason;
+
+          return Container(
             padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
             decoration: BoxDecoration(
               color: _C.surface,
@@ -540,51 +542,40 @@ class OperatorVerificationDetailScreen extends ConsumerWidget {
             ),
             child: SafeArea(
               top: false,
-              child: Row(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
                 children: [
-                  // Button: [ Kembalikan ]
-                  Expanded(
-                    flex: 2,
-                    child: OutlinedButton.icon(
-                      key: const Key('btn_kembalikan_pengajuan'),
-                      onPressed: actionState.isLoading
-                          ? null
-                          : () => _showReturnModal(context, ref, mutation),
-                      icon: const Icon(Icons.undo_rounded, size: 18),
-                      label: const Text(
-                        'Kembalikan',
-                        maxLines: 1,
-                        softWrap: false,
-                        overflow: TextOverflow.ellipsis,
-                        style: TextStyle(
-                          fontWeight: FontWeight.w600,
-                          fontSize: 13,
-                        ),
+                  if (!isDataComplete)
+                    Container(
+                      margin: const EdgeInsets.only(bottom: 10),
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFFEF3F2),
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: const Color(0xFFFECDCA)),
                       ),
-                      style: OutlinedButton.styleFrom(
-                        foregroundColor: _C.error,
-                        backgroundColor: _C.surfaceContainerLow,
-                        side: BorderSide(
-                          color: _C.error.withValues(alpha: 0.3),
-                        ),
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 8,
-                          vertical: 14,
-                        ),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(10),
-                        ),
+                      child: const Row(
+                        children: [
+                          Icon(Icons.info_outline, color: Color(0xFFD92D20), size: 18),
+                          SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              'Pengajuan belum lengkap. Dokumen SK SDM atau data wajib belum terpenuhi sehingga tidak dapat diteruskan ke Bagian Aset.',
+                              style: TextStyle(
+                                fontSize: 11,
+                                color: Color(0xFFB42318),
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
                     ),
-                  ),
-                  const SizedBox(width: 8),
-
-                  // Button: [ Verifikasi Valid / Teruskan ]
-                  Expanded(
-                    flex: 3,
+                  SizedBox(
+                    width: double.infinity,
                     child: ElevatedButton.icon(
                       key: const Key('btn_verifikasi_valid'),
-                      onPressed: actionState.isLoading
+                      onPressed: (actionState.isLoading || !isDataComplete)
                           ? null
                           : () => _executeVerification(context, ref, mutation),
                       icon: actionState.isLoading
@@ -598,7 +589,7 @@ class OperatorVerificationDetailScreen extends ConsumerWidget {
                             )
                           : const Icon(Icons.check_circle_rounded, size: 19),
                       label: const Text(
-                        'Verifikasi Valid',
+                        'Teruskan ke Bagian Aset',
                         maxLines: 1,
                         softWrap: false,
                         overflow: TextOverflow.ellipsis,
@@ -609,7 +600,9 @@ class OperatorVerificationDetailScreen extends ConsumerWidget {
                       ),
                       style: ElevatedButton.styleFrom(
                         backgroundColor: _C.primaryContainer,
+                        disabledBackgroundColor: _C.primaryContainer.withValues(alpha: 0.35),
                         foregroundColor: Colors.white,
+                        disabledForegroundColor: Colors.white.withValues(alpha: 0.6),
                         padding: const EdgeInsets.symmetric(vertical: 14),
                         elevation: 0,
                         shape: RoundedRectangleBorder(
@@ -621,7 +614,8 @@ class OperatorVerificationDetailScreen extends ConsumerWidget {
                 ],
               ),
             ),
-          ),
+          );
+        }(),
       ],
     );
   }
@@ -2120,42 +2114,19 @@ class OperatorVerificationDetailScreen extends ConsumerWidget {
     return '${parts[0][0]}${parts[1][0]}'.toUpperCase();
   }
 
-  // ── EKSEKUSI VERIFIKASI (Langsung tampil modal sukses Stitch terbaru) ────────
+  // ── EKSEKUSI VERIFIKASI (Jendela Modal Verifikasi Pengajuan) ───────────────
   Future<void> _executeVerification(
     BuildContext context,
     WidgetRef ref,
     Mutation mutation,
   ) async {
-    final success = await ref
-        .read(verificationActionProvider.notifier)
-        .verify(mutationId: mutation.id);
+    final verified = await showOperatorVerificationModal(
+      context,
+      mutation: mutation,
+    );
 
-    if (context.mounted) {
-      if (success) {
-        ref
-            .read(notificationProvider.notifier)
-            .notifyRole(
-              targetRole: UserRole.bagianAset,
-              title: 'Menunggu Verifikasi Data Aset',
-              message:
-                  'Pengajuan mutasi ${mutation.ticketNumber} (${mutation.asset.name}) telah diperiksa kelengkapannya dan siap diverifikasi.',
-              type: NotificationType.action,
-              relatedMutationId: mutation.id,
-            );
-        ref.invalidate(operatorMutationDetailProvider(mutation.id));
-        ref.invalidate(mutationDetailProvider(mutation.id));
-        AppFeedback.showSuccess(
-          context,
-          'Pengajuan berhasil diteruskan ke Bagian Aset.',
-        );
-        // ── Tampilkan Modal Sukses (Stitch: ID 2cc02f80cf3c404cb3bf174d61e73c50) ──
-        if (context.mounted) {
-          _showVerifySuccessDialog(context, ref, mutation);
-        }
-      } else {
-        final err = ref.read(verificationActionProvider).error;
-        AppFeedback.showError(context, err ?? 'Gagal memverifikasi pengajuan.');
-      }
+    if (verified == true && context.mounted) {
+      _showVerifySuccessDialog(context, ref, mutation);
     }
   }
 
@@ -2178,55 +2149,6 @@ class OperatorVerificationDetailScreen extends ConsumerWidget {
       },
       onOpenHistory: () {
         context.push(RouteNames.operatorMutationsPath);
-      },
-    );
-  }
-
-  // ── KEMBALIKAN PENGAJUAN MODAL (Stitch 04) ────────────────────────────────────
-  void _showReturnModal(
-    BuildContext context,
-    WidgetRef ref,
-    Mutation mutation,
-  ) {
-    showMutationReturnDialog(
-      context: context,
-      mutation: mutation,
-      onConfirm: (reason) async {
-        final success = await ref
-            .read(verificationActionProvider.notifier)
-            .returnMutation(mutationId: mutation.id, reason: reason);
-
-        if (context.mounted) {
-          if (success) {
-            final currentMutation = ref.read(verificationActionProvider).result;
-            ref
-                .read(notificationProvider.notifier)
-                .notifyUser(
-                  targetUserId:
-                      currentMutation?.applicantId ??
-                      mutation.applicantId ??
-                      'usr_pemohon',
-                  targetRole: UserRole.pemohon,
-                  title: 'Pengajuan Dikembalikan Operator',
-                  message:
-                      'Pengajuan ${currentMutation?.ticketNumber ?? mutation.ticketNumber} dikembalikan oleh Operator: $reason',
-                  type: NotificationType.warning,
-                  relatedMutationId: mutation.id,
-                );
-            ref.invalidate(operatorMutationDetailProvider(mutation.id));
-            ref.invalidate(mutationDetailProvider(mutation.id));
-            AppFeedback.showReturned(context, 'Pengajuan dikembalikan');
-            return true;
-          } else {
-            final err = ref.read(verificationActionProvider).error;
-            AppFeedback.showError(
-              context,
-              err ?? 'Gagal mengembalikan pengajuan.',
-            );
-            return false;
-          }
-        }
-        return false;
       },
     );
   }
