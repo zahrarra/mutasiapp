@@ -213,7 +213,7 @@ class MutationStatusTransitionTest extends TestCase
             ]);
     }
 
-    public function test_bagian_aset_return_requires_reason(): void
+    public function test_bagian_aset_return_action_is_forbidden(): void
     {
         $bagianAset = $this->createUser('bagian_aset');
         $pemohon = $this->createUser('pemohon');
@@ -224,20 +224,46 @@ class MutationStatusTransitionTest extends TestCase
         $response = $this->withHeader('Authorization', 'Bearer '.$token)
             ->postJson("/api/v1/mutations/{$mutation->id}/verify-asset", [
                 'action' => 'return',
-                'reason' => '',
-            ]);
-
-        $response->assertStatus(422)
-            ->assertJsonValidationErrors(['reason']);
-
-        $responseSuccess = $this->withHeader('Authorization', 'Bearer '.$token)
-            ->postJson("/api/v1/mutations/{$mutation->id}/verify-asset", [
-                'action' => 'return',
                 'reason' => 'Kategori aset salah.',
             ]);
 
-        $responseSuccess->assertStatus(200);
-        $this->assertEquals('dikembalikan_ke_pemohon', $mutation->fresh()->status);
+        $response->assertStatus(403)
+            ->assertJson([
+                'success' => false,
+                'message' => 'Bagian Aset tidak memiliki kewenangan untuk mengembalikan atau menolak pengajuan mutasi.',
+            ]);
+        $this->assertEquals('menunggu_verifikasi_bagian_aset', $mutation->fresh()->status);
+    }
+
+    public function test_bagian_aset_reject_action_succeeds_and_sets_status_ditolak(): void
+    {
+        $bagianAset = $this->createUser('bagian_aset');
+        $pemohon = $this->createUser('pemohon');
+        $mutation = $this->createMutation($pemohon, 'menunggu_verifikasi_bagian_aset');
+
+        $token = $bagianAset->createToken('test')->plainTextToken;
+
+        $response = $this->withHeader('Authorization', 'Bearer '.$token)
+            ->postJson("/api/v1/mutations/{$mutation->id}/verify-asset", [
+                'action' => 'reject',
+                'reason' => 'Fisik aset tidak sesuai dan rusak berat.',
+            ]);
+
+        $response->assertStatus(200)
+            ->assertJson([
+                'success' => true,
+                'data' => [
+                    'status' => 'ditolak',
+                    'rejection_reason' => 'Fisik aset tidak sesuai dan rusak berat.',
+                ],
+            ]);
+
+        $fresh = $mutation->fresh();
+        $this->assertEquals('ditolak', $fresh->status);
+        $this->assertEquals('Fisik aset tidak sesuai dan rusak berat.', $fresh->rejection_reason);
+        $this->assertEquals($bagianAset->id, $fresh->rejected_by);
+        $this->assertNotNull($fresh->rejected_at);
+        $this->assertFalse($fresh->asset->has_active_mutation);
     }
 
     // ─── 3. Pemimpin Divisi Approve & Reject Tests ──────────────────────────
@@ -479,36 +505,36 @@ class MutationStatusTransitionTest extends TestCase
         $forwardRes->assertStatus(200);
         $this->assertEquals('menunggu_verifikasi_bagian_aset', $mutation->fresh()->status);
 
-        // 2. Bagian Aset returns to Pemohon
+        // 2. Bagian Aset return is forbidden (403)
         $returnRes = $this->actingAs($bagianAset)
             ->postJson("/api/v1/mutations/{$mutation->id}/return-by-asset", [
                 'reason' => 'Data verifikasi aset memerlukan penyesuaian lokasi tujuan.',
             ]);
-        $returnRes->assertStatus(200);
-        $this->assertEquals('dikembalikan_ke_pemohon', $mutation->fresh()->status);
+        $returnRes->assertStatus(403);
 
-        // 3. Pemohon attempts to resubmit -> Route removed (404)
+        // 3. Historical returned mutation cannot be resubmitted -> 404
+        $historicalMutation = $this->createMutation($pemohon, 'dikembalikan_ke_pemohon');
         $resubmitRes = $this->actingAs($pemohon)
-            ->postJson("/api/v1/mutations/{$mutation->id}/resubmit", [
+            ->postJson("/api/v1/mutations/{$historicalMutation->id}/resubmit", [
                 'reason' => 'Lokasi tujuan dan deskripsi sudah disesuaikan.',
             ]);
 
         $resubmitRes->assertStatus(404);
 
-        $this->assertEquals('dikembalikan_ke_pemohon', $mutation->fresh()->status);
+        $this->assertEquals('dikembalikan_ke_pemohon', $historicalMutation->fresh()->status);
 
-        // 4. Queue assertions: Mutasi yang dikembalikan TIDAK boleh muncul di antrean aktif Bagian Aset maupun Operator
+        // 4. Queue assertions: Mutasi yang berstatus dikembalikan TIDAK boleh muncul di antrean aktif Bagian Aset maupun Operator
         $assetQueue = $this->actingAs($bagianAset)
             ->getJson('/api/v1/mutations?view=queue');
         $assetQueue->assertStatus(200);
         $assetIds = collect($assetQueue->json('data'))->pluck('id')->all();
-        $this->assertNotContains($mutation->id, $assetIds);
+        $this->assertNotContains($historicalMutation->id, $assetIds);
 
         $operatorQueue = $this->actingAs($operator)
             ->getJson('/api/v1/mutations?view=queue');
         $operatorQueue->assertStatus(200);
         $operatorIds = collect($operatorQueue->json('data'))->pluck('id')->all();
-        $this->assertNotContains($mutation->id, $operatorIds);
+        $this->assertNotContains($historicalMutation->id, $operatorIds);
     }
 
     public function test_pemohon_resubmit_forbidden_for_other_user(): void

@@ -207,7 +207,7 @@ class AutomaticMutationNotificationTest extends TestCase
         $this->assertEquals(0, $pemohon->notifications()->count());
     }
 
-    public function test_bagian_aset_return_notifies_pemohon(): void
+    public function test_bagian_aset_return_is_forbidden_and_sends_no_notification(): void
     {
         $bagianAset = $this->createUser('bagian_aset');
         $pemimpinDivisi = $this->createUser('pemimpin_divisi');
@@ -222,17 +222,10 @@ class AutomaticMutationNotificationTest extends TestCase
                 'reason' => 'Kondisi fisik aset rusak ringan butuh servis',
             ]);
 
-        $response->assertStatus(200);
+        $response->assertStatus(403);
 
-        // Pemohon menerima notifikasi
-        $this->assertEquals(1, $pemohon->notifications()->count());
-        $notif = $pemohon->notifications()->first();
-        $this->assertEquals('Pengajuan Mutasi Dikembalikan', $notif->data['title']);
-        $this->assertEquals($mutation->id, $notif->data['mutation_id']);
-        $this->assertEquals('dikembalikan_ke_pemohon', $notif->data['status']);
-        $this->assertEquals('return', $notif->data['action']);
-
-        // Pemimpin divisi tidak menerima
+        // Tidak ada notifikasi yang terkirim
+        $this->assertEquals(0, $pemohon->notifications()->count());
         $this->assertEquals(0, $pemimpinDivisi->notifications()->count());
     }
 

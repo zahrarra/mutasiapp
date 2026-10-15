@@ -189,21 +189,21 @@ class MutationWorkflowHistoryTest extends TestCase
     {
         $bagianAset = $this->createUser('bagian_aset');
         $pemohon = $this->createUser('pemohon');
-        $mutation = $this->createMutation($pemohon, 'menunggu_verifikasi_bagian_aset');
+        $mutation = $this->createMutation($pemohon, 'dikembalikan_ke_pemohon');
+
+        \App\Models\MutationStatusHistory::create([
+            'mutation_id' => $mutation->id,
+            'user_id' => $bagianAset->id,
+            'role' => 'bagian_aset',
+            'action' => 'return',
+            'status_from' => 'menunggu_verifikasi_bagian_aset',
+            'status_to' => 'dikembalikan_ke_pemohon',
+            'notes' => 'Perlu revisi data aset',
+        ]);
 
         $token = $bagianAset->createToken('test')->plainTextToken;
 
-        // Bagian aset mengembalikan mutasi ke pemohon
-        $this->withHeader('Authorization', 'Bearer '.$token)
-            ->postJson("/api/v1/mutations/{$mutation->id}/verify-asset", [
-                'action' => 'return',
-                'reason' => 'Perlu revisi data aset',
-            ])
-            ->assertStatus(200);
-
-        $this->assertEquals('dikembalikan_ke_pemohon', $mutation->fresh()->status);
-
-        // Status mutasi saat ini 'dikembalikan_ke_pemohon', tapi harus tetap muncul di view=history Bagian Aset
+        // Status mutasi historis 'dikembalikan_ke_pemohon' harus tetap muncul di view=history Bagian Aset
         $response = $this->withHeader('Authorization', 'Bearer '.$token)
             ->getJson('/api/v1/mutations?view=history');
 

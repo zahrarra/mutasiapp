@@ -118,27 +118,24 @@ class FinalReturnedMutationTest extends TestCase
     // ──────────────────────────────────────────────────────────────────────────
     // Skenario 2: Bagian Aset mengembalikan pengajuan -> tiket lama final & 409 on edit/resubmit
     // ──────────────────────────────────────────────────────────────────────────
-    public function test_asset_section_return_makes_mutation_final_and_cannot_be_resubmitted(): void
+    public function test_asset_section_return_is_prohibited_and_historical_returned_cannot_be_resubmitted(): void
     {
         $pemohon = $this->createUser('pemohon');
         $bagianAset = $this->createUser('bagian_aset');
         $asset = $this->createAsset($pemohon);
         $mutation = $this->createMutation($pemohon, $asset, 'menunggu_verifikasi_bagian_aset');
 
-        // Bagian Aset returns mutation
+        // Bagian Aset return is forbidden (HTTP 403)
         $response = $this->actingAs($bagianAset)
             ->postJson("/api/v1/mutations/{$mutation->id}/return-by-asset", [
                 'reason' => 'Fisik aset tidak sesuai spesifikasi.',
             ]);
-        $response->assertStatus(200);
+        $response->assertStatus(403);
 
-        $fresh = $mutation->fresh();
-        $this->assertEquals('dikembalikan_ke_pemohon', $fresh->status);
-        $this->assertEquals('Fisik aset tidak sesuai spesifikasi.', $fresh->return_reason);
-
-        // Resubmit route is removed -> 404
+        // Historical returned mutation remains final and resubmit route is removed -> 404
+        $historicalMutation = $this->createMutation($pemohon, $asset, 'dikembalikan_ke_pemohon');
         $resubmitResponse = $this->actingAs($pemohon)
-            ->postJson("/api/v1/mutations/{$mutation->id}/resubmit", [
+            ->postJson("/api/v1/mutations/{$historicalMutation->id}/resubmit", [
                 'reason' => 'Mencoba resubmit',
             ]);
         $resubmitResponse->assertStatus(404);

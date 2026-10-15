@@ -131,7 +131,7 @@ class MutationExplicitEndpointsTest extends TestCase
         $this->assertEquals('diajukan', $mutation->fresh()->status);
     }
 
-    public function test_bagian_aset_return_endpoint_success(): void
+    public function test_bagian_aset_return_endpoint_is_forbidden(): void
     {
         $pemohon = $this->createUser('pemohon');
         $bagianAset = $this->createUser('bagian_aset');
@@ -144,17 +144,57 @@ class MutationExplicitEndpointsTest extends TestCase
                 'reason' => 'Nomor seri aset tidak cocok dengan fisik.',
             ]);
 
+        $response->assertStatus(403)
+            ->assertJson([
+                'success' => false,
+                'message' => 'Bagian Aset tidak memiliki kewenangan untuk mengembalikan atau menolak pengajuan mutasi.',
+            ]);
+    }
+
+    public function test_bagian_aset_reject_endpoint_success(): void
+    {
+        $pemohon = $this->createUser('pemohon');
+        $bagianAset = $this->createUser('bagian_aset');
+        $kadiv = $this->createUser('pemimpin_divisi');
+        $mutation = $this->createMutation($pemohon, 'menunggu_verifikasi_bagian_aset');
+
+        $token = $bagianAset->createToken('test')->plainTextToken;
+
+        $response = $this->withHeader('Authorization', 'Bearer '.$token)
+            ->postJson("/api/v1/mutations/{$mutation->id}/reject-by-asset", [
+                'reason' => 'Aset rusak berat dan tidak layak dimutasi.',
+            ]);
+
         $response->assertStatus(200)
             ->assertJson([
                 'success' => true,
                 'data' => [
-                    'status' => 'dikembalikan_ke_pemohon',
-                    'return_reason' => 'Nomor seri aset tidak cocok dengan fisik.',
+                    'status' => 'ditolak',
+                    'rejection_reason' => 'Aset rusak berat dan tidak layak dimutasi.',
+                    'rejected_by' => $bagianAset->name,
+                    'rejected_by_id' => $bagianAset->id,
+                    'rejected_by_role' => 'bagian_aset',
+                    'asset_rejected_by' => $bagianAset->name,
+                    'kadiv_rejected_by' => null,
                 ],
             ]);
 
-        $this->assertEquals('dikembalikan_ke_pemohon', $mutation->fresh()->status);
-        $this->assertEquals('Nomor seri aset tidak cocok dengan fisik.', $mutation->fresh()->return_reason);
+        $fresh = $mutation->fresh();
+        $this->assertEquals('ditolak', $fresh->status);
+        $this->assertEquals('Aset rusak berat dan tidak layak dimutasi.', $fresh->rejection_reason);
+        $this->assertNotNull($fresh->rejected_at);
+        $this->assertEquals($bagianAset->id, $fresh->rejected_by);
+
+        // Riwayat mencatat role bagian_aset dengan action reject
+        $lastHistory = $fresh->statusHistories()->latest('id')->first();
+        $this->assertEquals('bagian_aset', $lastHistory->role);
+        $this->assertEquals('reject', $lastHistory->action);
+        $this->assertEquals('ditolak', $lastHistory->status_to);
+
+        // Pengajuan tidak boleh masuk atau diproses pada approval Kadiv (409 Conflict)
+        $kadivResponse = $this->actingAs($kadiv)
+            ->postJson("/api/v1/mutations/{$mutation->id}/approve");
+        $kadivResponse->assertStatus(409);
     }
 
     public function test_pemimpin_divisi_reject_endpoint_success(): void
@@ -178,6 +218,9 @@ class MutationExplicitEndpointsTest extends TestCase
                     'rejection_reason' => 'Aset masih dibutuhkan di unit kerja asal.',
                     'rejected_by' => $kadiv->name,
                     'rejected_by_id' => $kadiv->id,
+                    'rejected_by_role' => 'pemimpin_divisi',
+                    'asset_rejected_by' => null,
+                    'kadiv_rejected_by' => $kadiv->name,
                 ],
             ]);
 
@@ -186,6 +229,17 @@ class MutationExplicitEndpointsTest extends TestCase
         $this->assertEquals('Aset masih dibutuhkan di unit kerja asal.', $fresh->rejection_reason);
         $this->assertNotNull($fresh->rejected_at);
         $this->assertEquals($kadiv->id, $fresh->rejected_by);
+
+        // Riwayat mencatat role pemimpin_divisi dengan action reject
+        $lastHistory = $fresh->statusHistories()->latest('id')->first();
+        $this->assertEquals('pemimpin_divisi', $lastHistory->role);
+        $this->assertEquals('reject', $lastHistory->action);
+        $this->assertEquals('ditolak', $lastHistory->status_to);
+
+        // Status final tidak dapat diapprove kembali (409 Conflict)
+        $approveAgain = $this->withHeader('Authorization', 'Bearer '.$token)
+            ->postJson("/api/v1/mutations/{$mutation->id}/approve");
+        $approveAgain->assertStatus(409);
     }
 
     public function test_pemohon_report_discrepancy_endpoint_success(): void
@@ -280,10 +334,31 @@ class MutationExplicitEndpointsTest extends TestCase
             ->postJson("/api/v1/mutations/{$mutation->id}/return-by-operator", ['reason' => 'Alasan'])
             ->assertStatus(403);
 
-        // Bagian Aset tries return on selesai -> 409
+        // Bagian Aset return is forbidden (403)
         $bagianAset = $this->createUser('bagian_aset');
         $this->actingAs($bagianAset)
             ->postJson("/api/v1/mutations/{$mutation->id}/return-by-asset", ['reason' => 'Alasan'])
-            ->assertStatus(409);
+            ->assertStatus(403);
+    }
+
+    public function test_bagian_aset_cannot_return_via_verify_asset_action(): void
+    {
+        $pemohon = $this->createUser('pemohon');
+        $bagianAset = $this->createUser('bagian_aset');
+        $mutation = $this->createMutation($pemohon, 'menunggu_verifikasi_bagian_aset');
+
+        $response = $this->actingAs($bagianAset)
+            ->postJson("/api/v1/mutations/{$mutation->id}/verify-asset", [
+                'action' => 'return',
+                'reason' => 'Mencoba return lewat verify-asset',
+            ]);
+
+        $response->assertStatus(403)
+            ->assertJson([
+                'success' => false,
+                'message' => 'Bagian Aset tidak memiliki kewenangan untuk mengembalikan atau menolak pengajuan mutasi.',
+            ]);
+
+        $this->assertEquals('menunggu_verifikasi_bagian_aset', $mutation->fresh()->status);
     }
 }
