@@ -82,6 +82,7 @@ class MutationModel extends Mutation {
     required super.targetLocation,
     required super.currentPic,
     required super.targetPic,
+    super.targetPicId,
     required super.reason,
     super.documentName,
     super.documentPath,
@@ -97,6 +98,7 @@ class MutationModel extends Mutation {
     super.assetVerifiedAt,
     super.assetVerifiedBy,
     super.assetReturnReason,
+    super.assetRejectedBy,
     super.approvedAt,
     super.approvedBy,
     super.rejectedAt,
@@ -127,6 +129,7 @@ class MutationModel extends Mutation {
       targetLocation: mutation.targetLocation,
       currentPic: mutation.currentPic,
       targetPic: mutation.targetPic,
+      targetPicId: mutation.targetPicId,
       reason: mutation.reason,
       documentName: mutation.documentName,
       documentPath: mutation.documentPath,
@@ -142,6 +145,7 @@ class MutationModel extends Mutation {
       assetVerifiedAt: mutation.assetVerifiedAt,
       assetVerifiedBy: mutation.assetVerifiedBy,
       assetReturnReason: mutation.assetReturnReason,
+      assetRejectedBy: mutation.assetRejectedBy,
       approvedAt: mutation.approvedAt,
       approvedBy: mutation.approvedBy,
       rejectedAt: mutation.rejectedAt,
@@ -214,6 +218,11 @@ class MutationModel extends Mutation {
         (json['target_pic'] is String ? json['target_pic'] as String : null) ??
         json['targetPic']?.toString() ??
         '-';
+    final targetPicId = json['target_pic_id']?.toString() ??
+        (json['target_pic'] is Map
+            ? json['target_pic']['id']?.toString()
+            : null) ??
+        json['targetPicId']?.toString();
 
     // 4. Ekstraksi nested Asset
     Asset? assetEntity;
@@ -274,7 +283,9 @@ class MutationModel extends Mutation {
         acquisitionYear: acqYear,
         estimatedValue: estValue,
         hasActiveMutation:
-            json['status'] != 'selesai' && json['status'] != 'ditolak',
+            json['status'] != 'selesai' &&
+            json['status'] != 'ditolak' &&
+            json['status'] != 'dikembalikan_ke_pemohon',
         activeMutationTicket: json['ticket_number']?.toString(),
       );
     }
@@ -335,11 +346,17 @@ class MutationModel extends Mutation {
       json['asset_verified_at'] ?? json['assetVerifiedAt'],
     );
     final assetVerifiedBy = _parsePersonName(
-      json['asset_verified_by'] ?? json['assetVerifiedBy'],
+      json['asset_verified_by'] ??
+          json['assetVerifiedBy'] ??
+          json['asset_returned_by'] ??
+          json['assetReturnedBy'],
     );
     final assetReturnReason =
         json['asset_return_reason']?.toString() ??
         json['assetReturnReason']?.toString();
+    final assetRejectedBy = _parsePersonName(
+      json['asset_rejected_by'] ?? json['assetRejectedBy'],
+    );
 
     final approvedAt = _parseDateTime(
       json['approved_at'] ?? json['approvedAt'],
@@ -411,6 +428,7 @@ class MutationModel extends Mutation {
       targetLocation: targetLocation,
       currentPic: currentPic,
       targetPic: targetPic,
+      targetPicId: targetPicId,
       reason: json['reason']?.toString() ?? '',
       documentName: docName,
       documentPath: docPath,
@@ -425,6 +443,7 @@ class MutationModel extends Mutation {
       assetVerifiedAt: assetVerifiedAt,
       assetVerifiedBy: assetVerifiedBy,
       assetReturnReason: assetReturnReason,
+      assetRejectedBy: assetRejectedBy,
       approvedAt: approvedAt,
       approvedBy: approvedBy,
       rejectedAt: rejectedAt,

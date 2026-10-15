@@ -70,15 +70,6 @@ abstract class MutationRepository {
   /// yang di-generate oleh repository/server.
   Future<Result<Mutation>> submitMutation(SubmitMutationParams params);
 
-  /// Perbarui pengajuan mutasi yang dikembalikan ke Pemohon.
-  Future<Result<Mutation>> updateMutation({
-    required String mutationId,
-    required String targetLocation,
-    required String targetPic,
-    required String reason,
-    String? documentName,
-  });
-
   /// Ambil daftar mutasi milik user tertentu.
   Future<Result<List<Mutation>>> getMutationsByUser(String userId);
 
@@ -96,6 +87,7 @@ abstract class MutationRepository {
   Future<Result<Mutation>> operatorForward({
     required String mutationId,
     required String operatorName,
+    String? notes,
   });
 
   /// Pemeriksaan kelengkapan oleh Operator: Kembalikan ke Pemohon dengan alasan (PRD V1.1 §6.3).
@@ -111,10 +103,19 @@ abstract class MutationRepository {
     required String mutationId,
     required String verifierName,
     String? newPic,
+    String? notes,
   });
 
   /// Verifikasi data aset oleh Bagian Aset: Kembalikan ke Pemohon dengan alasan (PRD V1.1 §6.4).
   Future<Result<Mutation>> assetSectionReturn({
+    required String mutationId,
+    required String reason,
+    required String verifierName,
+  });
+
+  /// Verifikasi data aset oleh Bagian Aset: Tolak pengajuan dengan alasan.
+  /// Status pengajuan menjadi ditolak (MutationStatus.rejected).
+  Future<Result<Mutation>> assetSectionReject({
     required String mutationId,
     required String reason,
     required String verifierName,
@@ -156,6 +157,7 @@ abstract class MutationRepository {
     required String mutationId,
     required String operatorName,
     bool requiresKadivApproval = false,
+    String? notes,
   });
 
   /// Kembalikan pengajuan mutasi ke Pemohon (Legacy).

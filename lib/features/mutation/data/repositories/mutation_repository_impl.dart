@@ -595,7 +595,8 @@ class MutationRepositoryImpl implements MutationRepository {
           (m.asset.assetCode.isNotEmpty && m.asset.assetCode == rawAssetId);
       return matchesAsset &&
           m.status != MutationStatus.completed &&
-          m.status != MutationStatus.rejected;
+          m.status != MutationStatus.rejected &&
+          m.status != MutationStatus.returned;
     });
 
     if (hasActiveMutation) {
@@ -687,157 +688,6 @@ class MutationRepositoryImpl implements MutationRepository {
 
     _mutations.add(mutation);
     return Result.success(mutation);
-  }
-
-  @override
-  Future<Result<Mutation>> updateMutation({
-    required String mutationId,
-    required String targetLocation,
-    required String targetPic,
-    required String reason,
-    String? documentName,
-  }) async {
-    if (apiClient != null) {
-      if (secureStorage != null && !apiClient!.hasAuthToken) {
-        final token = await secureStorage!.getAuthToken();
-        if (token != null && token.isNotEmpty) {
-          apiClient!.setAuthToken(token);
-        }
-      }
-
-      final cleanMutationId = mutationId.replaceAll('mut_', '');
-
-      // Resolve destination_location_id jika memungkinkan
-      int? destLocationId;
-      try {
-        final locsRes = await apiClient!.get('/api/v1/locations');
-        if (locsRes case Success(:final data)) {
-          final list = data['data'] as List<dynamic>?;
-          if (list != null && list.isNotEmpty) {
-            final matched = list.firstWhere((item) {
-              final name = item['name']?.toString() ?? '';
-              return targetLocation.toLowerCase().startsWith(name.toLowerCase()) ||
-                  name.toLowerCase().startsWith(targetLocation.toLowerCase());
-            }, orElse: () => list.first);
-            destLocationId = int.tryParse(matched['id']?.toString() ?? '1');
-          }
-        }
-      } catch (_) {}
-      destLocationId ??= 1;
-
-      final response = await apiClient!.post(
-        '/api/v1/mutations/$cleanMutationId/resubmit',
-        body: {
-          'destination_location_id': destLocationId,
-          'reason': reason,
-        },
-      );
-
-      switch (response) {
-        case Success(:final data):
-          final success = data['success'] as bool? ?? true;
-          if (!success) {
-            return Result.failure(
-              ServerFailure(
-                message:
-                    data['message'] as String? ??
-                    'Gagal mengajukan ulang mutasi ke server.',
-              ),
-            );
-          }
-          final mutationMap = data['data'] as Map<String, dynamic>?;
-          if (mutationMap == null) {
-            return const Result.failure(
-              ServerFailure(message: 'Data response mutasi tidak valid.'),
-            );
-          }
-          try {
-            final updated = MutationModel.fromJson(mutationMap);
-            final index = _mutations.indexWhere((m) => m.id == mutationId);
-            if (index != -1) {
-              _mutations[index] = updated;
-            } else {
-              _mutations.insert(0, updated);
-            }
-            return Result.success(updated);
-          } catch (e) {
-            return Result.failure(
-              ServerFailure(message: 'Format data mutasi tidak valid: $e'),
-            );
-          }
-        case AppFailure(:final failure):
-          return Result.failure(failure);
-      }
-    }
-
-    await Future.delayed(const Duration(milliseconds: 300));
-
-    final index = _mutations.indexWhere((m) => m.id == mutationId);
-
-    if (index == -1) {
-      return const Result.failure(
-        NotFoundFailure(message: 'Pengajuan mutasi tidak ditemukan.'),
-      );
-    }
-
-    final current = _mutations[index];
-
-    if (current.status != MutationStatus.returned) {
-      return const Result.failure(
-        ConflictFailure(
-          message: 'Pengajuan ini tidak dapat diedit karena bukan berstatus "Dikembalikan ke Pemohon".',
-        ),
-      );
-    }
-
-    if (targetLocation.trim().isEmpty) {
-      return const Result.failure(
-        ValidationFailure(message: 'Lokasi tujuan wajib dipilih.'),
-      );
-    }
-
-    final effectiveTargetPic = current.isAssetMovingWithApplicant
-        ? (targetPic.trim().isNotEmpty
-              ? targetPic.trim()
-              : (current.targetPic.trim().isNotEmpty
-                    ? current.targetPic.trim()
-                    : current.applicantName))
-        : (targetPic.trim().isNotEmpty ? targetPic.trim() : current.targetPic);
-
-    if (current.isAssetMovingWithApplicant &&
-        effectiveTargetPic.trim().isEmpty) {
-      return const Result.failure(
-        ValidationFailure(message: 'Penanggung jawab baru wajib dipilih.'),
-      );
-    }
-
-    if (reason.trim().isEmpty) {
-      return const Result.failure(
-        ValidationFailure(message: 'Alasan mutasi wajib diisi.'),
-      );
-    }
-
-    // Jalur alur bisnis pengembalian:
-    // - Jika dikembalikan oleh Bagian Aset -> langsung kembali ke antrean Bagian Aset.
-    // - Jika dikembalikan oleh Operator -> kembali ke pemeriksaan Operator (submitted).
-    final isFromAssetSection = (current.assetReturnReason != null &&
-            current.assetReturnReason!.trim().isNotEmpty) ||
-        (current.rejectedBy != null && current.rejectedBy!.trim().isNotEmpty);
-    final nextStatus = isFromAssetSection
-        ? MutationStatus.waitingAssetVerification
-        : MutationStatus.submitted;
-
-    final updated = current.copyWith(
-      targetLocation: targetLocation,
-      targetPic: effectiveTargetPic,
-      reason: reason,
-      documentName: documentName,
-      status: nextStatus,
-    );
-
-    _mutations[index] = updated;
-
-    return Result.success(updated);
   }
 
   @override
@@ -996,12 +846,17 @@ class MutationRepositoryImpl implements MutationRepository {
     required String mutationId,
     required String operatorName,
     bool? requiresKadivApproval,
+    String? notes,
   }) async {
     if (apiClient != null) {
       final cleanMutationId = mutationId.replaceAll('mut_', '');
+      final body = <String, dynamic>{'action': 'verify'};
+      if (notes != null && notes.trim().isNotEmpty) {
+        body['reason'] = notes.trim();
+      }
       final response = await apiClient!.post(
         '/api/v1/mutations/$cleanMutationId/verify',
-        body: {'action': 'verify'},
+        body: body,
       );
 
       switch (response) {
@@ -1135,6 +990,18 @@ class MutationRepositoryImpl implements MutationRepository {
     );
 
     _mutations[index] = updated;
+
+    // Buka lock pada master aset karena status returned adalah status final
+    if (current.assetId != null && current.assetId!.isNotEmpty) {
+      final assetRes = await assetRepository.getAssetById(current.assetId!);
+      if (assetRes is Success<Asset>) {
+        final a = assetRes.data;
+        await assetRepository.updateAsset(
+          a.copyWith(hasActiveMutation: false, status: AssetStatus.available),
+        );
+      }
+    }
+
     return Result.success(updated);
   }
 
@@ -1143,10 +1010,14 @@ class MutationRepositoryImpl implements MutationRepository {
     required String mutationId,
     required String verifierName,
     String? newPic,
+    String? notes,
   }) async {
     if (apiClient != null) {
       final cleanMutationId = mutationId.replaceAll('mut_', '');
       final body = <String, dynamic>{'action': 'verify'};
+      if (notes != null && notes.trim().isNotEmpty) {
+        body['reason'] = notes.trim();
+      }
 
       // 1. Resolve target_pic_id ke integer database yang valid
       int? targetPicId = int.tryParse(newPic ?? '');
@@ -1263,11 +1134,28 @@ class MutationRepositoryImpl implements MutationRepository {
     required String reason,
     required String verifierName,
   }) async {
+    return const Result.failure(
+      ForbiddenFailure(
+        message:
+            'Bagian Aset tidak memiliki kewenangan untuk mengembalikan atau menolak pengajuan mutasi.',
+      ),
+    );
+  }
+
+  @override
+  Future<Result<Mutation>> assetSectionReject({
+    required String mutationId,
+    required String reason,
+    required String verifierName,
+  }) async {
     if (apiClient != null) {
       final cleanMutationId = mutationId.replaceAll('mut_', '');
       final response = await apiClient!.post(
         '/api/v1/mutations/$cleanMutationId/verify-asset',
-        body: {'action': 'return', 'reason': reason},
+        body: {
+          'action': 'reject',
+          'reason': reason.trim(),
+        },
       );
 
       switch (response) {
@@ -1278,7 +1166,7 @@ class MutationRepositoryImpl implements MutationRepository {
               ServerFailure(
                 message:
                     data['message'] as String? ??
-                    'Gagal mengembalikan pengajuan mutasi.',
+                    'Gagal menolak pengajuan mutasi.',
               ),
             );
           }
@@ -1286,7 +1174,7 @@ class MutationRepositoryImpl implements MutationRepository {
           if (mutationMap == null) {
             return const Result.failure(
               ServerFailure(
-                message: 'Data response pengembalian Bagian Aset tidak valid.',
+                message: 'Data response penolakan Bagian Aset tidak valid.',
               ),
             );
           }
@@ -1311,12 +1199,6 @@ class MutationRepositoryImpl implements MutationRepository {
 
     await Future.delayed(const Duration(milliseconds: 300));
 
-    if (reason.trim().isEmpty) {
-      return const Result.failure(
-        ValidationFailure(message: 'Alasan pengembalian wajib diisi.'),
-      );
-    }
-
     final index = _mutations.indexWhere((m) => m.id == mutationId);
     if (index == -1) {
       return const Result.failure(
@@ -1324,13 +1206,16 @@ class MutationRepositoryImpl implements MutationRepository {
       );
     }
 
+    if (reason.trim().isEmpty) {
+      return const Result.failure(
+        ValidationFailure(message: 'Alasan penolakan wajib diisi.'),
+      );
+    }
+
     final current = _mutations[index];
     final updated = current.copyWith(
-      status: MutationStatus.returned,
-      assetReturnReason: reason,
-      returnReason: reason,
-      assetVerifiedAt: DateTime.now(),
-      assetVerifiedBy: verifierName,
+      status: MutationStatus.rejected,
+      rejectionReason: reason.trim(),
       rejectedAt: DateTime.now(),
       rejectedBy: verifierName,
     );
@@ -1721,11 +1606,13 @@ class MutationRepositoryImpl implements MutationRepository {
     required String mutationId,
     required String operatorName,
     bool requiresKadivApproval = false,
+    String? notes,
   }) async {
     return operatorForward(
       mutationId: mutationId,
       operatorName: operatorName,
       requiresKadivApproval: requiresKadivApproval,
+      notes: notes,
     );
   }
 

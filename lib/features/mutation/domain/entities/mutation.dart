@@ -89,6 +89,9 @@ class Mutation {
   /// PIC / Penanggung jawab baru yang diajukan
   final String targetPic;
 
+  /// ID PIC / Penanggung jawab baru jika sudah ditentukan (target_pic_id dari database)
+  final String? targetPicId;
+
   /// Alasan / Justifikasi mutasi
   final String reason;
 
@@ -173,6 +176,9 @@ class Mutation {
   /// Alasan pengembalian oleh Bagian Aset jika data tidak valid
   final String? assetReturnReason;
 
+  /// Nama petugas Bagian Aset yang menolak pengajuan
+  final String? assetRejectedBy;
+
   const Mutation({
     required this.id,
     required this.ticketNumber,
@@ -187,6 +193,7 @@ class Mutation {
     required this.targetLocation,
     required this.currentPic,
     required this.targetPic,
+    this.targetPicId,
     required this.reason,
     this.documentName,
     this.documentPath,
@@ -202,6 +209,7 @@ class Mutation {
     this.assetVerifiedAt,
     this.assetVerifiedBy,
     this.assetReturnReason,
+    this.assetRejectedBy,
     this.approvedAt,
     this.approvedBy,
     this.rejectedAt,
@@ -233,6 +241,7 @@ class Mutation {
     String? targetLocation,
     String? currentPic,
     String? targetPic,
+    String? targetPicId,
     String? reason,
     String? documentName,
     String? documentPath,
@@ -248,6 +257,7 @@ class Mutation {
     DateTime? assetVerifiedAt,
     String? assetVerifiedBy,
     String? assetReturnReason,
+    String? assetRejectedBy,
     DateTime? approvedAt,
     String? approvedBy,
     DateTime? rejectedAt,
@@ -275,6 +285,7 @@ class Mutation {
       targetLocation: targetLocation ?? this.targetLocation,
       currentPic: currentPic ?? this.currentPic,
       targetPic: targetPic ?? this.targetPic,
+      targetPicId: targetPicId ?? this.targetPicId,
       reason: reason ?? this.reason,
       documentName: documentName ?? this.documentName,
       documentPath: documentPath ?? this.documentPath,
@@ -292,6 +303,7 @@ class Mutation {
       assetVerifiedAt: assetVerifiedAt ?? this.assetVerifiedAt,
       assetVerifiedBy: assetVerifiedBy ?? this.assetVerifiedBy,
       assetReturnReason: assetReturnReason ?? this.assetReturnReason,
+      assetRejectedBy: assetRejectedBy ?? this.assetRejectedBy,
       approvedAt: approvedAt ?? this.approvedAt,
       approvedBy: approvedBy ?? this.approvedBy,
       rejectedAt: rejectedAt ?? this.rejectedAt,
@@ -305,6 +317,51 @@ class Mutation {
       staffUpdatedBy: staffUpdatedBy ?? this.staffUpdatedBy,
       createdAt: createdAt ?? this.createdAt,
     );
+  }
+
+  /// Menandai apakah pengajuan ditolak di tahap Kadiv.
+  bool get isKadivRejected =>
+      status == MutationStatus.rejected &&
+      assetRejectedBy == null &&
+      (kadivRejectedBy != null ||
+          kadivRejectionReason != null ||
+          kadivApprovedBy != null);
+
+  /// Menandai apakah pengajuan ditolak di tahap Bagian Aset.
+  bool get isAssetRejected =>
+      status == MutationStatus.rejected && !isKadivRejected;
+
+  /// Apakah pengajuan mutasi memiliki PIC tujuan yang valid.
+  /// Sesuai aturan bisnis:
+  /// 1. Jika aset dibawa oleh Pemohon, PIC valid secara otomatis (yaitu Pemohon).
+  /// 2. Jika aset TIDAK dibawa Pemohon, PIC valid HANYA jika targetPicId valid
+  ///    atau targetPic memiliki nama yang bukan placeholder default ('-', 'Belum Ditentukan', dsb).
+  bool get hasValidTargetPic {
+    if (isAssetMovingWithApplicant) {
+      return true;
+    }
+    final cleanId = targetPicId?.trim();
+    final hasValidId = cleanId != null &&
+        cleanId.isNotEmpty &&
+        cleanId != '-' &&
+        cleanId != '0' &&
+        cleanId != 'null';
+
+    final cleanName = targetPic.trim();
+    final hasValidName = cleanName.isNotEmpty &&
+        cleanName != '-' &&
+        cleanName.toLowerCase() != 'belum ditentukan' &&
+        cleanName.toLowerCase() != 'belum ada' &&
+        cleanName.toLowerCase() != 'null';
+
+    return hasValidId || hasValidName;
+  }
+
+  /// Apakah mutasi ini membutuhkan pemilihan PIC baru oleh Bagian Aset.
+  /// Aturan bisnis: jika aset tidak dibawa Pemohon dan PIC tujuan belum valid.
+  bool get needsNewPic {
+    if (isAssetMovingWithApplicant) return false;
+    return !hasValidTargetPic;
   }
 
   @override

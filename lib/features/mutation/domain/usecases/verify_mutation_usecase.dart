@@ -18,6 +18,7 @@ class VerifyMutationUseCase {
     required String mutationId,
     required String operatorName,
     bool requiresKadivApproval = false,
+    String? notes,
   }) async {
     if (mutationId.trim().isEmpty) {
       return const Result.failure(
@@ -51,6 +52,7 @@ class VerifyMutationUseCase {
       mutationId: mutationId,
       operatorName: operatorName,
       requiresKadivApproval: requiresKadivApproval,
+      notes: notes,
     );
   }
 }

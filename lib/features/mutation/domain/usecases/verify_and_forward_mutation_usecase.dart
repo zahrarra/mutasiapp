@@ -22,6 +22,7 @@ class VerifyAndForwardMutationUseCase {
     required String mutationId,
     required String verifierName,
     String? newPic,
+    String? notes,
   }) async {
     if (mutationId.trim().isEmpty) {
       return const Result.failure(
@@ -73,6 +74,7 @@ class VerifyAndForwardMutationUseCase {
       newPic: (newPic != null && newPic.trim().isNotEmpty)
           ? newPic.trim()
           : null,
+      notes: notes,
     );
   }
 }

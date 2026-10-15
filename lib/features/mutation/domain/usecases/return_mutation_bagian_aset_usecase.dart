@@ -21,44 +21,11 @@ class ReturnMutationBagianAsetUseCase {
     required String reason,
     required String verifierName,
   }) async {
-    if (mutationId.trim().isEmpty) {
-      return const Result.failure(
-        ValidationFailure(message: 'ID mutasi tidak valid.'),
-      );
-    }
-
-    if (reason.trim().isEmpty) {
-      return const Result.failure(
-        ValidationFailure(message: 'Alasan pengembalian wajib diisi.'),
-      );
-    }
-
-    // Pastikan mutasi ada dan berstatus waitingAssetVerification
-    final existingResult = await repository.getMutationById(mutationId);
-    if (existingResult is AppFailure<Mutation>) {
-      return Result.failure(existingResult.failure);
-    }
-
-    final mutation = existingResult.dataOrNull;
-    if (mutation == null) {
-      return const Result.failure(
-        NotFoundFailure(message: 'Pengajuan mutasi tidak ditemukan.'),
-      );
-    }
-
-    if (!mutation.status.isWaitingAssetVerification) {
-      return Result.failure(
-        ValidationFailure(
-          message:
-              'Hanya pengajuan berstatus Menunggu Verifikasi Bagian Aset yang dapat dikembalikan (Status saat ini: ${mutation.status.displayName}).',
-        ),
-      );
-    }
-
-    return repository.assetSectionReturn(
-      mutationId: mutationId,
-      reason: reason.trim(),
-      verifierName: verifierName,
+    return const Result.failure(
+      ForbiddenFailure(
+        message:
+            'Bagian Aset tidak memiliki kewenangan untuk mengembalikan atau menolak pengajuan mutasi.',
+      ),
     );
   }
 }
