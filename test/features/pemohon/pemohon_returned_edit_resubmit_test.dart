@@ -1,7 +1,8 @@
 // test/features/pemohon/pemohon_returned_edit_resubmit_test.dart
 //
-// Validation test suite for Edit + Ajukan Ulang:
-// returned → edit → ajukan ulang → submitted → muncul di Operator
+// Integration & widget test untuk alur mutasi yang dikembalikan (Terminal Returned Rule):
+// 1. Layar detail mutasi menampilkan alasan pengembalian, tidak menampilkan tombol Edit & Ajukan Ulang, dan menyediakan tombol Ajukan Mutasi Baru.
+// 2. Mutasi yang dikembalikan berstatus final dan tidak muncul di antrean verifikasi aktif Operator maupun Bagian Aset.
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -19,13 +20,13 @@ import 'package:mutasiku/features/auth/domain/repositories/auth_repository.dart'
 import 'package:mutasiku/features/auth/domain/usecases/login_usecase.dart';
 import 'package:mutasiku/features/auth/domain/usecases/logout_usecase.dart';
 import 'package:mutasiku/features/auth/presentation/providers/auth_provider.dart';
+import 'package:mutasiku/features/bagian_aset/presentation/providers/bagian_aset_verification_provider.dart';
 import 'package:mutasiku/features/mutation/domain/entities/mutation.dart';
 import 'package:mutasiku/features/mutation/domain/entities/mutation_status.dart';
 import 'package:mutasiku/features/mutation/domain/repositories/mutation_repository.dart';
 import 'package:mutasiku/features/mutation/presentation/providers/mutation_provider.dart';
 import 'package:mutasiku/features/operator/presentation/providers/operator_verification_provider.dart';
-import 'package:mutasiku/features/bagian_aset/presentation/providers/bagian_aset_verification_provider.dart';
-import 'package:mutasiku/features/pemohon/presentation/screens/pemohon_edit_mutation_screen.dart';
+import 'package:mutasiku/features/pemohon/presentation/screens/pemohon_mutation_detail_screen.dart';
 
 class _FakeAuthRepo implements AuthRepository {
   final User? user;
@@ -39,52 +40,27 @@ class _FakeAuthRepo implements AuthRepository {
   }) async => Result.success(user!);
   @override
   Future<void> logout() async {}
-    @override
+  @override
   Future<Result<User>> changePassword({
     required String currentPassword,
     required String newPassword,
     required String confirmPassword,
-  }) async {
-    if (newPassword.length < 8) {
-      return Result.failure(
-        const ValidationFailure(message: 'Password baru minimal 8 karakter.'),
-      );
-    }
-    if (newPassword != confirmPassword) {
-      return Result.failure(
-        const ValidationFailure(message: 'Konfirmasi password baru tidak cocok.'),
-      );
-    }
-    if (newPassword == currentPassword) {
-      return Result.failure(
-        const ValidationFailure(
-          message: 'Password baru harus berbeda dengan password lama.',
-        ),
-      );
-    }
-    if (user != null) {
-      return Result.success(user!.copyWith(mustChangePassword: false));
-    }
-    return Result.failure(
-      const UnauthorizedFailure(message: 'Pengguna tidak ditemukan.'),
-    );
-  }
+  }) async => Result.success(user!);
 }
 
 class _FakeAuthNotifier extends AuthNotifier {
   _FakeAuthNotifier(User user)
-    : super(
-        loginUseCase: LoginUseCase(repository: _FakeAuthRepo(user)),
-        logoutUseCase: LogoutUseCase(repository: _FakeAuthRepo(user)),
-        authRepository: _FakeAuthRepo(user),
-      ) {
+      : super(
+          loginUseCase: LoginUseCase(repository: _FakeAuthRepo(user)),
+          logoutUseCase: LogoutUseCase(repository: _FakeAuthRepo(user)),
+          authRepository: _FakeAuthRepo(user),
+        ) {
     state = AuthState(isLoading: false, user: user);
   }
 }
 
 class _MockMutationRepository implements MutationRepository {
   final Map<String, Mutation> _mutations = {};
-  bool shouldFailUpdate = false;
 
   void addMutation(Mutation m) {
     _mutations[m.id] = m;
@@ -104,54 +80,9 @@ class _MockMutationRepository implements MutationRepository {
 
   @override
   Future<Result<List<Mutation>>> getMutationsByUser(String userId) async {
-    final userList = _mutations.values
-        .where((m) => m.applicantId == userId)
-        .toList();
+    final userList =
+        _mutations.values.where((m) => m.applicantId == userId).toList();
     return Result.success(userList);
-  }
-
-  @override
-  Future<Result<Mutation>> updateMutation({
-    required String mutationId,
-    required String targetLocation,
-    required String targetPic,
-    required String reason,
-    String? documentName,
-  }) async {
-    if (shouldFailUpdate) {
-      return Result.failure(
-        const ValidationFailure(message: 'Simulasi kegagalan saat menyimpan.'),
-      );
-    }
-
-    final current = _mutations[mutationId];
-    if (current == null) {
-      return Result.failure(
-        const NotFoundFailure(message: 'Mutation not found'),
-      );
-    }
-
-    // Jalur alur bisnis pengembalian:
-    // Jika pengembalian berasal dari Bagian Aset -> kembali ke Bagian Aset
-    // Jika dari Operator -> kembali ke Operator
-    final isFromAssetSection = (current.assetReturnReason != null &&
-            current.assetReturnReason!.trim().isNotEmpty) ||
-        (current.rejectedBy != null && current.rejectedBy!.trim().isNotEmpty);
-    final nextStatus = isFromAssetSection
-        ? MutationStatus.waitingAssetVerification
-        : MutationStatus.submitted;
-
-    // Keep ticket number and mutationId unchanged. Keep returnReason as history.
-    final updated = current.copyWith(
-      targetLocation: targetLocation,
-      targetPic: targetPic,
-      reason: reason,
-      documentName: documentName,
-      status: nextStatus,
-    );
-
-    _mutations[mutationId] = updated;
-    return Result.success(updated);
   }
 
   @override
@@ -160,31 +91,23 @@ class _MockMutationRepository implements MutationRepository {
 
 void main() {
   const pemohonA = User(
-    id: 'usr_pemohon_a',
-    username: 'pemohonA',
+    id: 'user_pemohon_a',
+    username: '199001012020011001',
     name: 'Rina Pemohon A',
-    email: 'rina@mutasiku.id',
-    role: UserRole.pemohon,
-  );
-
-  const pemohonB = User(
-    id: 'usr_pemohon_b',
-    username: 'pemohonB',
-    name: 'Budi Pemohon B',
-    email: 'budi@mutasiku.id',
+    email: 'rina@mutasiku.test',
     role: UserRole.pemohon,
   );
 
   const testAsset = Asset(
-    id: 'asset_prn_01',
-    assetCode: 'PRN-2026-0001',
+    id: 'ast_printer_001',
+    assetCode: 'AST-PRN-001',
     name: 'Printer HP LaserJet',
-    category: AssetCategory(id: 'cat_elk', code: 'ELK', name: 'Elektronik'),
+    category: AssetCategory(id: 'c1', code: 'PRN', name: 'Printer'),
     location: 'Lantai 2 - Keuangan',
     pic: 'Rina Pemohon A',
-    status: AssetStatus.available,
+    status: AssetStatus.inMutation,
     condition: 'Baik',
-    acquisitionYear: 2024,
+    acquisitionYear: 2023,
   );
 
   Mutation createReturnedMutation({
@@ -214,66 +137,11 @@ void main() {
     );
   }
 
-  group('Edit + Ajukan Ulang Workflow Tests', () {
+  group('Terminal Returned Mutation Tests', () {
     testWidgets(
-      '1. Pemohon hanya bisa edit mutation miliknya sendiri (Akses Ditolak untuk user lain)',
+      '1. Detail pengajuan returned menampilkan alasan pengembalian, status badge, tombol edit & resubmit TIDAK ada, tombol Ajukan Mutasi Baru tersedia',
       (tester) async {
         final repo = _MockMutationRepository();
-        // Mutation belongs to Pemohon A
-        final mutationA = createReturnedMutation(
-          applicantId: pemohonA.id,
-          applicantName: pemohonA.name,
-        );
-        repo.addMutation(mutationA);
-
-        // Logged in as Pemohon B
-        final container = ProviderContainer(
-          overrides: [
-            authStateProvider.overrideWith(
-              (ref) => _FakeAuthNotifier(pemohonB),
-            ),
-            mutationRepositoryProvider.overrideWithValue(repo),
-            apiMutationRepositoryProvider.overrideWithValue(repo),
-          ],
-        );
-        addTearDown(container.dispose);
-
-        final router = GoRouter(
-          initialLocation: '/pemohon/mutasi/${mutationA.id}/edit',
-          routes: [
-            GoRoute(
-              path: RouteNames.pemohonMutasiEditPath,
-              builder: (context, state) =>
-                  PemohonEditMutationScreen(mutationId: mutationA.id),
-            ),
-          ],
-        );
-
-        await tester.pumpWidget(
-          UncontrolledProviderScope(
-            container: container,
-            child: MaterialApp.router(routerConfig: router),
-          ),
-        );
-        await tester.pumpAndSettle();
-
-        // Access Denied view is displayed
-        expect(find.text('Akses Ditolak'), findsOneWidget);
-        expect(
-          find.text(
-            'Anda hanya dapat mengedit pengajuan mutasi milik Anda sendiri.',
-          ),
-          findsOneWidget,
-        );
-        expect(find.byKey(const Key('btn_ajukan_ulang')), findsNothing);
-      },
-    );
-
-    testWidgets(
-      '2. Pemohon can edit own mutation, operator returnReason is shown, resubmit changes status to submitted and appears in Operator queue',
-      (tester) async {
-        final repo = _MockMutationRepository();
-        // Mutation belongs to Pemohon A
         final mutationA = createReturnedMutation(
           applicantId: pemohonA.id,
           applicantName: pemohonA.name,
@@ -292,17 +160,17 @@ void main() {
         addTearDown(container.dispose);
 
         final router = GoRouter(
-          initialLocation: '/pemohon/mutasi/${mutationA.id}/edit',
+          initialLocation: '/pemohon/mutasi/${mutationA.id}',
           routes: [
             GoRoute(
-              path: RouteNames.pemohonMutasiEditPath,
+              path: RouteNames.pemohonMutasiCreatePath,
               builder: (context, state) =>
-                  PemohonEditMutationScreen(mutationId: mutationA.id),
+                  const Scaffold(body: Text('Form Pengajuan Baru')),
             ),
             GoRoute(
               path: RouteNames.pemohonMutasiDetailPath,
               builder: (context, state) =>
-                  Scaffold(body: Text('Detail ${state.pathParameters['id']}')),
+                  PemohonMutationDetailScreen(mutationId: mutationA.id),
             ),
           ],
         );
@@ -315,8 +183,7 @@ void main() {
         );
         await tester.pumpAndSettle();
 
-        // Verify operator returnReason is clearly displayed
-        expect(find.text('Catatan dari Operator:'), findsOneWidget);
+        // 1. Alasan pengembalian ditampilkan
         expect(
           find.text(
             'Harap lengkapi surat pengantar mutasi dan ubah PIC ke supervisor terkait.',
@@ -324,261 +191,61 @@ void main() {
           findsOneWidget,
         );
 
-        // Verify initial status in repository is returned
-        expect(
-          repo._mutations[mutationA.id]!.status,
-          equals(MutationStatus.returned),
-        );
+        // 2. Tombol edit & ajukan ulang TIDAK tersedia
+        expect(find.text('Edit & Ajukan Ulang'), findsNothing);
 
-        // Edit fields
-        await tester.enterText(
-          find.byKey(const Key('input_edit_target_location')),
-          'Lantai 4 - Logistik Baru',
-        );
-        await tester.enterText(
-          find.byKey(const Key('input_edit_target_pic')),
-          'Dedi Supervisor',
-        );
-        await tester.enterText(
-          find.byKey(const Key('input_edit_reason')),
-          'Telah diperbaiki: PIC diubah ke Supervisor Dedi sesuai catatan Operator.',
-        );
+        // 3. Tombol Ajukan Mutasi Baru tersedia
+        expect(find.byKey(const Key('btn_ajukan_mutasi_baru')), findsOneWidget);
 
-        // Scroll to and press "Ajukan Ulang"
-        await tester.ensureVisible(find.byKey(const Key('btn_ajukan_ulang')));
+        // 4. Klik Ajukan Mutasi Baru mengarah ke form pengajuan
+        await tester.ensureVisible(find.byKey(const Key('btn_ajukan_mutasi_baru')));
         await tester.pumpAndSettle();
-        await tester.tap(find.byKey(const Key('btn_ajukan_ulang')));
+        await tester.tap(find.byKey(const Key('btn_ajukan_mutasi_baru')));
         await tester.pumpAndSettle();
 
-        // Verify success feedback
-        expect(
-          find.text(
-            'Pengajuan berhasil diajukan ulang ke antrean verifikasi Operator.',
-          ),
-          findsOneWidget,
+        expect(find.text('Form Pengajuan Baru'), findsOneWidget);
+      },
+    );
+
+    testWidgets(
+      '2. Mutasi yang dikembalikan berstatus final dan tidak muncul di antrean verifikasi aktif Operator maupun Bagian Aset',
+      (tester) async {
+        final repo = _MockMutationRepository();
+        final mutationA = createReturnedMutation(
+          applicantId: pemohonA.id,
+          applicantName: pemohonA.name,
         );
+        repo.addMutation(mutationA);
 
-        // Verify status in repository is now SUBMITTED
-        final updatedMutation = repo._mutations[mutationA.id]!;
-        expect(updatedMutation.status, equals(MutationStatus.submitted));
-
-        // Verify mutationId and ticketNumber did NOT change
-        expect(updatedMutation.id, equals('mut_ret_001'));
-        expect(updatedMutation.ticketNumber, equals('MUT-2026-RET001'));
-
-        // Verify returnReason history is PRESERVED
-        expect(
-          updatedMutation.returnReason,
-          equals(
-            'Harap lengkapi surat pengantar mutasi dan ubah PIC ke supervisor terkait.',
-          ),
+        final container = ProviderContainer(
+          overrides: [
+            mutationRepositoryProvider.overrideWithValue(repo),
+            apiMutationRepositoryProvider.overrideWithValue(repo),
+          ],
         );
+        addTearDown(container.dispose);
 
-        // Verify updated values
-        expect(
-          updatedMutation.targetLocation,
-          equals('Lantai 4 - Logistik Baru'),
-        );
-        expect(updatedMutation.targetPic, equals('Dedi Supervisor'));
-        expect(
-          updatedMutation.reason,
-          equals(
-            'Telah diperbaiki: PIC diubah ke Supervisor Dedi sesuai catatan Operator.',
-          ),
-        );
-
-        // Verify Operator queue now includes this mutation
+        // Operator queue hanya menampilkan mutasi berstatus submitted
         final operatorList = await container.read(
           operatorAllMutationsProvider.future,
         );
+        final operatorActiveQueue = operatorList
+            .where((m) => m.status == MutationStatus.submitted)
+            .toList();
         expect(
-          operatorList.any(
-            (m) =>
-                m.id == 'mut_ret_001' && m.status == MutationStatus.submitted,
-          ),
-          isTrue,
-        );
-      },
-    );
-
-    testWidgets(
-      '3. If resubmit fails, mutation remains returned and error is displayed',
-      (tester) async {
-        final repo = _MockMutationRepository();
-        repo.shouldFailUpdate = true; // Server error simulation
-
-        final mutationA = createReturnedMutation(
-          applicantId: pemohonA.id,
-          applicantName: pemohonA.name,
-        );
-        repo.addMutation(mutationA);
-
-        final container = ProviderContainer(
-          overrides: [
-            authStateProvider.overrideWith(
-              (ref) => _FakeAuthNotifier(pemohonA),
-            ),
-            mutationRepositoryProvider.overrideWithValue(repo),
-            apiMutationRepositoryProvider.overrideWithValue(repo),
-          ],
-        );
-        addTearDown(container.dispose);
-
-        final router = GoRouter(
-          initialLocation: '/pemohon/mutasi/${mutationA.id}/edit',
-          routes: [
-            GoRoute(
-              path: RouteNames.pemohonMutasiEditPath,
-              builder: (context, state) =>
-                  PemohonEditMutationScreen(mutationId: mutationA.id),
-            ),
-          ],
+          operatorActiveQueue.any((m) => m.id == mutationA.id),
+          isFalse,
         );
 
-        await tester.pumpWidget(
-          UncontrolledProviderScope(
-            container: container,
-            child: MaterialApp.router(routerConfig: router),
-          ),
-        );
-        await tester.pumpAndSettle();
-
-        // 1. Requirement 2: jika belum diedit, tampilkan notifikasi warning dan blokir kirim ulang
-        await tester.ensureVisible(find.byKey(const Key('btn_ajukan_ulang')));
-        await tester.pumpAndSettle();
-        await tester.tap(find.byKey(const Key('btn_ajukan_ulang')));
-        await tester.pumpAndSettle();
-        expect(
-          find.text(
-            'Pengajuan harus diperbaiki/diedit terlebih dahulu sebelum dikirim ulang.',
-          ),
-          findsOneWidget,
-        );
-
-        // 2. Lakukan edit field agar lolos validasi perbaikan
-        await tester.enterText(
-          find.byKey(const Key('input_edit_target_location')),
-          'Lantai 5 - Revisi Setelah Pengembalian',
-        );
-        await tester.pumpAndSettle();
-
-        // Scroll and tap "Ajukan Ulang"
-        await tester.tap(find.byKey(const Key('btn_ajukan_ulang')));
-        await tester.pumpAndSettle();
-
-        // Error feedback is displayed
-        expect(find.text('Simulasi kegagalan saat menyimpan.'), findsOneWidget);
-
-        // Status in repository MUST remain returned
-        expect(
-          repo._mutations[mutationA.id]!.status,
-          equals(MutationStatus.returned),
-        );
-      },
-    );
-
-    testWidgets(
-      '4. Bagian Aset returns mutation -> Pemohon edits and resubmits -> status waitingAssetVerification, appears in Bagian Aset queue, and not Operator queue',
-      (tester) async {
-        final repo = _MockMutationRepository();
-        // Mutation returned by Bagian Aset
-        final mutationA = createReturnedMutation(
-          applicantId: pemohonA.id,
-          applicantName: pemohonA.name,
-          returnReason: 'Spesifikasi aset tidak sesuai dengan dokumen permohonan.',
-          assetReturnReason: 'Spesifikasi aset tidak sesuai dengan dokumen permohonan.',
-          rejectedBy: 'Akam Petugas Aset',
-        );
-        repo.addMutation(mutationA);
-
-        final container = ProviderContainer(
-          overrides: [
-            authStateProvider.overrideWith(
-              (ref) => _FakeAuthNotifier(pemohonA),
-            ),
-            mutationRepositoryProvider.overrideWithValue(repo),
-            apiMutationRepositoryProvider.overrideWithValue(repo),
-          ],
-        );
-        addTearDown(container.dispose);
-
-        final router = GoRouter(
-          initialLocation: '/pemohon/mutasi/${mutationA.id}/edit',
-          routes: [
-            GoRoute(
-              path: RouteNames.pemohonMutasiEditPath,
-              builder: (context, state) =>
-                  PemohonEditMutationScreen(mutationId: mutationA.id),
-            ),
-            GoRoute(
-              path: RouteNames.pemohonMutasiDetailPath,
-              builder: (context, state) =>
-                  Scaffold(body: Text('Detail ${state.pathParameters['id']}')),
-            ),
-          ],
-        );
-
-        await tester.pumpWidget(
-          UncontrolledProviderScope(
-            container: container,
-            child: MaterialApp.router(routerConfig: router),
-          ),
-        );
-        await tester.pumpAndSettle();
-
-        // Edit fields
-        await tester.enterText(
-          find.byKey(const Key('input_edit_target_location')),
-          'Lantai 3 - Server Room',
-        );
-        await tester.enterText(
-          find.byKey(const Key('input_edit_reason')),
-          'Telah disesuaikan spesifikasi lokasi sesuai catatan Bagian Aset.',
-        );
-
-        // Scroll to and press "Ajukan Ulang"
-        await tester.ensureVisible(find.byKey(const Key('btn_ajukan_ulang')));
-        await tester.pumpAndSettle();
-        await tester.tap(find.byKey(const Key('btn_ajukan_ulang')));
-        await tester.pumpAndSettle();
-
-        // Verify success feedback mentions Bagian Aset
-        expect(
-          find.text(
-            'Pengajuan berhasil diajukan ulang ke antrean verifikasi Bagian Aset.',
-          ),
-          findsOneWidget,
-        );
-
-        // Verify status in repository is now WAITING ASSET VERIFICATION
-        final updatedMutation = repo._mutations[mutationA.id]!;
-        expect(
-          updatedMutation.status,
-          equals(MutationStatus.waitingAssetVerification),
-        );
-
-        // Verify Bagian Aset queue includes this mutation
+        // Bagian Aset queue hanya menampilkan mutasi berstatus waitingAssetVerification
         final assetList = await container.read(
           bagianAsetAllMutationsProvider.future,
         );
+        final assetActiveQueue = assetList
+            .where((m) => m.status == MutationStatus.waitingAssetVerification)
+            .toList();
         expect(
-          assetList.any(
-            (m) =>
-                m.id == 'mut_ret_001' &&
-                m.status == MutationStatus.waitingAssetVerification,
-          ),
-          isTrue,
-        );
-
-        // Verify Operator queue does NOT include it as submitted
-        final operatorList = await container.read(
-          operatorAllMutationsProvider.future,
-        );
-        expect(
-          operatorList.any(
-            (m) =>
-                m.id == 'mut_ret_001' && m.status == MutationStatus.submitted,
-          ),
+          assetActiveQueue.any((m) => m.id == mutationA.id),
           isFalse,
         );
       },
