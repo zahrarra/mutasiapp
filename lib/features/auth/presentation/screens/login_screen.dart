@@ -1105,9 +1105,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
             vertical: 14,
           ),
         ),
-        validator: (v) => (v == null || v.trim().isEmpty)
-            ? 'Kata sandi wajib diisi'
-            : null,
+        validator: (v) =>
+            (v == null || v.trim().isEmpty) ? 'Kata sandi wajib diisi' : null,
       ),
     );
   }
@@ -1353,7 +1352,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
         ),
         const SizedBox(height: 4),
         Text(
-          'MutasiKu v2.4.0 • Divisi Operasional TI',
+          'MutasiKu v1.1.0 • Divisi Umum & Aset',
           style: GoogleFonts.plusJakartaSans(
             fontSize: 10,
             color: _LoginTheme.textPlaceholder,
