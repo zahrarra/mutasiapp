@@ -179,6 +179,9 @@ class Mutation {
   /// Nama petugas Bagian Aset yang menolak pengajuan
   final String? assetRejectedBy;
 
+  /// Tanggal konfirmasi serah terima dilakukan oleh Pemohon
+  final DateTime? confirmedAt;
+
   const Mutation({
     required this.id,
     required this.ticketNumber,
@@ -221,6 +224,7 @@ class Mutation {
     this.kadivRejectionReason,
     this.staffUpdatedAt,
     this.staffUpdatedBy,
+    this.confirmedAt,
     required this.createdAt,
     // ignore: prefer_initializing_formals
   }) : _assetId = assetId,
@@ -269,6 +273,7 @@ class Mutation {
     String? kadivRejectionReason,
     DateTime? staffUpdatedAt,
     String? staffUpdatedBy,
+    DateTime? confirmedAt,
     DateTime? createdAt,
   }) {
     return Mutation(
@@ -315,6 +320,7 @@ class Mutation {
       kadivRejectionReason: kadivRejectionReason ?? this.kadivRejectionReason,
       staffUpdatedAt: staffUpdatedAt ?? this.staffUpdatedAt,
       staffUpdatedBy: staffUpdatedBy ?? this.staffUpdatedBy,
+      confirmedAt: confirmedAt ?? this.confirmedAt,
       createdAt: createdAt ?? this.createdAt,
     );
   }
