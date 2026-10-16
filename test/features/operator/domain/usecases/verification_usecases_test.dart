@@ -13,7 +13,6 @@ import 'package:mutasiku/features/mutation/domain/entities/mutation.dart';
 import 'package:mutasiku/features/mutation/domain/entities/mutation_status.dart';
 import 'package:mutasiku/features/mutation/domain/repositories/mutation_repository.dart';
 import 'package:mutasiku/features/mutation/domain/usecases/get_pending_verifications_usecase.dart';
-import 'package:mutasiku/features/mutation/domain/usecases/return_mutation_usecase.dart';
 import 'package:mutasiku/features/mutation/domain/usecases/verify_mutation_usecase.dart';
 
 class FakeMutationRepository implements MutationRepository {
@@ -222,69 +221,6 @@ void main() {
         );
       },
     );
-  });
-
-  group('ReturnMutationUseCase tests', () {
-    test(
-      'succeeds when mutation is submitted and reason is provided',
-      () async {
-        final fakeRepo = FakeMutationRepository([
-          createDummyMutation(id: 'mut_1', status: MutationStatus.submitted),
-        ]);
-        final useCase = ReturnMutationUseCase(repository: fakeRepo);
-
-        final result = await useCase(
-          mutationId: 'mut_1',
-          reason: 'Dokumen SK Mutasi belum lengkap.',
-          operatorName: 'Operator Joko',
-        );
-
-        expect(result.isSuccess, true);
-        final updated = result.dataOrNull!;
-        expect(updated.status, MutationStatus.returned);
-        expect(updated.returnReason, 'Dokumen SK Mutasi belum lengkap.');
-        expect(updated.verifiedBy, 'Operator Joko');
-      },
-    );
-
-    test('fails when reason is empty or whitespace (PRD Aturan 5)', () async {
-      final fakeRepo = FakeMutationRepository([
-        createDummyMutation(id: 'mut_1', status: MutationStatus.submitted),
-      ]);
-      final useCase = ReturnMutationUseCase(repository: fakeRepo);
-
-      final result = await useCase(
-        mutationId: 'mut_1',
-        reason: '    ',
-        operatorName: 'Operator Joko',
-      );
-
-      expect(result.isFailure, true);
-      expect(result.failureOrNull, isA<ValidationFailure>());
-      expect(
-        result.failureOrNull?.message,
-        contains('Alasan pengembalian wajib diisi'),
-      );
-    });
-
-    test('fails if mutation is not in submitted status', () async {
-      final fakeRepo = FakeMutationRepository([
-        createDummyMutation(
-          id: 'mut_1',
-          status: MutationStatus.waitingAssetVerification,
-        ),
-      ]);
-      final useCase = ReturnMutationUseCase(repository: fakeRepo);
-
-      final result = await useCase(
-        mutationId: 'mut_1',
-        reason: 'Alasan pengembalian valid',
-        operatorName: 'Operator Joko',
-      );
-
-      expect(result.isFailure, true);
-      expect(result.failureOrNull, isA<ValidationFailure>());
-    });
   });
 
   group('GetPendingVerificationsUseCase tests', () {

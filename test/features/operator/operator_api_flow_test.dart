@@ -557,10 +557,8 @@ void main() {
       expect(steps[2].badgeText, equals('Sedang Diverifikasi'));
     });
 
-    test('9. Operator Return Action: POST /api/v1/mutations/{id}/verify dengan action: return & reason -> status transition ke dikembalikan_ke_pemohon dan terbaca jelas oleh Pemohon', () async {
-      String? returnEndpoint;
-      Map<String, dynamic>? returnBody;
-      var currentStatus = 'diajukan';
+    test('9. Operator Return Action dilarang: Operator tidak memiliki kewenangan return dan status pengajuan tidak dapat diubah ke returned', () async {
+      const currentStatus = 'diajukan';
 
       const expectedReason = 'Dokumen SK SDM belum ditandatangani basah';
       final baseJson = {
@@ -583,21 +581,12 @@ void main() {
       final mockClient = MockClient((request) async {
         if (request.method == 'POST' &&
             request.url.path == '/api/v1/mutations/201/verify') {
-          returnEndpoint = request.url.path;
-          returnBody = jsonDecode(request.body) as Map<String, dynamic>;
-          currentStatus = 'dikembalikan_ke_pemohon';
           return http.Response(
             jsonEncode({
-              'success': true,
-              'message': 'Pengajuan mutasi berhasil dikembalikan ke Pemohon.',
-              'data': {
-                ...baseJson,
-                'status': currentStatus,
-                'return_reason': expectedReason,
-                'asset_return_reason': null,
-              },
+              'success': false,
+              'message': 'Operator tidak memiliki kewenangan untuk mengembalikan atau menolak pengajuan mutasi.',
             }),
-            200,
+            403,
             headers: {'content-type': 'application/json'},
           );
         }
@@ -609,10 +598,6 @@ void main() {
               'data': {
                 ...baseJson,
                 'status': currentStatus,
-                if (currentStatus == 'dikembalikan_ke_pemohon') ...{
-                  'return_reason': expectedReason,
-                  'asset_return_reason': null,
-                },
               },
             }),
             200,
@@ -643,41 +628,24 @@ void main() {
       );
       addTearDown(container.dispose);
 
-      // Eksekusi aksi Operator return
+      // Eksekusi aksi Operator return diblokir
       final success = await container
           .read(verificationActionProvider.notifier)
           .returnMutation(mutationId: '201', reason: expectedReason);
 
-      expect(success, isTrue);
-      expect(returnEndpoint, equals('/api/v1/mutations/201/verify'));
+      expect(success, isFalse);
       expect(
-        returnBody,
-        equals({'action': 'return', 'reason': expectedReason}),
+        container.read(verificationActionProvider).error,
+        contains('Operator tidak memiliki kewenangan untuk mengembalikan'),
       );
 
-      // Pemohon membaca detail
-      final returnedDetail = await container.read(
+      // Mutasi tetap pada status asalnya (diajukan)
+      final detail = await container.read(
         apiMutationDetailProvider('201').future,
       );
 
-      expect(returnedDetail.status, equals(MutationStatus.returned));
-      expect(returnedDetail.returnReason, equals(expectedReason));
-      expect(returnedDetail.assetReturnReason, isNull);
-
-      // Verifikasi timeline tracking
-      final steps = MutationTrackingHelper.getStepsForMutation(
-        returnedDetail.status,
-        mutation: returnedDetail,
-      );
-      expect(steps[0].isCompleted, isTrue); // Step 1: Pengajuan Selesai
-      expect(steps[1].isAlert, isTrue); // Step 2: Perlu Perbaikan (Operator)
-      expect(steps[1].title, equals('Perlu Perbaikan (Operator)'));
-      expect(steps[1].badgeText, equals('Perlu Perbaikan'));
-      expect(steps[1].subtitle, contains(expectedReason));
-      expect(
-        steps[2].isUpcoming,
-        isTrue,
-      ); // Step 3: Belum dijalankan (Upcoming)
+      expect(detail.status, equals(MutationStatus.submitted));
+      expect(detail.returnReason, isNull);
     });
   });
 }

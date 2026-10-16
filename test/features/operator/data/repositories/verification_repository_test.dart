@@ -47,25 +47,29 @@ void main() {
       expect(updated.verifiedAt, isNotNull);
     });
 
-    test('returnMutation updates status to returned with reason', () async {
-      final all = await repository.getAllMutations();
-      final target = all.dataOrNull!.firstWhere(
-        (m) => m.status == MutationStatus.submitted,
-      );
+    test(
+      'returnMutation is rejected with ForbiddenFailure as operator cannot return mutations',
+      () async {
+        final all = await repository.getAllMutations();
+        final target = all.dataOrNull!.firstWhere(
+          (m) => m.status == MutationStatus.submitted,
+        );
 
-      const returnReason = 'Data lokasi tujuan tidak valid';
-      final result = await repository.returnMutation(
-        mutationId: target.id,
-        reason: returnReason,
-        operatorName: 'Operator Test',
-      );
+        const returnReason = 'Data lokasi tujuan tidak valid';
+        final result = await repository.returnMutation(
+          mutationId: target.id,
+          reason: returnReason,
+          operatorName: 'Operator Test',
+        );
 
-      expect(result.isSuccess, true);
-      final updated = result.dataOrNull!;
-      expect(updated.status, MutationStatus.returned);
-      expect(updated.returnReason, returnReason);
-      expect(updated.verifiedBy, 'Operator Test');
-    });
+        expect(result.isFailure, true);
+        expect(result.failureOrNull, isA<ForbiddenFailure>());
+        expect(
+          result.failureOrNull?.message,
+          contains('Operator tidak memiliki kewenangan'),
+        );
+      },
+    );
 
     test(
       'verifyMutation returns NotFoundFailure for unknown mutation id',
@@ -81,7 +85,7 @@ void main() {
     );
 
     test(
-      'returnMutation returns NotFoundFailure for unknown mutation id',
+      'returnMutation returns ForbiddenFailure even for unknown mutation id',
       () async {
         final result = await repository.returnMutation(
           mutationId: 'unknown_id_9999',
@@ -90,7 +94,7 @@ void main() {
         );
 
         expect(result.isFailure, true);
-        expect(result.failureOrNull, isA<NotFoundFailure>());
+        expect(result.failureOrNull, isA<ForbiddenFailure>());
       },
     );
   });

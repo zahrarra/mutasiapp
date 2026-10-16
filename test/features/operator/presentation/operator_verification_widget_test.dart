@@ -27,7 +27,6 @@ import 'package:mutasiku/features/operator/presentation/providers/operator_verif
 import 'package:mutasiku/features/operator/presentation/screens/operator_dashboard_screen.dart';
 import 'package:mutasiku/features/operator/presentation/screens/operator_mutations_screen.dart';
 import 'package:mutasiku/features/operator/presentation/screens/operator_verification_detail_screen.dart';
-import 'package:mutasiku/features/operator/presentation/screens/operator_return_form_screen.dart';
 import 'package:mutasiku/features/pemohon/presentation/screens/pemohon_create_mutation_screen.dart';
 
 class FakeAuthRepository implements AuthRepository {
@@ -273,35 +272,6 @@ void main() {
       );
       expect(detail.status, MutationStatus.waitingAssetVerification);
       expect(detail.verifiedBy, 'Siti Operator');
-    },
-  );
-
-  testWidgets(
-    'Operator return screen displays unauthorized action notice',
-    (tester) async {
-      final testWidget = ProviderScope(
-        overrides: [
-          authStateProvider.overrideWith(
-            (ref) => FakeAuthNotifier(operatorUser),
-          ),
-          apiMutationRepositoryProvider.overrideWith(
-            (ref) => ref.watch(mutationRepositoryProvider),
-          ),
-        ],
-        child: const MaterialApp(
-          home: OperatorReturnFormScreen(mutationId: 'mut_002'),
-        ),
-      );
-
-      await tester.pumpWidget(testWidget);
-      await tester.pumpAndSettle();
-
-      // Verify blocked message
-      expect(find.text('Aksi Tidak Diizinkan'), findsOneWidget);
-      expect(
-        find.textContaining('Operator tidak memiliki kewenangan'),
-        findsOneWidget,
-      );
     },
   );
 

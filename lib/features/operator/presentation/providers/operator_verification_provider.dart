@@ -12,7 +12,6 @@ import '../../../auth/presentation/providers/auth_provider.dart';
 import '../../../mutation/domain/entities/mutation.dart';
 import '../../../mutation/domain/entities/mutation_status.dart';
 import '../../../mutation/domain/usecases/get_pending_verifications_usecase.dart';
-import '../../../mutation/domain/usecases/return_mutation_usecase.dart';
 import '../../../mutation/domain/usecases/verify_mutation_usecase.dart';
 import '../../../mutation/presentation/providers/mutation_provider.dart';
 
@@ -21,11 +20,6 @@ import '../../../mutation/presentation/providers/mutation_provider.dart';
 final verifyMutationUseCaseProvider = Provider<VerifyMutationUseCase>((ref) {
   final repo = ref.watch(apiMutationRepositoryProvider);
   return VerifyMutationUseCase(repository: repo);
-});
-
-final returnMutationUseCaseProvider = Provider<ReturnMutationUseCase>((ref) {
-  final repo = ref.watch(apiMutationRepositoryProvider);
-  return ReturnMutationUseCase(repository: repo);
 });
 
 final getPendingVerificationsUseCaseProvider =
@@ -327,12 +321,10 @@ class VerificationActionState {
 class VerificationActionNotifier
     extends StateNotifier<VerificationActionState> {
   final VerifyMutationUseCase verifyUseCase;
-  final ReturnMutationUseCase returnUseCase;
   final Ref ref;
 
   VerificationActionNotifier({
     required this.verifyUseCase,
-    required this.returnUseCase,
     required this.ref,
   }) : super(const VerificationActionState());
 
@@ -383,46 +375,15 @@ class VerificationActionNotifier
     return false;
   }
 
-  /// Eksekusi Kembalikan Pengajuan
+  /// Eksekusi Kembalikan Pengajuan sudah dilarang sesuai aturan bisnis Operator
   Future<bool> returnMutation({
     required String mutationId,
     required String reason,
   }) async {
-    final authState = ref.read(authStateProvider);
-    final operatorName = authState.user?.name ?? 'Operator';
-
-    state = state.copyWith(
-      isLoading: true,
-      clearError: true,
-      clearSuccess: true,
-    );
-
-    final result = await returnUseCase(
-      mutationId: mutationId,
-      reason: reason,
-      operatorName: operatorName,
-    );
-
-    if (result is Success<Mutation>) {
-      state = VerificationActionState(
-        isLoading: false,
-        successMessage: 'Pengajuan mutasi berhasil dikembalikan ke Pemohon.',
-        result: result.data,
-      );
-
-      invalidateAllRoleMutationProviders(ref, mutationId);
-      return true;
-    } else if (result is AppFailure<Mutation>) {
-      state = VerificationActionState(
-        isLoading: false,
-        error: result.failure.userMessage,
-      );
-      return false;
-    }
-
     state = const VerificationActionState(
       isLoading: false,
-      error: 'Terjadi kesalahan sistem saat mengembalikan pengajuan.',
+      error:
+          'Operator tidak memiliki kewenangan untuk mengembalikan atau menolak pengajuan mutasi.',
     );
     return false;
   }
@@ -437,10 +398,8 @@ final verificationActionProvider =
       ref,
     ) {
       final verifyUseCase = ref.watch(verifyMutationUseCaseProvider);
-      final returnUseCase = ref.watch(returnMutationUseCaseProvider);
       return VerificationActionNotifier(
         verifyUseCase: verifyUseCase,
-        returnUseCase: returnUseCase,
         ref: ref,
       );
     });
