@@ -30,7 +30,6 @@ import '../../features/kadiv/presentation/screens/kadiv_reject_form_screen.dart'
 import '../../features/notification/presentation/screens/notification_screen.dart';
 import '../../features/operator/presentation/screens/operator_dashboard_screen.dart';
 import '../../features/operator/presentation/screens/operator_mutations_screen.dart';
-import '../../features/operator/presentation/screens/operator_return_form_screen.dart';
 import '../../features/operator/presentation/screens/operator_verification_detail_screen.dart';
 import '../../features/pemohon/presentation/screens/pemohon_confirmation_screen.dart';
 import '../../features/pemohon/presentation/screens/pemohon_create_mutation_screen.dart';
@@ -279,14 +278,6 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         },
       ),
       GoRoute(
-        path: RouteNames.operatorReturnFormPath,
-        name: RouteNames.operatorReturnFormName,
-        builder: (context, state) {
-          final id = state.pathParameters['id'] ?? '';
-          return OperatorReturnFormScreen(mutationId: id);
-        },
-      ),
-      GoRoute(
         path: RouteNames.operatorNotificationsPath,
         name: RouteNames.operatorNotificationsName,
         builder: (context, state) => const NotificationScreen(),
@@ -309,17 +300,6 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         builder: (context, state) {
           final id = state.pathParameters['id'] ?? '';
           return BagianAsetVerificationDetailScreen(mutationId: id);
-        },
-      ),
-      GoRoute(
-        path: RouteNames.bagianAsetReturnFormPath,
-        name: RouteNames.bagianAsetReturnFormName,
-        redirect: (context, state) {
-          final id = state.pathParameters['id'] ?? '';
-          return RouteNames.bagianAsetVerificationDetailPath.replaceFirst(
-            ':id',
-            id,
-          );
         },
       ),
       GoRoute(

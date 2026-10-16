@@ -54,9 +54,6 @@ abstract final class RouteNames {
   static const String operatorVerificationDetailName =
       'operatorVerificationDetail';
 
-  static const String operatorReturnFormPath = '/operator/mutations/:id/return';
-  static const String operatorReturnFormName = 'operatorReturnForm';
-
   static const String operatorHistoryPath = '/operator/verification-history';
   static const String operatorHistoryName = 'operatorHistory';
 
@@ -75,10 +72,6 @@ abstract final class RouteNames {
       '/bagian-aset/verifications/:id';
   static const String bagianAsetVerificationDetailName =
       'bagianAsetVerificationDetail';
-
-  static const String bagianAsetReturnFormPath =
-      '/bagian-aset/verifications/:id/return';
-  static const String bagianAsetReturnFormName = 'bagianAsetReturnForm';
 
   static const String bagianAsetHistoryPath = '/bagian-aset/history';
   static const String bagianAsetHistoryName = 'bagianAsetHistory';
