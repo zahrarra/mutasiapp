@@ -13,13 +13,15 @@ import 'package:mutasiku/features/mutation/domain/entities/mutation.dart';
 import 'package:mutasiku/features/mutation/domain/entities/mutation_status.dart';
 import 'package:mutasiku/features/mutation/domain/repositories/mutation_repository.dart';
 import 'package:mutasiku/features/mutation/domain/usecases/get_pending_verifications_usecase.dart';
-import 'package:mutasiku/features/mutation/domain/usecases/return_mutation_usecase.dart';
 import 'package:mutasiku/features/mutation/domain/usecases/verify_mutation_usecase.dart';
 
 class FakeMutationRepository implements MutationRepository {
   final List<Mutation> mutations;
 
   FakeMutationRepository(this.mutations);
+
+  @override
+  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
 
   @override
   Future<Result<Mutation>> submitMutation(SubmitMutationParams params) async {
@@ -51,7 +53,9 @@ class FakeMutationRepository implements MutationRepository {
   @override
   Future<Result<Mutation>> verifyMutation({
     required String mutationId,
+    String? notes,
     required String operatorName,
+    bool requiresKadivApproval = false,
   }) async {
     final index = mutations.indexWhere((m) => m.id == mutationId);
     if (index == -1) {
@@ -60,9 +64,10 @@ class FakeMutationRepository implements MutationRepository {
       );
     }
     final updated = mutations[index].copyWith(
-      status: MutationStatus.waitingKabagApproval,
+      status: MutationStatus.waitingAssetVerification,
       verifiedBy: operatorName,
       verifiedAt: DateTime.now(),
+      requiresKadivApproval: requiresKadivApproval,
     );
     mutations[index] = updated;
     return Result.success(updated);
@@ -91,23 +96,6 @@ class FakeMutationRepository implements MutationRepository {
   }
 
   @override
-  Future<Result<Mutation>> approveMutationKabag({
-    required String mutationId,
-    required String kabagName,
-  }) async {
-    throw UnimplementedError();
-  }
-
-  @override
-  Future<Result<Mutation>> rejectMutationKabag({
-    required String mutationId,
-    required String reason,
-    required String kabagName,
-  }) async {
-    throw UnimplementedError();
-  }
-
-  @override
   Future<Result<Mutation>> approveMutationKadiv({
     required String mutationId,
     required String kadivName,
@@ -120,6 +108,14 @@ class FakeMutationRepository implements MutationRepository {
     required String mutationId,
     required String reason,
     required String kadivName,
+  }) async {
+    throw UnimplementedError();
+  }
+
+  @override
+  Future<Result<Mutation>> confirmMutation({
+    required String mutationId,
+    required String confirmedBy,
   }) async {
     throw UnimplementedError();
   }
@@ -171,7 +167,7 @@ void main() {
 
       expect(result.isSuccess, true);
       final updated = result.dataOrNull!;
-      expect(updated.status, MutationStatus.waitingKabagApproval);
+      expect(updated.status, MutationStatus.waitingAssetVerification);
       expect(updated.verifiedBy, 'Operator Joko');
       expect(updated.verifiedAt, isNotNull);
     });
@@ -202,86 +198,29 @@ void main() {
       expect(result.failureOrNull, isA<NotFoundFailure>());
     });
 
-    test('fails if mutation is not in submitted status (e.g. already returned)',
-        () async {
-      final fakeRepo = FakeMutationRepository([
-        createDummyMutation(id: 'mut_1', status: MutationStatus.returned),
-      ]);
-      final useCase = VerifyMutationUseCase(repository: fakeRepo);
+    test(
+      'fails if mutation is not in submitted status (e.g. already returned)',
+      () async {
+        final fakeRepo = FakeMutationRepository([
+          createDummyMutation(id: 'mut_1', status: MutationStatus.returned),
+        ]);
+        final useCase = VerifyMutationUseCase(repository: fakeRepo);
 
-      final result = await useCase(
-        mutationId: 'mut_1',
-        operatorName: 'Operator Joko',
-      );
+        final result = await useCase(
+          mutationId: 'mut_1',
+          operatorName: 'Operator Joko',
+        );
 
-      expect(result.isFailure, true);
-      expect(result.failureOrNull, isA<ValidationFailure>());
-      expect(
-        result.failureOrNull?.message,
-        contains('Hanya pengajuan berstatus Diajukan yang dapat diverifikasi'),
-      );
-    });
-  });
-
-  group('ReturnMutationUseCase tests', () {
-    test('succeeds when mutation is submitted and reason is provided',
-        () async {
-      final fakeRepo = FakeMutationRepository([
-        createDummyMutation(id: 'mut_1', status: MutationStatus.submitted),
-      ]);
-      final useCase = ReturnMutationUseCase(repository: fakeRepo);
-
-      final result = await useCase(
-        mutationId: 'mut_1',
-        reason: 'Dokumen SK Mutasi belum lengkap.',
-        operatorName: 'Operator Joko',
-      );
-
-      expect(result.isSuccess, true);
-      final updated = result.dataOrNull!;
-      expect(updated.status, MutationStatus.returned);
-      expect(updated.returnReason, 'Dokumen SK Mutasi belum lengkap.');
-      expect(updated.verifiedBy, 'Operator Joko');
-    });
-
-    test('fails when reason is empty or whitespace (PRD Aturan 5)', () async {
-      final fakeRepo = FakeMutationRepository([
-        createDummyMutation(id: 'mut_1', status: MutationStatus.submitted),
-      ]);
-      final useCase = ReturnMutationUseCase(repository: fakeRepo);
-
-      final result = await useCase(
-        mutationId: 'mut_1',
-        reason: '    ',
-        operatorName: 'Operator Joko',
-      );
-
-      expect(result.isFailure, true);
-      expect(result.failureOrNull, isA<ValidationFailure>());
-      expect(
-        result.failureOrNull?.message,
-        contains('Alasan pengembalian wajib diisi'),
-      );
-    });
-
-    test('fails if mutation is not in submitted status', () async {
-      final fakeRepo = FakeMutationRepository([
-        createDummyMutation(
-          id: 'mut_1',
-          status: MutationStatus.waitingKabagApproval,
-        ),
-      ]);
-      final useCase = ReturnMutationUseCase(repository: fakeRepo);
-
-      final result = await useCase(
-        mutationId: 'mut_1',
-        reason: 'Alasan pengembalian valid',
-        operatorName: 'Operator Joko',
-      );
-
-      expect(result.isFailure, true);
-      expect(result.failureOrNull, isA<ValidationFailure>());
-    });
+        expect(result.isFailure, true);
+        expect(result.failureOrNull, isA<ValidationFailure>());
+        expect(
+          result.failureOrNull?.message,
+          contains(
+            'Hanya pengajuan berstatus Diajukan yang dapat diverifikasi',
+          ),
+        );
+      },
+    );
   });
 
   group('GetPendingVerificationsUseCase tests', () {
@@ -291,7 +230,7 @@ void main() {
         createDummyMutation(id: 'mut_2', status: MutationStatus.returned),
         createDummyMutation(
           id: 'mut_3',
-          status: MutationStatus.waitingKabagApproval,
+          status: MutationStatus.waitingAssetVerification,
         ),
         createDummyMutation(id: 'mut_4', status: MutationStatus.submitted),
       ]);

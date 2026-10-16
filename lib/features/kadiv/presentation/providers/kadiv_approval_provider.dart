@@ -4,6 +4,7 @@
 // Sumber: ROLE-FLOW.md §6, SCREEN-SPEC.md KDV-001–004, TECHNICAL-DESIGN.md.
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+
 import '../../../../core/errors/result.dart';
 import '../../../auth/presentation/providers/auth_provider.dart';
 import '../../../mutation/domain/entities/mutation.dart';
@@ -12,26 +13,34 @@ import '../../../mutation/domain/usecases/approve_mutation_kadiv_usecase.dart';
 import '../../../mutation/domain/usecases/get_kadiv_approvals_usecase.dart';
 import '../../../mutation/domain/usecases/reject_mutation_kadiv_usecase.dart';
 import '../../../mutation/presentation/providers/mutation_provider.dart';
+import '../../../auth/domain/entities/user_role.dart';
+import '../../../notification/domain/entities/notification_item.dart';
+import '../../../notification/presentation/providers/notification_provider.dart';
 
 // ─── Use Case Providers ───────────────────────────────────────────────────────
 
 final approveMutationKadivUseCaseProvider =
     Provider<ApproveMutationKadivUseCase>((ref) {
-  final repo = ref.watch(mutationRepositoryProvider);
-  return ApproveMutationKadivUseCase(repository: repo);
-});
+      final repo = ref.watch(apiMutationRepositoryProvider);
+      return ApproveMutationKadivUseCase(repository: repo);
+    });
 
-final rejectMutationKadivUseCaseProvider =
-    Provider<RejectMutationKadivUseCase>((ref) {
-  final repo = ref.watch(mutationRepositoryProvider);
-  return RejectMutationKadivUseCase(repository: repo);
-});
+final rejectMutationKadivUseCaseProvider = Provider<RejectMutationKadivUseCase>(
+  (ref) {
+    final repo = ref.watch(apiMutationRepositoryProvider);
+    return RejectMutationKadivUseCase(repository: repo);
+  },
+);
 
-final getKadivApprovalsUseCaseProvider =
-    Provider<GetKadivApprovalsUseCase>((ref) {
-  final repo = ref.watch(mutationRepositoryProvider);
+final getKadivApprovalsUseCaseProvider = Provider<GetKadivApprovalsUseCase>((
+  ref,
+) {
+  final repo = ref.watch(apiMutationRepositoryProvider);
   return GetKadivApprovalsUseCase(repository: repo);
 });
+
+/// Provider detail satu mutasi untuk Pemimpin Divisi via API Laravel.
+final kadivMutationDetailProvider = apiMutationDetailProvider;
 
 // ─── Filter & Search State ───────────────────────────────────────────────────
 
@@ -40,32 +49,44 @@ enum KadivSortOrder {
   oldest;
 
   String get displayName => switch (this) {
-        KadivSortOrder.newest => 'Terbaru',
-        KadivSortOrder.oldest => 'Terlama',
-      };
+    KadivSortOrder.newest => 'Terbaru',
+    KadivSortOrder.oldest => 'Terlama',
+  };
 }
 
 enum KadivStatusFilter {
-  waiting,
-  approved,
+  all,
+  processing,
+  allocated,
+  returned,
+  completed,
   rejected,
-  all;
+  // Legacy / specific queue aliases
+  waiting,
+  approved;
 
   String get displayName => switch (this) {
-        KadivStatusFilter.waiting => 'Menunggu Approval',
-        KadivStatusFilter.approved => 'Disetujui',
-        KadivStatusFilter.rejected => 'Ditolak',
-        KadivStatusFilter.all => 'Semua',
-      };
+    KadivStatusFilter.all => 'Semua',
+    KadivStatusFilter.processing => 'Diproses',
+    KadivStatusFilter.allocated => 'Dialokasikan',
+    KadivStatusFilter.returned => 'Dikembalikan',
+    KadivStatusFilter.completed => 'Selesai',
+    KadivStatusFilter.rejected => 'Ditolak',
+    // Legacy compatibility labels
+    KadivStatusFilter.waiting => 'Menunggu Otorisasi',
+    KadivStatusFilter.approved => 'Disetujui',
+  };
 }
 
 final kadivSearchQueryProvider = StateProvider<String>((ref) => '');
 
-final kadivSortOrderProvider =
-    StateProvider<KadivSortOrder>((ref) => KadivSortOrder.newest);
+final kadivSortOrderProvider = StateProvider<KadivSortOrder>(
+  (ref) => KadivSortOrder.newest,
+);
 
-final kadivStatusFilterProvider =
-    StateProvider<KadivStatusFilter>((ref) => KadivStatusFilter.waiting);
+final kadivStatusFilterProvider = StateProvider<KadivStatusFilter>(
+  (ref) => KadivStatusFilter.all,
+);
 
 // ─── Mutations Data Providers ────────────────────────────────────────────────
 
@@ -95,23 +116,30 @@ class KadivApprovalStats {
   });
 }
 
+bool isWaitingKadivApproval(Mutation m) {
+  return m.status.isWaitingDivisionApproval;
+}
+
 final kadivStatsProvider = Provider<KadivApprovalStats>((ref) {
   final asyncMutations = ref.watch(kadivAllMutationsProvider);
 
   return asyncMutations.when(
     data: (mutations) {
       final waiting = mutations
-          .where((m) => m.status == MutationStatus.waitingKadivApproval)
+          .where((m) => m.status.isWaitingDivisionApproval)
           .length;
       final approved = mutations
-          .where((m) =>
-              m.status == MutationStatus.approved &&
-              (m.kadivApprovedBy != null || m.approvedBy != null))
+          .where(
+            (m) =>
+                m.status == MutationStatus.approved ||
+                m.status == MutationStatus.waitingConfirmation ||
+                m.status == MutationStatus.pendingConfirmation ||
+                m.status == MutationStatus.completed ||
+                m.kadivApprovedBy != null,
+          )
           .length;
       final rejected = mutations
-          .where((m) =>
-              m.status == MutationStatus.rejected &&
-              (m.kadivRejectedBy != null || m.kadivRejectionReason != null))
+          .where((m) => m.status == MutationStatus.rejected)
           .length;
 
       return KadivApprovalStats(
@@ -134,8 +162,9 @@ final kadivStatsProvider = Provider<KadivApprovalStats>((ref) {
 });
 
 /// Provider antrean mutasi untuk Kadiv (KDV-002 & Riwayat) dengan filter status, pencarian, dan sorting.
-final filteredKadivApprovalsProvider =
-    Provider<AsyncValue<List<Mutation>>>((ref) {
+final filteredKadivApprovalsProvider = Provider<AsyncValue<List<Mutation>>>((
+  ref,
+) {
   final asyncAll = ref.watch(kadivAllMutationsProvider);
   final query = ref.watch(kadivSearchQueryProvider).toLowerCase().trim();
   final statusFilter = ref.watch(kadivStatusFilterProvider);
@@ -145,18 +174,25 @@ final filteredKadivApprovalsProvider =
     // 1. Filter berdasarkan status tab
     var list = mutations.where((m) {
       return switch (statusFilter) {
-        KadivStatusFilter.waiting =>
-          m.status == MutationStatus.waitingKadivApproval,
-        KadivStatusFilter.approved =>
-          m.status == MutationStatus.approved &&
-              (m.kadivApprovedBy != null || m.approvedBy != null),
+        KadivStatusFilter.processing =>
+          m.status.historyCategory == MutationHistoryCategory.processing,
+        KadivStatusFilter.allocated =>
+          m.status.historyCategory == MutationHistoryCategory.allocated,
+        KadivStatusFilter.returned =>
+          m.status.historyCategory == MutationHistoryCategory.returned,
+        KadivStatusFilter.completed =>
+          m.status.historyCategory == MutationHistoryCategory.completed,
         KadivStatusFilter.rejected =>
-          m.status == MutationStatus.rejected &&
-              (m.kadivRejectedBy != null || m.kadivRejectionReason != null),
-        KadivStatusFilter.all =>
-          m.status == MutationStatus.waitingKadivApproval ||
-              m.kadivApprovedBy != null ||
-              m.kadivRejectedBy != null,
+          m.status.historyCategory == MutationHistoryCategory.rejected,
+        KadivStatusFilter.all => true,
+        // Legacy / queue compatibility
+        KadivStatusFilter.waiting => m.status.isWaitingDivisionApproval,
+        KadivStatusFilter.approved =>
+          m.status == MutationStatus.approved ||
+              m.status == MutationStatus.waitingConfirmation ||
+              m.status == MutationStatus.pendingConfirmation ||
+              m.status == MutationStatus.completed ||
+              m.kadivApprovedBy != null,
       };
     }).toList();
 
@@ -210,8 +246,9 @@ class KadivApprovalActionState {
     return KadivApprovalActionState(
       isLoading: isLoading ?? this.isLoading,
       error: clearError ? null : (error ?? this.error),
-      successMessage:
-          clearSuccess ? null : (successMessage ?? this.successMessage),
+      successMessage: clearSuccess
+          ? null
+          : (successMessage ?? this.successMessage),
       result: result ?? this.result,
     );
   }
@@ -232,7 +269,7 @@ class KadivApprovalActionNotifier
   /// Eksekusi Approve oleh Kadiv
   Future<bool> approve({required String mutationId}) async {
     final authState = ref.read(authStateProvider);
-    final kadivName = authState.user?.name ?? 'Kadiv';
+    final kadivName = authState.user?.name ?? 'Pemimpin Divisi';
 
     state = state.copyWith(
       isLoading: true,
@@ -248,10 +285,37 @@ class KadivApprovalActionNotifier
     if (result is Success<Mutation>) {
       state = KadivApprovalActionState(
         isLoading: false,
-        successMessage: 'Pengajuan mutasi berhasil disetujui oleh Kadiv.',
+        successMessage:
+            'Pengajuan mutasi berhasil disetujui oleh Pemimpin Divisi.',
         result: result.data,
       );
-      ref.invalidate(kadivAllMutationsProvider);
+      invalidateAllRoleMutationProviders(ref, mutationId);
+
+      try {
+        ref
+            .read(notificationProvider.notifier)
+            .notifyRole(
+              targetRole: UserRole.pemohon,
+              title: 'Persetujuan Final Selesai',
+              message:
+                  'Pengajuan mutasi ${result.data.ticketNumber} (${result.data.asset.name}) telah disetujui Pemimpin Divisi. Silakan periksa aset dan berikan konfirmasi.',
+              type: NotificationType.action,
+              relatedMutationId: mutationId,
+            );
+      } catch (_) {}
+
+      try {
+        final notifNotifier = ref.read(notificationProvider.notifier);
+        final notifs = ref.read(notificationProvider);
+        for (final n in notifs) {
+          if (n.relatedMutationId == mutationId &&
+              n.targetRole == UserRole.kadiv &&
+              !n.isRead) {
+            notifNotifier.markAsRead(n.id);
+          }
+        }
+      } catch (_) {}
+
       return true;
     } else if (result is AppFailure<Mutation>) {
       state = KadivApprovalActionState(
@@ -274,7 +338,7 @@ class KadivApprovalActionNotifier
     required String reason,
   }) async {
     final authState = ref.read(authStateProvider);
-    final kadivName = authState.user?.name ?? 'Kadiv';
+    final kadivName = authState.user?.name ?? 'Pemimpin Divisi';
 
     state = state.copyWith(
       isLoading: true,
@@ -291,10 +355,40 @@ class KadivApprovalActionNotifier
     if (result is Success<Mutation>) {
       state = KadivApprovalActionState(
         isLoading: false,
-        successMessage: 'Pengajuan mutasi berhasil ditolak oleh Kadiv.',
+        successMessage:
+            'Pengajuan mutasi berhasil ditolak oleh Pemimpin Divisi.',
         result: result.data,
       );
-      ref.invalidate(kadivAllMutationsProvider);
+      invalidateAllRoleMutationProviders(ref, mutationId);
+
+      try {
+        if (result.data.applicantId != null) {
+          ref
+              .read(notificationProvider.notifier)
+              .notifyUser(
+                targetUserId: result.data.applicantId!,
+                targetRole: UserRole.pemohon,
+                title: 'Pengajuan Mutasi Ditolak Pemimpin Divisi',
+                message:
+                    'Pengajuan mutasi ${result.data.ticketNumber} ditolak oleh Pemimpin Divisi dengan alasan: $reason',
+                type: NotificationType.warning,
+                relatedMutationId: mutationId,
+              );
+        }
+      } catch (_) {}
+
+      try {
+        final notifNotifier = ref.read(notificationProvider.notifier);
+        final notifs = ref.read(notificationProvider);
+        for (final n in notifs) {
+          if (n.relatedMutationId == mutationId &&
+              n.targetRole == UserRole.kadiv &&
+              !n.isRead) {
+            notifNotifier.markAsRead(n.id);
+          }
+        }
+      } catch (_) {}
+
       return true;
     } else if (result is AppFailure<Mutation>) {
       state = KadivApprovalActionState(
@@ -316,13 +410,23 @@ class KadivApprovalActionNotifier
   }
 }
 
-final kadivApprovalActionProvider = StateNotifierProvider<
-    KadivApprovalActionNotifier, KadivApprovalActionState>((ref) {
-  final approveUseCase = ref.watch(approveMutationKadivUseCaseProvider);
-  final rejectUseCase = ref.watch(rejectMutationKadivUseCaseProvider);
-  return KadivApprovalActionNotifier(
-    approveUseCase: approveUseCase,
-    rejectUseCase: rejectUseCase,
-    ref: ref,
-  );
-});
+final kadivApprovalActionProvider =
+    StateNotifierProvider<
+      KadivApprovalActionNotifier,
+      KadivApprovalActionState
+    >((ref) {
+      final approveUseCase = ref.watch(approveMutationKadivUseCaseProvider);
+      final rejectUseCase = ref.watch(rejectMutationKadivUseCaseProvider);
+      return KadivApprovalActionNotifier(
+        approveUseCase: approveUseCase,
+        rejectUseCase: rejectUseCase,
+        ref: ref,
+      );
+    });
+
+// ─── Pemimpin Divisi Aliases ──────────────────────────────────────────────────
+typedef PemimpinDivisiApprovalActionState = KadivApprovalActionState;
+typedef PemimpinDivisiApprovalActionNotifier = KadivApprovalActionNotifier;
+final pemimpinDivisiApprovalActionProvider = kadivApprovalActionProvider;
+final filteredPemimpinDivisiApprovalsProvider = filteredKadivApprovalsProvider;
+final pemimpinDivisiStatsProvider = kadivStatsProvider;

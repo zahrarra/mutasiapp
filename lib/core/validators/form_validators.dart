@@ -26,7 +26,11 @@ abstract final class FormValidators {
   }
 
   /// Validator min length password.
-  static String? minLength(String? value, int min, [String fieldName = 'Field']) {
+  static String? minLength(
+    String? value,
+    int min, [
+    String fieldName = 'Field',
+  ]) {
     if (value == null || value.isEmpty) {
       return '$fieldName tidak boleh kosong';
     }

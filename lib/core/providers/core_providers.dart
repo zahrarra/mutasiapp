@@ -6,6 +6,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
+
 import '../constants/app_constants.dart';
 import '../network/api_client.dart';
 import '../services/connectivity_service.dart';
@@ -14,7 +15,9 @@ import '../storage/secure_storage.dart';
 
 /// Provider untuk [SharedPreferences] yang di-override di main.dart saat bootstrap.
 final sharedPreferencesProvider = Provider<SharedPreferences>((ref) {
-  throw UnimplementedError('sharedPreferencesProvider must be overridden in main()');
+  throw UnimplementedError(
+    'sharedPreferencesProvider must be overridden in main()',
+  );
 });
 
 /// Provider untuk [http.Client] dasar.
@@ -27,15 +30,17 @@ final httpClientProvider = Provider<http.Client>((ref) {
 /// Provider untuk [ApiClient] HTTP wrapper.
 final apiClientProvider = Provider<ApiClient>((ref) {
   final httpClient = ref.watch(httpClientProvider);
+  final secureStorage = ref.watch(secureStorageProvider);
   return ApiClient(
     httpClient: httpClient,
     baseUrl: AppConstants.defaultBaseUrl,
+    tokenGetter: () => secureStorage.getAuthToken(),
   );
 });
 
 /// Provider untuk [SecureStorage] token storage.
 final secureStorageProvider = Provider<SecureStorage>((ref) {
-  return const SecureStorage();
+  return SecureStorage();
 });
 
 /// Provider untuk [LocalStorage] non-sensitive preferences storage.

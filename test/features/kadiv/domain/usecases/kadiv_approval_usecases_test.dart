@@ -22,6 +22,9 @@ class FakeKadivMutationRepository implements MutationRepository {
   FakeKadivMutationRepository(this.mutations);
 
   @override
+  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
+
+  @override
   Future<Result<Mutation>> submitMutation(SubmitMutationParams params) async {
     throw UnimplementedError();
   }
@@ -51,7 +54,9 @@ class FakeKadivMutationRepository implements MutationRepository {
   @override
   Future<Result<Mutation>> verifyMutation({
     required String mutationId,
+    String? notes,
     required String operatorName,
+    bool requiresKadivApproval = false,
   }) async {
     throw UnimplementedError();
   }
@@ -61,23 +66,6 @@ class FakeKadivMutationRepository implements MutationRepository {
     required String mutationId,
     required String reason,
     required String operatorName,
-  }) async {
-    throw UnimplementedError();
-  }
-
-  @override
-  Future<Result<Mutation>> approveMutationKabag({
-    required String mutationId,
-    required String kabagName,
-  }) async {
-    throw UnimplementedError();
-  }
-
-  @override
-  Future<Result<Mutation>> rejectMutationKabag({
-    required String mutationId,
-    required String reason,
-    required String kabagName,
   }) async {
     throw UnimplementedError();
   }
@@ -126,6 +114,14 @@ class FakeKadivMutationRepository implements MutationRepository {
     mutations[index] = updated;
     return Result.success(updated);
   }
+
+  @override
+  Future<Result<Mutation>> confirmMutation({
+    required String mutationId,
+    required String confirmedBy,
+  }) async {
+    throw UnimplementedError();
+  }
 }
 
 void main() {
@@ -156,7 +152,7 @@ void main() {
       targetPic: 'Bambang',
       reason: 'Relokasi server data center.',
       status: status,
-      approvedBy: 'Kabag Aset',
+      approvedBy: 'Bagian Aset',
       approvedAt: DateTime(2026, 9, 17, 10, 0),
       createdAt: DateTime(2026, 9, 17, 8, 0),
     );
@@ -166,7 +162,9 @@ void main() {
     test('berhasil menyetujui mutasi berstatus waitingKadivApproval', () async {
       final repo = FakeKadivMutationRepository([
         createDummyMutation(
-            id: 'mut_kdv_1', status: MutationStatus.waitingKadivApproval),
+          id: 'mut_kdv_1',
+          status: MutationStatus.waitingKadivApproval,
+        ),
       ]);
       final useCase = ApproveMutationKadivUseCase(repository: repo);
 
@@ -191,10 +189,7 @@ void main() {
       );
 
       expect(result.isFailure, true);
-      expect(
-        (result as AppFailure).failure,
-        isA<ValidationFailure>(),
-      );
+      expect((result as AppFailure).failure, isA<ValidationFailure>());
     });
 
     test('gagal jika mutasi tidak ditemukan', () async {
@@ -207,16 +202,12 @@ void main() {
       );
 
       expect(result.isFailure, true);
-      expect(
-        (result as AppFailure).failure,
-        isA<NotFoundFailure>(),
-      );
+      expect((result as AppFailure).failure, isA<NotFoundFailure>());
     });
 
     test('gagal jika status mutasi bukan waitingKadivApproval', () async {
       final repo = FakeKadivMutationRepository([
-        createDummyMutation(
-            id: 'mut_kdv_1', status: MutationStatus.submitted),
+        createDummyMutation(id: 'mut_kdv_1', status: MutationStatus.submitted),
       ]);
       final useCase = ApproveMutationKadivUseCase(repository: repo);
 
@@ -226,10 +217,7 @@ void main() {
       );
 
       expect(result.isFailure, true);
-      expect(
-        (result as AppFailure).failure,
-        isA<ValidationFailure>(),
-      );
+      expect((result as AppFailure).failure, isA<ValidationFailure>());
     });
   });
 
@@ -237,7 +225,9 @@ void main() {
     test('berhasil menolak mutasi dengan alasan valid', () async {
       final repo = FakeKadivMutationRepository([
         createDummyMutation(
-            id: 'mut_kdv_1', status: MutationStatus.waitingKadivApproval),
+          id: 'mut_kdv_1',
+          status: MutationStatus.waitingKadivApproval,
+        ),
       ]);
       final useCase = RejectMutationKadivUseCase(repository: repo);
 
@@ -250,15 +240,19 @@ void main() {
       expect(result.isSuccess, true);
       final updated = result.dataOrNull!;
       expect(updated.status, MutationStatus.rejected);
-      expect(updated.rejectionReason,
-          'Perangkat server utama belum boleh dialihkan.');
+      expect(
+        updated.rejectionReason,
+        'Perangkat server utama belum boleh dialihkan.',
+      );
       expect(updated.kadivRejectedBy, 'Kepala Divisi Aset');
     });
 
     test('gagal jika alasan penolakan kosong', () async {
       final repo = FakeKadivMutationRepository([
         createDummyMutation(
-            id: 'mut_kdv_1', status: MutationStatus.waitingKadivApproval),
+          id: 'mut_kdv_1',
+          status: MutationStatus.waitingKadivApproval,
+        ),
       ]);
       final useCase = RejectMutationKadivUseCase(repository: repo);
 
@@ -269,16 +263,12 @@ void main() {
       );
 
       expect(result.isFailure, true);
-      expect(
-        (result as AppFailure).failure,
-        isA<ValidationFailure>(),
-      );
+      expect((result as AppFailure).failure, isA<ValidationFailure>());
     });
 
     test('gagal jika status mutasi bukan waitingKadivApproval', () async {
       final repo = FakeKadivMutationRepository([
-        createDummyMutation(
-            id: 'mut_kdv_1', status: MutationStatus.approved),
+        createDummyMutation(id: 'mut_kdv_1', status: MutationStatus.approved),
       ]);
       final useCase = RejectMutationKadivUseCase(repository: repo);
 
@@ -289,28 +279,29 @@ void main() {
       );
 
       expect(result.isFailure, true);
-      expect(
-        (result as AppFailure).failure,
-        isA<ValidationFailure>(),
-      );
+      expect((result as AppFailure).failure, isA<ValidationFailure>());
     });
   });
 
   group('GetKadivApprovalsUseCase', () {
-    test('mengambil seluruh daftar mutasi untuk keperluan review Kadiv',
-        () async {
-      final repo = FakeKadivMutationRepository([
-        createDummyMutation(
-            id: 'm1', status: MutationStatus.waitingKadivApproval),
-        createDummyMutation(id: 'm2', status: MutationStatus.submitted),
-        createDummyMutation(id: 'm3', status: MutationStatus.approved),
-      ]);
-      final useCase = GetKadivApprovalsUseCase(repository: repo);
+    test(
+      'mengambil seluruh daftar mutasi untuk keperluan review Kadiv',
+      () async {
+        final repo = FakeKadivMutationRepository([
+          createDummyMutation(
+            id: 'm1',
+            status: MutationStatus.waitingKadivApproval,
+          ),
+          createDummyMutation(id: 'm2', status: MutationStatus.submitted),
+          createDummyMutation(id: 'm3', status: MutationStatus.approved),
+        ]);
+        final useCase = GetKadivApprovalsUseCase(repository: repo);
 
-      final result = await useCase();
+        final result = await useCase();
 
-      expect(result.isSuccess, true);
-      expect(result.dataOrNull!.length, 3);
-    });
+        expect(result.isSuccess, true);
+        expect(result.dataOrNull!.length, 3);
+      },
+    );
   });
 }

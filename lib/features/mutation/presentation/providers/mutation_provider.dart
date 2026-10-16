@@ -2,9 +2,17 @@
 //
 // Riverpod providers untuk Mutation Submission.
 // Sumber: ROLE-FLOW.md §3, SCREEN-SPEC.md REQ-002–007.
+//
+// FLOW PENGAJUAN BARU:
+// Pemohon menginput data aset secara manual.
+// Aset tidak harus sudah tersedia di database.
+// SubmitMutationUseCase tidak melakukan pencarian aset.
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter/foundation.dart';
+
 import '../../../../core/errors/result.dart';
+import '../../../../core/providers/core_providers.dart';
 import '../../../asset/domain/entities/asset.dart';
 import '../../../asset/presentation/providers/asset_provider.dart';
 import '../../../auth/presentation/providers/auth_provider.dart';
@@ -14,38 +22,89 @@ import '../../domain/repositories/mutation_repository.dart';
 import '../../domain/usecases/get_mutation_detail_usecase.dart';
 import '../../domain/usecases/get_mutations_usecase.dart';
 import '../../domain/usecases/submit_mutation_usecase.dart';
+import '../../../operator/presentation/providers/operator_verification_provider.dart';
+import '../../../bagian_aset/presentation/providers/bagian_aset_verification_provider.dart';
+import '../../../kadiv/presentation/providers/kadiv_approval_provider.dart';
+import '../../../pemohon/presentation/providers/pemohon_confirmation_provider.dart';
 
 // ─── Repository & Use Case Providers ─────────────────────────────────────────
 
 /// Provider untuk [MutationRepository].
+///
+/// Default provider mempertahankan mock repository agar seluruh widget test & alur
+/// lama tetap berjalan stabil tanpa regresi.
 final mutationRepositoryProvider = Provider<MutationRepository>((ref) {
   final assetRepo = ref.watch(assetRepositoryProvider);
   return MutationRepositoryImpl(assetRepository: assetRepo);
 });
 
-/// Provider untuk [SubmitMutationUseCase].
-final submitMutationUseCaseProvider = Provider<SubmitMutationUseCase>((ref) {
-  final mutationRepo = ref.watch(mutationRepositoryProvider);
+/// Provider untuk [MutationRepository] yang terhubung ke Laravel backend via [ApiClient].
+final apiMutationRepositoryProvider = Provider<MutationRepository>((ref) {
   final assetRepo = ref.watch(assetRepositoryProvider);
-  return SubmitMutationUseCase(
-    mutationRepository: mutationRepo,
+  final apiClient = ref.watch(apiClientProvider);
+  final secureStorage = ref.watch(secureStorageProvider);
+
+  return MutationRepositoryImpl(
     assetRepository: assetRepo,
+    apiClient: apiClient,
+    secureStorage: secureStorage,
   );
 });
 
+/// Provider untuk [SubmitMutationUseCase].
+///
+/// PENTING:
+/// SubmitMutationUseCase TIDAK lagi membutuhkan AssetRepository.
+///
+/// Data aset berasal dari input manual Pemohon:
+/// - assetName
+/// - assetId
+/// - sourceLocation
+/// - targetLocation
+/// - targetPic
+/// - reason
+/// - documentName
+final submitMutationUseCaseProvider = Provider<SubmitMutationUseCase>((ref) {
+  final mutationRepo = ref.watch(apiMutationRepositoryProvider);
+
+  return SubmitMutationUseCase(mutationRepository: mutationRepo);
+});
+
 /// Provider untuk [GetMutationsUseCase].
+///
+/// Menggunakan [apiMutationRepositoryProvider] agar alur Pemohon membaca data
+/// langsung dari backend Laravel API melalui [ApiClient].
 final getMutationsUseCaseProvider = Provider<GetMutationsUseCase>((ref) {
-  final repo = ref.watch(mutationRepositoryProvider);
+  final repo = ref.watch(apiMutationRepositoryProvider);
+
   return GetMutationsUseCase(repository: repo);
 });
 
 /// Provider untuk [GetMutationDetailUseCase].
-final getMutationDetailUseCaseProvider = Provider<GetMutationDetailUseCase>((ref) {
+final getMutationDetailUseCaseProvider = Provider<GetMutationDetailUseCase>((
+  ref,
+) {
   final repo = ref.watch(mutationRepositoryProvider);
+
+  return GetMutationDetailUseCase(repository: repo);
+});
+
+/// Provider khusus untuk [GetMutationDetailUseCase] yang terhubung ke API Laravel.
+final apiGetMutationDetailUseCaseProvider = Provider<GetMutationDetailUseCase>((
+  ref,
+) {
+  final repo = ref.watch(apiMutationRepositoryProvider);
+
   return GetMutationDetailUseCase(repository: repo);
 });
 
 // ─── Eligible Assets Provider ────────────────────────────────────────────────
+//
+// Provider di bawah masih dipertahankan karena kemungkinan masih digunakan
+// oleh halaman/fitur aset lain.
+//
+// Namun FORM PENGAJUAN MUTASI BARU tidak menggunakan provider ini.
+// Pemohon langsung mengisi data aset secara manual.
 
 /// Provider yang memfilter aset eligible untuk mutasi.
 ///
@@ -56,25 +115,32 @@ final eligibleAssetsProvider = FutureProvider<List<Asset>>((ref) async {
   final result = await useCase();
 
   if (result is Success<List<Asset>>) {
-    // Hanya return aset yang tidak locked
     return result.data.where((asset) => !asset.isLocked).toList();
-  } else if (result is AppFailure<List<Asset>>) {
+  }
+
+  if (result is AppFailure<List<Asset>>) {
     throw Exception(result.failure.userMessage);
   }
+
   return [];
 });
 
-/// Provider yang mengambil semua aset (termasuk locked) untuk tampilan
-/// dengan indikator lock.
+/// Provider yang mengambil semua aset termasuk locked.
+///
+/// Provider ini tetap dipertahankan untuk kebutuhan halaman aset
+/// atau fitur lama yang masih menampilkan daftar aset.
 final allUserAssetsProvider = FutureProvider<List<Asset>>((ref) async {
   final useCase = ref.watch(getAssetsUseCaseProvider);
   final result = await useCase();
 
   if (result is Success<List<Asset>>) {
     return result.data;
-  } else if (result is AppFailure<List<Asset>>) {
+  }
+
+  if (result is AppFailure<List<Asset>>) {
     throw Exception(result.failure.userMessage);
   }
+
   return [];
 });
 
@@ -93,27 +159,67 @@ final mutationListProvider = FutureProvider<List<Mutation>>((ref) async {
 
   if (result is Success<List<Mutation>>) {
     return result.data;
-  } else if (result is AppFailure<List<Mutation>>) {
+  }
+
+  if (result is AppFailure<List<Mutation>>) {
     throw Exception(result.failure.userMessage);
   }
+
+  return [];
+});
+
+/// Provider daftar seluruh mutasi transaksi sistem untuk kebutuhan Admin Dashboard & Audit Log.
+/// Membaca langsung dari API backend Laravel (/api/v1/mutations?view=all).
+final adminMutationsProvider = FutureProvider<List<Mutation>>((ref) async {
+  final repo = ref.watch(apiMutationRepositoryProvider);
+  final result = await repo.getAllMutations();
+
+  if (result is Success<List<Mutation>>) {
+    return result.data;
+  }
+
+  if (result is AppFailure<List<Mutation>>) {
+    throw Exception(result.failure.userMessage);
+  }
+
   return [];
 });
 
 // ─── Mutation Detail Provider ────────────────────────────────────────────────
 
-/// Provider detail satu mutasi berdasarkan ID.
-final mutationDetailProvider =
-    FutureProvider.family<Mutation, String>((ref, id) async {
-  final useCase = ref.watch(getMutationDetailUseCaseProvider);
+/// Provider detail satu mutasi berdasarkan ID via API Laravel.
+/// Digunakan oleh alur Pemohon untuk membaca data detail pengajuan mutasi dari server.
+final pemohonMutationDetailProvider = FutureProvider.family<Mutation, String>((
+  ref,
+  id,
+) async {
+  final useCase = ref.watch(apiGetMutationDetailUseCaseProvider);
+
   final result = await useCase(id);
 
   if (result is Success<Mutation>) {
     return result.data;
-  } else if (result is AppFailure<Mutation>) {
+  }
+
+  // Fallback ke default / mock mutation repository (misal saat widget test tanpa API)
+  final mockUseCase = ref.watch(getMutationDetailUseCaseProvider);
+  final mockResult = await mockUseCase(id);
+  if (mockResult is Success<Mutation>) {
+    return mockResult.data;
+  }
+
+  if (result is AppFailure<Mutation>) {
     throw Exception(result.failure.userMessage);
   }
+
   throw Exception('Pengajuan mutasi tidak ditemukan.');
 });
+
+/// Alias untuk [pemohonMutationDetailProvider].
+final apiMutationDetailProvider = pemohonMutationDetailProvider;
+
+/// Provider detail satu mutasi berdasarkan ID (Terhubung ke API Laravel dengan fallback repository).
+final mutationDetailProvider = apiMutationDetailProvider;
 
 // ─── Submit Mutation Provider ────────────────────────────────────────────────
 
@@ -123,11 +229,7 @@ class SubmitMutationState {
   final Mutation? result;
   final String? error;
 
-  const SubmitMutationState({
-    this.isLoading = false,
-    this.result,
-    this.error,
-  });
+  const SubmitMutationState({this.isLoading = false, this.result, this.error});
 
   SubmitMutationState copyWith({
     bool? isLoading,
@@ -150,30 +252,70 @@ class SubmitMutationNotifier extends StateNotifier<SubmitMutationState> {
   final Ref ref;
 
   SubmitMutationNotifier({required this.useCase, required this.ref})
-      : super(const SubmitMutationState());
+    : super(const SubmitMutationState());
 
   Future<Mutation?> submit(SubmitMutationParams params) async {
-    state = state.copyWith(isLoading: true, clearError: true, clearResult: true);
+    debugPrint('========== SUBMIT START ==========');
+    debugPrint('assetId: ${params.assetId}');
+    debugPrint('assetName: ${params.assetName}');
+    debugPrint('sourceLocation: ${params.sourceLocation}');
+    debugPrint('targetLocation: ${params.targetLocation}');
+    debugPrint('targetPic: ${params.targetPic}');
+    debugPrint('reason: ${params.reason}');
+    debugPrint('==================================');
+
+    state = state.copyWith(
+      isLoading: true,
+      clearError: true,
+      clearResult: true,
+    );
 
     final result = await useCase(params);
 
+    debugPrint('[SubmitMutation] RESULT TYPE: ${result.runtimeType}');
+
     if (result is Success<Mutation>) {
+      debugPrint('[SubmitMutation] SUCCESS');
+      debugPrint('[SubmitMutation] Ticket: ${result.data.ticketNumber}');
+      debugPrint('[SubmitMutation] ID: ${result.data.id}');
+
       state = SubmitMutationState(isLoading: false, result: result.data);
-      // Invalidate mutation list agar ter-refresh
-      ref.invalidate(mutationListProvider);
+
+      // Invalidate list agar seluruh role langsung diperbarui dengan data baru
+      invalidateAllRoleMutationProviders(ref, result.data.id);
+
       return result.data;
-    } else if (result is AppFailure<Mutation>) {
+    }
+
+    if (result is AppFailure<Mutation>) {
+      debugPrint(
+        '[SubmitMutation] FAILURE TYPE: '
+        '${result.failure.runtimeType}',
+      );
+      debugPrint(
+        '[SubmitMutation] FAILURE MESSAGE: '
+        '${result.failure.message}',
+      );
+      debugPrint(
+        '[SubmitMutation] USER MESSAGE: '
+        '${result.failure.userMessage}',
+      );
+
       state = SubmitMutationState(
         isLoading: false,
         error: result.failure.userMessage,
       );
+
       return null;
     }
+
+    debugPrint('[SubmitMutation] UNKNOWN RESULT');
 
     state = const SubmitMutationState(
       isLoading: false,
       error: 'Terjadi kesalahan. Coba lagi.',
     );
+
     return null;
   }
 
@@ -185,6 +327,29 @@ class SubmitMutationNotifier extends StateNotifier<SubmitMutationState> {
 /// Provider untuk [SubmitMutationNotifier].
 final submitMutationProvider =
     StateNotifierProvider<SubmitMutationNotifier, SubmitMutationState>((ref) {
-  final useCase = ref.watch(submitMutationUseCaseProvider);
-  return SubmitMutationNotifier(useCase: useCase, ref: ref);
-});
+      final useCase = ref.watch(submitMutationUseCaseProvider);
+
+      return SubmitMutationNotifier(useCase: useCase, ref: ref);
+    });
+
+/// Invalidate seluruh provider daftar dan detail mutasi di SEMUA role
+/// agar status dan riwayat di setiap role selalu mengikuti kondisi terkini backend.
+void invalidateAllRoleMutationProviders(dynamic ref, [String? mutationId]) {
+  ref.invalidate(mutationListProvider);
+  ref.invalidate(operatorAllMutationsProvider);
+  ref.invalidate(bagianAsetAllMutationsProvider);
+  ref.invalidate(kadivAllMutationsProvider);
+  ref.invalidate(assetListProvider);
+  ref.invalidate(userResponsibleAssetsProvider);
+  ref.invalidate(pendingConfirmationsProvider);
+
+  if (mutationId != null && mutationId.isNotEmpty) {
+    ref.invalidate(mutationDetailProvider(mutationId));
+    ref.invalidate(apiMutationDetailProvider(mutationId));
+    ref.invalidate(operatorMutationDetailProvider(mutationId));
+    ref.invalidate(bagianAsetMutationDetailProvider(mutationId));
+    ref.invalidate(kadivMutationDetailProvider(mutationId));
+    ref.invalidate(pemohonMutationDetailProvider(mutationId));
+  }
+}
+

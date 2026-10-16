@@ -4,6 +4,8 @@
 // Sumber: ROLE-FLOW.md §3, TECHNICAL-DESIGN.md §5, SCREEN-SPEC.md REQ-005.
 
 import '../../../asset/domain/entities/asset.dart';
+import '../../../asset/domain/entities/asset_category.dart';
+import '../../../asset/domain/entities/asset_status.dart';
 import 'mutation_status.dart';
 
 /// Entity domain permohonan pengajuan mutasi aset.
@@ -13,8 +15,64 @@ class Mutation {
   /// Nomor Tiket Server-Generated (Format: KATEGORI-TAHUN-NOURUT, misal: ELK-2026-00124)
   final String ticketNumber;
 
-  /// Aset yang dimutasi
-  final Asset asset;
+  /// ID Aset jika terdaftar di sistem master data.
+  /// Bernilai `null` jika aset belum terdaftar (fallback).
+  final String? _assetId;
+  String? get assetId => isUnregisteredAsset ? null : (_assetId ?? _asset?.id);
+
+  /// Aset yang dimutasi (internal snapshot)
+  final Asset? _asset;
+
+  /// Aset yang dimutasi.
+  /// Jika aset belum terdaftar, mengembalikan representasi fallback aman
+  /// tanpa membuat ID dummy palsu.
+  Asset get asset {
+    final existing = _asset;
+    if (existing != null) return existing;
+    return Asset(
+      id: '',
+      assetCode: '-',
+      name: customAssetName ?? 'Aset Tidak Terdaftar',
+      category: const AssetCategory(
+        id: 'cat_unregistered',
+        code: 'OTH',
+        name: 'Tidak Terdaftar',
+      ),
+      location: currentLocation,
+      pic: currentPic,
+      status: AssetStatus.available,
+      condition: 'Belum Terdaftar',
+      serialNumber: customSerialNumber,
+      acquisitionYear: createdAt.year,
+    );
+  }
+
+  /// Menandai apakah mutasi ini untuk aset yang belum terdaftar di database.
+  final bool isUnregisteredAsset;
+
+  /// Nama aset manual (jika [isUnregisteredAsset] true)
+  final String? customAssetName;
+
+  /// Nomor seri aset manual (jika [isUnregisteredAsset] true)
+  final String? customSerialNumber;
+
+  /// Getter helper untuk nama aset yang ditampilkan (selalu Nama Aset master)
+  String get displayAssetName => asset.name;
+
+  /// Getter helper untuk kode aset yang ditampilkan (selalu Kode Aset master)
+  String get displayAssetCode => asset.assetCode;
+
+  /// Getter helper untuk serial number aset (selalu Serial Number dari master Asset)
+  String get displaySerialNumber {
+    final sn = asset.serialNumber?.trim();
+    if (sn != null && sn.isNotEmpty) {
+      return sn;
+    }
+    return '-';
+  }
+
+  /// ID Pemohon (user login yang mengajukan)
+  final String? applicantId;
 
   /// Nama Pemohon
   final String applicantName;
@@ -31,11 +89,20 @@ class Mutation {
   /// PIC / Penanggung jawab baru yang diajukan
   final String targetPic;
 
+  /// ID PIC / Penanggung jawab baru jika sudah ditentukan (target_pic_id dari database)
+  final String? targetPicId;
+
   /// Alasan / Justifikasi mutasi
   final String reason;
 
   /// Nama dokumen pendukung (opsional)
   final String? documentName;
+
+  /// Path lokal dokumen di perangkat (opsional)
+  final String? documentPath;
+
+  /// Raw byte array dokumen untuk rendering langsung (opsional)
+  final List<int>? documentBytes;
 
   /// Status pengajuan mutasi
   final MutationStatus status;
@@ -43,7 +110,11 @@ class Mutation {
   /// Catatan / alasan pengembalian jika ditolak/dikembalikan oleh Operator
   final String? returnReason;
 
-  /// Catatan / alasan penolakan jika ditolak oleh Kabag Aset
+  /// Apakah mutasi ini memerlukan approval Pemimpin Divisi.
+  /// Ditentukan oleh Bagian Aset saat memverifikasi pengajuan.
+  final bool requiresKadivApproval;
+
+  /// Catatan / alasan pengembalian jika dikembalikan oleh Bagian Aset
   final String? rejectionReason;
 
   /// Tanggal verifikasi / pengembalian dilakukan oleh Operator
@@ -52,16 +123,16 @@ class Mutation {
   /// Nama Operator yang melakukan verifikasi / pengembalian
   final String? verifiedBy;
 
-  /// Tanggal persetujuan dilakukan oleh Kabag Aset
+  /// Tanggal verifikasi dilakukan oleh Bagian Aset
   final DateTime? approvedAt;
 
-  /// Nama Kabag Aset yang menyetujui
+  /// Nama verifikator Bagian Aset yang memverifikasi
   final String? approvedBy;
 
-  /// Tanggal penolakan dilakukan oleh Kabag Aset
+  /// Tanggal pengembalian dilakukan oleh Bagian Aset
   final DateTime? rejectedAt;
 
-  /// Nama Kabag Aset yang menolak
+  /// Nama verifikator Bagian Aset yang mengembalikan
   final String? rejectedBy;
 
   /// Tanggal persetujuan dilakukan oleh Kadiv
@@ -79,25 +150,66 @@ class Mutation {
   /// Catatan / alasan penolakan jika ditolak oleh Kadiv
   final String? kadivRejectionReason;
 
+  /// Tanggal pembaruan lokasi & PIC fisik dilakukan oleh Bagian Aset (legacy field)
+  final DateTime? staffUpdatedAt;
+
+  /// Nama petugas Bagian Aset yang melakukan pembaruan (legacy field)
+  final String? staffUpdatedBy;
+
   /// Waktu pembuatan pengajuan
   final DateTime createdAt;
+
+  /// Pertanyaan PRD V1.1: "Aset ikut saya pindah?" (Ya / Tidak).
+  /// - Ya -> targetPic otomatis Pemohon sendiri.
+  /// - Tidak -> targetPic dikosongkan dan ditentukan oleh Bagian Aset.
+  final bool isAssetMovingWithApplicant;
+
+  /// Catatan / alasan ketidaksesuaian dari Pemohon saat konfirmasi jika memilih "Tidak Sesuai"
+  final String? confirmationReason;
+
+  /// Nama petugas Bagian Aset yang memverifikasi pengajuan
+  final String? assetVerifiedBy;
+
+  /// Tanggal verifikasi dilakukan oleh Bagian Aset
+  final DateTime? assetVerifiedAt;
+
+  /// Alasan pengembalian oleh Bagian Aset jika data tidak valid
+  final String? assetReturnReason;
+
+  /// Nama petugas Bagian Aset yang menolak pengajuan
+  final String? assetRejectedBy;
 
   const Mutation({
     required this.id,
     required this.ticketNumber,
-    required this.asset,
+    String? assetId,
+    Asset? asset,
+    this.isUnregisteredAsset = false,
+    this.customAssetName,
+    this.customSerialNumber,
+    this.applicantId,
     required this.applicantName,
     required this.currentLocation,
     required this.targetLocation,
     required this.currentPic,
     required this.targetPic,
+    this.targetPicId,
     required this.reason,
     this.documentName,
+    this.documentPath,
+    this.documentBytes,
     required this.status,
+    this.isAssetMovingWithApplicant = true,
+    this.confirmationReason,
     this.returnReason,
+    this.requiresKadivApproval = false,
     this.rejectionReason,
     this.verifiedAt,
     this.verifiedBy,
+    this.assetVerifiedAt,
+    this.assetVerifiedBy,
+    this.assetReturnReason,
+    this.assetRejectedBy,
     this.approvedAt,
     this.approvedBy,
     this.rejectedAt,
@@ -107,25 +219,45 @@ class Mutation {
     this.kadivRejectedAt,
     this.kadivRejectedBy,
     this.kadivRejectionReason,
+    this.staffUpdatedAt,
+    this.staffUpdatedBy,
     required this.createdAt,
-  });
+    // ignore: prefer_initializing_formals
+  }) : _assetId = assetId,
+       // ignore: prefer_initializing_formals
+       _asset = asset;
 
   Mutation copyWith({
     String? id,
     String? ticketNumber,
+    String? assetId,
     Asset? asset,
+    bool? isUnregisteredAsset,
+    String? customAssetName,
+    String? customSerialNumber,
+    String? applicantId,
     String? applicantName,
     String? currentLocation,
     String? targetLocation,
     String? currentPic,
     String? targetPic,
+    String? targetPicId,
     String? reason,
     String? documentName,
+    String? documentPath,
+    List<int>? documentBytes,
     MutationStatus? status,
+    bool? isAssetMovingWithApplicant,
+    String? confirmationReason,
     String? returnReason,
+    bool? requiresKadivApproval,
     String? rejectionReason,
     DateTime? verifiedAt,
     String? verifiedBy,
+    DateTime? assetVerifiedAt,
+    String? assetVerifiedBy,
+    String? assetReturnReason,
+    String? assetRejectedBy,
     DateTime? approvedAt,
     String? approvedBy,
     DateTime? rejectedAt,
@@ -135,24 +267,43 @@ class Mutation {
     DateTime? kadivRejectedAt,
     String? kadivRejectedBy,
     String? kadivRejectionReason,
+    DateTime? staffUpdatedAt,
+    String? staffUpdatedBy,
     DateTime? createdAt,
   }) {
     return Mutation(
       id: id ?? this.id,
       ticketNumber: ticketNumber ?? this.ticketNumber,
-      asset: asset ?? this.asset,
+      assetId: assetId ?? this.assetId,
+      asset: asset ?? _asset,
+      isUnregisteredAsset: isUnregisteredAsset ?? this.isUnregisteredAsset,
+      customAssetName: customAssetName ?? this.customAssetName,
+      customSerialNumber: customSerialNumber ?? this.customSerialNumber,
+      applicantId: applicantId ?? this.applicantId,
       applicantName: applicantName ?? this.applicantName,
       currentLocation: currentLocation ?? this.currentLocation,
       targetLocation: targetLocation ?? this.targetLocation,
       currentPic: currentPic ?? this.currentPic,
       targetPic: targetPic ?? this.targetPic,
+      targetPicId: targetPicId ?? this.targetPicId,
       reason: reason ?? this.reason,
       documentName: documentName ?? this.documentName,
+      documentPath: documentPath ?? this.documentPath,
+      documentBytes: documentBytes ?? this.documentBytes,
       status: status ?? this.status,
+      isAssetMovingWithApplicant:
+          isAssetMovingWithApplicant ?? this.isAssetMovingWithApplicant,
+      confirmationReason: confirmationReason ?? this.confirmationReason,
       returnReason: returnReason ?? this.returnReason,
+      requiresKadivApproval:
+          requiresKadivApproval ?? this.requiresKadivApproval,
       rejectionReason: rejectionReason ?? this.rejectionReason,
       verifiedAt: verifiedAt ?? this.verifiedAt,
       verifiedBy: verifiedBy ?? this.verifiedBy,
+      assetVerifiedAt: assetVerifiedAt ?? this.assetVerifiedAt,
+      assetVerifiedBy: assetVerifiedBy ?? this.assetVerifiedBy,
+      assetReturnReason: assetReturnReason ?? this.assetReturnReason,
+      assetRejectedBy: assetRejectedBy ?? this.assetRejectedBy,
       approvedAt: approvedAt ?? this.approvedAt,
       approvedBy: approvedBy ?? this.approvedBy,
       rejectedAt: rejectedAt ?? this.rejectedAt,
@@ -162,8 +313,55 @@ class Mutation {
       kadivRejectedAt: kadivRejectedAt ?? this.kadivRejectedAt,
       kadivRejectedBy: kadivRejectedBy ?? this.kadivRejectedBy,
       kadivRejectionReason: kadivRejectionReason ?? this.kadivRejectionReason,
+      staffUpdatedAt: staffUpdatedAt ?? this.staffUpdatedAt,
+      staffUpdatedBy: staffUpdatedBy ?? this.staffUpdatedBy,
       createdAt: createdAt ?? this.createdAt,
     );
+  }
+
+  /// Menandai apakah pengajuan ditolak di tahap Kadiv.
+  bool get isKadivRejected =>
+      status == MutationStatus.rejected &&
+      assetRejectedBy == null &&
+      (kadivRejectedBy != null ||
+          kadivRejectionReason != null ||
+          kadivApprovedBy != null);
+
+  /// Menandai apakah pengajuan ditolak di tahap Bagian Aset.
+  bool get isAssetRejected =>
+      status == MutationStatus.rejected && !isKadivRejected;
+
+  /// Apakah pengajuan mutasi memiliki PIC tujuan yang valid.
+  /// Sesuai aturan bisnis:
+  /// 1. Jika aset dibawa oleh Pemohon, PIC valid secara otomatis (yaitu Pemohon).
+  /// 2. Jika aset TIDAK dibawa Pemohon, PIC valid HANYA jika targetPicId valid
+  ///    atau targetPic memiliki nama yang bukan placeholder default ('-', 'Belum Ditentukan', dsb).
+  bool get hasValidTargetPic {
+    if (isAssetMovingWithApplicant) {
+      return true;
+    }
+    final cleanId = targetPicId?.trim();
+    final hasValidId = cleanId != null &&
+        cleanId.isNotEmpty &&
+        cleanId != '-' &&
+        cleanId != '0' &&
+        cleanId != 'null';
+
+    final cleanName = targetPic.trim();
+    final hasValidName = cleanName.isNotEmpty &&
+        cleanName != '-' &&
+        cleanName.toLowerCase() != 'belum ditentukan' &&
+        cleanName.toLowerCase() != 'belum ada' &&
+        cleanName.toLowerCase() != 'null';
+
+    return hasValidId || hasValidName;
+  }
+
+  /// Apakah mutasi ini membutuhkan pemilihan PIC baru oleh Bagian Aset.
+  /// Aturan bisnis: jika aset tidak dibawa Pemohon dan PIC tujuan belum valid.
+  bool get needsNewPic {
+    if (isAssetMovingWithApplicant) return false;
+    return !hasValidTargetPic;
   }
 
   @override

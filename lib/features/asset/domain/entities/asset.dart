@@ -48,6 +48,9 @@ class Asset {
   /// Riwayat mutasi aset
   final List<AssetHistoryItem> history;
 
+  /// Estimasi nilai aset (Rupiah), digunakan untuk validasi kriteria approval Kadiv.
+  final double? estimatedValue;
+
   const Asset({
     required this.id,
     required this.assetCode,
@@ -59,6 +62,7 @@ class Asset {
     required this.condition,
     this.serialNumber,
     required this.acquisitionYear,
+    this.estimatedValue,
     this.hasActiveMutation = false,
     this.activeMutationTicket,
     this.history = const [],
@@ -66,6 +70,40 @@ class Asset {
 
   /// Status kunci mutasi: jika status == inMutation atau hasActiveMutation == true.
   bool get isLocked => hasActiveMutation || status == AssetStatus.inMutation;
+
+  Asset copyWith({
+    String? id,
+    String? assetCode,
+    String? name,
+    AssetCategory? category,
+    String? location,
+    String? pic,
+    AssetStatus? status,
+    String? condition,
+    String? serialNumber,
+    int? acquisitionYear,
+    double? estimatedValue,
+    bool? hasActiveMutation,
+    String? activeMutationTicket,
+    List<AssetHistoryItem>? history,
+  }) {
+    return Asset(
+      id: id ?? this.id,
+      assetCode: assetCode ?? this.assetCode,
+      name: name ?? this.name,
+      category: category ?? this.category,
+      location: location ?? this.location,
+      pic: pic ?? this.pic,
+      status: status ?? this.status,
+      condition: condition ?? this.condition,
+      serialNumber: serialNumber ?? this.serialNumber,
+      acquisitionYear: acquisitionYear ?? this.acquisitionYear,
+      estimatedValue: estimatedValue ?? this.estimatedValue,
+      hasActiveMutation: hasActiveMutation ?? this.hasActiveMutation,
+      activeMutationTicket: activeMutationTicket ?? this.activeMutationTicket,
+      history: history ?? this.history,
+    );
+  }
 
   @override
   bool operator ==(Object other) =>
@@ -79,5 +117,8 @@ class Asset {
 
   @override
   int get hashCode =>
-      id.hashCode ^ assetCode.hashCode ^ name.hashCode ^ hasActiveMutation.hashCode;
+      id.hashCode ^
+      assetCode.hashCode ^
+      name.hashCode ^
+      hasActiveMutation.hashCode;
 }

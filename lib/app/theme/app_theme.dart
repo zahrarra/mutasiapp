@@ -8,6 +8,7 @@
 // - Jangan hardcode Colors.blue / Colors.red di widget.
 
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 
 import 'app_colors.dart';
 import 'app_spacing.dart';
@@ -71,7 +72,9 @@ abstract final class AppTheme {
       useMaterial3: true,
       colorScheme: colorScheme,
 
-      // Typography
+      // Typography — Montserrat sebagai font default seluruh aplikasi.
+      // fontFamily ini meng-cover semua Text() yang tidak menentukan fontFamily secara eksplisit.
+      fontFamily: GoogleFonts.montserrat().fontFamily,
       textTheme: AppTypography.textTheme,
 
       // Scaffold
@@ -95,7 +98,7 @@ abstract final class AppTheme {
           foregroundColor: AppColors.surface,
           disabledBackgroundColor: AppColors.disabledBackground,
           disabledForegroundColor: AppColors.disabled,
-          minimumSize: const Size.fromHeight(AppSpacing.buttonHeight),
+          minimumSize: const Size(64, AppSpacing.buttonHeight),
           padding: const EdgeInsets.symmetric(
             horizontal: AppSpacing.xxl,
             vertical: AppSpacing.md,
@@ -113,7 +116,7 @@ abstract final class AppTheme {
         style: OutlinedButton.styleFrom(
           foregroundColor: AppColors.primary,
           disabledForegroundColor: AppColors.disabled,
-          minimumSize: const Size.fromHeight(AppSpacing.buttonHeight),
+          minimumSize: const Size(64, AppSpacing.buttonHeight),
           padding: const EdgeInsets.symmetric(
             horizontal: AppSpacing.xxl,
             vertical: AppSpacing.md,
@@ -167,8 +170,7 @@ abstract final class AppTheme {
           borderSide: const BorderSide(color: AppColors.border),
         ),
         labelStyle: AppTypography.body.copyWith(color: AppColors.textSecondary),
-        hintStyle:
-            AppTypography.body.copyWith(color: AppColors.textDisabled),
+        hintStyle: AppTypography.body.copyWith(color: AppColors.textDisabled),
         errorStyle: AppTypography.caption.copyWith(color: AppColors.error),
       ),
 
@@ -204,8 +206,7 @@ abstract final class AppTheme {
       // SnackBar
       snackBarTheme: SnackBarThemeData(
         backgroundColor: AppColors.textPrimary,
-        contentTextStyle:
-            AppTypography.body.copyWith(color: AppColors.surface),
+        contentTextStyle: AppTypography.body.copyWith(color: AppColors.surface),
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(AppRadius.button),
         ),

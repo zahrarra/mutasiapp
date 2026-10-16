@@ -16,6 +16,8 @@ abstract class AssetRepository {
     String? categoryId,
     String? location,
     AssetStatus? status,
+    bool? mine,
+    bool? available,
   });
 
   /// Ambil detail satu aset berdasarkan ID.
@@ -26,4 +28,57 @@ abstract class AssetRepository {
 
   /// Ambil daftar kategori aset.
   Future<Result<List<AssetCategory>>> getCategories();
+
+  /// Menambah kategori aset baru oleh Admin.
+  Future<Result<AssetCategory>> addCategory(AssetCategory category);
+
+  /// Memperbarui informasi kategori aset oleh Admin.
+  Future<Result<AssetCategory>> updateCategory(AssetCategory category);
+
+  /// Mengaktifkan atau menonaktifkan kategori aset oleh Admin.
+  Future<Result<void>> toggleCategoryActive(String id, bool isActive);
+
+  /// Menghapus kategori aset jika tidak digunakan oleh aset terdaftar.
+  Future<Result<void>> deleteCategory(String id);
+
+  /// Update lokasi dan PIC aset serta catat riwayat perubahan.
+  Future<Result<Asset>> updateAssetLocationAndPic({
+    required String assetId,
+    required String newLocation,
+    required String newPic,
+    required String ticketNumber,
+    required String updatedBy,
+  });
+
+  /// Memperbarui informasi aset (status, lokasi, PIC).
+  Future<Result<Asset>> updateAsset(Asset asset);
+
+  /// Menambahkan aset baru oleh Admin (POST /api/v1/admin/assets).
+  Future<Result<Asset>> createAsset(CreateAssetParams params);
+}
+
+class CreateAssetParams {
+  final String assetCode;
+  final String name;
+  final String assetCategoryId;
+  final String locationId;
+  final String picId;
+  final String condition;
+  final String serialNumber;
+  final int acquisitionYear;
+  final int? usageYear;
+  final bool isActive;
+
+  const CreateAssetParams({
+    required this.assetCode,
+    required this.name,
+    required this.assetCategoryId,
+    required this.locationId,
+    required this.picId,
+    required this.condition,
+    required this.serialNumber,
+    required this.acquisitionYear,
+    this.usageYear,
+    this.isActive = true,
+  });
 }

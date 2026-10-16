@@ -15,12 +15,14 @@ class GetAssetsUseCase {
     String? categoryId,
     String? location,
     AssetStatus? status,
+    bool? mine,
   }) {
     return repository.getAssets(
       query: query,
       categoryId: categoryId,
       location: location,
       status: status,
+      mine: mine,
     );
   }
 }

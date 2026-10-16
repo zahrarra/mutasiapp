@@ -56,7 +56,9 @@ abstract final class AppRadius {
   static const double button = 8.0;
   static const double input = 8.0;
   static const double card = 12.0;
+  static const double md = 12.0;
   static const double large = 16.0;
+  static const double lg = 16.0;
   static const double xlarge = 24.0;
   static const double pill = 999.0;
 }

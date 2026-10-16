@@ -4,6 +4,7 @@
 // Sumber: PROJECT-SETUP.md §21, DESIGN.md.
 
 import 'package:flutter/material.dart';
+
 import '../../app/theme/app_colors.dart';
 import '../../app/theme/app_spacing.dart';
 
@@ -44,7 +45,9 @@ class CustomButton extends StatelessWidget {
             child: CircularProgressIndicator(
               strokeWidth: 2,
               valueColor: AlwaysStoppedAnimation<Color>(
-                variant == ButtonVariant.primary ? Colors.white : AppColors.primary,
+                variant == ButtonVariant.primary
+                    ? Colors.white
+                    : AppColors.primary,
               ),
             ),
           ),
@@ -53,10 +56,7 @@ class CustomButton extends StatelessWidget {
           icon!,
           const SizedBox(width: AppSpacing.xs),
         ],
-        Text(
-          label,
-          style: const TextStyle(fontWeight: FontWeight.w600),
-        ),
+        Text(label, style: const TextStyle(fontWeight: FontWeight.w600)),
       ],
     );
 

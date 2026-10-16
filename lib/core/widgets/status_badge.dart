@@ -6,6 +6,7 @@
 // DESIGN.md §2: Status badge = Icon + Text + Color.
 
 import 'package:flutter/material.dart';
+
 import '../../app/theme/app_colors.dart';
 import '../../app/theme/app_spacing.dart';
 
@@ -28,39 +29,39 @@ class StatusBadge extends StatelessWidget {
   });
 
   factory StatusBadge.success(String label, {IconData? icon}) => StatusBadge(
-        label: label,
-        backgroundColor: AppColors.successContainer,
-        textColor: AppColors.success,
-        icon: icon,
-      );
+    label: label,
+    backgroundColor: AppColors.successContainer,
+    textColor: AppColors.success,
+    icon: icon,
+  );
 
   factory StatusBadge.warning(String label, {IconData? icon}) => StatusBadge(
-        label: label,
-        backgroundColor: AppColors.warningContainer,
-        textColor: AppColors.warning,
-        icon: icon,
-      );
+    label: label,
+    backgroundColor: AppColors.warningContainer,
+    textColor: AppColors.warning,
+    icon: icon,
+  );
 
   factory StatusBadge.error(String label, {IconData? icon}) => StatusBadge(
-        label: label,
-        backgroundColor: AppColors.errorContainer,
-        textColor: AppColors.error,
-        icon: icon,
-      );
+    label: label,
+    backgroundColor: AppColors.errorContainer,
+    textColor: AppColors.error,
+    icon: icon,
+  );
 
   factory StatusBadge.info(String label, {IconData? icon}) => StatusBadge(
-        label: label,
-        backgroundColor: AppColors.infoContainer,
-        textColor: AppColors.info,
-        icon: icon,
-      );
+    label: label,
+    backgroundColor: AppColors.infoContainer,
+    textColor: AppColors.info,
+    icon: icon,
+  );
 
   @override
   Widget build(BuildContext context) {
     return Container(
       padding: const EdgeInsets.symmetric(
         horizontal: AppSpacing.sm + AppSpacing.xxs, // 10px
-        vertical: AppSpacing.xs,                    // 4px
+        vertical: AppSpacing.xs, // 4px
       ),
       decoration: BoxDecoration(
         color: backgroundColor,

@@ -6,6 +6,7 @@
 // DESIGN.md §2: Status badge = Icon + Text + Color.
 
 import 'package:flutter/material.dart';
+
 import '../../../../app/theme/app_spacing.dart';
 import '../../domain/entities/asset_status.dart';
 
@@ -24,7 +25,7 @@ class AssetStatusBadge extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(
         horizontal: AppSpacing.sm + AppSpacing.xxs, // 10px
-        vertical: AppSpacing.xs,                    // 4px
+        vertical: AppSpacing.xs, // 4px
       ),
       decoration: BoxDecoration(
         color: status.backgroundColor,

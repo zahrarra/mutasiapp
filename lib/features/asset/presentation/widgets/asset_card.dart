@@ -4,6 +4,7 @@
 // Sumber: SCREEN-SPEC.md, DESIGN.md.
 
 import 'package:flutter/material.dart';
+
 import '../../../../app/theme/app_colors.dart';
 import '../../../../app/theme/app_spacing.dart';
 import '../../domain/entities/asset.dart';
@@ -14,11 +15,7 @@ class AssetCard extends StatelessWidget {
   final Asset asset;
   final VoidCallback? onTap;
 
-  const AssetCard({
-    super.key,
-    required this.asset,
-    this.onTap,
-  });
+  const AssetCard({super.key, required this.asset, this.onTap});
 
   @override
   Widget build(BuildContext context) {
@@ -64,7 +61,10 @@ class AssetCard extends StatelessWidget {
                       ),
                     ),
                   ),
-                  AssetStatusBadge(status: asset.status, isLocked: asset.isLocked),
+                  AssetStatusBadge(
+                    status: asset.status,
+                    isLocked: asset.isLocked,
+                  ),
                 ],
               ),
               const SizedBox(height: AppSpacing.xs),
@@ -83,19 +83,33 @@ class AssetCard extends StatelessWidget {
               // Category & Location
               Row(
                 children: [
-                  const Icon(Icons.category_outlined, size: 14, color: AppColors.textSecondary),
+                  const Icon(
+                    Icons.category_outlined,
+                    size: 14,
+                    color: AppColors.textSecondary,
+                  ),
                   const SizedBox(width: AppSpacing.xxs),
                   Text(
                     asset.category.name,
-                    style: const TextStyle(fontSize: 12, color: AppColors.textSecondary),
+                    style: const TextStyle(
+                      fontSize: 12,
+                      color: AppColors.textSecondary,
+                    ),
                   ),
                   const SizedBox(width: AppSpacing.md),
-                  const Icon(Icons.location_on_outlined, size: 14, color: AppColors.textSecondary),
+                  const Icon(
+                    Icons.location_on_outlined,
+                    size: 14,
+                    color: AppColors.textSecondary,
+                  ),
                   const SizedBox(width: AppSpacing.xxs),
                   Expanded(
                     child: Text(
                       asset.location,
-                      style: const TextStyle(fontSize: 12, color: AppColors.textSecondary),
+                      style: const TextStyle(
+                        fontSize: 12,
+                        color: AppColors.textSecondary,
+                      ),
                       overflow: TextOverflow.ellipsis,
                     ),
                   ),
@@ -106,11 +120,18 @@ class AssetCard extends StatelessWidget {
               // PIC
               Row(
                 children: [
-                  const Icon(Icons.person_outline, size: 14, color: AppColors.textDisabled),
+                  const Icon(
+                    Icons.person_outline,
+                    size: 14,
+                    color: AppColors.textDisabled,
+                  ),
                   const SizedBox(width: AppSpacing.xxs),
                   Text(
                     'PIC: ${asset.pic}',
-                    style: const TextStyle(fontSize: 11, color: AppColors.textDisabled),
+                    style: const TextStyle(
+                      fontSize: 11,
+                      color: AppColors.textDisabled,
+                    ),
                   ),
                 ],
               ),
@@ -130,7 +151,11 @@ class AssetCard extends StatelessWidget {
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      const Icon(Icons.lock, size: 12, color: AppColors.warning),
+                      const Icon(
+                        Icons.lock,
+                        size: 12,
+                        color: AppColors.warning,
+                      ),
                       const SizedBox(width: AppSpacing.xxs),
                       Text(
                         'Aset Terkunci (${asset.activeMutationTicket ?? "Mutasi Aktif"})',

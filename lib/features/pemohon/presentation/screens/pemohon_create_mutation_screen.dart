@@ -1,0 +1,2119 @@
+// lib/features/pemohon/presentation/screens/pemohon_create_mutation_screen.dart
+//
+// Form Pengajuan Mutasi — visual Stitch “Executive Clean Form”.
+// Font: Montserrat.
+// Functionality: submit, dokumen, validasi, provider.
+
+import 'dart:typed_data';
+import 'dart:ui';
+
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
+import 'package:google_fonts/google_fonts.dart';
+
+import '../../../../app/router/route_names.dart';
+import '../../../../core/services/document_picker_service.dart';
+import '../../../../core/services/mutation_draft_service.dart';
+import '../../../../core/widgets/app_feedback.dart';
+import '../../../../core/widgets/document_preview_dialog.dart';
+import '../../../../core/widgets/inline_searchable_dropdown.dart';
+import '../../../../core/widgets/mutasiku_page_header.dart';
+import '../../../admin/domain/entities/location_item.dart';
+import '../../../asset/domain/entities/asset.dart';
+import '../../../asset/presentation/providers/asset_provider.dart';
+import '../../../auth/domain/entities/user_role.dart';
+import '../../../auth/presentation/providers/auth_provider.dart';
+import '../../../mutation/domain/repositories/mutation_repository.dart';
+import '../../../mutation/presentation/providers/mutation_form_provider.dart';
+import '../../../mutation/presentation/providers/mutation_provider.dart';
+import '../../../mutation/presentation/widgets/mutation_submit_success_dialog.dart';
+import '../../../notification/domain/entities/notification_item.dart';
+import '../../../notification/presentation/providers/notification_provider.dart';
+
+abstract final class _C {
+  static const bg = Color(0xFFF6F8FA);
+  static const white = Color(0xFFFFFFFF);
+  static const navy = Color(0xFF0F3D56);
+  static const text = Color(0xFF172B4D);
+  static const muted = Color(0xFF52606D);
+  static const border = Color(0xFFD0D5DD);
+  static const teal = Color(0xFF006A63);
+  static const warning = Color(0xFFB45309);
+  static const warningBg = Color(0xFFFEF3C7);
+  static const warningBorder = Color(0xFFFDE68A);
+  static const success = Color(0xFF15803D);
+}
+
+class PemohonCreateMutationScreen extends ConsumerStatefulWidget {
+  const PemohonCreateMutationScreen({super.key});
+
+  @override
+  ConsumerState<PemohonCreateMutationScreen> createState() =>
+      _PemohonCreateMutationScreenState();
+}
+
+class _PemohonCreateMutationScreenState
+    extends ConsumerState<PemohonCreateMutationScreen> {
+  final _formKey = GlobalKey<FormState>();
+
+  final _assetSelectController = TextEditingController();
+  final _assetNameController = TextEditingController();
+  final _assetCodeController = TextEditingController();
+  final _sourceLocationController = TextEditingController();
+  final _currentPicController = TextEditingController();
+  final _locationController = TextEditingController();
+  final _roomController = TextEditingController();
+  final _picController = TextEditingController();
+  final _reasonController = TextEditingController();
+
+  String? _documentName;
+  int? _documentSize;
+  String? _documentPath;
+  List<int>? _documentBytes;
+
+  /// true = dibawa sendiri, false = ditinggalkan
+  bool _bringAsset = true;
+
+  String? _selectedAssetId;
+  String? _selectedTargetLocationId;
+
+  @visibleForTesting
+  String? get selectedTargetLocationId => _selectedTargetLocationId;
+
+  static const _maxReason = 250;
+
+  @override
+  void initState() {
+    super.initState();
+
+    _reasonController.addListener(() {
+      if (mounted) {
+        setState(() {});
+      }
+    });
+
+    // Agar tampilan lokasi read-only ikut berubah
+    // ketika lokasi asal diketik.
+    _sourceLocationController.addListener(() {
+      if (mounted) {
+        setState(() {});
+      }
+    });
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final user = ref.read(authStateProvider).user;
+      if (_bringAsset && user != null && _picController.text.trim().isEmpty) {
+        setState(() {
+          _picController.text = user.name;
+        });
+      }
+      _loadSavedDraft();
+
+      // Trigger pemuatan master lokasi aktif terkini jika belum dimuat atau dalam state error
+      final locState = ref.read(masterLocationsProvider);
+      if (locState.hasError || (locState.valueOrNull?.isEmpty ?? true)) {
+        ref.read(masterLocationsProvider.notifier).loadLocations();
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _assetSelectController.dispose();
+    _assetNameController.dispose();
+    _assetCodeController.dispose();
+    _sourceLocationController.dispose();
+    _currentPicController.dispose();
+    _locationController.dispose();
+    _roomController.dispose();
+    _picController.dispose();
+    _reasonController.dispose();
+    super.dispose();
+  }
+
+  // ---------------------------------------------------------------------------
+  // TYPOGRAPHY
+  // ---------------------------------------------------------------------------
+
+  /// Style untuk teks yang diketik user.
+  /// Sengaja dibuat kecil dan regular agar tidak terlalu besar/bold.
+  TextStyle _inputTextStyle({Color color = _C.text, double size = 13}) {
+    return GoogleFonts.montserrat(
+      fontSize: size,
+      fontWeight: FontWeight.w400,
+      color: color,
+      height: 1.35,
+    );
+  }
+
+  TextStyle _m({
+    double size = 14,
+    FontWeight weight = FontWeight.w400,
+    Color color = _C.text,
+    double? height,
+    double? letterSpacing,
+  }) {
+    return GoogleFonts.montserrat(
+      fontSize: size,
+      fontWeight: weight,
+      color: color,
+      height: height,
+      letterSpacing: letterSpacing,
+    );
+  }
+
+  // ---------------------------------------------------------------------------
+  // NAVIGATION
+  // ---------------------------------------------------------------------------
+
+  void _safePop() {
+    if (context.canPop()) {
+      context.pop();
+    } else {
+      context.go(RouteNames.pemohonDashboardPath);
+    }
+  }
+
+  // ---------------------------------------------------------------------------
+  // DRAFT
+  // ---------------------------------------------------------------------------
+
+  Future<void> _loadSavedDraft() async {
+    final user = ref.read(authStateProvider).user;
+    final draft = await MutationDraftService.loadDraft(userId: user?.id);
+    if (draft != null && mounted) {
+      setState(() {
+        _selectedAssetId = draft.assetId;
+        _assetSelectController.text = draft.assetName;
+        _assetNameController.text = draft.assetName;
+        _assetCodeController.text = draft.assetCode;
+        _sourceLocationController.text = draft.sourceLocation;
+        _currentPicController.text = draft.currentPic;
+        _locationController.text = draft.targetLocation;
+        _roomController.text = draft.room;
+        _bringAsset = draft.bringAsset;
+        if (_bringAsset) {
+          _picController.text = draft.targetPic.isNotEmpty
+              ? draft.targetPic
+              : (user?.name ?? '');
+        } else {
+          _picController.clear();
+        }
+        _reasonController.text = draft.reason;
+        _documentName = draft.documentName;
+        _documentSize = draft.documentSize;
+        _documentPath = draft.documentPath;
+        _documentBytes = draft.documentBytes;
+      });
+      AppFeedback.showInfo(context, 'Draf pengajuan mutasi dimuat.');
+    }
+  }
+
+  Future<void> _saveDraft() async {
+    final user = ref.read(authStateProvider).user;
+    final draft = MutationDraft(
+      assetId: _selectedAssetId,
+      assetName: _assetNameController.text.trim(),
+      assetCode: _assetCodeController.text.trim(),
+      sourceLocation: _sourceLocationController.text.trim(),
+      currentPic: _currentPicController.text.trim(),
+      targetLocation: _locationController.text.trim(),
+      room: _roomController.text.trim(),
+      bringAsset: _bringAsset,
+      targetPic: _picController.text.trim(),
+      reason: _reasonController.text.trim(),
+      documentName: _documentName,
+      documentSize: _documentSize,
+      documentPath: _documentPath,
+      documentBytes: _documentBytes,
+      savedAt: DateTime.now(),
+    );
+    await MutationDraftService.saveDraft(draft, userId: user?.id);
+    if (mounted) {
+      AppFeedback.showSuccess(context, 'Draf pengajuan berhasil disimpan.');
+      _safePop();
+    }
+  }
+
+  // ---------------------------------------------------------------------------
+  // DOCUMENT
+  // ---------------------------------------------------------------------------
+
+  void _previewDocument() {
+    if (_documentName == null) return;
+    DocumentPreviewDialog.showFile(
+      context,
+      fileName: _documentName!,
+      bytes: _documentBytes != null
+          ? Uint8List.fromList(_documentBytes!)
+          : null,
+      filePath: _documentPath,
+    );
+  }
+
+  Future<void> _pickDocument() async {
+    try {
+      final result = await DocumentPickerService.pickDocument(
+        allowedExtensions: const ['pdf'],
+      );
+
+      if (!mounted) return;
+
+      if (result.isCanceled) return;
+
+      if (result.isFailure) {
+        AppFeedback.showError(
+          context,
+          result.errorMessage ?? 'Upload gagal. Ukuran file maksimal 30 MB.',
+        );
+        return;
+      }
+
+      final doc = result.document;
+
+      if (doc != null) {
+        setState(() {
+          _documentName = doc.name;
+          _documentSize = doc.size;
+          _documentPath = doc.path;
+          _documentBytes = doc.bytes;
+        });
+
+        AppFeedback.showSuccess(context, 'Dokumen diunggah: ${doc.name}');
+      }
+    } catch (e) {
+      if (mounted) {
+        AppFeedback.showError(context, 'Gagal mengunggah dokumen: $e');
+      }
+    }
+  }
+
+  String _formatFileSize(int? bytes) {
+    if (bytes == null || bytes <= 0) return '—';
+
+    if (bytes < 1024) {
+      return '$bytes B';
+    }
+
+    if (bytes < 1024 * 1024) {
+      return '${(bytes / 1024).toStringAsFixed(1)} KB';
+    }
+
+    return '${(bytes / (1024 * 1024)).toStringAsFixed(1)} MB';
+  }
+
+  // ---------------------------------------------------------------------------
+  // CONFIRM DIALOG (Stitch Modal Konfirmasi Pengajuan)
+  // ---------------------------------------------------------------------------
+
+  void _showConfirmSubmitDialog() {
+    FocusScope.of(context).unfocus();
+    if (!(_formKey.currentState?.validate() ?? false)) return;
+
+    final userAssets =
+        ref.read(userResponsibleAssetsProvider).valueOrNull ?? [];
+    if ((_selectedAssetId == null || _selectedAssetId!.trim().isEmpty) &&
+        userAssets.isNotEmpty) {
+      final customSN = _assetCodeController.text.trim();
+      final customName = _assetNameController.text.trim();
+      final Asset? match = userAssets.cast<Asset?>().firstWhere(
+        (a) =>
+            a != null &&
+            (a.assetCode.toLowerCase() == customSN.toLowerCase() ||
+                (a.serialNumber != null &&
+                    a.serialNumber!.toLowerCase() == customSN.toLowerCase()) ||
+                a.name.toLowerCase() == customName.toLowerCase() ||
+                a.id == customSN),
+        orElse: () => userAssets.cast<Asset?>().firstWhere(
+          (a) =>
+              a != null &&
+              customName.isNotEmpty &&
+              a.name.toLowerCase().contains(customName.toLowerCase()),
+          orElse: () => null,
+        ),
+      );
+      if (match != null) {
+        _selectedAssetId = match.id;
+      }
+    }
+
+    if (_selectedAssetId == null || _selectedAssetId!.trim().isEmpty) {
+      AppFeedback.showError(context, 'Silakan pilih aset terlebih dahulu.');
+      return;
+    }
+
+    final sourceLocation = _sourceLocationController.text.trim();
+    final targetLoc = _locationController.text.trim();
+    if (sourceLocation.isEmpty) {
+      AppFeedback.showError(context, 'Lokasi aset saat ini wajib diisi.');
+      return;
+    }
+    if (targetLoc.isEmpty) {
+      AppFeedback.showError(context, 'Lokasi tujuan wajib diisi.');
+      return;
+    }
+    if (_documentName == null || _documentName!.trim().isEmpty) {
+      AppFeedback.showError(
+        context,
+        'Surat Keputusan (SK) SDM wajib diunggah untuk pengajuan mutasi.',
+      );
+      return;
+    }
+
+    showGeneralDialog(
+      context: context,
+      barrierDismissible: false,
+      barrierColor: const Color(0xFF0F172A).withValues(alpha: 0.50),
+      barrierLabel: 'Modal Konfirmasi Pengajuan',
+      transitionDuration: const Duration(milliseconds: 200),
+      transitionBuilder: (context, anim1, anim2, child) {
+        return FadeTransition(
+          opacity: CurvedAnimation(parent: anim1, curve: Curves.easeOut),
+          child: ScaleTransition(
+            scale: Tween<double>(begin: 0.95, end: 1.0).animate(
+              CurvedAnimation(parent: anim1, curve: Curves.easeOutCubic),
+            ),
+            child: child,
+          ),
+        );
+      },
+      pageBuilder: (dialogCtx, anim1, anim2) {
+        return BackdropFilter(
+          filter: ImageFilter.blur(sigmaX: 8, sigmaY: 8),
+          child: Center(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
+              child: Material(
+                type: MaterialType.transparency,
+                child: Container(
+                  width: double.infinity,
+                  constraints: const BoxConstraints(maxWidth: 320),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(24),
+                    border: Border.all(color: const Color(0xFFF1F5F9)),
+                    boxShadow: [
+                      BoxShadow(
+                        color: const Color(0xFF0F172A).withValues(alpha: 0.12),
+                        blurRadius: 28,
+                        offset: const Offset(0, 14),
+                      ),
+                    ],
+                  ),
+                  padding: const EdgeInsets.fromLTRB(20, 24, 20, 20),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.center,
+                    children: [
+                      // ── Icon Circle (Stitch Screen #1) ──
+                      Container(
+                        width: 64,
+                        height: 64,
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFECF4FF),
+                          shape: BoxShape.circle,
+                          border: Border.all(color: const Color(0xFFD5E4F4)),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withValues(alpha: 0.04),
+                              blurRadius: 4,
+                              offset: const Offset(0, 1),
+                            ),
+                          ],
+                        ),
+                        child: const Center(
+                          child: _MinimalistPaperAirplane(
+                            size: 30,
+                            color: Color(0xFF00273A),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+
+                      // ── Title ──
+                      Text(
+                        'Kirim Pengajuan?',
+                        textAlign: TextAlign.center,
+                        style: GoogleFonts.montserrat(
+                          fontSize: 19,
+                          fontWeight: FontWeight.w700,
+                          color: const Color(0xFF00273A),
+                          letterSpacing: -0.3,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+
+                      // ── Subtitle ──
+                      Text(
+                        'Pastikan seluruh data mutasi aset dan dokumen SK SDM sudah sesuai sebelum diteruskan ke pemeriksaan Operator.',
+                        textAlign: TextAlign.center,
+                        style: GoogleFonts.montserrat(
+                          fontSize: 12.5,
+                          fontWeight: FontWeight.w400,
+                          color: const Color(0xFF64748B),
+                          height: 1.45,
+                        ),
+                      ),
+                      const SizedBox(height: 20),
+
+                      // ── Action Buttons ──
+                      // Primary: Kirim Pengajuan
+                      SizedBox(
+                        width: double.infinity,
+                        height: 44,
+                        child: ElevatedButton(
+                          key: const Key('btn_confirm_submit'),
+                          onPressed: () {
+                            Navigator.of(dialogCtx).pop();
+                            _submit();
+                          },
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: const Color(0xFF00273A),
+                            foregroundColor: Colors.white,
+                            elevation: 0,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            padding: EdgeInsets.zero,
+                          ),
+                          child: Text(
+                            'Kirim Pengajuan',
+                            style: GoogleFonts.montserrat(
+                              fontSize: 13.5,
+                              fontWeight: FontWeight.w600,
+                              color: Colors.white,
+                            ),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 10),
+
+                      // Secondary: Batal
+                      SizedBox(
+                        width: double.infinity,
+                        height: 44,
+                        child: ElevatedButton(
+                          key: const Key('btn_cancel_submit'),
+                          onPressed: () => Navigator.of(dialogCtx).pop(),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: const Color(0xFFECF4FF),
+                            foregroundColor: const Color(0xFF00273A),
+                            elevation: 0,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            padding: EdgeInsets.zero,
+                          ),
+                          child: Text(
+                            'Batal',
+                            style: GoogleFonts.montserrat(
+                              fontSize: 13.5,
+                              fontWeight: FontWeight.w600,
+                              color: const Color(0xFF00273A),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  // ---------------------------------------------------------------------------
+  // SUBMIT
+  // ---------------------------------------------------------------------------
+
+  Future<void> _submit() async {
+    FocusScope.of(context).unfocus();
+
+    if (!(_formKey.currentState?.validate() ?? false)) {
+      return;
+    }
+
+    final user = ref.read(authStateProvider).user;
+
+    final sourceLocation = _sourceLocationController.text.trim();
+    final targetLoc = _locationController.text.trim();
+    final room = _roomController.text.trim();
+
+    // Lokasi tujuan lengkap.
+    final fullTarget = room.isEmpty ? targetLoc : '$targetLoc — $room';
+
+    // Pastikan lokasi asal benar-benar tersedia.
+    if (sourceLocation.isEmpty) {
+      AppFeedback.showError(context, 'Lokasi aset saat ini wajib diisi.');
+      return;
+    }
+
+    if (targetLoc.isEmpty) {
+      AppFeedback.showError(context, 'Lokasi tujuan wajib diisi.');
+      return;
+    }
+
+    if (_documentName == null || _documentName!.trim().isEmpty) {
+      AppFeedback.showError(
+        context,
+        'Surat Keputusan (SK) SDM wajib diunggah untuk pengajuan mutasi.',
+      );
+      return;
+    }
+
+    final targetPic = _bringAsset
+        ? (_picController.text.trim().isNotEmpty
+              ? _picController.text.trim()
+              : (user?.name ?? ''))
+        : '';
+
+    final customSN = _assetCodeController.text.trim();
+    final customName = _assetNameController.text.trim();
+    final userAssets =
+        ref.read(userResponsibleAssetsProvider).valueOrNull ?? [];
+
+    if ((_selectedAssetId == null || _selectedAssetId!.trim().isEmpty) &&
+        userAssets.isNotEmpty) {
+      final Asset? match = userAssets.cast<Asset?>().firstWhere(
+        (a) =>
+            a != null &&
+            (a.assetCode.toLowerCase() == customSN.toLowerCase() ||
+                (a.serialNumber != null &&
+                    a.serialNumber!.toLowerCase() == customSN.toLowerCase()) ||
+                a.name.toLowerCase() == customName.toLowerCase() ||
+                a.id == customSN),
+        orElse: () => userAssets.cast<Asset?>().firstWhere(
+          (a) =>
+              a != null &&
+              customName.isNotEmpty &&
+              a.name.toLowerCase().contains(customName.toLowerCase()),
+          orElse: () => null,
+        ),
+      );
+      if (match != null) {
+        _selectedAssetId = match.id;
+      }
+    }
+
+    if (_selectedAssetId == null || _selectedAssetId!.trim().isEmpty) {
+      AppFeedback.showError(context, 'Silakan pilih aset terlebih dahulu.');
+      return;
+    }
+
+    // Resolve target location ID dari master data jika belum tersimpan
+    String? destLocId = _selectedTargetLocationId;
+    if (destLocId == null || destLocId.isEmpty) {
+      final matchedLoc = ref
+          .read(availableActiveLocationItemsProvider)
+          .where((l) => l.name.toLowerCase() == targetLoc.toLowerCase())
+          .firstOrNull;
+      destLocId = matchedLoc?.id;
+    }
+
+    final params = SubmitMutationParams(
+      applicantId: user?.id,
+      applicantName: user?.name,
+      assetId: _selectedAssetId!.trim(),
+      assetName: _assetNameController.text.trim(),
+      customSerialNumber: customSN.isNotEmpty ? customSN : null,
+      isAssetMovingWithApplicant: _bringAsset,
+      isUnregisteredAsset: false,
+      sourceLocation: sourceLocation,
+      targetLocation: fullTarget,
+      destinationLocationId: destLocId,
+      currentPic: _currentPicController.text.trim().isNotEmpty
+          ? _currentPicController.text.trim()
+          : (user?.name ?? ''),
+      targetPic: targetPic,
+      reason: _reasonController.text.trim(),
+      documentName: _documentName,
+      documentPath: _documentPath,
+      documentBytes: _documentBytes,
+    );
+
+    final mutation = await ref
+        .read(submitMutationProvider.notifier)
+        .submit(params);
+
+    if (!mounted) return;
+
+    if (mutation != null) {
+      await MutationDraftService.clearDraft(userId: user?.id);
+      if (!mounted) return;
+
+      ref
+          .read(notificationProvider.notifier)
+          .notifyRole(
+            targetRole: UserRole.operator,
+            title: 'Pengajuan Baru Masuk',
+            message:
+                'Pengajuan ${mutation.ticketNumber} diajukan oleh ${mutation.applicantName}.',
+            type: NotificationType.action,
+            relatedMutationId: mutation.id,
+          );
+
+      ref.invalidate(mutationListProvider);
+
+      // Tampilkan Modal Dialog Sukses di atas Form Pengajuan Mutasi (background tetap dim + blur)
+      if (mounted) {
+        await showMutationSubmitSuccessDialog(
+          context,
+          mutationId: mutation.id,
+          ticketNumber: mutation.ticketNumber,
+        );
+      }
+    } else {
+      final err = ref.read(submitMutationProvider).error;
+
+      AppFeedback.showError(context, err ?? 'Gagal mengajukan mutasi');
+    }
+  }
+
+  // ---------------------------------------------------------------------------
+  // BUILD
+  // ---------------------------------------------------------------------------
+
+  @override
+  Widget build(BuildContext context) {
+    final submitState = ref.watch(submitMutationProvider);
+    final locations = ref.watch(availableLocationsProvider);
+    final locationItems = ref.watch(availableActiveLocationItemsProvider);
+    final locationsAsync = ref.watch(masterLocationsProvider);
+    final assetsAsync = ref.watch(userResponsibleAssetsProvider);
+    final user = ref.watch(authStateProvider).user;
+    if (_bringAsset && user != null && _picController.text.trim().isEmpty) {
+      _picController.text = user.name;
+    }
+
+    // Jika master lokasi aktif selesai dimuat dan controller masih memegang data lama yang tidak valid,
+    // jangan pertahankan data lama tersebut.
+    if (locations.isNotEmpty && _locationController.text.trim().isNotEmpty) {
+      final currentTarget = _locationController.text.trim();
+      if (!locations.contains(currentTarget)) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted && _locationController.text.trim() == currentTarget) {
+            setState(() {
+              _locationController.clear();
+              _selectedTargetLocationId = null;
+            });
+          }
+        });
+      }
+    }
+
+    return Scaffold(
+      backgroundColor: _C.bg,
+      body: Column(
+        children: [
+          _buildHeader(),
+
+          Expanded(
+            child: Form(
+              key: _formKey,
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.fromLTRB(16, 16, 16, 120),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    _sectionAsset(locations, assetsAsync),
+
+                    const SizedBox(height: 16),
+
+                    _sectionRoute(locations, locationItems, locationsAsync),
+
+                    const SizedBox(height: 16),
+
+                    _sectionReasonDoc(),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+      bottomNavigationBar: _bottomBar(submitState.isLoading),
+    );
+  }
+
+  // ---------------------------------------------------------------------------
+  // HEADER
+  // ---------------------------------------------------------------------------
+
+  Widget _buildHeader() {
+    return SafeArea(
+      bottom: false,
+      child: MutasiKuPageHeader(
+        title: 'Form Pengajuan Mutasi',
+        subtitle:
+            'Pengalihan lokasi fisik dan penanggung jawab (PIC) aset dinas',
+        onBack: _safePop,
+      ),
+    );
+  }
+
+  // ---------------------------------------------------------------------------
+  // SECTION ASET
+  // ---------------------------------------------------------------------------
+
+  Widget _sectionAsset(
+    List<String> locations,
+    AsyncValue<List<Asset>> assetsAsync,
+  ) {
+    final rawAssets = assetsAsync.valueOrNull ?? [];
+    final userAssets = rawAssets.where((a) => !a.hasActiveMutation).toList();
+    final assetOptions = userAssets
+        .map((a) => '${a.name} (${a.assetCode})')
+        .toList();
+    final assetMap = {
+      for (final a in userAssets) '${a.name} (${a.assetCode})': a,
+      for (final a in userAssets) a.name: a,
+      for (final a in userAssets) a.assetCode: a,
+      for (final a in userAssets) a.id: a,
+    };
+
+    return _card(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              _iconBox(Icons.inventory_2_outlined),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  'Informasi Aset Terdaftar',
+                  style: _m(size: 14, weight: FontWeight.w700),
+                ),
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 4,
+                ),
+                decoration: BoxDecoration(
+                  color: _C.warningBg,
+                  borderRadius: BorderRadius.circular(999),
+                  border: Border.all(color: _C.warningBorder),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Icon(Icons.lock_outline, size: 13, color: _C.warning),
+                    const SizedBox(width: 4),
+                    Text(
+                      'Terkunci saat proses',
+                      style: _m(
+                        size: 11,
+                        weight: FontWeight.w600,
+                        color: _C.warning,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+
+          const SizedBox(height: 12),
+          const Divider(height: 1, color: Color(0x99D0D5DD)),
+          const SizedBox(height: 14),
+
+          // ── Loading state ──
+          if (assetsAsync.isLoading)
+            Padding(
+              padding: const EdgeInsets.only(bottom: 12),
+              child: Row(
+                children: [
+                  const SizedBox(
+                    width: 14,
+                    height: 14,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  ),
+                  const SizedBox(width: 8),
+                  Text(
+                    'Memuat daftar master aset...',
+                    style: _m(size: 12, color: _C.muted),
+                  ),
+                ],
+              ),
+            ),
+
+          // ── Error state ──
+          if (assetsAsync.hasError)
+            Container(
+              margin: const EdgeInsets.only(bottom: 12),
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: const Color(0xFFFEF2F2),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: const Color(0xFFFCA5A5)),
+              ),
+              child: Row(
+                children: [
+                  const Icon(
+                    Icons.error_outline,
+                    size: 16,
+                    color: Color(0xFFDC2626),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      'Gagal memuat master aset dari server.',
+                      style: _m(size: 11, color: const Color(0xFFDC2626)),
+                    ),
+                  ),
+                  InkWell(
+                    onTap: () => ref.invalidate(userResponsibleAssetsProvider),
+                    child: const Padding(
+                      padding: EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+                      child: Text(
+                        'Coba lagi',
+                        style: TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.bold,
+                          color: Color(0xFFDC2626),
+                          decoration: TextDecoration.underline,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+
+          // ── Empty state ──
+          if (!assetsAsync.isLoading &&
+              !assetsAsync.hasError &&
+              userAssets.isEmpty)
+            Container(
+              margin: const EdgeInsets.only(bottom: 12),
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: _C.warningBg,
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: _C.warningBorder),
+              ),
+              child: Row(
+                children: [
+                  const Icon(Icons.info_outline, size: 16, color: _C.warning),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      'Tidak ada aset terdaftar yang terikat sebagai tanggung jawab Anda.',
+                      style: _m(size: 11, color: _C.warning),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+
+          // ── Dropdown Pemilihan Aset ──
+          InlineSearchableDropdown(
+            fieldKey: const Key('dropdown_select_asset'),
+            controller: _assetSelectController,
+            labelText: 'Pilih Aset Terdaftar *',
+            hintText: 'Pilih aset dari daftar master data',
+            items: assetOptions,
+            validator: (v) {
+              if (_selectedAssetId == null ||
+                  _selectedAssetId!.trim().isEmpty) {
+                return 'Silakan pilih aset terlebih dahulu.';
+              }
+              return null;
+            },
+            onChanged: (selectedStr) {
+              final match = assetMap[selectedStr];
+              if (match != null) {
+                setState(() {
+                  _selectedAssetId = match.id;
+                  _assetNameController.text = match.name;
+                  _assetCodeController.text =
+                      match.serialNumber?.isNotEmpty == true
+                      ? match.serialNumber!
+                      : match.assetCode;
+                  if (match.location.isNotEmpty) {
+                    _sourceLocationController.text = match.location;
+                  }
+                  if (match.pic.isNotEmpty) {
+                    _currentPicController.text = match.pic;
+                  }
+                });
+              }
+            },
+          ),
+
+          const SizedBox(height: 12),
+
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Container(
+                width: 48,
+                height: 48,
+                decoration: BoxDecoration(
+                  color: _C.bg,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: _C.border),
+                ),
+                child: const Icon(Icons.laptop_mac, size: 26, color: _C.text),
+              ),
+
+              const SizedBox(width: 14),
+
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    TextFormField(
+                      controller: _assetNameController,
+                      readOnly: _selectedAssetId != null,
+                      style: _inputTextStyle(),
+                      decoration: _inputDeco('Nama aset *').copyWith(
+                        fillColor: _selectedAssetId != null
+                            ? const Color(0xFFF1F5F9)
+                            : null,
+                        filled: _selectedAssetId != null,
+                        suffixIcon: _selectedAssetId != null
+                            ? const Tooltip(
+                                message: 'Data aset terdaftar dari master data',
+                                child: Icon(
+                                  Icons.lock_outline,
+                                  size: 16,
+                                  color: _C.muted,
+                                ),
+                              )
+                            : null,
+                      ),
+                      validator: (v) => (v == null || v.trim().isEmpty)
+                          ? 'Wajib diisi'
+                          : null,
+                    ),
+
+                    const SizedBox(height: 8),
+
+                    TextFormField(
+                      controller: _assetCodeController,
+                      readOnly: _selectedAssetId != null,
+                      style: _inputTextStyle(color: _C.muted),
+                      decoration: _inputDeco('Nomor Seri / Kode Aset').copyWith(
+                        fillColor: _selectedAssetId != null
+                            ? const Color(0xFFF1F5F9)
+                            : null,
+                        filled: _selectedAssetId != null,
+                        suffixIcon: _selectedAssetId != null
+                            ? const Tooltip(
+                                message: 'Data aset terdaftar dari master data',
+                                child: Icon(
+                                  Icons.lock_outline,
+                                  size: 16,
+                                  color: _C.muted,
+                                ),
+                              )
+                            : null,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+
+          if (_selectedAssetId != null) ...[
+            const SizedBox(height: 8),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+              decoration: BoxDecoration(
+                color: const Color(0xFFECFDF5),
+                borderRadius: BorderRadius.circular(6),
+                border: Border.all(color: const Color(0xFFA7F3D0)),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Icon(Icons.check_circle, size: 14, color: _C.success),
+                  const SizedBox(width: 6),
+                  Text(
+                    'Aset terdaftar di SIMAK BMN / Master Data',
+                    style: _m(
+                      size: 11,
+                      weight: FontWeight.w600,
+                      color: _C.success,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+
+          const SizedBox(height: 12),
+
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(14),
+            decoration: BoxDecoration(
+              color: _C.bg,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: _C.border),
+            ),
+            child: Column(
+              children: [
+                TextFormField(
+                  controller: _currentPicController,
+                  style: _inputTextStyle(),
+                  decoration: _inputDeco('Pemegang / PIC saat ini'),
+                ),
+
+                const SizedBox(height: 8),
+
+                InlineSearchableDropdown(
+                  fieldKey: const Key('dropdown_source_location'),
+                  controller: _sourceLocationController,
+                  labelText: 'Unit kerja & lokasi asal *',
+                  hintText: 'Pilih unit kerja & lokasi asal',
+                  items: locations,
+                  validator: (v) => (v == null || v.trim().isEmpty)
+                      ? 'Lokasi aset saat ini wajib diisi'
+                      : null,
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ---------------------------------------------------------------------------
+  // SECTION RUTE
+  // ---------------------------------------------------------------------------
+
+  Widget _sectionRoute(
+    List<String> locations,
+    List<LocationItem> locationItems,
+    AsyncValue<List<LocationItem>> locationsAsync,
+  ) {
+    final sourceLocation = _sourceLocationController.text.trim();
+
+    return _card(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                width: 28,
+                height: 28,
+                decoration: BoxDecoration(
+                  color: const Color(0xFFE1F0FF),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: const Icon(Icons.alt_route, size: 18, color: _C.navy),
+              ),
+
+              const SizedBox(width: 8),
+
+              Expanded(
+                child: Text(
+                  'Rute & Status Pengelolaan Fisik',
+                  style: _m(size: 14, weight: FontWeight.w700),
+                ),
+              ),
+
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFECFDF5),
+                  borderRadius: BorderRadius.circular(999),
+                  border: Border.all(color: const Color(0xFFA7F3D0)),
+                ),
+                child: Text(
+                  'SOP-AST-2025',
+                  style: _m(size: 10, weight: FontWeight.w600, color: _C.teal),
+                ),
+              ),
+            ],
+          ),
+
+          const SizedBox(height: 12),
+
+          const Divider(height: 1, color: Color(0x99D0D5DD)),
+
+          const SizedBox(height: 14),
+
+          Text(
+            'LOKASI ASAL (READ-ONLY)',
+            style: _m(
+              size: 11,
+              weight: FontWeight.w600,
+              color: _C.muted,
+              letterSpacing: 0.6,
+            ),
+          ),
+
+          const SizedBox(height: 6),
+
+          Container(
+            padding: const EdgeInsets.all(10),
+            decoration: BoxDecoration(
+              color: _C.bg,
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: _C.border.withValues(alpha: 0.7)),
+            ),
+            child: Row(
+              children: [
+                const Icon(Icons.apartment, size: 18, color: _C.muted),
+
+                const SizedBox(width: 10),
+
+                Expanded(
+                  child: Text(
+                    sourceLocation.isEmpty
+                        ? 'Isi lokasi asal di bagian aset'
+                        : sourceLocation,
+                    style: _inputTextStyle(
+                      color: sourceLocation.isEmpty ? _C.muted : _C.text,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+
+          const SizedBox(height: 14),
+
+          Text(
+            'UNIT / CABANG PENUGASAN BARU',
+            style: _m(
+              size: 11,
+              weight: FontWeight.w600,
+              color: _C.muted,
+              letterSpacing: 0.6,
+            ),
+          ),
+
+          const SizedBox(height: 6),
+
+          // Tampilkan loading / error / kosong secara jelas
+          if (locationsAsync.isLoading)
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 6),
+              child: Row(
+                children: [
+                  const SizedBox(
+                    width: 14,
+                    height: 14,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  ),
+                  const SizedBox(width: 8),
+                  Text(
+                    'Memuat master lokasi dari server...',
+                    style: _m(size: 12, color: _C.muted),
+                  ),
+                ],
+              ),
+            )
+          else if (locationsAsync.hasError)
+            Container(
+              margin: const EdgeInsets.only(bottom: 8),
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: const Color(0xFFFEF2F2),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: const Color(0xFFFECACA)),
+              ),
+              child: Row(
+                children: [
+                  const Icon(
+                    Icons.error_outline,
+                    size: 16,
+                    color: Color(0xFFDC2626),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      'Gagal memuat master lokasi dari server.',
+                      style: _m(size: 12, color: const Color(0xFFDC2626)),
+                    ),
+                  ),
+                  TextButton(
+                    onPressed: () => ref.refresh(masterLocationsProvider),
+                    child: const Text('Coba Lagi', style: TextStyle(fontSize: 12)),
+                  ),
+                ],
+              ),
+            )
+          else if (locations.isEmpty)
+            Container(
+              margin: const EdgeInsets.only(bottom: 8),
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: const Color(0xFFFFFBEB),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: const Color(0xFFFDE68A)),
+              ),
+              child: Text(
+                'Data master lokasi belum tersedia.',
+                style: _m(size: 12, color: const Color(0xFFD97706)),
+              ),
+            ),
+
+          DropdownButtonFormField<String>(
+            key: const Key('dropdown_target_location'),
+            initialValue: locations.contains(_locationController.text.trim())
+                ? _locationController.text.trim()
+                : null,
+            style: _inputTextStyle(),
+            decoration: _inputDeco('Pilih unit / cabang tujuan *').copyWith(
+              prefixIcon: const Icon(Icons.business, size: 20, color: _C.navy),
+            ),
+            icon: const Icon(Icons.expand_more, color: _C.muted),
+            items: locations.map((loc) {
+              return DropdownMenuItem<String>(
+                value: loc,
+                child: Text(loc, style: _inputTextStyle()),
+              );
+            }).toList(),
+            onChanged: (val) {
+              if (val != null) {
+                setState(() {
+                  _locationController.text = val;
+                  final match = locationItems
+                      .where((l) => l.name.toLowerCase() == val.toLowerCase())
+                      .firstOrNull;
+                  if (match != null) {
+                    _selectedTargetLocationId = match.id;
+                  }
+                });
+              }
+            },
+            validator: (v) => (v == null || v.trim().isEmpty)
+                ? 'Lokasi tujuan wajib dipilih'
+                : null,
+          ),
+
+          const SizedBox(height: 14),
+
+          Text(
+            'RUANGAN / AREA PENEMPATAN',
+            style: _m(
+              size: 11,
+              weight: FontWeight.w600,
+              color: _C.muted,
+              letterSpacing: 0.6,
+            ),
+          ),
+
+          const SizedBox(height: 6),
+
+          TextFormField(
+            controller: _roomController,
+            style: _inputTextStyle(),
+            decoration: _inputDeco('Contoh: Lantai 1 — Ruang Operasional')
+                .copyWith(
+                  prefixIcon: const Icon(
+                    Icons.meeting_room,
+                    size: 18,
+                    color: _C.muted,
+                  ),
+                ),
+          ),
+
+          const SizedBox(height: 14),
+
+          Text(
+            'ASET IKUT SAYA PINDAH? *',
+            style: _m(
+              size: 11,
+              weight: FontWeight.w600,
+              color: _C.muted,
+              letterSpacing: 0.6,
+            ),
+          ),
+
+          const SizedBox(height: 8),
+
+          _radioHandling(
+            selected: _bringAsset,
+            title: 'Ya, Aset Ikut Saya Pindah',
+            badge: 'Bawa Sendiri',
+            badgeGreen: true,
+            body: 'Perangkat tetap digunakan & dibawa pemohon ke unit penugasan baru.',
+            icon: Icons.work_outline,
+            onTap: () {
+              final currentUser = ref.read(authStateProvider).user;
+              setState(() {
+                _bringAsset = true;
+                _picController.text = currentUser?.name ?? '';
+              });
+            },
+          ),
+
+          const SizedBox(height: 10),
+
+          _radioHandling(
+            selected: !_bringAsset,
+            title: 'Tidak, Aset Ditinggalkan di Unit Asal',
+            badge: 'Tinggalkan',
+            badgeGreen: false,
+            body: 'Aset fisik ditinggalkan di unit kerja saat ini. PIC baru akan ditentukan oleh Bagian Aset melalui sistem.',
+            icon: Icons.warehouse_outlined,
+            onTap: () {
+              setState(() {
+                _bringAsset = false;
+                _picController.clear();
+              });
+            },
+          ),
+
+          const SizedBox(height: 12),
+
+          Container(
+            padding: const EdgeInsets.all(14),
+            decoration: BoxDecoration(
+              color: const Color(0xFFF0FDFA),
+              borderRadius: BorderRadius.circular(12),
+              border: const Border(left: BorderSide(color: _C.teal, width: 4)),
+            ),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Icon(Icons.policy_outlined, size: 18, color: _C.teal),
+
+                const SizedBox(width: 10),
+
+                Expanded(
+                  child: Text.rich(
+                    TextSpan(
+                      style: _m(size: 12, color: _C.muted, height: 1.4),
+                      children: [
+                        TextSpan(
+                          text: 'Ketentuan Tata Kelola Inventaris:\n',
+                          style: _m(size: 12, weight: FontWeight.w600),
+                        ),
+                        TextSpan(
+                          text: _bringAsset
+                              ? 'Aset dibawa ke unit baru dan PIC tetap Pemohon. Master inventaris akan diperbarui setelah konfirmasi serah terima.'
+                              : 'Aset ditinggalkan di lokasi asal. PIC baru akan ditentukan oleh Bagian Aset melalui sistem saat verifikasi.',
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+
+          if (_bringAsset) ...[
+            const SizedBox(height: 12),
+
+            Container(
+              key: const Key('card_pic_tujuan_otomatis'),
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+              decoration: BoxDecoration(
+                color: _C.bg,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: _C.border),
+              ),
+              child: Row(
+                children: [
+                  const Icon(
+                    Icons.person_pin_rounded,
+                    size: 22,
+                    color: _C.navy,
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'PIC TUJUAN (OTOMATIS PEMOHON)',
+                          style: _m(
+                            size: 10,
+                            weight: FontWeight.w600,
+                            color: _C.muted,
+                          ),
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          _picController.text.isNotEmpty
+                              ? _picController.text
+                              : (ref.watch(authStateProvider).user?.name ??
+                                    'Pemohon Sendiri'),
+                          key: const Key('text_pic_tujuan_otomatis'),
+                          style: _m(
+                            size: 13,
+                            weight: FontWeight.w600,
+                            color: _C.text,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 4,
+                    ),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFECFDF5),
+                      borderRadius: BorderRadius.circular(6),
+                      border: Border.all(color: const Color(0xFFA7F3D0)),
+                    ),
+                    child: Text(
+                      'Otomatis Pemohon',
+                      style: _m(
+                        size: 11,
+                        weight: FontWeight.w600,
+                        color: _C.teal,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ] else ...[
+            const SizedBox(height: 12),
+
+            Container(
+              key: const Key('card_pic_tujuan_ditinggalkan'),
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+              decoration: BoxDecoration(
+                color: const Color(0xFFF8FAFC),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: const Color(0xFFE2E8F0)),
+              ),
+              child: Row(
+                children: [
+                  const Icon(
+                    Icons.info_outline_rounded,
+                    size: 22,
+                    color: _C.muted,
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'PIC TUJUAN',
+                          style: _m(
+                            size: 10,
+                            weight: FontWeight.w600,
+                            color: _C.muted,
+                          ),
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          'Akan ditentukan oleh Bagian Aset',
+                          key: const Key('text_pic_tujuan_ditinggalkan'),
+                          style: _m(
+                            size: 13,
+                            weight: FontWeight.w500,
+                            color: _C.muted,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 4,
+                    ),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFF1F5F9),
+                      borderRadius: BorderRadius.circular(6),
+                      border: Border.all(color: const Color(0xFFCBD5E1)),
+                    ),
+                    child: Text(
+                      'Oleh Bagian Aset',
+                      style: _m(
+                        size: 11,
+                        weight: FontWeight.w600,
+                        color: _C.muted,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  // ---------------------------------------------------------------------------
+  // RADIO
+  // ---------------------------------------------------------------------------
+
+  Widget _radioHandling({
+    required bool selected,
+    required String title,
+    required String badge,
+    required bool badgeGreen,
+    required String body,
+    required IconData icon,
+    required VoidCallback onTap,
+  }) {
+    return Material(
+      color: selected ? const Color(0xFFF7F9FF) : _C.white,
+      borderRadius: BorderRadius.circular(12),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(12),
+        child: Container(
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(
+              color: selected ? _C.navy : _C.border,
+              width: selected ? 2 : 1,
+            ),
+          ),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Icon(
+                selected ? Icons.radio_button_checked : Icons.radio_button_off,
+                size: 20,
+                color: selected ? _C.navy : _C.muted,
+              ),
+
+              const SizedBox(width: 10),
+
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Icon(
+                          icon,
+                          size: 16,
+                          color: selected ? _C.navy : _C.muted,
+                        ),
+
+                        const SizedBox(width: 6),
+
+                        Expanded(
+                          child: Text(
+                            title,
+                            style: _m(size: 13, weight: FontWeight.w600),
+                          ),
+                        ),
+
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 8,
+                            vertical: 2,
+                          ),
+                          decoration: BoxDecoration(
+                            color: badgeGreen ? const Color(0xFFECFDF5) : _C.bg,
+                            borderRadius: BorderRadius.circular(999),
+                            border: Border.all(
+                              color: badgeGreen
+                                  ? const Color(0xFFA7F3D0)
+                                  : _C.border,
+                            ),
+                          ),
+                          child: Text(
+                            badge,
+                            style: _m(
+                              size: 10,
+                              weight: FontWeight.w600,
+                              color: badgeGreen ? _C.success : _C.muted,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+
+                    const SizedBox(height: 4),
+
+                    Text(
+                      body,
+                      style: _m(size: 12, color: _C.muted, height: 1.35),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  // ---------------------------------------------------------------------------
+  // SECTION ALASAN & DOKUMEN
+  // ---------------------------------------------------------------------------
+
+  Widget _sectionReasonDoc() {
+    final len = _reasonController.text.length;
+
+    return _card(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Icon(Icons.description_outlined, size: 20, color: _C.navy),
+
+              const SizedBox(width: 8),
+
+              Text(
+                'Alasan & Dokumen Otorisasi',
+                style: _m(size: 14, weight: FontWeight.w700),
+              ),
+            ],
+          ),
+
+          const SizedBox(height: 12),
+
+          const Divider(height: 1, color: Color(0x99D0D5DD)),
+
+          const SizedBox(height: 14),
+
+          Row(
+            children: [
+              Text(
+                'ALASAN KEBUTUHAN MUTASI *',
+                style: _m(
+                  size: 11,
+                  weight: FontWeight.w600,
+                  color: _C.muted,
+                  letterSpacing: 0.5,
+                ),
+              ),
+
+              const Spacer(),
+
+              Text(
+                '$len / $_maxReason',
+                style: _m(size: 11, weight: FontWeight.w500, color: _C.muted),
+              ),
+            ],
+          ),
+
+          const SizedBox(height: 6),
+
+          TextFormField(
+            controller: _reasonController,
+            maxLength: _maxReason,
+            maxLines: 3,
+            style: _inputTextStyle(size: 13),
+            decoration: _inputDeco('Jelaskan alasan mutasi...')
+                .copyWith(counterText: ''),
+            validator: (v) =>
+                (v == null || v.trim().isEmpty) ? 'Alasan wajib diisi' : null,
+          ),
+
+          const SizedBox(height: 14),
+
+          Text(
+            'SURAT KEPUTUSAN (SK) SDM *',
+            style: _m(
+              size: 11,
+              weight: FontWeight.w600,
+              color: _C.muted,
+              letterSpacing: 0.5,
+            ),
+          ),
+
+          const SizedBox(height: 2),
+
+          Text(
+            'PDF wajib, maksimal 30 MB',
+            style: _m(size: 11, weight: FontWeight.w500, color: _C.muted),
+          ),
+
+          const SizedBox(height: 8),
+
+          if (_documentName != null) ...[
+            Container(
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: _C.bg.withValues(alpha: 0.6),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: _C.border),
+              ),
+              child: Row(
+                children: [
+                  Container(
+                    width: 36,
+                    height: 36,
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFFEF2F2),
+                      borderRadius: BorderRadius.circular(6),
+                      border: Border.all(color: const Color(0xFFFECACA)),
+                    ),
+                    child: const Icon(
+                      Icons.picture_as_pdf,
+                      size: 20,
+                      color: Color(0xFFDC2626),
+                    ),
+                  ),
+
+                  const SizedBox(width: 10),
+
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          _documentName!,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: _m(size: 13, weight: FontWeight.w500),
+                        ),
+                        Text(
+                          _formatFileSize(_documentSize),
+                          style: _m(size: 11, color: _C.muted),
+                        ),
+                      ],
+                    ),
+                  ),
+
+                  IconButton(
+                    tooltip: 'Lihat dokumen',
+                    icon: const Icon(
+                      Icons.visibility_outlined,
+                      size: 20,
+                      color: _C.navy,
+                    ),
+                    onPressed: _previewDocument,
+                  ),
+
+                  TextButton(
+                    onPressed: () {
+                      setState(() {
+                        _documentName = null;
+                        _documentSize = null;
+                        _documentPath = null;
+                        _documentBytes = null;
+                      });
+                    },
+                    child: Text(
+                      'Hapus',
+                      style: _m(
+                        size: 12,
+                        weight: FontWeight.w600,
+                        color: const Color(0xFFDC2626),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+
+            const SizedBox(height: 8),
+          ],
+
+          if (_documentName == null) ...[
+            OutlinedButton.icon(
+              onPressed: _pickDocument,
+              style: OutlinedButton.styleFrom(
+                foregroundColor: _C.navy,
+                side: const BorderSide(color: _C.border),
+                minimumSize: const Size(double.infinity, 44),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
+              ),
+              icon: const Icon(Icons.upload_file, size: 18),
+              label: Text(
+                'Unggah Berkas',
+                style: _m(size: 12, weight: FontWeight.w600, color: _C.navy),
+              ),
+            ),
+          ] else ...[
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+              decoration: BoxDecoration(
+                color: const Color(0xFFF1F5F9),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: _C.border),
+              ),
+              child: Row(
+                children: [
+                  const Icon(Icons.info_outline, size: 16, color: _C.muted),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      'Jangan unggah berkas tambahan. Hanya 1 berkas SK SDM yang diperkenankan.',
+                      style: _m(
+                        size: 12,
+                        weight: FontWeight.w500,
+                        color: _C.muted,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  // ---------------------------------------------------------------------------
+  // BOTTOM BAR
+  // ---------------------------------------------------------------------------
+
+  Widget _bottomBar(bool loading) {
+    return Container(
+      decoration: BoxDecoration(
+        color: _C.white.withValues(alpha: 0.95),
+        border: const Border(top: BorderSide(color: Color(0xCCD0D5DD))),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.06),
+            blurRadius: 12,
+            offset: const Offset(0, -2),
+          ),
+        ],
+      ),
+      child: SafeArea(
+        top: false,
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Row(
+                children: [
+                  OutlinedButton.icon(
+                    onPressed: loading ? null : _saveDraft,
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: _C.text,
+                      side: const BorderSide(color: _C.border),
+                      minimumSize: const Size(0, 48),
+                      padding: const EdgeInsets.symmetric(horizontal: 14),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                    ),
+                    icon: const Icon(Icons.bookmark_border, size: 18),
+                    label: Text(
+                      'Simpan Draf',
+                      style: _m(size: 13, weight: FontWeight.w600),
+                    ),
+                  ),
+
+                  const SizedBox(width: 12),
+
+                  Expanded(
+                    child: ElevatedButton(
+                      onPressed: loading ? null : _showConfirmSubmitDialog,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: _C.navy,
+                        foregroundColor: Colors.white,
+                        minimumSize: const Size(0, 48),
+                        elevation: 0,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                      ),
+                      child: loading
+                          ? const SizedBox(
+                              width: 22,
+                              height: 22,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                color: Colors.white,
+                              ),
+                            )
+                          : Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Flexible(
+                                  child: Text(
+                                    'Kirim Pengajuan Mutasi',
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: _m(
+                                      size: 13,
+                                      weight: FontWeight.w600,
+                                      color: Colors.white,
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(width: 6),
+                                const Icon(Icons.send_rounded, size: 18),
+                              ],
+                            ),
+                    ),
+                  ),
+                ],
+              ),
+
+              const SizedBox(height: 8),
+
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Icon(Icons.verified_user, size: 12, color: _C.teal),
+
+                  const SizedBox(width: 4),
+
+                  Flexible(
+                    child: Text(
+                      'Sesuai Ketentuan MutasiKu • Tiket diterbitkan otomatis',
+                      textAlign: TextAlign.center,
+                      style: _m(
+                        size: 10,
+                        weight: FontWeight.w500,
+                        color: _C.muted,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  // ---------------------------------------------------------------------------
+  // HELPERS
+  // ---------------------------------------------------------------------------
+
+  Widget _card({required Widget child}) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: _C.white,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: _C.border),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.03),
+            blurRadius: 4,
+            offset: const Offset(0, 1),
+          ),
+        ],
+      ),
+      child: child,
+    );
+  }
+
+  Widget _iconBox(IconData icon) {
+    return Container(
+      width: 28,
+      height: 28,
+      decoration: BoxDecoration(
+        color: _C.bg,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: _C.border),
+      ),
+      child: Icon(icon, size: 18, color: _C.text),
+    );
+  }
+
+  // ---------------------------------------------------------------------------
+  // INPUT DECORATION
+  // ---------------------------------------------------------------------------
+
+  InputDecoration _inputDeco(String hint) {
+    return InputDecoration(
+      hintText: hint,
+
+      // Hint berukuran dan bergaya sama persis dengan input text (13sp w400)
+      hintStyle: _inputTextStyle(color: _C.muted, size: 13),
+
+      filled: true,
+      fillColor: _C.white,
+
+      contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+
+      border: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(8),
+        borderSide: const BorderSide(color: _C.border),
+      ),
+
+      enabledBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(8),
+        borderSide: const BorderSide(color: _C.border),
+      ),
+
+      focusedBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(8),
+        borderSide: const BorderSide(color: _C.navy, width: 1.5),
+      ),
+
+      errorBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(8),
+        borderSide: const BorderSide(color: Color(0xFFB42318)),
+      ),
+
+      focusedErrorBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(8),
+        borderSide: const BorderSide(color: Color(0xFFB42318), width: 1.5),
+      ),
+    );
+  }
+}
+
+class _MinimalistPaperAirplane extends StatelessWidget {
+  final double size;
+  final Color color;
+  const _MinimalistPaperAirplane({
+    this.size = 36,
+    this.color = const Color(0xFF00273A),
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      width: size,
+      height: size,
+      child: CustomPaint(painter: _MinimalistPaperAirplanePainter(color)),
+    );
+  }
+}
+
+class _MinimalistPaperAirplanePainter extends CustomPainter {
+  final Color color;
+  const _MinimalistPaperAirplanePainter(this.color);
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = color
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 2.0
+      ..strokeCap = StrokeCap.round
+      ..strokeJoin = StrokeJoin.round;
+
+    final scaleX = size.width / 24.0;
+    final scaleY = size.height / 24.0;
+
+    // Stitch Screen #2 SVG: d="M6 12L3 21l18-9L3 3l3 9zm0 0h12"
+    final path = Path();
+    path.moveTo(6 * scaleX, 12 * scaleY);
+    path.lineTo(3 * scaleX, 21 * scaleY);
+    path.lineTo(21 * scaleX, 12 * scaleY);
+    path.lineTo(3 * scaleX, 3 * scaleY);
+    path.lineTo(6 * scaleX, 12 * scaleY);
+    path.close();
+
+    path.moveTo(6 * scaleX, 12 * scaleY);
+    path.lineTo(18 * scaleX, 12 * scaleY);
+
+    canvas.drawPath(path, paint);
+  }
+
+  @override
+  bool shouldRepaint(covariant _MinimalistPaperAirplanePainter oldDelegate) =>
+      color != oldDelegate.color;
+}

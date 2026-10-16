@@ -41,32 +41,31 @@ sealed class Result<T> {
 
   /// Ambil data jika sukses, null jika gagal.
   T? get dataOrNull => switch (this) {
-        Success(:final data) => data,
-        AppFailure() => null,
-      };
+    Success(:final data) => data,
+    AppFailure() => null,
+  };
 
   /// Ambil failure jika gagal, null jika sukses.
   Failure? get failureOrNull => switch (this) {
-        Success() => null,
-        AppFailure(:final failure) => failure,
-      };
+    Success() => null,
+    AppFailure(:final failure) => failure,
+  };
 
   /// Transformasi data jika sukses.
   ///
   /// Jika gagal, kembalikan failure yang sama.
   Result<R> map<R>(R Function(T data) transform) => switch (this) {
-        Success(:final data) => Result.success(transform(data)),
-        AppFailure(:final failure) => Result.failure(failure),
-      };
+    Success(:final data) => Result.success(transform(data)),
+    AppFailure(:final failure) => Result.failure(failure),
+  };
 
   /// Transformasi data asynchronous jika sukses.
   Future<Result<R>> mapAsync<R>(
     Future<Result<R>> Function(T data) transform,
-  ) async =>
-      switch (this) {
-        Success(:final data) => transform(data),
-        AppFailure(:final failure) => Result.failure(failure),
-      };
+  ) async => switch (this) {
+    Success(:final data) => transform(data),
+    AppFailure(:final failure) => Result.failure(failure),
+  };
 
   /// Eksekusi callback sesuai state.
   void when({
@@ -83,9 +82,9 @@ sealed class Result<T> {
 
   /// Ambil nilai dengan fallback jika gagal.
   T getOrElse(T defaultValue) => switch (this) {
-        Success(:final data) => data,
-        AppFailure() => defaultValue,
-      };
+    Success(:final data) => data,
+    AppFailure() => defaultValue,
+  };
 }
 
 /// Result sukses.

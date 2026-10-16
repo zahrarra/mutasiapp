@@ -1,18 +1,59 @@
 // lib/features/operator/presentation/screens/operator_mutations_screen.dart
 //
-// Screen: Pengajuan Masuk Operator (OPR-002).
+// Screen: Pengajuan Masuk — Antrean Verifikasi Operator (OPR-002).
 // Sumber: SCREEN-SPEC.md OPR-002, ROLE-FLOW.md §4, WIREFRAME.md §2.
+// UI: Stitch design baseline — filter tab-pills, avatar initials, asset info box.
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import '../../../../app/theme/app_colors.dart';
-import '../../../../app/theme/app_spacing.dart';
-import '../../../mutation/domain/entities/mutation.dart';
-import '../providers/operator_verification_provider.dart';
 
+import '../../../../app/router/route_names.dart';
+import '../../../auth/domain/entities/user_role.dart';
+import '../../../../core/widgets/custom_floating_nav_bar.dart';
+import '../../../mutation/domain/entities/mutation.dart';
+import '../../../mutation/domain/entities/mutation_status.dart';
+import '../providers/operator_verification_provider.dart';
+import '../../../../core/widgets/mutasiku_page_header.dart';
+
+// ─── Design tokens (Stitch baseline) ─────────────────────────────────────────
+class _C {
+  static const navy = Color(0xFF0F3D56);
+  static const teal = Color(0xFF0F766E);
+  static const surface = Color(0xFFFFFFFF);
+  static const bg = Color(0xFFF6F8FA);
+  static const textPrimary = Color(0xFF172B4D);
+  static const textSecondary = Color(0xFF52606D);
+  static const border = Color(0xFFD0D5DD);
+  static const success = Color(0xFF10B981);
+  static const successBg = Color(0xFFECFDF5);
+  static const error = Color(0xFFEF4444);
+  static const errorBg = Color(0xFFFEF2F2);
+  static const info = Color(0xFF3B82F6);
+  static const infoBg = Color(0xFFEFF6FF);
+}
+
+// ─── Filter tab enum ──────────────────────────────────────────────────────────
+enum _Tab { all, submitted, allocated, returned, completed, rejected, ti, umum }
+
+extension _TabExt on _Tab {
+  String label(int count) => switch (this) {
+    _Tab.all => 'Semua ($count)',
+    _Tab.submitted => 'Diproses ($count)',
+    _Tab.allocated => 'Dialokasikan ($count)',
+    _Tab.returned => 'Dikembalikan ($count)',
+    _Tab.completed => 'Selesai ($count)',
+    _Tab.rejected => 'Ditolak ($count)',
+    _Tab.ti => 'Aset TI ($count)',
+    _Tab.umum => 'Aset Umum ($count)',
+  };
+}
+
+// ─── Screen ───────────────────────────────────────────────────────────────────
 class OperatorMutationsScreen extends ConsumerStatefulWidget {
-  const OperatorMutationsScreen({super.key});
+  final String? initialFilter;
+
+  const OperatorMutationsScreen({super.key, this.initialFilter});
 
   @override
   ConsumerState<OperatorMutationsScreen> createState() =>
@@ -22,6 +63,76 @@ class OperatorMutationsScreen extends ConsumerStatefulWidget {
 class _OperatorMutationsScreenState
     extends ConsumerState<OperatorMutationsScreen> {
   final _searchController = TextEditingController();
+  _Tab _activeTab = _Tab.submitted;
+
+  @override
+  void initState() {
+    super.initState();
+    _activeTab = _parseFilter(widget.initialFilter);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        _applyTabFilter(_activeTab);
+      }
+    });
+  }
+
+  @override
+  void didUpdateWidget(covariant OperatorMutationsScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.initialFilter != oldWidget.initialFilter) {
+      final newTab = _parseFilter(widget.initialFilter);
+      setState(() => _activeTab = newTab);
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) {
+          _applyTabFilter(newTab);
+        }
+      });
+    }
+  }
+
+  _Tab _parseFilter(String? filter) {
+    if (filter == null) return _Tab.submitted;
+    final f = filter.toLowerCase().trim();
+    if (f == 'submitted' ||
+        f == 'pending' ||
+        f == 'menunggu' ||
+        f == 'diproses' ||
+        f == 'processing' ||
+        f == 'progress' ||
+        f == 'dalam proses' ||
+        f == 'menunggu_verifikasi') {
+      return _Tab.submitted;
+    }
+    if (f == 'allocated' ||
+        f == 'dialokasikan' ||
+        f == 'disetujui' ||
+        f == 'approved' ||
+        f == 'accepted' ||
+        f == 'diterima' ||
+        f == 'forwarded' ||
+        f == 'diteruskan') {
+      return _Tab.allocated;
+    }
+    if (f == 'returned' || f == 'dikembalikan') {
+      return _Tab.all;
+    }
+    if (f == 'completed' || f == 'selesai' || f == 'done') {
+      return _Tab.completed;
+    }
+    if (f == 'rejected' || f == 'ditolak') {
+      return _Tab.rejected;
+    }
+    if (f == 'ti' || f == 'it' || f == 'aset_ti' || f == 'asetti') {
+      return _Tab.ti;
+    }
+    if (f == 'umum' || f == 'non_ti' || f == 'aset_umum' || f == 'asetumum') {
+      return _Tab.umum;
+    }
+    if (f == 'all' || f == 'semua') {
+      return _Tab.all;
+    }
+    return _Tab.submitted;
+  }
 
   @override
   void dispose() {
@@ -29,317 +140,1004 @@ class _OperatorMutationsScreenState
     super.dispose();
   }
 
+  void _switchTab(_Tab tab) {
+    setState(() => _activeTab = tab);
+    _applyTabFilter(tab);
+  }
+
+  void _applyTabFilter(_Tab tab) {
+    switch (tab) {
+      case _Tab.all:
+        ref.read(operatorStatusFilterProvider.notifier).state =
+            OperatorStatusFilter.all;
+        ref.read(operatorCategoryFilterProvider.notifier).state =
+            OperatorCategoryFilter.all;
+        break;
+      case _Tab.submitted:
+        ref.read(operatorStatusFilterProvider.notifier).state =
+            OperatorStatusFilter.submitted;
+        ref.read(operatorCategoryFilterProvider.notifier).state =
+            OperatorCategoryFilter.all;
+        break;
+      case _Tab.allocated:
+        ref.read(operatorStatusFilterProvider.notifier).state =
+            OperatorStatusFilter.allocated;
+        ref.read(operatorCategoryFilterProvider.notifier).state =
+            OperatorCategoryFilter.all;
+        break;
+      case _Tab.returned:
+        ref.read(operatorStatusFilterProvider.notifier).state =
+            OperatorStatusFilter.returned;
+        ref.read(operatorCategoryFilterProvider.notifier).state =
+            OperatorCategoryFilter.all;
+        break;
+      case _Tab.completed:
+        ref.read(operatorStatusFilterProvider.notifier).state =
+            OperatorStatusFilter.completed;
+        ref.read(operatorCategoryFilterProvider.notifier).state =
+            OperatorCategoryFilter.all;
+        break;
+      case _Tab.rejected:
+        ref.read(operatorStatusFilterProvider.notifier).state =
+            OperatorStatusFilter.rejected;
+        ref.read(operatorCategoryFilterProvider.notifier).state =
+            OperatorCategoryFilter.all;
+        break;
+      case _Tab.ti:
+        ref.read(operatorStatusFilterProvider.notifier).state =
+            OperatorStatusFilter.all;
+        ref.read(operatorCategoryFilterProvider.notifier).state =
+            OperatorCategoryFilter.ti;
+        break;
+      case _Tab.umum:
+        ref.read(operatorStatusFilterProvider.notifier).state =
+            OperatorStatusFilter.all;
+        ref.read(operatorCategoryFilterProvider.notifier).state =
+            OperatorCategoryFilter.umum;
+        break;
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final asyncIncoming = ref.watch(filteredIncomingMutationsProvider);
-    final sortOrder = ref.watch(operatorSortOrderProvider);
+    final asyncAll = ref.watch(operatorAllMutationsProvider);
+
+    // Hitung badge jumlah (dari data mentah)
+    final totalCount = asyncAll.valueOrNull?.length ?? 0;
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Pengajuan Masuk'),
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
-          onPressed: () => context.pop(),
-        ),
-      ),
+      backgroundColor: _C.bg,
+      extendBody: true,
       body: Column(
         children: [
-          // Search & Filter Header
-          Container(
-            padding: const EdgeInsets.all(AppSpacing.md),
-            color: AppColors.surface,
-            child: Column(
-              children: [
-                // Search Field
-                TextField(
-                  key: const Key('input_search_mutations'),
-                  controller: _searchController,
-                  decoration: InputDecoration(
-                    hintText: 'Cari no. tiket, aset, pemohon...',
-                    prefixIcon: const Icon(Icons.search, size: 20),
-                    suffixIcon: _searchController.text.isNotEmpty
-                        ? IconButton(
-                            icon: const Icon(Icons.clear, size: 18),
-                            onPressed: () {
-                              _searchController.clear();
-                              ref
-                                  .read(operatorSearchQueryProvider.notifier)
-                                  .state = '';
-                            },
-                          )
-                        : null,
-                    filled: true,
-                    fillColor: Colors.white,
-                    contentPadding: const EdgeInsets.symmetric(
-                      horizontal: AppSpacing.md,
-                      vertical: AppSpacing.sm,
-                    ),
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
-                      borderSide: const BorderSide(color: AppColors.border),
-                    ),
-                    enabledBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
-                      borderSide: const BorderSide(color: AppColors.border),
-                    ),
-                  ),
-                  onChanged: (value) {
-                    ref.read(operatorSearchQueryProvider.notifier).state =
-                        value;
-                  },
-                ),
-                const SizedBox(height: AppSpacing.sm),
+          // ── App bar ───────────────────────────────────────────────────
+          _buildTopBar(context, totalCount),
 
-                // Sort Chips: [ Terbaru ] [ Terlama ]
-                Row(
-                  children: [
-                    const Text(
-                      'Urutkan:',
-                      style: TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w600,
-                        color: AppColors.textSecondary,
-                      ),
-                    ),
-                    const SizedBox(width: AppSpacing.sm),
-                    ChoiceChip(
-                      key: const Key('chip_sort_terbaru'),
-                      label: const Text('Terbaru'),
-                      selected: sortOrder == MutationSortOrder.newest,
-                      onSelected: (selected) {
-                        if (selected) {
-                          ref.read(operatorSortOrderProvider.notifier).state =
-                              MutationSortOrder.newest;
-                        }
-                      },
-                    ),
-                    const SizedBox(width: AppSpacing.xs),
-                    ChoiceChip(
-                      key: const Key('chip_sort_terlama'),
-                      label: const Text('Terlama'),
-                      selected: sortOrder == MutationSortOrder.oldest,
-                      onSelected: (selected) {
-                        if (selected) {
-                          ref.read(operatorSortOrderProvider.notifier).state =
-                              MutationSortOrder.oldest;
-                        }
-                      },
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          ),
-          const Divider(height: 1, thickness: 1, color: AppColors.border),
+          // ── Search ────────────────────────────────────────────────────
+          _buildSearchBar(),
 
-          // Content List
+          // ── Filter tab-pills ──────────────────────────────────────────
+          _buildFilterTabs(asyncAll),
+
+          const Divider(height: 1, color: _C.border),
+
+          // ── List ──────────────────────────────────────────────────────
           Expanded(
             child: asyncIncoming.when(
-              data: (mutations) {
-                if (mutations.isEmpty) {
-                  return _buildEmptyState();
-                }
-
-                return RefreshIndicator(
-                  onRefresh: () async {
-                    ref.invalidate(operatorAllMutationsProvider);
-                  },
-                  child: ListView.separated(
-                    padding: const EdgeInsets.all(AppSpacing.md),
-                    itemCount: mutations.length,
-                    separatorBuilder: (_, _) =>
-                        const SizedBox(height: AppSpacing.sm),
-                    itemBuilder: (context, index) {
-                      final item = mutations[index];
-                      return _buildMutationCard(context, item);
-                    },
-                  ),
-                );
-              },
-              loading: () => const Center(child: CircularProgressIndicator()),
-              error: (err, _) => Center(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    const Icon(Icons.error_outline,
-                        size: 48, color: AppColors.error),
-                    const SizedBox(height: AppSpacing.sm),
-                    Text(
-                      'Gagal memuat pengajuan: $err',
-                      textAlign: TextAlign.center,
-                      style: const TextStyle(color: AppColors.error),
-                    ),
-                    const SizedBox(height: AppSpacing.md),
-                    ElevatedButton(
-                      onPressed: () =>
-                          ref.invalidate(operatorAllMutationsProvider),
-                      child: const Text('Coba Lagi'),
-                    ),
-                  ],
+              data: (list) => _buildList(list),
+              loading: () => const Center(
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  color: _C.teal,
                 ),
               ),
+              error: (err, _) => _buildError(err),
             ),
+          ),
+        ],
+      ),
+      bottomNavigationBar: CustomFloatingNavBar.scaffoldBottomBar(
+        items: RoleNavConfig.getNavItemsForRole(UserRole.operator),
+      ),
+    );
+  }
+
+  // ── Top bar ───────────────────────────────────────────────────────────────
+  Widget _buildTopBar(BuildContext context, int count) {
+    return SafeArea(
+      bottom: false,
+      child: MutasiKuPageHeader(
+        title: 'Pengajuan Masuk',
+        subtitle: 'Antrean berkas mutasi menunggu verifikasi',
+        onBack: () {
+          if (context.canPop()) {
+            context.pop();
+          } else {
+            context.go(RouteNames.operatorDashboardPath);
+          }
+        },
+      ),
+    );
+  }
+
+  // ── Search bar & Filters ──────────────────────────────────────────────────
+  Widget _buildSearchBar() {
+    final statusFilter = ref.watch(operatorStatusFilterProvider);
+    final sortOrder = ref.watch(operatorSortOrderProvider);
+
+    return Container(
+      padding: const EdgeInsets.fromLTRB(16, 12, 16, 10),
+      color: _C.surface,
+      child: Column(
+        children: [
+          Container(
+            height: 46,
+            decoration: BoxDecoration(
+              color: _C.bg,
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(color: _C.border),
+            ),
+            child: TextField(
+              key: const Key('input_search_mutations'),
+              controller: _searchController,
+              style: const TextStyle(fontSize: 13, color: _C.textPrimary),
+              decoration: InputDecoration(
+                hintText: 'Cari no. tiket, aset, pemohon...',
+                hintStyle: TextStyle(
+                  fontSize: 13,
+                  color: _C.textSecondary.withValues(alpha: 0.6),
+                ),
+                prefixIcon: const Padding(
+                  padding: EdgeInsets.only(left: 14, right: 8),
+                  child: Icon(
+                    Icons.search_rounded,
+                    size: 20,
+                    color: _C.textSecondary,
+                  ),
+                ),
+                prefixIconConstraints: const BoxConstraints(
+                  minWidth: 0,
+                  minHeight: 0,
+                ),
+                suffixIcon: _searchController.text.isNotEmpty
+                    ? GestureDetector(
+                        onTap: () {
+                          _searchController.clear();
+                          ref.read(operatorSearchQueryProvider.notifier).state =
+                              '';
+                          setState(() {});
+                        },
+                        child: const Icon(
+                          Icons.close_rounded,
+                          size: 16,
+                          color: _C.textSecondary,
+                        ),
+                      )
+                    : null,
+                border: InputBorder.none,
+                contentPadding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 12,
+                ),
+              ),
+              onChanged: (value) {
+                ref.read(operatorSearchQueryProvider.notifier).state = value;
+                setState(() {});
+              },
+            ),
+          ),
+          const SizedBox(height: 10),
+          Row(
+            children: [
+              Expanded(
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 2,
+                  ),
+                  decoration: BoxDecoration(
+                    color: _C.bg,
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(color: _C.border),
+                  ),
+                  child: DropdownButtonHideUnderline(
+                    child: DropdownButton<OperatorStatusFilter>(
+                      key: const Key('dropdown_filter_operator_status'),
+                      value: statusFilter == OperatorStatusFilter.returned
+                          ? OperatorStatusFilter.all
+                          : statusFilter,
+                      isDense: true,
+                      isExpanded: true,
+                      icon: const Icon(
+                        Icons.filter_list_rounded,
+                        size: 16,
+                        color: _C.teal,
+                      ),
+                      style: const TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w500,
+                        color: _C.textPrimary,
+                      ),
+                      items: OperatorStatusFilter.values
+                          .where((s) => s != OperatorStatusFilter.returned)
+                          .map(
+                            (s) => DropdownMenuItem(
+                              value: s,
+                              child: Text(s.displayName),
+                            ),
+                          )
+                          .toList(),
+                      onChanged: (val) {
+                        if (val != null) {
+                          ref
+                                  .read(operatorStatusFilterProvider.notifier)
+                                  .state =
+                              val;
+                          ref
+                                  .read(operatorCategoryFilterProvider.notifier)
+                                  .state =
+                              OperatorCategoryFilter.all;
+                          setState(() {
+                            _activeTab = switch (val) {
+                              OperatorStatusFilter.all => _Tab.all,
+                              OperatorStatusFilter.submitted => _Tab.submitted,
+                              OperatorStatusFilter.allocated => _Tab.allocated,
+                              OperatorStatusFilter.returned => _Tab.returned,
+                              OperatorStatusFilter.completed => _Tab.completed,
+                              OperatorStatusFilter.rejected => _Tab.rejected,
+                            };
+                          });
+                        }
+                      },
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 10),
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 2,
+                ),
+                decoration: BoxDecoration(
+                  color: _C.bg,
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(color: _C.border),
+                ),
+                child: DropdownButtonHideUnderline(
+                  child: DropdownButton<MutationSortOrder>(
+                    key: const Key('dropdown_filter_operator_sort'),
+                    value: sortOrder,
+                    isDense: true,
+                    icon: const Icon(
+                      Icons.sort_rounded,
+                      size: 16,
+                      color: _C.textSecondary,
+                    ),
+                    style: const TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w500,
+                      color: _C.textPrimary,
+                    ),
+                    items: MutationSortOrder.values
+                        .map(
+                          (s) => DropdownMenuItem(
+                            value: s,
+                            child: Text(s.displayName),
+                          ),
+                        )
+                        .toList(),
+                    onChanged: (val) {
+                      if (val != null) {
+                        ref.read(operatorSortOrderProvider.notifier).state =
+                            val;
+                        setState(() {});
+                      }
+                    },
+                  ),
+                ),
+              ),
+            ],
           ),
         ],
       ),
     );
   }
 
-  String _formatDateTime(DateTime dt) {
-    const months = [
-      'Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun',
-      'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'
-    ];
-    final day = dt.day.toString().padLeft(2, '0');
-    final month = months[dt.month - 1];
-    final year = dt.year;
-    final hour = dt.hour.toString().padLeft(2, '0');
-    final minute = dt.minute.toString().padLeft(2, '0');
-    return '$day $month $year $hour:$minute';
-  }
+  // ── Filter tab-pills (scrollable) ─────────────────────────────────────────
+  Widget _buildFilterTabs(AsyncValue<List<Mutation>> asyncAll) {
+    final allList = asyncAll.valueOrNull ?? [];
+    final totalAll = allList.length;
+    final totalSubmitted = allList
+        .where(
+          (m) =>
+              m.status.historyCategory == MutationHistoryCategory.processing,
+        )
+        .length;
+    final totalAllocated = allList
+        .where(
+          (m) => m.status.historyCategory == MutationHistoryCategory.allocated,
+        )
+        .length;
+    final totalReturned = allList
+        .where(
+          (m) => m.status.historyCategory == MutationHistoryCategory.returned,
+        )
+        .length;
+    final totalCompleted = allList
+        .where(
+          (m) => m.status.historyCategory == MutationHistoryCategory.completed,
+        )
+        .length;
+    final totalRejected = allList
+        .where(
+          (m) => m.status.historyCategory == MutationHistoryCategory.rejected,
+        )
+        .length;
+    final totalTi = allList
+        .where(
+          (m) => isTiAsset(m),
+        )
+        .length;
+    final totalUmum = allList
+        .where(
+          (m) => !isTiAsset(m),
+        )
+        .length;
 
-  Widget _buildMutationCard(BuildContext context, Mutation item) {
-    final formattedDate = _formatDateTime(item.createdAt);
+    final counts = {
+      _Tab.all: totalAll,
+      _Tab.submitted: totalSubmitted,
+      _Tab.allocated: totalAllocated,
+      _Tab.returned: totalReturned,
+      _Tab.completed: totalCompleted,
+      _Tab.rejected: totalRejected,
+      _Tab.ti: totalTi,
+      _Tab.umum: totalUmum,
+    };
 
-    return Card(
-      elevation: 0,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(AppRadius.card),
-        side: const BorderSide(color: AppColors.border),
-      ),
-      child: InkWell(
-        key: Key('card_mutation_${item.id}'),
-        onTap: () {
-          context.push('/operator/mutations/${item.id}');
-        },
-        borderRadius: BorderRadius.circular(AppRadius.card),
-        child: Padding(
-          padding: const EdgeInsets.all(AppSpacing.md),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Ticket & Status Badge
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text(
-                    item.ticketNumber,
-                    style: const TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.bold,
-                      color: AppColors.primary,
+    return Container(
+      color: _C.surface,
+      padding: const EdgeInsets.fromLTRB(16, 0, 0, 12),
+      child: SingleChildScrollView(
+        scrollDirection: Axis.horizontal,
+        child: Row(
+          children: _Tab.values
+              .where((tab) => tab != _Tab.returned)
+              .map((tab) {
+            final active = _activeTab == tab;
+            return Padding(
+              padding: const EdgeInsets.only(right: 8),
+              child: GestureDetector(
+                onTap: () => _switchTab(tab),
+                child: AnimatedContainer(
+                  duration: const Duration(milliseconds: 180),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 14,
+                    vertical: 7,
+                  ),
+                  decoration: BoxDecoration(
+                    color: active ? _C.navy : _C.surface,
+                    borderRadius: BorderRadius.circular(999),
+                    border: Border.all(
+                      color: active
+                          ? _C.navy
+                          : _C.border.withValues(alpha: 0.8),
+                    ),
+                    boxShadow: active
+                        ? [
+                            BoxShadow(
+                              color: _C.navy.withValues(alpha: 0.18),
+                              blurRadius: 6,
+                              offset: const Offset(0, 2),
+                            ),
+                          ]
+                        : null,
+                  ),
+                  child: Text(
+                    tab.label(counts[tab] ?? 0),
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: active ? FontWeight.w700 : FontWeight.w500,
+                      color: active ? Colors.white : _C.textSecondary,
                     ),
                   ),
-                  Container(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                    decoration: BoxDecoration(
-                      color: item.status.backgroundColor,
-                      borderRadius: BorderRadius.circular(AppRadius.pill),
-                    ),
-                    child: Text(
-                      item.status.displayName,
-                      style: TextStyle(
-                        fontSize: 11,
-                        fontWeight: FontWeight.w600,
-                        color: item.status.color,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: AppSpacing.xs),
-
-              // Asset Name
-              Text(
-                item.asset.name,
-                style: const TextStyle(
-                  fontSize: 15,
-                  fontWeight: FontWeight.w600,
-                  color: AppColors.textPrimary,
                 ),
               ),
-              const SizedBox(height: AppSpacing.sm),
-              const Divider(height: 1, color: AppColors.border),
-              const SizedBox(height: AppSpacing.sm),
-
-              // Pemohon & Tanggal
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Text(
-                        'Pemohon',
-                        style: TextStyle(
-                          fontSize: 11,
-                          color: AppColors.textSecondary,
-                        ),
-                      ),
-                      Text(
-                        item.applicantName,
-                        style: const TextStyle(
-                          fontSize: 13,
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
-                    ],
-                  ),
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.end,
-                    children: [
-                      const Text(
-                        'Diajukan',
-                        style: TextStyle(
-                          fontSize: 11,
-                          color: AppColors.textSecondary,
-                        ),
-                      ),
-                      Text(
-                        formattedDate,
-                        style: const TextStyle(
-                          fontSize: 12,
-                          color: AppColors.textSecondary,
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-            ],
-          ),
+            );
+          }).toList(),
         ),
       ),
     );
   }
 
+  // ── List ──────────────────────────────────────────────────────────────────
+  Widget _buildList(List<Mutation> mutations) {
+    if (mutations.isEmpty) return _buildEmptyState();
+
+    return RefreshIndicator(
+      color: _C.teal,
+      onRefresh: () async => ref.invalidate(operatorAllMutationsProvider),
+      child: ListView.separated(
+        padding: const EdgeInsets.fromLTRB(16, 16, 16, 120),
+        itemCount: mutations.length,
+        separatorBuilder: (context, index) => const SizedBox(height: 12),
+        itemBuilder: (context, index) {
+          final item = mutations[index];
+          return _MutationCard(
+            mutation: item,
+            onTap: () => context.push('/operator/mutations/${item.id}'),
+          );
+        },
+      ),
+    );
+  }
+
+  // ── Empty state ───────────────────────────────────────────────────────────
   Widget _buildEmptyState() {
+    final isSearch = ref.watch(operatorSearchQueryProvider).trim().isNotEmpty;
+
     return Center(
       child: Padding(
-        padding: const EdgeInsets.all(AppSpacing.xl),
+        padding: const EdgeInsets.all(32),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const Icon(Icons.check_circle_outline,
-                size: 56, color: AppColors.success),
-            const SizedBox(height: AppSpacing.md),
-            const Text(
-              'Tidak Ada Pengajuan Masuk',
-              style: TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.bold,
-                color: AppColors.textPrimary,
+            Container(
+              width: 72,
+              height: 72,
+              decoration: BoxDecoration(
+                color: isSearch ? _C.infoBg : _C.successBg,
+                borderRadius: BorderRadius.circular(20),
+              ),
+              child: Icon(
+                isSearch
+                    ? Icons.search_off_rounded
+                    : Icons.check_circle_outline_rounded,
+                size: 36,
+                color: isSearch ? _C.info : _C.success,
               ),
             ),
-            const SizedBox(height: AppSpacing.xs),
-            const Text(
-              'Semua pengajuan mutasi telah diproses dan diverifikasi.',
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                fontSize: 13,
-                color: AppColors.textSecondary,
+            const SizedBox(height: 16),
+            Text(
+              isSearch ? 'Tidak Ditemukan' : 'Tidak Ada Pengajuan Masuk',
+              style: const TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.w700,
+                color: _C.textPrimary,
               ),
+            ),
+            const SizedBox(height: 6),
+            Text(
+              isSearch
+                  ? 'Coba kata kunci lain atau ubah filter.'
+                  : 'Semua pengajuan telah diproses.',
+              textAlign: TextAlign.center,
+              style: const TextStyle(fontSize: 13, color: _C.textSecondary),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // ── Error state ───────────────────────────────────────────────────────────
+  Widget _buildError(Object err) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(32),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Container(
+              width: 64,
+              height: 64,
+              decoration: BoxDecoration(
+                color: _C.errorBg,
+                borderRadius: BorderRadius.circular(18),
+              ),
+              child: const Icon(
+                Icons.error_outline_rounded,
+                size: 32,
+                color: _C.error,
+              ),
+            ),
+            const SizedBox(height: 16),
+            const Text(
+              'Gagal Memuat Data',
+              style: TextStyle(
+                fontSize: 15,
+                fontWeight: FontWeight.w700,
+                color: _C.textPrimary,
+              ),
+            ),
+            const SizedBox(height: 6),
+            Text(
+              '$err',
+              textAlign: TextAlign.center,
+              style: const TextStyle(fontSize: 12, color: _C.textSecondary),
+            ),
+            const SizedBox(height: 20),
+            GestureDetector(
+              onTap: () => ref.invalidate(operatorAllMutationsProvider),
+              child: Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 20,
+                  vertical: 10,
+                ),
+                decoration: BoxDecoration(
+                  color: _C.teal,
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: const Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(Icons.refresh_rounded, size: 16, color: Colors.white),
+                    SizedBox(width: 6),
+                    Text(
+                      'Coba Lagi',
+                      style: TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.white,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ─── Mutation Card (Stitch-style) ─────────────────────────────────────────────
+class _MutationCard extends StatelessWidget {
+  final Mutation mutation;
+  final VoidCallback? onTap;
+
+  const _MutationCard({required this.mutation, this.onTap});
+
+  // ── Date helper ─────────────────────────────────────────────────────────
+  static String _relativeDate(DateTime dt) {
+    final now = DateTime.now();
+    final diff = now.difference(dt);
+    if (diff.inMinutes < 1) return 'Baru saja';
+    if (diff.inMinutes < 60) return '${diff.inMinutes} menit lalu';
+    if (diff.inHours < 24) return '${diff.inHours} jam lalu';
+    if (diff.inDays == 1) return 'Kemarin';
+    const months = [
+      'Jan',
+      'Feb',
+      'Mar',
+      'Apr',
+      'Mei',
+      'Jun',
+      'Jul',
+      'Agu',
+      'Sep',
+      'Okt',
+      'Nov',
+      'Des',
+    ];
+    return '${dt.day} ${months[dt.month - 1]} ${dt.year}';
+  }
+
+  // ── Initials ─────────────────────────────────────────────────────────────
+  static String _initials(String name) {
+    final parts = name.trim().split(RegExp(r'\s+'));
+    if (parts.isEmpty || parts.first.isEmpty) return '?';
+    if (parts.length == 1) return parts.first[0].toUpperCase();
+    return '${parts[0][0]}${parts[1][0]}'.toUpperCase();
+  }
+
+  // ── Avatar color from name ────────────────────────────────────────────────
+  static Color _avatarBg(String name) {
+    final hash = name.codeUnits.fold(0, (p, e) => p + e);
+    const palette = [
+      Color(0xFFECFDF5), // green
+      Color(0xFFEFF6FF), // blue
+      Color(0xFFF5F3FF), // purple
+      Color(0xFFFFF7ED), // orange
+      Color(0xFFFCE7F3), // pink
+    ];
+    return palette[hash % palette.length];
+  }
+
+  static Color _avatarFg(String name) {
+    final hash = name.codeUnits.fold(0, (p, e) => p + e);
+    const palette = [
+      Color(0xFF059669),
+      Color(0xFF1D4ED8),
+      Color(0xFF7C3AED),
+      Color(0xFFEA580C),
+      Color(0xFFDB2777),
+    ];
+    return palette[hash % palette.length];
+  }
+
+  // ── Status badge ─────────────────────────────────────────────────────────
+  ({Color fg, Color bg, String label}) _statusInfo(MutationStatus s) =>
+      switch (s) {
+        MutationStatus.submitted => (
+          fg: const Color(0xFFB45309),
+          bg: const Color(0xFFFEF3C7),
+          label: 'Diajukan',
+        ),
+        MutationStatus.returned => (
+          fg: const Color(0xFFB45309),
+          bg: const Color(0xFFFFF7ED),
+          label: 'Dikembalikan',
+        ),
+        MutationStatus.waitingAssetVerification ||
+        MutationStatus.verified ||
+        MutationStatus.waitingDivisionHeadApproval ||
+        MutationStatus.waitingKadivApproval ||
+        MutationStatus.waitingConfirmation ||
+        MutationStatus.approved ||
+        MutationStatus.pendingConfirmation => (
+          fg: const Color(0xFF059669),
+          bg: const Color(0xFFECFDF5),
+          label: 'Dialokasikan',
+        ),
+        MutationStatus.completed => (
+          fg: const Color(0xFF059669),
+          bg: const Color(0xFFECFDF5),
+          label: 'Selesai',
+        ),
+        MutationStatus.rejected => (
+          fg: const Color(0xFFDC2626),
+          bg: const Color(0xFFFEF2F2),
+          label: 'Ditolak',
+        ),
+        _ => (
+          fg: const Color(0xFF52606D),
+          bg: const Color(0xFFF6F8FA),
+          label: s.displayName,
+        ),
+      };
+
+  @override
+  Widget build(BuildContext context) {
+    final m = mutation;
+    final si = _statusInfo(m.status);
+    final ini = _initials(m.applicantName);
+    final bg = _avatarBg(m.applicantName);
+    final fg = _avatarFg(m.applicantName);
+
+    return GestureDetector(
+      key: Key('card_mutation_${m.id}'),
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.all(18),
+        decoration: BoxDecoration(
+          color: _C.surface,
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(color: const Color(0xFFF2F4F7)),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.04),
+              blurRadius: 12,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // ── Row 1: Ticket + Status ──────────────────────────────────
+            Wrap(
+              alignment: WrapAlignment.spaceBetween,
+              crossAxisAlignment: WrapCrossAlignment.center,
+              spacing: 8,
+              runSpacing: 6,
+              children: [
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 9,
+                    vertical: 4,
+                  ),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFF1F5F9),
+                    borderRadius: BorderRadius.circular(999),
+                  ),
+                  child: Text(
+                    m.ticketNumber,
+                    style: const TextStyle(
+                      fontSize: 10,
+                      fontWeight: FontWeight.w700,
+                      fontFamily: 'monospace',
+                      color: _C.navy,
+                      letterSpacing: 0.3,
+                    ),
+                  ),
+                ),
+                // Status badge with dot
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 9,
+                    vertical: 4,
+                  ),
+                  decoration: BoxDecoration(
+                    color: si.bg,
+                    borderRadius: BorderRadius.circular(999),
+                    border: Border.all(color: si.fg.withValues(alpha: 0.25)),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Container(
+                        width: 6,
+                        height: 6,
+                        decoration: BoxDecoration(
+                          color: si.fg,
+                          shape: BoxShape.circle,
+                        ),
+                      ),
+                      const SizedBox(width: 5),
+                      Text(
+                        si.label,
+                        style: TextStyle(
+                          fontSize: 10,
+                          fontWeight: FontWeight.w600,
+                          color: si.fg,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+
+            // ── Row 2: Avatar + Pemohon + Waktu ────────────────────────
+            Row(
+              children: [
+                Container(
+                  width: 42,
+                  height: 42,
+                  decoration: BoxDecoration(
+                    color: bg,
+                    shape: BoxShape.circle,
+                    border: Border.all(color: fg.withValues(alpha: 0.18)),
+                  ),
+                  alignment: Alignment.center,
+                  child: Text(
+                    ini,
+                    style: TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w700,
+                      color: fg,
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        m.applicantName,
+                        style: const TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w700,
+                          color: _C.textPrimary,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      const SizedBox(height: 1),
+                      Text(
+                        _relativeDate(m.createdAt),
+                        style: const TextStyle(
+                          fontSize: 11,
+                          color: _C.textSecondary,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+
+            // ── Asset info box (Stitch-style) ───────────────────────────
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: _C.bg,
+                borderRadius: BorderRadius.circular(14),
+                border: Border.all(color: const Color(0xFFF2F4F7)),
+              ),
+              child: Column(
+                children: [
+                  // Asset name + code
+                  Row(
+                    children: [
+                      Container(
+                        width: 36,
+                        height: 36,
+                        decoration: BoxDecoration(
+                          color: _C.navy.withValues(alpha: 0.08),
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: const Icon(
+                          Icons.inventory_2_outlined,
+                          size: 18,
+                          color: _C.navy,
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              m.displayAssetName,
+                              style: const TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w700,
+                                color: _C.textPrimary,
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                            Text(
+                              m.isUnregisteredAsset
+                                  ? 'SN: ${m.displaySerialNumber}'
+                                  : (m.displaySerialNumber != '-'
+                                        ? '${m.displayAssetCode} • SN: ${m.displaySerialNumber}'
+                                        : m.displayAssetCode),
+                              style: const TextStyle(
+                                fontSize: 10,
+                                color: _C.textSecondary,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                  // Divider
+                  Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 8),
+                    child: Container(height: 1, color: const Color(0xFFE5E7EB)),
+                  ),
+                  // Lokasi: asal → tujuan
+                  Row(
+                    children: [
+                      const Icon(
+                        Icons.location_on_outlined,
+                        size: 14,
+                        color: _C.textSecondary,
+                      ),
+                      const SizedBox(width: 4),
+                      Expanded(
+                        child: Text(
+                          m.currentLocation,
+                          style: const TextStyle(
+                            fontSize: 11,
+                            fontWeight: FontWeight.w500,
+                            color: _C.textPrimary,
+                          ),
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 6),
+                        child: Icon(
+                          Icons.arrow_forward_rounded,
+                          size: 14,
+                          color: _C.textSecondary.withValues(alpha: 0.6),
+                        ),
+                      ),
+                      Expanded(
+                        child: Text(
+                          m.targetLocation,
+                          style: const TextStyle(
+                            fontSize: 11,
+                            fontWeight: FontWeight.w500,
+                            color: _C.textPrimary,
+                          ),
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          textAlign: TextAlign.end,
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 12),
+
+            // ── Row 4: Doc info + CTA button ────────────────────────────
+            Wrap(
+              alignment: WrapAlignment.spaceBetween,
+              crossAxisAlignment: WrapCrossAlignment.center,
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                // Doc chip
+                if (m.documentName != null && m.documentName!.isNotEmpty)
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 4,
+                    ),
+                    decoration: BoxDecoration(
+                      color: _C.bg,
+                      borderRadius: BorderRadius.circular(6),
+                      border: Border.all(color: _C.border),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Icon(
+                          Icons.attach_file_rounded,
+                          size: 12,
+                          color: _C.textSecondary,
+                        ),
+                        const SizedBox(width: 3),
+                        Text(
+                          '1 Lampiran',
+                          style: const TextStyle(
+                            fontSize: 10,
+                            color: _C.textSecondary,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      ],
+                    ),
+                  )
+                else
+                  const SizedBox.shrink(),
+
+                // Periksa Pengajuan button
+                GestureDetector(
+                  onTap: onTap,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 14,
+                      vertical: 9,
+                    ),
+                    decoration: BoxDecoration(
+                      color: _C.navy,
+                      borderRadius: BorderRadius.circular(10),
+                      boxShadow: [
+                        BoxShadow(
+                          color: _C.navy.withValues(alpha: 0.2),
+                          blurRadius: 6,
+                          offset: const Offset(0, 2),
+                        ),
+                      ],
+                    ),
+                    child: const Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          'Periksa Pengajuan',
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                            color: Colors.white,
+                          ),
+                        ),
+                        SizedBox(width: 4),
+                        Icon(
+                          Icons.chevron_right_rounded,
+                          size: 16,
+                          color: Colors.white,
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
             ),
           ],
         ),

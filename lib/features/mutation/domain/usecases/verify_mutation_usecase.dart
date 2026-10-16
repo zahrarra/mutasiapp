@@ -17,6 +17,8 @@ class VerifyMutationUseCase {
   Future<Result<Mutation>> call({
     required String mutationId,
     required String operatorName,
+    bool requiresKadivApproval = false,
+    String? notes,
   }) async {
     if (mutationId.trim().isEmpty) {
       return const Result.failure(
@@ -40,7 +42,8 @@ class VerifyMutationUseCase {
     if (mutation.status != MutationStatus.submitted) {
       return Result.failure(
         ValidationFailure(
-          message: 'Hanya pengajuan berstatus Diajukan yang dapat diverifikasi (Status saat ini: ${mutation.status.displayName}).',
+          message:
+              'Hanya pengajuan berstatus Diajukan yang dapat diverifikasi (Status saat ini: ${mutation.status.displayName}).',
         ),
       );
     }
@@ -48,6 +51,8 @@ class VerifyMutationUseCase {
     return repository.verifyMutation(
       mutationId: mutationId,
       operatorName: operatorName,
+      requiresKadivApproval: requiresKadivApproval,
+      notes: notes,
     );
   }
 }

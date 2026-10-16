@@ -1,0 +1,168 @@
+<!DOCTYPE html><html lang="id"><head>
+<meta charset="utf-8">
+<meta content="width=device-width, initial-scale=1.0" name="viewport">
+<title>MutasiKu — Konfirmasi &amp; Sukses Pengajuan Mutasi</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link href="https://fonts.googleapis.com" rel="preconnect">
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&amp;family=JetBrains+Mono:wght@500;600&amp;display=swap" rel="stylesheet">
+<script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Inter', 'sans-serif'],
+            mono: ['JetBrains Mono', 'monospace'],
+          },
+          colors: {
+            brand: {
+              navy: '#00273A',
+              navyDark: '#001A27',
+              cyan: '#0A4866',
+              teal: '#0F766E',
+              tealLight: '#14B8A6',
+              sky: '#E0F2FE',
+            },
+            surface: {
+              DEFAULT: '#FFFFFF',
+              dim: '#F4F7FA',
+              border: '#E2E8F0',
+              muted: '#64748B',
+              text: '#0F172A',
+            },
+            status: {
+              success: '#059669',
+              successBg: '#ECFDF5',
+              warning: '#D97706',
+              warningBg: '#FFFBEB',
+            }
+          },
+          animation: {
+            'bounce-subtle': 'bounceSubtle 3s ease-in-out infinite',
+            'pulse-glow': 'pulseGlow 2.5s ease-in-out infinite',
+            'float-plane': 'floatPlane 3s ease-in-out infinite',
+            'scale-check': 'scaleCheck 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards',
+            'fade-slide-up': 'fadeSlideUp 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards',
+          },
+          keyframes: {
+            bounceSubtle: {
+              '0%, 100%': { transform: 'translateY(0)' },
+              '50%': { transform: 'translateY(-4px)' },
+            },
+            pulseGlow: {
+              '0%, 100%': { opacity: '0.4', transform: 'scale(1)' },
+              '50%': { opacity: '0.8', transform: 'scale(1.08)' },
+            },
+            floatPlane: {
+              '0%, 100%': { transform: 'translateY(0) rotate(0deg)' },
+              '50%': { transform: 'translateY(-5px) rotate(-3deg)' },
+            },
+            scaleCheck: {
+              '0%': { transform: 'scale(0.6) rotate(-15deg)', opacity: '0' },
+              '70%': { transform: 'scale(1.1) rotate(3deg)', opacity: '1' },
+              '100%': { transform: 'scale(1) rotate(0deg)', opacity: '1' },
+            },
+            fadeSlideUp: {
+              '0%': { opacity: '0', transform: 'translateY(16px)' },
+              '100%': { opacity: '1', transform: 'translateY(0)' },
+            }
+          }
+        }
+      }
+    }
+  </script>
+<style>
+    /* Custom Scrollbar */
+    ::-webkit-scrollbar { width: 4px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: #CBD5E1; border-radius: 999px; }
+    
+    /* Active State Transitions */
+    .tab-btn.active {
+      background-color: #00273A;
+      color: #FFFFFF;
+      box-shadow: 0 2px 8px rgba(0, 39, 58, 0.25);
+    }
+    .tab-btn:not(.active) {
+      color: #64748B;
+      background-color: transparent;
+    }
+    .tab-btn:not(.active):hover {
+      color: #00273A;
+      background-color: #EEF2F6;
+    }
+  </style>
+</head>
+<body class="bg-slate-900/40 backdrop-blur-sm text-slate-800 font-sans antialiased min-h-screen flex items-center justify-center p-6 select-none">
+<!-- Mobile Frame Container (Simulating high-end mobile app in preview) -->
+<div class="bg-white rounded-3xl p-8 max-w-sm w-full shadow-2xl border border-slate-100/80 text-center flex flex-col items-center animate-fade-slide-up">
+  <div class="w-20 h-20 rounded-full bg-[#ecf4ff] border border-[#d5e4f4] flex items-center justify-center mb-6 shadow-sm text-[#00273a]">
+    <svg class="w-9 h-9" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+      <path stroke-linecap="round" stroke-linejoin="round" d="M6 12L3 21l18-9L3 3l3 9zm0 0h12"></path>
+    </svg>
+  </div>
+  <h2 class="text-2xl font-bold text-[#00273a] tracking-tight mb-3">Kirim Pengajuan?</h2>
+  <p class="text-sm text-slate-500 font-normal leading-relaxed mb-6 px-1">Pastikan seluruh data mutasi aset dan dokumen SK SDM sudah sesuai sebelum diteruskan ke pemeriksaan Operator.</p>
+  <button type="button" class="w-full h-12 bg-[#00273a] hover:bg-[#0f3d56] text-white font-semibold rounded-xl transition-all shadow-sm flex items-center justify-center mb-3">
+    Ya, Kirim Pengajuan
+  </button>
+  <button type="button" class="w-full h-12 bg-[#ecf4ff] hover:bg-[#dbeaf9] text-[#00273a] font-semibold rounded-xl transition-all flex items-center justify-center">
+    Periksa Kembali
+  </button>
+</div>
+<script>
+    function switchState(state) {
+      const modalConfirm = document.getElementById('modalConfirm');
+      const modalSuccess = document.getElementById('modalSuccess');
+      const btnTabConfirm = document.getElementById('btnTabConfirm');
+      const btnTabSuccess = document.getElementById('btnTabSuccess');
+
+      if (state === 'confirm') {
+        modalConfirm.classList.remove('hidden');
+        modalSuccess.classList.add('hidden');
+        btnTabConfirm.classList.add('active');
+        btnTabSuccess.classList.remove('active');
+      } else {
+        modalConfirm.classList.add('hidden');
+        modalSuccess.classList.remove('hidden');
+        btnTabConfirm.classList.remove('active');
+        btnTabSuccess.classList.add('active');
+      }
+    }
+
+    function submitToSuccess() {
+      // Transition from confirm to success state
+      switchState('success');
+    }
+
+    function toggleSubmitBtn() {
+      const cb = document.getElementById('cbAgreement');
+      const btn = document.getElementById('btnConfirmSubmit');
+      if (cb.checked) {
+        btn.disabled = false;
+        btn.classList.remove('opacity-50', 'cursor-not-allowed');
+      } else {
+        btn.disabled = true;
+        btn.classList.add('opacity-50', 'cursor-not-allowed');
+      }
+    }
+
+    function copyTicket() {
+      const ticketNum = document.getElementById('ticketNumber').innerText;
+      navigator.clipboard.writeText(ticketNum).then(() => {
+        const copyText = document.getElementById('copyText');
+        const copyIcon = document.getElementById('copyIcon');
+        copyText.innerText = 'Tersalin!';
+        copyText.classList.add('text-emerald-600');
+        setTimeout(() => {
+          copyText.innerText = 'Salin';
+          copyText.classList.remove('text-emerald-600');
+        }, 2000);
+      });
+    }
+  </script>
+
+
+
+
+</body></html>

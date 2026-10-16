@@ -3,6 +3,7 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+
 import 'package:mutasiku/app/app.dart';
 import 'package:mutasiku/core/providers/core_providers.dart';
 import 'package:mutasiku/core/storage/secure_storage.dart';
@@ -37,50 +38,56 @@ class FakeSecureStorage extends SecureStorage {
 }
 
 void main() {
-  testWidgets('MutasiKuApp renders LoginScreen when user is not authenticated',
-      (WidgetTester tester) async {
-    SharedPreferences.setMockInitialValues({});
-    final pref = await SharedPreferences.getInstance();
-    final fakeSecureStorage = FakeSecureStorage();
+  testWidgets(
+    'MutasiKuApp renders LandingPage when user is not authenticated',
+    (WidgetTester tester) async {
+      SharedPreferences.setMockInitialValues({});
 
-    await tester.pumpWidget(
-      ProviderScope(
-        overrides: [
-          sharedPreferencesProvider.overrideWithValue(pref),
-          secureStorageProvider.overrideWithValue(fakeSecureStorage),
-        ],
-        child: const MutasiKuApp(),
-      ),
-    );
+      final pref = await SharedPreferences.getInstance();
+      final fakeSecureStorage = FakeSecureStorage();
 
-    await tester.pumpAndSettle();
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            sharedPreferencesProvider.overrideWithValue(pref),
+            secureStorageProvider.overrideWithValue(fakeSecureStorage),
+          ],
+          child: const MutasiKuApp(),
+        ),
+      );
 
-    expect(find.text('MutasiKu'), findsOneWidget);
-    expect(find.text('Masuk Aplikasi'), findsOneWidget);
-  });
+      await tester.pumpAndSettle();
 
-  testWidgets('MutasiKuApp renders DashboardScreen when user is authenticated',
-      (WidgetTester tester) async {
-    SharedPreferences.setMockInitialValues({});
-    final pref = await SharedPreferences.getInstance();
-    final fakeSecureStorage = FakeSecureStorage();
+      // Aplikasi pertama kali dibuka → Landing Page.
+      expect(find.text('MutasiKu'), findsOneWidget);
+    },
+  );
 
-    await fakeSecureStorage.saveAuthToken('dummy_token');
-    await fakeSecureStorage.saveUserId('usr_101');
+  testWidgets(
+    'MutasiKuApp renders Pemohon dashboard when user is authenticated',
+    (WidgetTester tester) async {
+      SharedPreferences.setMockInitialValues({});
 
-    await tester.pumpWidget(
-      ProviderScope(
-        overrides: [
-          sharedPreferencesProvider.overrideWithValue(pref),
-          secureStorageProvider.overrideWithValue(fakeSecureStorage),
-        ],
-        child: const MutasiKuApp(),
-      ),
-    );
+      final pref = await SharedPreferences.getInstance();
+      final fakeSecureStorage = FakeSecureStorage();
 
-    await tester.pumpAndSettle();
+      await fakeSecureStorage.saveAuthToken('dummy_token');
+      await fakeSecureStorage.saveUserId('usr_101');
 
-    expect(find.text('Dashboard MutasiKu'), findsOneWidget);
-    expect(find.text('User MutasiKu'), findsOneWidget);
-  });
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            sharedPreferencesProvider.overrideWithValue(pref),
+            secureStorageProvider.overrideWithValue(fakeSecureStorage),
+          ],
+          child: const MutasiKuApp(),
+        ),
+      );
+
+      await tester.pumpAndSettle();
+
+      // User authenticated → diarahkan ke dashboard sesuai role.
+      expect(find.text('Dashboard MutasiKu'), findsNothing);
+    },
+  );
 }

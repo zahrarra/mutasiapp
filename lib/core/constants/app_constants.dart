@@ -3,6 +3,8 @@
 // Konstanta global MutasiKu.
 // Jangan menaruh business rule di sini.
 
+import 'package:flutter/foundation.dart';
+
 /// Konstanta aplikasi MutasiKu.
 abstract final class AppConstants {
   /// Nama aplikasi
@@ -36,7 +38,17 @@ abstract final class AppConstants {
   // Nilai default; nilai sesungguhnya dikonfigurasi via environment.
   // Lihat .env.example.
 
-  /// Base URL default (override via environment)
-  /// OPEN QUESTION: URL production belum ditentukan (PRD §13.5).
-  static const String defaultBaseUrl = 'https://api.mutasiku.example.com';
+  /// Base URL default (override via environment API_BASE_URL).
+  /// Otomatis menggunakan 10.0.2.2:8000 pada platform Android Emulator
+  /// dan 127.0.0.1:8000 pada Web / Desktop Localhost.
+  static String get defaultBaseUrl {
+    const envUrl = String.fromEnvironment('API_BASE_URL');
+    if (envUrl.isNotEmpty) {
+      return envUrl;
+    }
+    if (!kIsWeb && defaultTargetPlatform == TargetPlatform.android) {
+      return 'http://10.0.2.2:8000';
+    }
+    return 'http://127.0.0.1:8000';
+  }
 }

@@ -18,6 +18,9 @@ abstract final class AppColors {
   /// Digunakan: primary button, active nav, heading, brand element.
   static const Color primary = Color(0xFF0F3D56);
 
+  /// Primary container (light tinted background for brand element)
+  static const Color primaryContainer = Color(0xFFE0F2FE);
+
   /// Secondary — #0F766E
   /// Digunakan: secondary emphasis, supporting interactive elements.
   static const Color secondary = Color(0xFF0F766E);
