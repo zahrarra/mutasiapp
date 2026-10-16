@@ -1,8 +1,10 @@
-// test/features/pemohon/pemohon_returned_edit_resubmit_test.dart
+// test/features/pemohon/pemohon_final_mutation_no_edit_resubmit_test.dart
 //
-// Integration & widget test untuk alur mutasi yang dikembalikan (Terminal Returned Rule):
-// 1. Layar detail mutasi menampilkan alasan pengembalian, tidak menampilkan tombol Edit & Ajukan Ulang, dan menyediakan tombol Ajukan Mutasi Baru.
-// 2. Mutasi yang dikembalikan berstatus final dan tidak muncul di antrean verifikasi aktif Operator maupun Bagian Aset.
+// Integration & widget test untuk pengajuan mutasi final (Terminal Final Rule):
+// 1. Layar detail mutasi berstatus final (ditolak / returned historis) menampilkan alasan penolakan/pengembalian,
+//    tidak menampilkan tombol Edit & Ajukan Ulang, dan menyediakan tombol Ajukan Mutasi Baru.
+// 2. Mutasi final tidak muncul di antrean verifikasi aktif Operator maupun Bagian Aset.
+// 3. Mengklik Ajukan Mutasi Baru mengarahkan Pemohon ke form pembuatan pengajuan baru yang independen.
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -110,6 +112,31 @@ void main() {
     acquisitionYear: 2023,
   );
 
+  Mutation createRejectedMutation({
+    required String applicantId,
+    required String applicantName,
+    String? rejectionReason =
+        'Spesifikasi aset tidak sesuai dengan kebutuhan divisi tujuan.',
+    String? rejectedBy = 'Bambang Bagian Aset',
+  }) {
+    return Mutation(
+      id: 'mut_rej_001',
+      ticketNumber: 'MUT-2026-REJ001',
+      asset: testAsset,
+      applicantId: applicantId,
+      applicantName: applicantName,
+      currentLocation: 'Lantai 2 - Keuangan',
+      targetLocation: 'Lantai 3 - IT',
+      currentPic: 'Rina Pemohon A',
+      targetPic: 'Andi IT',
+      reason: 'Kebutuhan cetak dokumen laporan keuangan',
+      status: MutationStatus.rejected,
+      rejectionReason: rejectionReason,
+      rejectedBy: rejectedBy,
+      createdAt: DateTime.now().subtract(const Duration(days: 1)),
+    );
+  }
+
   Mutation createReturnedMutation({
     required String applicantId,
     required String applicantName,
@@ -137,9 +164,78 @@ void main() {
     );
   }
 
-  group('Terminal Returned Mutation Tests', () {
+  group('Terminal Final Mutation (No Edit / Resubmit) Tests', () {
     testWidgets(
-      '1. Detail pengajuan returned menampilkan alasan pengembalian, status badge, tombol edit & resubmit TIDAK ada, tombol Ajukan Mutasi Baru tersedia',
+      '1. Detail pengajuan ditolak (rejected) menampilkan alasan penolakan, tombol edit & resubmit TIDAK ada, tombol Ajukan Mutasi Baru tersedia',
+      (tester) async {
+        final repo = _MockMutationRepository();
+        final mutation = createRejectedMutation(
+          applicantId: pemohonA.id,
+          applicantName: pemohonA.name,
+        );
+        repo.addMutation(mutation);
+
+        final container = ProviderContainer(
+          overrides: [
+            authStateProvider.overrideWith(
+              (ref) => _FakeAuthNotifier(pemohonA),
+            ),
+            mutationRepositoryProvider.overrideWithValue(repo),
+            apiMutationRepositoryProvider.overrideWithValue(repo),
+          ],
+        );
+        addTearDown(container.dispose);
+
+        final router = GoRouter(
+          initialLocation: '/pemohon/mutasi/${mutation.id}',
+          routes: [
+            GoRoute(
+              path: RouteNames.pemohonMutasiCreatePath,
+              builder: (context, state) =>
+                  const Scaffold(body: Text('Form Pengajuan Baru')),
+            ),
+            GoRoute(
+              path: RouteNames.pemohonMutasiDetailPath,
+              builder: (context, state) =>
+                  PemohonMutationDetailScreen(mutationId: mutation.id),
+            ),
+          ],
+        );
+
+        await tester.pumpWidget(
+          UncontrolledProviderScope(
+            container: container,
+            child: MaterialApp.router(routerConfig: router),
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        // 1. Alasan penolakan ditampilkan
+        expect(
+          find.text(
+            'Spesifikasi aset tidak sesuai dengan kebutuhan divisi tujuan.',
+          ),
+          findsOneWidget,
+        );
+
+        // 2. Tombol edit & ajukan ulang TIDAK tersedia
+        expect(find.text('Edit & Ajukan Ulang'), findsNothing);
+
+        // 3. Tombol Ajukan Mutasi Baru tersedia
+        expect(find.byKey(const Key('btn_ajukan_mutasi_baru')), findsOneWidget);
+
+        // 4. Klik Ajukan Mutasi Baru mengarah ke form pengajuan
+        await tester.ensureVisible(find.byKey(const Key('btn_ajukan_mutasi_baru')));
+        await tester.pumpAndSettle();
+        await tester.tap(find.byKey(const Key('btn_ajukan_mutasi_baru')));
+        await tester.pumpAndSettle();
+
+        expect(find.text('Form Pengajuan Baru'), findsOneWidget);
+      },
+    );
+
+    testWidgets(
+      '2. Detail pengajuan historis returned menampilkan status final tanpa tombol edit & resubmit, dan ada tombol Ajukan Mutasi Baru',
       (tester) async {
         final repo = _MockMutationRepository();
         final mutationA = createReturnedMutation(
@@ -183,7 +279,7 @@ void main() {
         );
         await tester.pumpAndSettle();
 
-        // 1. Alasan pengembalian ditampilkan
+        // 1. Alasan pengembalian historis ditampilkan
         expect(
           find.text(
             'Harap lengkapi surat pengantar mutasi dan ubah PIC ke supervisor terkait.',
@@ -208,14 +304,19 @@ void main() {
     );
 
     testWidgets(
-      '2. Mutasi yang dikembalikan berstatus final dan tidak muncul di antrean verifikasi aktif Operator maupun Bagian Aset',
+      '3. Mutasi final (ditolak & returned) tidak muncul di antrean verifikasi aktif Operator maupun Bagian Aset',
       (tester) async {
         final repo = _MockMutationRepository();
         final mutationA = createReturnedMutation(
           applicantId: pemohonA.id,
           applicantName: pemohonA.name,
         );
+        final mutationB = createRejectedMutation(
+          applicantId: pemohonA.id,
+          applicantName: pemohonA.name,
+        );
         repo.addMutation(mutationA);
+        repo.addMutation(mutationB);
 
         final container = ProviderContainer(
           overrides: [
@@ -233,7 +334,7 @@ void main() {
             .where((m) => m.status == MutationStatus.submitted)
             .toList();
         expect(
-          operatorActiveQueue.any((m) => m.id == mutationA.id),
+          operatorActiveQueue.any((m) => m.id == mutationA.id || m.id == mutationB.id),
           isFalse,
         );
 
@@ -245,7 +346,7 @@ void main() {
             .where((m) => m.status == MutationStatus.waitingAssetVerification)
             .toList();
         expect(
-          assetActiveQueue.any((m) => m.id == mutationA.id),
+          assetActiveQueue.any((m) => m.id == mutationA.id || m.id == mutationB.id),
           isFalse,
         );
       },

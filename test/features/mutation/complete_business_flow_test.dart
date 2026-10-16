@@ -284,7 +284,7 @@ void main() {
     },
   );
 
-  test('Flow 3: Operator Returns Mutation with Reason', () async {
+  test('Flow 3: Operator Return is Blocked & Prohibited', () async {
     final submitResult = await mutationRepo.submitMutation(
       const SubmitMutationParams(
         applicantId: 'usr_pemohon',
@@ -308,16 +308,13 @@ void main() {
           mutationId: mutation.id,
           reason: 'Dokumen BA serah terima belum dilampirkan.',
         );
-    expect(returnSuccess, isTrue);
+    expect(returnSuccess, isFalse);
 
-    final returnedMutation = (await mutationRepo.getMutationById(
+    final currentMutation = (await mutationRepo.getMutationById(
       mutation.id,
     ) as Success<Mutation>).data;
-    expect(returnedMutation.status, equals(MutationStatus.returned));
-    expect(
-      returnedMutation.returnReason,
-      equals('Dokumen BA serah terima belum dilampirkan.'),
-    );
+    // Status must remain submitted, not returned
+    expect(currentMutation.status, equals(MutationStatus.submitted));
   });
 
   test('Flow 4: Bagian Aset Reject succeeds (ditolak) & Return is Blocked', () async {

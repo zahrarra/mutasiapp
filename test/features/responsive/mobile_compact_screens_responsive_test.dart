@@ -174,7 +174,7 @@ void main() {
       expect(tester.takeException(), isNull);
     });
 
-    testWidgets('Action buttons with Kembalikan render cleanly without overflow on ultra-compact mobile (320x568)', (
+    testWidgets('Action buttons with Tolak render cleanly without overflow on ultra-compact mobile (320x568)', (
       tester,
     ) async {
       tester.view.physicalSize = const Size(320, 568);
@@ -200,7 +200,7 @@ void main() {
                           padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 12),
                         ),
                         child: const Text(
-                          'Kembalikan',
+                          'Tolak',
                           maxLines: 1,
                           softWrap: false,
                           overflow: TextOverflow.ellipsis,
@@ -216,7 +216,7 @@ void main() {
                           padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 12),
                         ),
                         child: const Text(
-                          'Verifikasi Valid',
+                          'Setujui Mutasi',
                           maxLines: 1,
                           softWrap: false,
                           overflow: TextOverflow.ellipsis,
@@ -232,8 +232,8 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      expect(find.text('Kembalikan'), findsOneWidget);
-      expect(find.text('Verifikasi Valid'), findsOneWidget);
+      expect(find.text('Tolak'), findsOneWidget);
+      expect(find.text('Setujui Mutasi'), findsOneWidget);
       expect(tester.takeException(), isNull);
     });
   });
