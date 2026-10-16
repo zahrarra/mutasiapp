@@ -16,11 +16,9 @@ import 'package:mutasiku/features/auth/domain/usecases/login_usecase.dart';
 import 'package:mutasiku/features/auth/domain/usecases/logout_usecase.dart';
 import 'package:mutasiku/features/auth/presentation/providers/auth_provider.dart';
 import 'package:mutasiku/features/bagian_aset/presentation/screens/bagian_aset_dashboard_screen.dart';
-import 'package:mutasiku/features/bagian_aset/presentation/screens/bagian_aset_return_form_screen.dart';
 import 'package:mutasiku/features/bagian_aset/presentation/screens/bagian_aset_verification_detail_screen.dart';
 import 'package:mutasiku/features/bagian_aset/presentation/screens/bagian_aset_verifications_screen.dart';
 import 'package:mutasiku/features/mutation/data/repositories/mutation_repository_impl.dart';
-import 'package:mutasiku/features/mutation/domain/entities/mutation_status.dart';
 import 'package:mutasiku/features/mutation/presentation/providers/mutation_provider.dart';
 import 'package:mutasiku/features/bagian_aset/presentation/providers/bagian_aset_verification_provider.dart';
 import 'package:mutasiku/features/notification/presentation/screens/notification_screen.dart';
@@ -395,70 +393,6 @@ void main() {
       expect(detail.status.isWaitingDivisionApproval, true);
       expect(detail.assetVerifiedBy, 'Bambang Bagian Aset');
       expect(detail.requiresKadivApproval, true);
-    },
-  );
-
-  testWidgets(
-    'Regresi: Bagian Aset return form ditolak dan status mutasi tidak berubah',
-    (tester) async {
-      late WidgetRef containerRef;
-
-      final testWidget = ProviderScope(
-        overrides: [
-          authStateProvider.overrideWith(
-            (ref) => FakeBagianAsetAuthNotifier(bagianAsetUser),
-          ),
-          apiMutationRepositoryProvider.overrideWith(
-            (ref) => ref.watch(mutationRepositoryProvider),
-          ),
-        ],
-        child: Consumer(
-          builder: (context, ref, _) {
-            containerRef = ref;
-            return const MaterialApp(
-              home: BagianAsetReturnFormScreen(mutationId: 'mut_004'),
-            );
-          },
-        ),
-      );
-
-      await tester.pumpWidget(testWidget);
-      await tester.pumpAndSettle();
-
-      // Context Card
-      expect(find.text('FURNITUR-2026-00018'), findsOneWidget);
-
-      // Try submitting without reason
-      await tester.tap(find.byKey(const Key('btn_submit_tolak')));
-      await tester.pumpAndSettle();
-
-      expect(find.text('Alasan penolakan wajib diisi.'), findsOneWidget);
-
-      // Enter reason
-      await tester.enterText(
-        find.byKey(const Key('input_alasan_penolakan')),
-        'Anggaran relokasi furnitur belum dialokasikan untuk cabang ini.',
-      );
-      await tester.pumpAndSettle();
-
-      // Submit return -> Harus gagal dan ditolak
-      await tester.tap(find.byKey(const Key('btn_submit_tolak')));
-      await tester.pump();
-      await tester.pump(const Duration(milliseconds: 500));
-
-      // Feedback error muncul bahwa Bagian Aset tidak berwenang mengembalikan
-      expect(
-        find.text(
-          'Bagian Aset tidak memiliki kewenangan untuk mengembalikan atau menolak pengajuan mutasi.',
-        ),
-        findsOneWidget,
-      );
-
-      // Cek status mutasi tetap waitingAssetVerification
-      final detail = await containerRef.read(
-        bagianAsetMutationDetailProvider('mut_004').future,
-      );
-      expect(detail.status, MutationStatus.waitingAssetVerification);
     },
   );
 

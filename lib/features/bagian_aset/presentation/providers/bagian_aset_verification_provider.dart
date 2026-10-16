@@ -18,7 +18,6 @@ import '../../../mutation/domain/entities/mutation.dart';
 import '../../../mutation/domain/entities/mutation_status.dart';
 import '../../../mutation/domain/usecases/get_bagian_aset_verifications_usecase.dart';
 import '../../../mutation/domain/usecases/reject_mutation_bagian_aset_usecase.dart';
-import '../../../mutation/domain/usecases/return_mutation_bagian_aset_usecase.dart';
 import '../../../mutation/domain/usecases/verify_and_forward_mutation_usecase.dart';
 import '../../../mutation/presentation/providers/mutation_provider.dart';
 import '../../../notification/domain/entities/notification_item.dart';
@@ -36,12 +35,6 @@ final rejectMutationBagianAsetUseCaseProvider =
     Provider<RejectMutationBagianAsetUseCase>((ref) {
       final repo = ref.watch(apiMutationRepositoryProvider);
       return RejectMutationBagianAsetUseCase(repository: repo);
-    });
-
-final returnMutationBagianAsetUseCaseProvider =
-    Provider<ReturnMutationBagianAsetUseCase>((ref) {
-      final repo = ref.watch(apiMutationRepositoryProvider);
-      return ReturnMutationBagianAsetUseCase(repository: repo);
     });
 
 final getBagianAsetVerificationsUseCaseProvider =
@@ -296,13 +289,11 @@ class BagianAsetVerificationActionNotifier
     extends StateNotifier<BagianAsetVerificationActionState> {
   final VerifyAndForwardMutationUseCase verifyAndForwardUseCase;
   final RejectMutationBagianAsetUseCase rejectUseCase;
-  final ReturnMutationBagianAsetUseCase returnUseCase;
   final Ref ref;
 
   BagianAsetVerificationActionNotifier({
     required this.verifyAndForwardUseCase,
     required this.rejectUseCase,
-    required this.returnUseCase,
     required this.ref,
   }) : super(const BagianAsetVerificationActionState());
 
@@ -457,11 +448,9 @@ final bagianAsetVerificationActionProvider =
         verifyAndForwardMutationUseCaseProvider,
       );
       final rejectUseCase = ref.watch(rejectMutationBagianAsetUseCaseProvider);
-      final returnUseCase = ref.watch(returnMutationBagianAsetUseCaseProvider);
       return BagianAsetVerificationActionNotifier(
         verifyAndForwardUseCase: verifyAndForwardUseCase,
         rejectUseCase: rejectUseCase,
-        returnUseCase: returnUseCase,
         ref: ref,
       );
     });
