@@ -972,37 +972,12 @@ class MutationRepositoryImpl implements MutationRepository {
       }
     }
 
-    await Future.delayed(const Duration(milliseconds: 300));
-
-    final index = _mutations.indexWhere((m) => m.id == mutationId);
-    if (index == -1) {
-      return const Result.failure(
-        NotFoundFailure(message: 'Pengajuan mutasi tidak ditemukan.'),
-      );
-    }
-
-    final current = _mutations[index];
-    final updated = current.copyWith(
-      status: MutationStatus.returned,
-      returnReason: reason,
-      verifiedAt: DateTime.now(),
-      verifiedBy: operatorName,
+    return const Result.failure(
+      ForbiddenFailure(
+        message:
+            'Operator tidak memiliki kewenangan untuk mengembalikan atau menolak pengajuan mutasi.',
+      ),
     );
-
-    _mutations[index] = updated;
-
-    // Buka lock pada master aset karena status returned adalah status final
-    if (current.assetId != null && current.assetId!.isNotEmpty) {
-      final assetRes = await assetRepository.getAssetById(current.assetId!);
-      if (assetRes is Success<Asset>) {
-        final a = assetRes.data;
-        await assetRepository.updateAsset(
-          a.copyWith(hasActiveMutation: false, status: AssetStatus.available),
-        );
-      }
-    }
-
-    return Result.success(updated);
   }
 
   @override
