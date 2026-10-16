@@ -1,22 +1,22 @@
 // lib/features/auth/presentation/screens/login_screen.dart
 //
-// Screen: Halaman Login (Responsive Desktop & Mobile).
+// Layar: Halaman Login (Responsif Desktop & Ponsel).
 // Baseline: Stitch "MutasiKu — Portal Login & Tata Kelola Aset (Executive Redesign)"
 // Screen ID: 658aa4d233d54aa78204fa309fcdca96
 //
-// UI Architecture:
+// Arsitektur UI:
 // - Desktop / Laptop (>= 960px):
-//   * Two-column split layout matching the reference design image.
-//   * Left (45%): Dark navy hero panel (navy-850/800/900 gradient, ambient radial glows,
-//     glowing brand emblem, headline, value proposition, 3 feature glass cards, SSL compliance seal).
-//   * Right (55%): Executive form canvas (#FFFFFF / #F8FAFC) with layered ambient circular curves,
-//     top action bar (back button + status pill), Hello Again! header, form inputs,
-//     Remember me & Forgot Password?, elevated #13384D Login button, Security notice card,
-//     helpdesk support link, and micro-copy footer.
-// - Mobile / Tablet (< 960px):
-//   * Responsive single-column layout preserving the exact visual styling.
-//   * Clean, fluid, touch-friendly inputs, zero overflow, no horizontal scrolling.
-// - 100% preservation of auth logic, state management, validation, routing, and test keys.
+//   * Tata letak terpisah dua kolom yang sesuai dengan gambar referensi desain.
+//   * Kiri (45%): Panel hero biru dongker tua (gradien navy-850/800/900, pendaran radial ambien,
+//     emblem brand berpendar, judul utama, proposisi nilai, 3 kartu kaca fitur, segel kepatuhan SSL).
+//   * Kanan (55%): Kanvas formulir eksekutif (#FFFFFF / #F8FAFC) dengan lapisan lengkungan melingkar ambien,
+//     bilah aksi atas (tombol kembali + pil status), header Selamat Datang!, input formulir,
+//     Ingat saya & Lupa Kata Sandi?, tombol Masuk bertingkat #13384D, kartu pemberitahuan keamanan,
+//     tautan dukungan helpdesk, dan footer mikro-teks.
+// - Ponsel / Tablet (< 960px):
+//   * Tata letak satu kolom responsif yang mempertahankan gaya visual yang persis.
+//   * Input yang rapi, fleksibel, ramah sentuhan, tanpa overflow, tanpa pergeseran horizontal.
+// - Mempertahankan 100% logika autentikasi, manajemen state, validasi, perutean, dan test key.
 
 import 'dart:math' as math;
 
@@ -30,32 +30,32 @@ import '../../../../core/errors/failures.dart';
 import '../../../../core/validators/form_validators.dart';
 import '../providers/auth_provider.dart';
 
-/// Design tokens sesuai baseline Stitch Halaman Login (Executive Redesign)
+/// Token desain sesuai baseline Stitch Halaman Login (Executive Redesign)
 abstract final class _LoginTheme {
-  // Brand & Navy Palette
+  // Palet Warna Brand & Biru Dongker
   static const Color navy900 = Color(0xFF001A27);
   static const Color navy850 = Color(0xFF00273A);
   static const Color navy800 = Color(0xFF06344D);
-  static const Color brandNavy = Color(0xFF13384D); // Primary CTA Button
+  static const Color brandNavy = Color(0xFF13384D); // Tombol CTA Utama
 
-  // Teal & Cyan Palette
+  // Palet Warna Teal & Cyan
   static const Color teal = Color(0xFF0F766E);
   static const Color teal400 = Color(0xFF2DD4BF);
   static const Color teal500 = Color(0xFF14B8A6);
   static const Color teal600 = Color(0xFF0D9488);
 
-  // Surfaces & Backgrounds
+  // Permukaan & Latar Belakang
   static const Color backgroundLight = Color(0xFFF8FAFC);
   static const Color surfaceWhite = Color(0xFFFFFFFF);
   static const Color border = Color(0xFFE2E8F0);
 
-  // Typography
+  // Tipografi
   static const Color textHeading = Color(0xFF0F172A);
   static const Color textBody = Color(0xFF1E293B);
   static const Color textMuted = Color(0xFF64748B);
   static const Color textPlaceholder = Color(0xFF94A3B8);
 
-  // States & Badges
+  // Status & Lencana
   static const Color error = Color(0xFFB42318);
   static const Color errorContainer = Color(0xFFFEE2E2);
   static const Color successGreen = Color(0xFF047857);
@@ -180,8 +180,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
     return LayoutBuilder(
       builder: (context, constraints) {
-        // Breakpoint: Mobile / Tablet portrait (< 960px)
-        // Desktop / Laptop (>= 960px): Stitch two-column split layout
+        // Batas resolusi (breakpoint): Ponsel / Tablet potret (< 960px)
+        // Desktop / Laptop (>= 960px): Tata letak terpisah dua kolom Stitch
         final isMobile = constraints.maxWidth < 960;
         if (isMobile) {
           return _buildMobileLayout(loading, auth, constraints);
@@ -193,7 +193,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   }
 
   // ──────────────────────────────────────────────────────────────────────────
-  // MOBILE LAYOUT (< 960px): RESPONSIVE SINGLE-COLUMN FORM CANVAS
+  // TATA LETAK PONSEL (< 960px): KANVAS FORMULIR SATU KOLOM RESPONSIF
   // ──────────────────────────────────────────────────────────────────────────
   Widget _buildMobileLayout(
     bool loading,
@@ -209,7 +209,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       body: Stack(
         clipBehavior: Clip.hardEdge,
         children: [
-          // Ambient background curves (exact circular layers from reference image)
+          // Lengkungan latar belakang ambien (lapisan melingkar persis sesuai gambar referensi)
           Positioned(
             top: -160,
             right: -160,
@@ -270,17 +270,17 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
-                        // Top Bar: Back Button & MutasiKu Internal Badge
+                        // Bilah Atas: Tombol Kembali & Lencana Internal MutasiKu
                         _buildTopHeader(),
 
                         const SizedBox(height: 32),
 
-                        // Heading Section: Hello Again!
+                        // Bagian Judul: Selamat Datang!
                         _buildHeadingSection(),
 
                         const SizedBox(height: 24),
 
-                        // Error Alert Banner (if auth failed)
+                        // Banner Peringatan Kesalahan (jika autentikasi gagal)
                         if (auth.failure != null) ...[
                           _buildErrorBanner(
                             _resolveLoginErrorMessage(auth.failure!),
@@ -288,37 +288,37 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                           const SizedBox(height: 16),
                         ],
 
-                        // Input 1: Email Address / NIP Input Card
+                        // Input 1: Kartu Input Alamat Email / NIP
                         _buildUsernameField(),
 
                         const SizedBox(height: 14),
 
-                        // Input 2: Password Input Card
+                        // Input 2: Kartu Input Kata Sandi
                         _buildPasswordField(),
 
                         const SizedBox(height: 14),
 
-                        // Utility Row: Remember Me & Forgot Password
+                        // Baris Utilitas: Ingat Saya & Lupa Kata Sandi
                         _buildUtilityRow(),
 
                         const SizedBox(height: 18),
 
-                        // Primary CTA: Elevated Login Button
+                        // CTA Utama: Tombol Masuk Bertingkat
                         _buildSubmitButton(loading),
 
                         const SizedBox(height: 20),
 
-                        // Enterprise Trust & Security Card
+                        // Kartu Kepercayaan & Keamanan Perusahaan
                         _buildEnterpriseTrustCard(),
 
                         const SizedBox(height: 18),
 
-                        // Helpdesk Link
+                        // Tautan Helpdesk
                         _buildHelpdeskLink(),
 
                         const SizedBox(height: 36),
 
-                        // Bottom Footer
+                        // Footer Bawah
                         _buildFooter(),
                       ],
                     ),
@@ -333,7 +333,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   }
 
   // ──────────────────────────────────────────────────────────────────────────
-  // DESKTOP LAYOUT (>= 960px): TWO-COLUMN STITCH REFERENCE IMAGE REDESIGN
+  // TATA LETAK DESKTOP (>= 960px): REDESAIN DUA KOLOM SESUAI GAMBAR REFERENSI STITCH
   // ──────────────────────────────────────────────────────────────────────────
   Widget _buildDesktopLayout(
     bool loading,
@@ -344,10 +344,10 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       backgroundColor: _LoginTheme.backgroundLight,
       body: Row(
         children: [
-          // ── Left Column: Brand Hero Panel (Reference Image Specs) ──────────
+          // ── Kolom Kiri: Panel Hero Brand (Spesifikasi Gambar Referensi) ──────────
           Expanded(flex: 9, child: _buildDesktopHeroPanel()),
 
-          // ── Right Column: Login Form Canvas (Reference Image Specs) ────────
+          // ── Kolom Kanan: Kanvas Formulir Login (Spesifikasi Gambar Referensi) ────────
           Expanded(
             flex: 11,
             child: Container(
@@ -356,7 +356,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
               child: Stack(
                 clipBehavior: Clip.hardEdge,
                 children: [
-                  // Subtle ambient circular curves behind form (Reference Image Specs)
+                  // Lengkungan melingkar ambien halus di belakang formulir (Spesifikasi Gambar Referensi)
                   Positioned(
                     top: -180,
                     right: -180,
@@ -403,7 +403,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                     ),
                   ),
 
-                  // Center Form Container
+                  // Wadah Formulir Bagian Tengah
                   SafeArea(
                     child: Center(
                       child: LayoutBuilder(
@@ -417,9 +417,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                             child: ConstrainedBox(
                               constraints: BoxConstraints(
                                 minHeight: math.max(
-                                  0,
-                                  viewportConstraints.maxHeight - 48,
-                                ),
+                                0,
+                                viewportConstraints.maxHeight - 48,
+                              ),
                                 maxWidth: 440,
                               ),
                               child: IntrinsicHeight(
@@ -429,17 +429,17 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                                     crossAxisAlignment:
                                         CrossAxisAlignment.stretch,
                                     children: [
-                                      // Top Action Bar: Back Button & Status Badge
+                                      // Bilah Aksi Atas: Tombol Kembali & Lencana Status
                                       _buildTopHeader(),
 
                                       const Spacer(),
 
-                                      // Heading Section: Hello Again!
+                                      // Bagian Judul: Selamat Datang!
                                       _buildHeadingSection(),
 
                                       const SizedBox(height: 24),
 
-                                      // Error Alert Banner (if auth failed)
+                                      // Banner Peringatan Kesalahan (jika autentikasi gagal)
                                       if (auth.failure != null) ...[
                                         _buildErrorBanner(
                                           _resolveLoginErrorMessage(
@@ -449,37 +449,37 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                                         const SizedBox(height: 16),
                                       ],
 
-                                      // Input 1: Email Address / NIP Input Card
+                                      // Input 1: Kartu Input Alamat Email / NIP
                                       _buildUsernameField(),
 
                                       const SizedBox(height: 14),
 
-                                      // Input 2: Password Input Card
+                                      // Input 2: Kartu Input Kata Sandi
                                       _buildPasswordField(),
 
                                       const SizedBox(height: 14),
 
-                                      // Utility Row: Remember Me & Forgot Password
+                                      // Baris Utilitas: Ingat Saya & Lupa Kata Sandi
                                       _buildUtilityRow(),
 
                                       const SizedBox(height: 18),
 
-                                      // Primary CTA: Elevated Login Button
+                                      // CTA Utama: Tombol Masuk Bertingkat
                                       _buildSubmitButton(loading),
 
                                       const SizedBox(height: 20),
 
-                                      // Enterprise Trust & Security Card
+                                      // Kartu Kepercayaan & Keamanan Perusahaan
                                       _buildEnterpriseTrustCard(),
 
                                       const SizedBox(height: 18),
 
-                                      // Helpdesk Link
+                                      // Tautan Helpdesk
                                       _buildHelpdeskLink(),
 
                                       const Spacer(),
 
-                                      // Bottom Footer
+                                      // Footer Bawah
                                       _buildFooter(),
                                     ],
                                   ),
@@ -501,7 +501,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   }
 
   // ──────────────────────────────────────────────────────────────────────────
-  // DESKTOP HERO PANEL (Left Column Visual Showcase - Reference Image Specs)
+  // PANEL HERO DESKTOP (Tampilan Visual Kolom Kiri - Spesifikasi Gambar Referensi)
   // ──────────────────────────────────────────────────────────────────────────
   Widget _buildDesktopHeroPanel() {
     return Container(
@@ -519,7 +519,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       child: Stack(
         clipBehavior: Clip.hardEdge,
         children: [
-          // Background ambient glows (Reference image specs)
+          // Pendaran ambien latar belakang (Spesifikasi gambar referensi)
           Positioned(
             top: -96,
             right: -96,
@@ -549,7 +549,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
             ),
           ),
 
-          // Content Showcase
+          // Tampilan Konten
           SafeArea(
             child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: 48, vertical: 40),
@@ -557,14 +557,14 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  // Top Section: Logo, Headline, Value Proposition & 3 Feature Cards
+                  // Bagian Atas: Logo, Judul Utama, Proposisi Nilai & 3 Kartu Fitur
                   Expanded(
                     child: SingleChildScrollView(
                       physics: const ClampingScrollPhysics(),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          // Brand Header: Logo Emblem + Name + Subtitle
+                          // Header Brand: Emblem Logo + Nama + Subjudul
                           Row(
                             children: [
                               _buildBrandEmblem(size: 48, radius: 12),
@@ -614,7 +614,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
                           const SizedBox(height: 40),
 
-                          // Hero Headline (Constrained to naturally break on 3 lines like reference image)
+                          // Judul Utama Hero (Dibatasi agar terbagi menjadi 3 baris secara alami seperti gambar referensi)
                           ConstrainedBox(
                             constraints: const BoxConstraints(maxWidth: 440),
                             child: Text(
@@ -643,7 +643,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
                           const SizedBox(height: 32),
 
-                          // 3 Feature Glass Cards (Reference image specs)
+                          // 3 Kartu Kaca Fitur (Spesifikasi gambar referensi)
                           _buildDesktopFeatureItem(
                             icon: Icons.verified_user_rounded,
                             title: 'Otorisasi & Alur Berjenjang',
@@ -668,7 +668,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                     ),
                   ),
 
-                  // Bottom Compliance & Security Seal Footer (Reference Image Specs)
+                  // Footer Segel Kepatuhan & Keamanan Bawah (Spesifikasi Gambar Referensi)
                   Container(
                     padding: const EdgeInsets.only(top: 16),
                     decoration: BoxDecoration(
@@ -818,13 +818,13 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   }
 
   // ──────────────────────────────────────────────────────────────────────────
-  // SHARED FORM COMPONENTS
+  // KOMPONEN FORMULIR BERSAMA
   // ──────────────────────────────────────────────────────────────────────────
   Widget _buildTopHeader() {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        // Back Button
+        // Tombol Kembali
         InkWell(
           onTap: () {
             if (context.canPop()) {
@@ -857,7 +857,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
           ),
         ),
 
-        // Status Indicator Pill: Logo Emblem + MutasiKu + Internal
+        // Pil Indikator Status: Emblem Logo + MutasiKu + Internal
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
           decoration: BoxDecoration(
@@ -1118,7 +1118,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       spacing: 8,
       runSpacing: 8,
       children: [
-        // Remember Me
+        // Ingat Saya
         InkWell(
           onTap: () => setState(() => _remember = !_remember),
           borderRadius: BorderRadius.circular(6),
@@ -1151,7 +1151,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
           ),
         ),
 
-        // Forgot Password
+        // Lupa Kata Sandi
         GestureDetector(
           onTap: _showHelpdeskDialog,
           child: Text(
@@ -1363,7 +1363,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   }
 }
 
-/// CustomPainter untuk Dynamic S / Double Exchange Ribbon Icon
+/// CustomPainter untuk Dynamic S / Ikon Pita Pertukaran Ganda
 class _MutasiKuEmblemRibbonPainter extends CustomPainter {
   const _MutasiKuEmblemRibbonPainter();
 
@@ -1373,7 +1373,7 @@ class _MutasiKuEmblemRibbonPainter extends CustomPainter {
     canvas.save();
     canvas.scale(scale, scale);
 
-    // 1. Top capsule / ribbon going right (White)
+    // 1. Kapsul / pita atas mengarah ke kanan (Putih)
     final topPath = Path()
       ..moveTo(38, 42)
       ..cubicTo(38, 35.37, 43.37, 30, 50, 30)
@@ -1392,7 +1392,7 @@ class _MutasiKuEmblemRibbonPainter extends CustomPainter {
 
     canvas.drawPath(topPath, topPaint);
 
-    // 2. Bottom capsule / ribbon going left (Accent Gradient: Cyan to Teal)
+    // 2. Kapsul / pita bawah mengarah ke kiri (Gradien Aksen: Cyan ke Teal)
     final bottomPath = Path()
       ..moveTo(82, 54)
       ..cubicTo(82, 60.63, 76.63, 66, 70, 66)
@@ -1415,7 +1415,7 @@ class _MutasiKuEmblemRibbonPainter extends CustomPainter {
 
     canvas.drawPath(bottomPath, bottomPaint);
 
-    // 3. Directional arrow accent markers on transfer flow
+    // 3. Penanda aksen panah penunjuk arah pada alur perpindahan
     final topArrow = Path()
       ..moveTo(76, 26)
       ..lineTo(84, 30)
