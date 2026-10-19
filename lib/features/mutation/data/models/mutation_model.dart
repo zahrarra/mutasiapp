@@ -110,6 +110,7 @@ class MutationModel extends Mutation {
     super.kadivRejectionReason,
     super.staffUpdatedAt,
     super.staffUpdatedBy,
+    super.confirmedAt,
     required super.createdAt,
   });
 
@@ -157,6 +158,7 @@ class MutationModel extends Mutation {
       kadivRejectionReason: mutation.kadivRejectionReason,
       staffUpdatedAt: mutation.staffUpdatedAt,
       staffUpdatedBy: mutation.staffUpdatedBy,
+      confirmedAt: mutation.confirmedAt,
       createdAt: mutation.createdAt,
     );
   }
@@ -399,6 +401,10 @@ class MutationModel extends Mutation {
       json['staff_updated_by'] ?? json['staffUpdatedBy'],
     );
 
+    final confirmedAt = _parseDateTime(
+      json['confirmed_at'] ?? json['confirmedAt'],
+    );
+
     final requiresKadivApproval =
         json['requires_kadiv_approval'] as bool? ??
         json['requiresKadivApproval'] as bool? ??
@@ -455,6 +461,7 @@ class MutationModel extends Mutation {
       kadivRejectionReason: kadivRejectionReason,
       staffUpdatedAt: staffUpdatedAt,
       staffUpdatedBy: staffUpdatedBy,
+      confirmedAt: confirmedAt,
       createdAt: createdAt,
     );
   }
@@ -538,6 +545,7 @@ class MutationModel extends Mutation {
       'return_reason': returnReason,
       'rejection_reason': rejectionReason,
       'confirmation_reason': confirmationReason,
+      'confirmed_at': confirmedAt?.toIso8601String(),
       'created_at': createdAt.toIso8601String(),
     };
   }

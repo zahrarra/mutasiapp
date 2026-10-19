@@ -164,18 +164,33 @@ enum MutationStatus {
     if (value == null) return MutationStatus.submitted;
     switch (value.trim().toLowerCase()) {
       case 'diajukan':
+      case 'submitted':
         return MutationStatus.submitted;
       case 'menunggu_verifikasi_bagian_aset':
+      case 'waiting_asset_verification':
         return MutationStatus.waitingAssetVerification;
       case 'dikembalikan_ke_pemohon':
+      case 'returned':
         return MutationStatus.returned;
       case 'menunggu_approval_pemimpin_divisi':
+      case 'menunggu_approval_kadiv':
+      case 'waiting_division_head_approval':
+      case 'waiting_kadiv_approval':
         return MutationStatus.waitingDivisionHeadApproval;
       case 'ditolak':
+      case 'rejected':
         return MutationStatus.rejected;
       case 'menunggu_konfirmasi_pemohon':
+      case 'menunggu_konfirmasi':
+      case 'waiting_confirmation':
+      case 'waitingconfirmation':
+      case 'pending_confirmation':
+      case 'pendingconfirmation':
+      case 'disetujui':
+      case 'approved':
         return MutationStatus.waitingConfirmation;
       case 'selesai':
+      case 'completed':
         return MutationStatus.completed;
       // Status lokal / legacy fallback
       case 'waiting_sync':

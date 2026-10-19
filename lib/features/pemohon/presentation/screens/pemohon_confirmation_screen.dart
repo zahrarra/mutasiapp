@@ -57,6 +57,19 @@ class _PemohonConfirmationScreenState
   bool _checkPic = true;
   bool _copiedSn = false;
 
+  @override
+  void initState() {
+    super.initState();
+    // Reset action state saat membuka layar agar state aksi mutasi sebelumnya
+    // tidak bocor ke mutasi saat ini.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        ref.read(pemohonConfirmationActionProvider.notifier).reset();
+      }
+    });
+  }
+
+
   TextStyle _t({
     double size = 14,
     FontWeight w = FontWeight.w400,
@@ -189,41 +202,31 @@ class _PemohonConfirmationScreenState
     Mutation mutation,
     PemohonConfirmationActionState actionState,
   ) {
-    final m = actionState.result ?? mutation;
-    final isPending =
-        m.status == MutationStatus.waitingConfirmation ||
-        m.status == MutationStatus.pendingConfirmation;
-    final isCompleted = m.status == MutationStatus.completed;
+    final cleanId = widget.mutationId.replaceAll('mut_', '');
+    final isMatchingResult = actionState.result != null &&
+        (actionState.result!.id == widget.mutationId ||
+            actionState.result!.id == cleanId);
+    final m = isMatchingResult ? actionState.result! : mutation;
+
+    final isCompleted =
+        m.status == MutationStatus.completed || m.confirmedAt != null;
+    final isPending = !isCompleted &&
+        (m.status == MutationStatus.waitingConfirmation ||
+            m.status == MutationStatus.pendingConfirmation ||
+            m.status == MutationStatus.approved);
     final isDisputedByApplicant =
         (m.status == MutationStatus.returned && m.staffUpdatedAt != null) ||
         (m.status == MutationStatus.waitingAssetVerification &&
             m.confirmationReason != null);
+
+    final showActionSuccess =
+        isMatchingResult && actionState.successMessage != null;
 
     return Stack(
       children: [
         ListView(
           padding: const EdgeInsets.fromLTRB(16, 4, 16, 32),
           children: [
-            if (actionState.successMessage != null) ...[
-              _banner(
-                actionState.successMessage!,
-                _C.success,
-                const Color(0xFFECFDF3),
-                const Color(0xFFD1FADF),
-                Icons.check_circle,
-              ),
-              const SizedBox(height: 12),
-            ],
-            if (actionState.error != null) ...[
-              _banner(
-                actionState.error!,
-                _C.error,
-                const Color(0xFFFEF3F2),
-                const Color(0xFFFECDCA),
-                Icons.error_outline,
-              ),
-              const SizedBox(height: 12),
-            ],
             if (isCompleted) ...[
               _banner(
                 'Konfirmasi telah diberikan. Mutasi aset telah selesai.',
@@ -231,6 +234,15 @@ class _PemohonConfirmationScreenState
                 const Color(0xFFECFDF3),
                 const Color(0xFFD1FADF),
                 Icons.check_circle_outline,
+              ),
+              const SizedBox(height: 12),
+            ] else if (showActionSuccess) ...[
+              _banner(
+                actionState.successMessage!,
+                _C.success,
+                const Color(0xFFECFDF3),
+                const Color(0xFFD1FADF),
+                Icons.check_circle,
               ),
               const SizedBox(height: 12),
             ] else if (isDisputedByApplicant) ...[
@@ -254,8 +266,23 @@ class _PemohonConfirmationScreenState
               ),
               const SizedBox(height: 12),
             ],
+            if (actionState.error != null) ...[
+              _banner(
+                actionState.error!,
+                _C.error,
+                const Color(0xFFFEF3F2),
+                const Color(0xFFFECDCA),
+                Icons.error_outline,
+              ),
+              const SizedBox(height: 12),
+            ],
 
-            _ticketCard(m, isDisputedByApplicant: isDisputedByApplicant),
+            _ticketCard(
+              m,
+              isDisputedByApplicant: isDisputedByApplicant,
+              isPending: isPending,
+              isCompleted: isCompleted,
+            ),
             const SizedBox(height: 12),
             _assetUpdateCard(m),
             const SizedBox(height: 12),
@@ -336,18 +363,23 @@ class _PemohonConfirmationScreenState
     );
   }
 
-  Widget _ticketCard(Mutation m, {required bool isDisputedByApplicant}) {
-    final pending =
-        m.status == MutationStatus.waitingConfirmation ||
-        m.status == MutationStatus.pendingConfirmation;
-    final done = m.status == MutationStatus.completed;
+  Widget _ticketCard(
+    Mutation m, {
+    required bool isDisputedByApplicant,
+    required bool isPending,
+    required bool isCompleted,
+  }) {
+    final pending = isPending;
+    final done = isCompleted;
 
     // Untuk kasus laporan ketidaksesuaian oleh pemohon, tampilkan badge
     // netral ("Menunggu Bagian Aset") — bukan "Dikembalikan ke Pemohon" yang
     // secara semantik menyalahkan pemohon padahal justru pemohon yang lapor.
     final badgeLabel = isDisputedByApplicant
         ? 'Menunggu Bagian Aset'
-        : m.status.displayName;
+        : (done
+            ? 'Selesai'
+            : (pending ? 'Menunggu Konfirmasi' : m.status.displayName));
     final badgeIcon = isDisputedByApplicant
         ? Icons.hourglass_top
         : pending
@@ -420,28 +452,34 @@ class _PemohonConfirmationScreenState
               ),
             ],
           ),
-          const SizedBox(height: 10),
-          Container(
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              color: _C.surfaceLow.withValues(alpha: 0.6),
-              borderRadius: BorderRadius.circular(8),
-              border: Border.all(color: _C.surfaceHigh),
-            ),
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Icon(Icons.info, size: 20, color: _C.info),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Text(
-                    'Bagian Aset telah memverifikasi data aset pada sistem inventaris korporat. Harap lakukan verifikasi fisik sebelum melakukan konfirmasi final.',
-                    style: _t(size: 12, color: const Color(0xFF42474D), h: 1.4),
+          if (isPending) ...[
+            const SizedBox(height: 10),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: _C.surfaceLow.withValues(alpha: 0.6),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: _C.surfaceHigh),
+              ),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Icon(Icons.info, size: 20, color: _C.info),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      'Bagian Aset telah memverifikasi data aset pada sistem inventaris korporat. Harap lakukan verifikasi fisik sebelum melakukan konfirmasi final.',
+                      style: _t(
+                        size: 12,
+                        color: const Color(0xFF42474D),
+                        h: 1.4,
+                      ),
+                    ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
-          ),
+          ],
         ],
       ),
     );
