@@ -1,10 +1,9 @@
-
 FROM php:8.4-apache
 
 RUN apt-get update && apt-get install -y \
-    git unzip libzip-dev default-libmysqlclient-dev \
-    && docker-php-ext-configure pdo_mysql --with-pdo-mysql=/usr \
-    && docker-php-ext-install pdo_mysql \
+    git unzip libzip-dev \
+    && docker-php-ext-configure pdo_mysql --with-pdo-mysql=mysqlnd \
+    && docker-php-ext-install pdo_mysql mysqli zip bcmath \
     && a2enmod rewrite \
     && rm -rf /var/lib/apt/lists/*
 
