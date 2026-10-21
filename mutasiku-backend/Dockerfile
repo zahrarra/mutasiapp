@@ -23,3 +23,5 @@ RUN sed -ri -e 's!/var/www/html!/var/www/html/public!g' \
     && chown -R www-data:www-data storage bootstrap/cache
 
 EXPOSE 80
+
+CMD ["sh", "-c", "php artisan migrate --force; php artisan db:seed --force; apache2-foreground"]
