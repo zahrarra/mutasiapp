@@ -7,23 +7,15 @@ import 'package:flutter/foundation.dart';
 
 /// Konstanta aplikasi MutasiKu.
 abstract final class AppConstants {
-  /// Nama aplikasi
   static const String appName = 'MutasiKu';
-
-  /// Versi aplikasi
   static const String appVersion = '1.0.0';
 
-  // ─── API ─────────────────────────────────────────────────────────────────
-
+  // ─── API ───
   /// Default request timeout
-  static const Duration requestTimeout = Duration(seconds: 30);
+  static const Duration requestTimeout = Duration(seconds: 600);
 
   /// Default connection timeout
   static const Duration connectionTimeout = Duration(seconds: 15);
-
-  // ─── Storage keys ─────────────────────────────────────────────────────────
-  // Kunci untuk SecureStorage dan LocalStorage.
-  // Jangan gunakan string literal di tempat lain — selalu referensikan konstanta ini.
 
   /// Kunci token autentikasi (SecureStorage)
   static const String keyAuthToken = 'auth_token';
@@ -34,13 +26,9 @@ abstract final class AppConstants {
   /// Kunci data user yang disimpan (LocalStorage)
   static const String keyCurrentUser = 'current_user';
 
-  // ─── Environment ─────────────────────────────────────────────────────────
+  // ─── Environment ─────
   // Nilai default; nilai sesungguhnya dikonfigurasi via environment.
-  // Lihat .env.example.
-
-  /// Base URL default (override via environment API_BASE_URL).
-  /// Otomatis menggunakan 10.0.2.2:8000 pada platform Android Emulator
-  /// dan 127.0.0.1:8000 pada Web / Desktop Localhost.
+  /// Base URL default (override via environment API_BASE_URL). Otomatis menggunakan 10.0.2.2:8000 pada platform Android Emulator dan 127.0.0.1:8000 pada Web / Desktop Localhost.
   static String get defaultBaseUrl {
     const envUrl = String.fromEnvironment('API_BASE_URL');
     if (envUrl.isNotEmpty) {
