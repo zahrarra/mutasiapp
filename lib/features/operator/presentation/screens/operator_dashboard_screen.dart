@@ -2,7 +2,7 @@
 //
 // Dashboard Operator — UI Baseline Stitch (Screen: 8635da188ee14001bb4d2e31da291d20).
 // Menggunakan Curved Deep Navy Header, Search Bar Kapsul Transparan 1:1 Stitch,
-// Hero Action Banner (Tugas Operator SLA 18M), Kategori & Status Prioritas 2x2 Grid,
+// Hero Action Banner (Tugas Operator), Kategori & Status Prioritas 2x2 Grid,
 // dan Antrean Perlu Pemeriksaan dengan checklist badge & CTA Periksa & Teruskan Tiket.
 // Mempertahankan 100% business logic, provider, navigation, dan flow Operator.
 
@@ -815,7 +815,7 @@ class _OperatorDashboardScreenState
                 ),
                 const SizedBox(width: 12),
 
-                // Right SLA Box (Stitch: w-16 h-16 rounded-2xl bg-white/10)
+                // Right Jam Kerja Box (Stitch: w-16 h-16 rounded-2xl bg-white/10)
                 Container(
                   width: 64,
                   height: 64,

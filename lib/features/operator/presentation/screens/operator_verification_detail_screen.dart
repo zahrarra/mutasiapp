@@ -2,7 +2,7 @@
 //
 // Screen: Detail Verifikasi Pengajuan Mutasi (OPR-003).
 // Sumber: SCREEN-SPEC.md OPR-003, ROLE-FLOW.md §4, WIREFRAME.md §2.
-// UI: Stitch design baseline — Status banner with SLA, Pemegang Aset card,
+// UI: Stitch design baseline — Status banner, Pemegang Aset card,
 //     Detail Aset Fisik & Master SIMAK BMN, Visual Route, Kelengkapan Dokumen,
 //     Operational Timeline, and Sticky Action Bar with verification modal.
 
@@ -13,9 +13,8 @@ import 'package:go_router/go_router.dart';
 import '../../../../app/router/route_names.dart';
 import '../../../../app/theme/app_colors.dart';
 import '../../../../app/theme/app_spacing.dart';
-import '../../../../core/utils/sla_wita_helper.dart';
+import '../../../../core/utils/wita_time_helper.dart';
 import '../../../../core/widgets/document_preview_dialog.dart';
-import '../../../../core/widgets/sla_live_badge.dart';
 import '../../../../core/providers/core_providers.dart';
 import '../../../asset/domain/entities/asset.dart';
 import '../../../auth/presentation/providers/auth_provider.dart';
@@ -640,7 +639,7 @@ class OperatorVerificationDetailScreen extends ConsumerWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Row 1: Status Pill & SLA (Responsive Wrap)
+          // Row 1: Status Pill (Responsive Wrap)
           Wrap(
             spacing: 8,
             runSpacing: 8,
@@ -684,7 +683,6 @@ class OperatorVerificationDetailScreen extends ConsumerWidget {
                   ],
                 ),
               ),
-              SlaLiveBadge(mutation: mutation),
             ],
           ),
           const SizedBox(height: 14),
@@ -2101,7 +2099,7 @@ class OperatorVerificationDetailScreen extends ConsumerWidget {
   }
 
   String _formatDateTime(DateTime dt) {
-    return SlaWitaHelper.formatDateTimeWita(dt);
+    return WitaTimeHelper.formatDateTimeWita(dt);
   }
 
   static String _getInitials(String name) {

@@ -10,7 +10,7 @@ import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 import '../../../../app/router/route_names.dart';
-import '../../../../core/utils/sla_wita_helper.dart';
+import '../../../../core/utils/wita_time_helper.dart';
 import '../../../../core/widgets/app_feedback.dart';
 import '../../../../core/widgets/error_view.dart';
 import '../../../../core/widgets/mutasiku_page_header.dart';
@@ -116,7 +116,7 @@ class _PemohonConfirmationScreenState
   }
 
   String _formatDateTime(DateTime dt) {
-    return SlaWitaHelper.formatDateTimeWita(dt);
+    return WitaTimeHelper.formatDateTimeWita(dt);
   }
 
   @override

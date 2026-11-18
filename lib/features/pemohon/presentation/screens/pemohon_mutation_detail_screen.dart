@@ -13,12 +13,11 @@ import '../../../../app/router/route_names.dart';
 import '../../../../app/theme/app_colors.dart';
 import '../../../../app/theme/app_spacing.dart';
 import '../../../../core/providers/core_providers.dart';
-import '../../../../core/utils/sla_wita_helper.dart';
+import '../../../../core/utils/wita_time_helper.dart';
 import '../../../../core/widgets/document_preview_dialog.dart';
 import '../../../../core/widgets/error_view.dart';
 import '../../../../core/widgets/loading_indicator.dart';
 import '../../../../core/widgets/mutasiku_page_header.dart';
-import '../../../../core/widgets/sla_live_badge.dart';
 import '../../../auth/domain/entities/user.dart';
 import '../../../auth/domain/entities/user_role.dart';
 import '../../../auth/presentation/providers/auth_provider.dart';
@@ -358,7 +357,7 @@ class PemohonMutationDetailScreen extends ConsumerWidget {
           ),
           const SizedBox(height: 16),
 
-          // 2-Column Info: Tanggal Pengajuan & Target SLA
+          // Info: Tanggal Pengajuan
           Container(
             padding: const EdgeInsets.only(top: 12),
             decoration: BoxDecoration(
@@ -391,7 +390,7 @@ class PemohonMutationDetailScreen extends ConsumerWidget {
                           const SizedBox(width: 4),
                           Expanded(
                             child: Text(
-                              SlaWitaHelper.formatDateTimeWita(mutation.createdAt),
+                              WitaTimeHelper.formatDateTimeWita(mutation.createdAt),
                               style: const TextStyle(
                                 fontSize: 11,
                                 fontWeight: FontWeight.w500,
@@ -401,60 +400,6 @@ class PemohonMutationDetailScreen extends ConsumerWidget {
                             ),
                           ),
                         ],
-                      ),
-                    ],
-                  ),
-                ),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      SlaLiveBuilder(
-                        mutation: mutation,
-                        builder: (context, sla) {
-                          final isOverdue = sla.isOverdue;
-                          return Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                'SLA',
-                                style: TextStyle(
-                                  fontSize: 10,
-                                  fontWeight: FontWeight.w600,
-                                  color: const Color(0xFFA5F3FC).withValues(alpha: 0.7),
-                                ),
-                              ),
-                              const SizedBox(height: 3),
-                              Row(
-                                children: [
-                                  Icon(
-                                    isOverdue
-                                        ? Icons.warning_amber_rounded
-                                        : Icons.timer_outlined,
-                                    size: 13,
-                                    color: isOverdue
-                                        ? const Color(0xFFF87171)
-                                        : const Color(0xFFFDE047),
-                                  ),
-                                  const SizedBox(width: 4),
-                                  Expanded(
-                                    child: Text(
-                                      sla.label,
-                                      style: TextStyle(
-                                        fontSize: 11,
-                                        fontWeight: FontWeight.w500,
-                                        color: isOverdue
-                                            ? const Color(0xFFFECACA)
-                                            : Colors.white,
-                                      ),
-                                      overflow: TextOverflow.ellipsis,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ],
-                          );
-                        },
                       ),
                     ],
                   ),

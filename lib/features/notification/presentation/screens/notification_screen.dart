@@ -10,7 +10,7 @@ import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:mutasiku/core/widgets/custom_floating_nav_bar.dart';
 
-import '../../../../core/utils/sla_wita_helper.dart';
+import '../../../../core/utils/wita_time_helper.dart';
 import '../../../../core/widgets/mutasiku_page_header.dart';
 
 import '../../../../app/router/route_names.dart';
@@ -146,7 +146,7 @@ class _NotificationScreenState extends ConsumerState<NotificationScreen> {
   }
 
   String _relative(DateTime d) {
-    final wita = SlaWitaHelper.toWita(d);
+    final wita = WitaTimeHelper.toWita(d);
     final diff = DateTime.now().difference(d);
     final h = wita.hour.toString().padLeft(2, '0');
     final min = wita.minute.toString().padLeft(2, '0');
@@ -171,9 +171,7 @@ class _NotificationScreenState extends ConsumerState<NotificationScreen> {
         _S.success,
       );
     }
-    if (t.contains('sla') ||
-        t.contains('peringatan') ||
-        t.contains('warning')) {
+    if (t.contains('peringatan') || t.contains('warning')) {
       return (
         Icons.warning_amber_rounded,
         _S.warning.withValues(alpha: 0.1),

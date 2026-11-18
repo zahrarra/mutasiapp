@@ -17,10 +17,9 @@ import '../../../../app/router/route_names.dart';
 import '../../../../app/theme/app_colors.dart';
 import '../../../../app/theme/app_spacing.dart';
 import '../../../../core/providers/core_providers.dart';
-import '../../../../core/utils/sla_wita_helper.dart';
+import '../../../../core/utils/wita_time_helper.dart';
 import '../../../../core/widgets/document_preview_dialog.dart';
 import '../../../../core/widgets/mutasiku_page_header.dart';
-import '../../../../core/widgets/sla_live_badge.dart';
 import '../../../asset/domain/entities/asset.dart';
 import '../../../auth/presentation/providers/auth_provider.dart';
 import '../../../mutation/domain/entities/mutation.dart';
@@ -643,7 +642,7 @@ class KadivApprovalDetailScreen extends ConsumerWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Row 1: Status Pill & SLA (Responsive Wrap)
+          // Row 1: Status Pill (Responsive Wrap)
           Wrap(
             spacing: 8,
             runSpacing: 8,
@@ -684,7 +683,6 @@ class KadivApprovalDetailScreen extends ConsumerWidget {
                   ],
                 ),
               ),
-              SlaLiveBadge(mutation: mutation),
             ],
           ),
           const SizedBox(height: 14),
@@ -2202,7 +2200,7 @@ class KadivApprovalDetailScreen extends ConsumerWidget {
 
 
   String _formatDateTime(DateTime dt) {
-    return SlaWitaHelper.formatDateTimeWita(dt);
+    return WitaTimeHelper.formatDateTimeWita(dt);
   }
 
   static String _getInitials(String name) {
