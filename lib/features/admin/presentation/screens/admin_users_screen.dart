@@ -57,6 +57,16 @@ class _AdminUsersScreenState extends ConsumerState<AdminUsersScreen> {
   UserRole? _selectedRoleFilter;
   String _selectedUnitFilter = 'Semua Unit';
 
+  /// Role yang divisinya sudah ditetapkan dan tidak bisa dipilih bebas:
+  /// Bagian Aset dan Pemimpin Divisi sama-sama berada di Divisi Umum dan Aset.
+  bool _hasFixedDepartment(UserRole role) =>
+      role == UserRole.bagianAset || role == UserRole.kadiv;
+
+  /// Divisi yang sudah ditetapkan untuk role tersebut.
+  String _fixedDepartment(UserRole role) => role == UserRole.kadiv
+      ? MasterDepartments.kadivDepartment
+      : MasterDepartments.bagianAsetDepartment;
+
   final List<String> _unitList = const [
     'Semua Unit',
     'Kantor Pusat',
@@ -532,8 +542,7 @@ class _AdminUsersScreenState extends ConsumerState<AdminUsersScreen> {
                                       ),
                                     );
                                   }).toList(),
-                                  onChanged: selectedRole ==
-                                          UserRole.bagianAset
+                                  onChanged: _hasFixedDepartment(selectedRole)
                                       ? null
                                       : (val) {
                                           if (val != null) {
@@ -543,7 +552,7 @@ class _AdminUsersScreenState extends ConsumerState<AdminUsersScreen> {
                                           }
                                         },
                                 ),
-                                if (selectedRole == UserRole.bagianAset) ...[
+                                if (_hasFixedDepartment(selectedRole)) ...[
                                   const SizedBox(height: 6),
                                   Text(
                                     'Divisi otomatis: Divisi Umum dan Aset',
@@ -588,9 +597,9 @@ class _AdminUsersScreenState extends ConsumerState<AdminUsersScreen> {
                                     if (val != null) {
                                       setDialogState(() {
                                         selectedRole = val;
-                                        if (val == UserRole.bagianAset) {
-                                          selectedDivision = MasterDepartments
-                                              .bagianAsetDepartment;
+                                        if (_hasFixedDepartment(val)) {
+                                          selectedDivision =
+                                              _fixedDepartment(val);
                                         }
                                       });
                                     }
@@ -844,11 +853,11 @@ class _AdminUsersScreenState extends ConsumerState<AdminUsersScreen> {
     final initialDept = MasterDepartments.contains(user.department?.trim())
         ? MasterDepartments.canonical(user.department)
         : MasterDepartments.defaultDepartment;
-    // Bagian Aset sudah ditetapkan di Divisi Umum dan Aset — paksa
+    // Bagian Aset dan Kadiv sudah ditetapkan di Divisi Umum dan Aset — paksa
     // nilainya di sini supaya data lama yang divisinya salah
     // (mis. Bagian Aset + Divisi SKAI) ikut terkoreksi saat diedit.
-    final effectiveDept = user.role == UserRole.bagianAset
-        ? MasterDepartments.bagianAsetDepartment
+    final effectiveDept = _hasFixedDepartment(user.role)
+        ? _fixedDepartment(user.role)
         : initialDept;
     final deptCtrl = TextEditingController(text: effectiveDept);
     String selectedDivision = effectiveDept;
@@ -1009,9 +1018,9 @@ class _AdminUsersScreenState extends ConsumerState<AdminUsersScreen> {
                                     if (val != null) {
                                       setDialogState(() {
                                         selectedRole = val;
-                                        if (val == UserRole.bagianAset) {
-                                          selectedDivision = MasterDepartments
-                                              .bagianAsetDepartment;
+                                        if (_hasFixedDepartment(val)) {
+                                          selectedDivision =
+                                              _fixedDepartment(val);
                                           deptCtrl.text = selectedDivision;
                                         }
                                       });
@@ -1048,8 +1057,7 @@ class _AdminUsersScreenState extends ConsumerState<AdminUsersScreen> {
                                       ),
                                     );
                                   }).toList(),
-                                  onChanged: selectedRole ==
-                                          UserRole.bagianAset
+                                  onChanged: _hasFixedDepartment(selectedRole)
                                       ? null
                                       : (val) {
                                           if (val != null) {
@@ -1060,7 +1068,7 @@ class _AdminUsersScreenState extends ConsumerState<AdminUsersScreen> {
                                           }
                                         },
                                 ),
-                                if (selectedRole == UserRole.bagianAset) ...[
+                                if (_hasFixedDepartment(selectedRole)) ...[
                                   const SizedBox(height: 6),
                                   Text(
                                     'Divisi otomatis: Divisi Umum dan Aset',
