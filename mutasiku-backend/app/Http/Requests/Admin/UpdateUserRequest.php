@@ -26,9 +26,9 @@ class UpdateUserRequest extends FormRequest
             }
         }
 
-        // Bagian Aset dan Pemimpin Divisi sudah ditetapkan di Divisi Umum
-        // dan Aset — divisinya tidak bisa dipilih bebas, paksa nilainya
-        // di sini supaya API tidak bisa menyimpan kombinasi yang salah.
+        // Bagian Aset, Pemimpin Divisi, dan Operator sudah ditetapkan di
+        // Divisi Umum dan Aset — divisinya tidak bisa dipilih bebas, paksa
+        // nilainya di sini supaya API tidak bisa menyimpan kombinasi yang salah.
         // Kalau role tidak dikirim, pakai role user yang sudah ada —
         // jadi data lama yang divisinya salah ikut terkoreksi saat diedit.
         $roleId = $this->input('role_id');
@@ -41,7 +41,7 @@ class UpdateUserRequest extends FormRequest
         }
         if ($roleId) {
             $role = \App\Models\Role::find($roleId);
-            if ($role && in_array($role->name, ['bagian_aset', 'pemimpin_divisi'], true)) {
+            if ($role && in_array($role->name, ['bagian_aset', 'pemimpin_divisi', 'operator'], true)) {
                 $this->merge(['department' => 'Divisi Umum dan Aset']);
             }
         }
@@ -56,12 +56,34 @@ class UpdateUserRequest extends FormRequest
             'name' => ['sometimes', 'required', 'string', 'max:255'],
             'email' => ['sometimes', 'required', 'string', 'email', 'max:255', Rule::unique('users', 'email')->ignore($userId)],
             'password' => ['nullable', 'string', 'min:6'],
-            'role_id' => ['sometimes', 'required', 'integer', 'exists:roles,id'],
+            'role_id' => ['sometimes', 'required', 'integer', 'exists:roles,id', $this->singletonRoleRule($userId)],
             'role' => ['nullable', 'string'],
             'department' => ['nullable', 'string', 'max:255'],
             'nip' => ['nullable', 'string', 'max:50', Rule::unique('users', 'nip')->ignore($userId)],
             'is_active' => ['nullable', 'boolean'],
         ];
+    }
+
+    /**
+     * Role Admin, Operator, dan Pemimpin Divisi masing-masing hanya boleh
+     * dimiliki oleh 1 user. Tolak perubahan role kalau role tersebut sudah
+     * dipakai user lain (user yang sedang diedit dikecualikan).
+     */
+    private function singletonRoleRule(mixed $ignoreUserId = null): \Closure
+    {
+        return function (string $attribute, mixed $value, \Closure $fail) use ($ignoreUserId) {
+            $role = \App\Models\Role::find($value);
+            if (! $role || ! in_array($role->name, ['admin', 'operator', 'pemimpin_divisi'], true)) {
+                return;
+            }
+            $query = \App\Models\User::where('role_id', $value);
+            if ($ignoreUserId) {
+                $query->where('id', '!=', $ignoreUserId);
+            }
+            if ($query->exists()) {
+                $fail('Role ini hanya boleh dimiliki oleh satu user dan sudah ada user lain dengan role tersebut.');
+            }
+        };
     }
 
     public function messages(): array

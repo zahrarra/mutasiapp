@@ -58,14 +58,39 @@ class _AdminUsersScreenState extends ConsumerState<AdminUsersScreen> {
   String _selectedUnitFilter = 'Semua Unit';
 
   /// Role yang divisinya sudah ditetapkan dan tidak bisa dipilih bebas:
-  /// Bagian Aset dan Pemimpin Divisi sama-sama berada di Divisi Umum dan Aset.
+  /// Bagian Aset, Pemimpin Divisi, dan Operator sama-sama berada di
+  /// Divisi Umum dan Aset.
   bool _hasFixedDepartment(UserRole role) =>
-      role == UserRole.bagianAset || role == UserRole.kadiv;
+      role == UserRole.bagianAset ||
+      role == UserRole.kadiv ||
+      role == UserRole.operator;
 
   /// Divisi yang sudah ditetapkan untuk role tersebut.
-  String _fixedDepartment(UserRole role) => role == UserRole.kadiv
-      ? MasterDepartments.kadivDepartment
-      : MasterDepartments.bagianAsetDepartment;
+  String _fixedDepartment(UserRole role) => switch (role) {
+        UserRole.kadiv => MasterDepartments.kadivDepartment,
+        UserRole.operator => MasterDepartments.operatorDepartment,
+        _ => MasterDepartments.bagianAsetDepartment,
+      };
+
+  /// Role yang hanya boleh dimiliki oleh 1 user.
+  static const List<UserRole> _singletonRoles = [
+    UserRole.admin,
+    UserRole.operator,
+    UserRole.kadiv,
+  ];
+
+  /// Role singleton yang sudah ada usernya, berdasarkan daftar user saat ini.
+  /// [excludeUserId] dipakai saat edit supaya user yang sedang diedit tidak
+  /// dihitung sebagai "sudah ada".
+  Set<UserRole> _takenSingletonRoles([String? excludeUserId]) {
+    final users = ref.read(masterUsersProvider).valueOrNull ?? const <User>[];
+    return users
+        .where(
+          (u) => _singletonRoles.contains(u.role) && u.id != excludeUserId,
+        )
+        .map((u) => u.role)
+        .toSet();
+  }
 
   final List<String> _unitList = const [
     'Semua Unit',
@@ -376,7 +401,16 @@ class _AdminUsersScreenState extends ConsumerState<AdminUsersScreen> {
     final passwordCtrl = TextEditingController();
     final confirmPasswordCtrl = TextEditingController();
     String selectedDivision = MasterDepartments.defaultDepartment;
+    final takenRoles = _takenSingletonRoles();
     UserRole selectedRole = UserRole.operator;
+    if (takenRoles.contains(selectedRole)) {
+      selectedRole = UserRole.activeRoles.firstWhere(
+        (r) => !takenRoles.contains(r),
+      );
+    }
+    if (_hasFixedDepartment(selectedRole)) {
+      selectedDivision = _fixedDepartment(selectedRole);
+    }
     bool obscurePassword = true;
     bool obscureConfirm = true;
 
@@ -585,10 +619,14 @@ class _AdminUsersScreenState extends ConsumerState<AdminUsersScreen> {
                                     hintText: 'Pilih Role',
                                   ),
                                   items: UserRole.activeRoles.map((r) {
+                                    final taken = takenRoles.contains(r);
                                     return DropdownMenuItem(
                                       value: r,
+                                      enabled: !taken,
                                       child: Text(
-                                        r.displayName,
+                                        taken
+                                            ? '${r.displayName} (sudah ada)'
+                                            : r.displayName,
                                         overflow: TextOverflow.ellipsis,
                                       ),
                                     );
@@ -605,6 +643,17 @@ class _AdminUsersScreenState extends ConsumerState<AdminUsersScreen> {
                                     }
                                   },
                                 ),
+                                if (takenRoles.isNotEmpty) ...[
+                                  const SizedBox(height: 6),
+                                  Text(
+                                    'Role ${takenRoles.map((r) => r.displayName).join(', ')} sudah ada — masing-masing hanya 1 user.',
+                                    style: GoogleFonts.inter(
+                                      fontSize: 11,
+                                      fontWeight: FontWeight.w400,
+                                      color: const Color(0xFF64748B),
+                                    ),
+                                  ),
+                                ],
                               ],
                             ),
                           ),
@@ -853,8 +902,8 @@ class _AdminUsersScreenState extends ConsumerState<AdminUsersScreen> {
     final initialDept = MasterDepartments.contains(user.department?.trim())
         ? MasterDepartments.canonical(user.department)
         : MasterDepartments.defaultDepartment;
-    // Bagian Aset dan Kadiv sudah ditetapkan di Divisi Umum dan Aset — paksa
-    // nilainya di sini supaya data lama yang divisinya salah
+    // Bagian Aset, Kadiv, dan Operator sudah ditetapkan di Divisi Umum dan
+    // Aset — paksa nilainya di sini supaya data lama yang divisinya salah
     // (mis. Bagian Aset + Divisi SKAI) ikut terkoreksi saat diedit.
     final effectiveDept = _hasFixedDepartment(user.role)
         ? _fixedDepartment(user.role)
@@ -864,6 +913,9 @@ class _AdminUsersScreenState extends ConsumerState<AdminUsersScreen> {
     final nipCtrl = TextEditingController(text: user.username);
     UserRole selectedRole = user.role;
     String selectedStatus = user.isActive ? 'Aktif' : 'Nonaktif';
+    // Role singleton yang sudah dipakai user lain (user yang sedang
+    // diedit dikecualikan supaya role-nya sendiri tetap bisa dipilih).
+    final takenRoles = _takenSingletonRoles(user.id);
 
     showDialog(
       context: context,
@@ -1006,10 +1058,14 @@ class _AdminUsersScreenState extends ConsumerState<AdminUsersScreen> {
                                     hintText: 'Pilih Role',
                                   ),
                                   items: UserRole.activeRoles.map((r) {
+                                    final taken = takenRoles.contains(r);
                                     return DropdownMenuItem(
                                       value: r,
+                                      enabled: !taken,
                                       child: Text(
-                                        r.displayName,
+                                        taken
+                                            ? '${r.displayName} (sudah ada)'
+                                            : r.displayName,
                                         overflow: TextOverflow.ellipsis,
                                       ),
                                     );
@@ -1027,6 +1083,17 @@ class _AdminUsersScreenState extends ConsumerState<AdminUsersScreen> {
                                     }
                                   },
                                 ),
+                                if (takenRoles.isNotEmpty) ...[
+                                  const SizedBox(height: 6),
+                                  Text(
+                                    'Role ${takenRoles.map((r) => r.displayName).join(', ')} sudah ada — masing-masing hanya 1 user.',
+                                    style: GoogleFonts.inter(
+                                      fontSize: 11,
+                                      fontWeight: FontWeight.w400,
+                                      color: const Color(0xFF64748B),
+                                    ),
+                                  ),
+                                ],
                               ],
                             ),
                             right: Column(

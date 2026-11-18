@@ -24,12 +24,12 @@ class StoreUserRequest extends FormRequest
             }
         }
 
-        // Bagian Aset dan Pemimpin Divisi sudah ditetapkan di Divisi Umum
-        // dan Aset — divisinya tidak bisa dipilih bebas, paksa nilainya
-        // di sini supaya API tidak bisa menyimpan kombinasi yang salah.
+        // Bagian Aset, Pemimpin Divisi, dan Operator sudah ditetapkan di
+        // Divisi Umum dan Aset — divisinya tidak bisa dipilih bebas, paksa
+        // nilainya di sini supaya API tidak bisa menyimpan kombinasi yang salah.
         if ($this->filled('role_id')) {
             $role = \App\Models\Role::find($this->input('role_id'));
-            if ($role && in_array($role->name, ['bagian_aset', 'pemimpin_divisi'], true)) {
+            if ($role && in_array($role->name, ['bagian_aset', 'pemimpin_divisi', 'operator'], true)) {
                 $this->merge(['department' => 'Divisi Umum dan Aset']);
             }
         }
@@ -41,12 +41,30 @@ class StoreUserRequest extends FormRequest
             'name' => ['required', 'string', 'max:255'],
             'email' => ['required', 'string', 'email', 'max:255', 'unique:users,email'],
             'password' => ['required', 'string', 'min:6'],
-            'role_id' => ['required', 'integer', 'exists:roles,id'],
+            'role_id' => ['required', 'integer', 'exists:roles,id', $this->singletonRoleRule()],
             'role' => ['nullable', 'string'],
             'department' => ['nullable', 'string', 'max:255'],
             'nip' => ['nullable', 'string', 'max:50', 'unique:users,nip'],
             'is_active' => ['nullable', 'boolean'],
         ];
+    }
+
+    /**
+     * Role Admin, Operator, dan Pemimpin Divisi masing-masing hanya boleh
+     * dimiliki oleh 1 user. Tolak pembuatan user baru kalau role tersebut
+     * sudah dipakai user lain.
+     */
+    private function singletonRoleRule(): \Closure
+    {
+        return function (string $attribute, mixed $value, \Closure $fail) {
+            $role = \App\Models\Role::find($value);
+            if (! $role || ! in_array($role->name, ['admin', 'operator', 'pemimpin_divisi'], true)) {
+                return;
+            }
+            if (\App\Models\User::where('role_id', $value)->exists()) {
+                $fail('Role ini hanya boleh dimiliki oleh satu user dan sudah ada user dengan role tersebut.');
+            }
+        };
     }
 
     public function messages(): array

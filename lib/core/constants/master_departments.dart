@@ -32,6 +32,11 @@ abstract final class MasterDepartments {
   /// tidak bisa dipilih bebas saat admin membuat/mengubah user.
   static const String kadivDepartment = 'Divisi Umum dan Aset';
 
+  /// Divisi yang sudah ditetapkan untuk role Operator.
+  /// Operator adalah staf Divisi Umum dan Aset, jadi divisinya juga
+  /// tidak bisa dipilih bebas saat admin membuat/mengubah user.
+  static const String operatorDepartment = 'Divisi Umum dan Aset';
+
   /// Cek apakah suatu nama divisi terdaftar dalam master data
   static bool contains(String? name) {
     if (name == null || name.trim().isEmpty) return false;
