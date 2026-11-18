@@ -53,14 +53,14 @@ class UserDepartmentPersistenceTest extends TestCase
 
         $response->assertStatus(201)
             ->assertJsonPath('data.name', 'Budi Santoso')
-            ->assertJsonPath('data.department', 'Umum & Aset');
+            ->assertJsonPath('data.department', 'Divisi Umum dan Aset');
 
         $userId = $response->json('data.id');
 
         // Buktikan tersimpan permanen di database
         $this->assertDatabaseHas('users', [
             'id' => $userId,
-            'department' => 'Umum & Aset',
+            'department' => 'Divisi Umum dan Aset',
         ]);
     }
 
@@ -81,16 +81,16 @@ class UserDepartmentPersistenceTest extends TestCase
 
         $response = $this->withHeader('Authorization', 'Bearer ' . $token)
             ->putJson("/api/v1/admin/users/{$user->id}", [
-                'department' => 'Divisi Kredit',
+                'department' => 'Divisi Umum dan Aset',
             ]);
 
         $response->assertStatus(200)
-            ->assertJsonPath('data.department', 'Divisi Kredit');
+            ->assertJsonPath('data.department', 'Divisi Umum dan Aset');
 
         // Buktikan update tersimpan permanen di database
         $this->assertDatabaseHas('users', [
             'id' => $user->id,
-            'department' => 'Divisi Kredit',
+            'department' => 'Divisi Umum dan Aset',
         ]);
 
         // Buktikan pembacaan ulang via GET show
@@ -98,7 +98,7 @@ class UserDepartmentPersistenceTest extends TestCase
             ->getJson("/api/v1/admin/users/{$user->id}");
 
         $showResponse->assertStatus(200)
-            ->assertJsonPath('data.department', 'Divisi Kredit');
+            ->assertJsonPath('data.department', 'Divisi Umum dan Aset');
     }
 
     public function test_backward_compatibility_with_legacy_users_having_null_department(): void
