@@ -25,6 +25,26 @@ class UpdateUserRequest extends FormRequest
                 $this->merge(['role_id' => $role->id]);
             }
         }
+
+        // Bagian Aset sudah ditetapkan di Divisi Umum dan Aset —
+        // divisinya tidak bisa dipilih bebas, paksa nilainya di sini
+        // supaya API tidak bisa menyimpan kombinasi yang salah.
+        // Kalau role tidak dikirim, pakai role user yang sudah ada —
+        // jadi data lama yang divisinya salah ikut terkoreksi saat diedit.
+        $roleId = $this->input('role_id');
+        if (! $roleId) {
+            $userParam = $this->route('user') ?? $this->route('id');
+            $existing = $userParam instanceof User
+                ? $userParam
+                : User::find($userParam);
+            $roleId = $existing?->role_id;
+        }
+        if ($roleId) {
+            $role = \App\Models\Role::find($roleId);
+            if ($role && $role->name === 'bagian_aset') {
+                $this->merge(['department' => 'Divisi Umum dan Aset']);
+            }
+        }
     }
 
     public function rules(): array

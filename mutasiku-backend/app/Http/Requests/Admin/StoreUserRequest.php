@@ -23,6 +23,16 @@ class StoreUserRequest extends FormRequest
                 $this->merge(['role_id' => $role->id]);
             }
         }
+
+        // Bagian Aset sudah ditetapkan di Divisi Umum dan Aset —
+        // divisinya tidak bisa dipilih bebas, paksa nilainya di sini
+        // supaya API tidak bisa menyimpan kombinasi yang salah.
+        if ($this->filled('role_id')) {
+            $role = \App\Models\Role::find($this->input('role_id'));
+            if ($role && $role->name === 'bagian_aset') {
+                $this->merge(['department' => 'Divisi Umum dan Aset']);
+            }
+        }
     }
 
     public function rules(): array

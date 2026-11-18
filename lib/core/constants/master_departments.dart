@@ -22,6 +22,11 @@ abstract final class MasterDepartments {
   /// Nilai default pilihan divisi awal
   static const String defaultDepartment = 'Divisi Operasional';
 
+  /// Divisi yang sudah ditetapkan untuk role Bagian Aset.
+  /// Bagian Aset adalah bagian dari Divisi Umum dan Aset, jadi divisinya
+  /// tidak bisa dipilih bebas saat admin membuat/mengubah user.
+  static const String bagianAsetDepartment = 'Divisi Umum dan Aset';
+
   /// Cek apakah suatu nama divisi terdaftar dalam master data
   static bool contains(String? name) {
     if (name == null || name.trim().isEmpty) return false;
