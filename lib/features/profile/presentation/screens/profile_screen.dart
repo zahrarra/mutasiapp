@@ -72,7 +72,12 @@ class ProfileScreen extends ConsumerWidget {
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(24),
           ),
-          child: Padding(
+          // Batasi lebar dialog di layar lebar: tanpa batas, tombol
+          // Expanded membuat dialog melebar selebar layar desktop.
+          // Di HP (lebar layar < 420) dialog tetap selebar layar.
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 420),
+            child: Padding(
             padding: const EdgeInsets.all(24),
             child: Column(
               mainAxisSize: MainAxisSize.min,
@@ -147,6 +152,7 @@ class ProfileScreen extends ConsumerWidget {
                 ),
               ],
             ),
+          ),
           ),
         );
       },
