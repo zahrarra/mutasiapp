@@ -30,11 +30,12 @@ abstract final class ResponsiveBreakpoints {
   static const double desktop = 1024.0;
 
   /// Lebar maksimum konten biasa (daftar, detail, form, dashboard).
-  /// Cukup untuk satu kolom kartu/form yang nyaman dibaca.
-  static const double defaultMaxWidth = 720.0;
+  /// 1200px supaya di layar desktop tampil selebar desktop, bukan
+  /// sekecil layar HP. (Sebelumnya 720px — terlalu sempit di desktop.)
+  static const double defaultMaxWidth = 1200.0;
 
   /// Lebar maksimum konten berbentuk tabel lebar (mis. audit log).
-  static const double wideMaxWidth = 960.0;
+  static const double wideMaxWidth = 1400.0;
 }
 
 /// Memusatkan [child] dan membatasi lebarnya di layar lebar.
