@@ -44,12 +44,15 @@ abstract final class ResponsiveBreakpoints {
 ///   jadi tampilan HP tidak berubah).
 /// - Layar lebar: [child] dibatasi [maxWidth] dan dipusatkan.
 ///
-/// Aman dipakai untuk membungkus `body` Scaffold yang berisi:
+/// Dipakai untuk membungkus `body` Scaffold yang berisi:
 /// Column (termasuk yang punya Expanded), SingleChildScrollView,
 /// CustomScrollView, RefreshIndicator, dan hasil `AsyncValue.when`.
-/// Tinggi dibiarkan mengikuti tinggi viewport (Align meneruskan batas
-/// tinggi Scaffold), jadi Expanded dan scroll di dalam [child]
-/// tetap bekerja seperti semula.
+///
+/// Tinggi [child] dibuat sama dengan tinggi viewport (bukan dibiarkan
+/// longgar): kalau tinggi dibiarkan longgar, layar yang bisa di-scroll
+/// akan mengembang setinggi seluruh isinya, bagian bawahnya terpotong
+/// dan tidak bisa di-scroll. Dengan tinggi penuh, scroll dan Expanded
+/// di dalam [child] bekerja seperti semula.
 class ResponsiveCenter extends StatelessWidget {
   /// Konten yang dibatasi lebarnya (biasanya `body` sebuah Scaffold).
   final Widget child;
@@ -67,12 +70,22 @@ class ResponsiveCenter extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Align(
-      alignment: Alignment.topCenter,
-      child: ConstrainedBox(
-        constraints: BoxConstraints(maxWidth: maxWidth),
-        child: child,
-      ),
+    // LayoutBuilder membaca ukuran body Scaffold (lebar + tinggi viewport).
+    // Lebar dibatasi maxWidth dan dipusatkan; tinggi dibuat penuh supaya
+    // layar yang bisa di-scroll tetap bisa di-scroll (jangan pakai Align:
+    // Align memberi batas tinggi yang longgar, sehingga scroll view
+    // mengembang setinggi isinya dan bagian bawah terpotong).
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final double width = constraints.maxWidth.isFinite
+            ? (constraints.maxWidth > maxWidth ? maxWidth : constraints.maxWidth)
+            : maxWidth;
+        final double? height =
+            constraints.maxHeight.isFinite ? constraints.maxHeight : null;
+        return Center(
+          child: SizedBox(width: width, height: height, child: child),
+        );
+      },
     );
   }
 }
