@@ -212,33 +212,33 @@ class _OperatorMutationsScreenState
       extendBody: true,
       body: ResponsiveCenter(
         child: Column(
-        children: [
-          // ── App bar ───────────────────────────────────────────────────
-          _buildTopBar(context, totalCount),
+          children: [
+            // ── App bar ───────────────────────────────────────────────────
+            _buildTopBar(context, totalCount),
 
-          // ── Search ────────────────────────────────────────────────────
-          _buildSearchBar(),
+            // ── Search ────────────────────────────────────────────────────
+            _buildSearchBar(),
 
-          // ── Filter tab-pills ──────────────────────────────────────────
-          _buildFilterTabs(asyncAll),
+            // ── Filter tab-pills ──────────────────────────────────────────
+            _buildFilterTabs(asyncAll),
 
-          const Divider(height: 1, color: _C.border),
+            const Divider(height: 1, color: _C.border),
 
-          // ── List ──────────────────────────────────────────────────────
-          Expanded(
-            child: asyncIncoming.when(
-              data: (list) => _buildList(list),
-              loading: () => const Center(
-                child: CircularProgressIndicator(
-                  strokeWidth: 2,
-                  color: _C.teal,
+            // ── List ──────────────────────────────────────────────────────
+            Expanded(
+              child: asyncIncoming.when(
+                data: (list) => _buildList(list),
+                loading: () => const Center(
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
+                    color: _C.teal,
+                  ),
                 ),
+                error: (err, _) => _buildError(err),
               ),
-              error: (err, _) => _buildError(err),
             ),
-          ),
-        ],
-      ),
+          ],
+        ),
       ),
       bottomNavigationBar: CustomFloatingNavBar.scaffoldBottomBar(
         items: RoleNavConfig.getNavItemsForRole(UserRole.operator),
@@ -454,8 +454,7 @@ class _OperatorMutationsScreenState
     final totalAll = allList.length;
     final totalSubmitted = allList
         .where(
-          (m) =>
-              m.status.historyCategory == MutationHistoryCategory.processing,
+          (m) => m.status.historyCategory == MutationHistoryCategory.processing,
         )
         .length;
     final totalAllocated = allList
@@ -478,16 +477,8 @@ class _OperatorMutationsScreenState
           (m) => m.status.historyCategory == MutationHistoryCategory.rejected,
         )
         .length;
-    final totalTi = allList
-        .where(
-          (m) => isTiAsset(m),
-        )
-        .length;
-    final totalUmum = allList
-        .where(
-          (m) => !isTiAsset(m),
-        )
-        .length;
+    final totalTi = allList.where((m) => isTiAsset(m)).length;
+    final totalUmum = allList.where((m) => !isTiAsset(m)).length;
 
     final counts = {
       _Tab.all: totalAll,
@@ -506,9 +497,7 @@ class _OperatorMutationsScreenState
       child: SingleChildScrollView(
         scrollDirection: Axis.horizontal,
         child: Row(
-          children: _Tab.values
-              .where((tab) => tab != _Tab.returned)
-              .map((tab) {
+          children: _Tab.values.where((tab) => tab != _Tab.returned).map((tab) {
             final active = _activeTab == tab;
             return Padding(
               padding: const EdgeInsets.only(right: 8),

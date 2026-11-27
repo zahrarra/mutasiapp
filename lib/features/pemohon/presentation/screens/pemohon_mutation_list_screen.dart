@@ -166,7 +166,8 @@ class _PemohonMutationListScreenState
         result = result
             .where(
               (m) =>
-                  m.status.historyCategory == MutationHistoryCategory.processing,
+                  m.status.historyCategory ==
+                  MutationHistoryCategory.processing,
             )
             .toList();
         break;
@@ -190,8 +191,7 @@ class _PemohonMutationListScreenState
         result = result
             .where(
               (m) =>
-                  m.status.historyCategory ==
-                  MutationHistoryCategory.completed,
+                  m.status.historyCategory == MutationHistoryCategory.completed,
             )
             .toList();
         break;
@@ -236,7 +236,8 @@ class _PemohonMutationListScreenState
         return list
             .where(
               (m) =>
-                  m.status.historyCategory == MutationHistoryCategory.processing,
+                  m.status.historyCategory ==
+                  MutationHistoryCategory.processing,
             )
             .length;
       case _QuickFilter.allocated:
@@ -257,8 +258,7 @@ class _PemohonMutationListScreenState
         return list
             .where(
               (m) =>
-                  m.status.historyCategory ==
-                  MutationHistoryCategory.completed,
+                  m.status.historyCategory == MutationHistoryCategory.completed,
             )
             .length;
       case _QuickFilter.rejected:
@@ -285,72 +285,77 @@ class _PemohonMutationListScreenState
       backgroundColor: _C.background,
       body: ResponsiveCenter(
         child: Column(
-        children: [
-          _buildHeader(),
-          Expanded(
-            child: RefreshIndicator(
-              color: _C.primaryContainer,
-              onRefresh: () async {
-                ref.invalidate(mutationListProvider);
-                await ref.read(mutationListProvider.future);
-              },
-              child: CustomScrollView(
-                physics: const AlwaysScrollableScrollPhysics(
-                  parent: BouncingScrollPhysics(),
-                ),
-                slivers: [
-                  SliverPadding(
-                    padding: const EdgeInsets.fromLTRB(16, 8, 16, 100),
-                    sliver: SliverList(
-                      delegate: SliverChildListDelegate([
-                        _buildTitle(all.length),
-                        const SizedBox(height: 12),
-                        _buildSearch(),
-                        const SizedBox(height: 12),
-                        _buildChips(all),
-                        const SizedBox(height: 12),
-                        if (asyncList.isLoading && all.isEmpty)
-                          const Padding(
-                            padding: EdgeInsets.all(32),
-                            child: Center(child: CircularProgressIndicator()),
-                          )
-                        else if (asyncList.hasError && all.isEmpty)
-                          Padding(
-                            padding: const EdgeInsets.all(24),
-                            child: ErrorView(
-                              message: asyncList.error.toString().replaceFirst(
-                                'Exception: ',
-                                '',
-                              ),
-                              onRetry: () =>
-                                  ref.invalidate(mutationListProvider),
-                            ),
-                          )
-                        else if (filtered.isEmpty)
-                          Padding(
-                            padding: const EdgeInsets.all(24),
-                            child: Text(
-                              'Tidak ada pengajuan.',
-                              textAlign: TextAlign.center,
-                              style: _inter(size: 13, color: _C.textSecondary),
-                            ),
-                          )
-                        else
-                          ...filtered.map(
-                            (m) => Padding(
-                              padding: const EdgeInsets.only(bottom: 8),
-                              child: _MutationCard(mutation: m, style: _inter),
-                            ),
-                          ),
-                      ]),
-                    ),
+          children: [
+            _buildHeader(),
+            Expanded(
+              child: RefreshIndicator(
+                color: _C.primaryContainer,
+                onRefresh: () async {
+                  ref.invalidate(mutationListProvider);
+                  await ref.read(mutationListProvider.future);
+                },
+                child: CustomScrollView(
+                  physics: const AlwaysScrollableScrollPhysics(
+                    parent: BouncingScrollPhysics(),
                   ),
-                ],
+                  slivers: [
+                    SliverPadding(
+                      padding: const EdgeInsets.fromLTRB(16, 8, 16, 100),
+                      sliver: SliverList(
+                        delegate: SliverChildListDelegate([
+                          _buildTitle(all.length),
+                          const SizedBox(height: 12),
+                          _buildSearch(),
+                          const SizedBox(height: 12),
+                          _buildChips(all),
+                          const SizedBox(height: 12),
+                          if (asyncList.isLoading && all.isEmpty)
+                            const Padding(
+                              padding: EdgeInsets.all(32),
+                              child: Center(child: CircularProgressIndicator()),
+                            )
+                          else if (asyncList.hasError && all.isEmpty)
+                            Padding(
+                              padding: const EdgeInsets.all(24),
+                              child: ErrorView(
+                                message: asyncList.error
+                                    .toString()
+                                    .replaceFirst('Exception: ', ''),
+                                onRetry: () =>
+                                    ref.invalidate(mutationListProvider),
+                              ),
+                            )
+                          else if (filtered.isEmpty)
+                            Padding(
+                              padding: const EdgeInsets.all(24),
+                              child: Text(
+                                'Tidak ada pengajuan.',
+                                textAlign: TextAlign.center,
+                                style: _inter(
+                                  size: 13,
+                                  color: _C.textSecondary,
+                                ),
+                              ),
+                            )
+                          else
+                            ...filtered.map(
+                              (m) => Padding(
+                                padding: const EdgeInsets.only(bottom: 8),
+                                child: _MutationCard(
+                                  mutation: m,
+                                  style: _inter,
+                                ),
+                              ),
+                            ),
+                        ]),
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ),
-          ),
-        ],
-      ),
+          ],
+        ),
       ),
       floatingActionButtonLocation: const _SnugEndFloatFabLocation(gap: 10.0),
       floatingActionButton: FloatingActionButton.extended(

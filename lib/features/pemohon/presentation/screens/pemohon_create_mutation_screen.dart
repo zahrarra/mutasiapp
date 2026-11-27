@@ -710,33 +710,33 @@ class _PemohonCreateMutationScreenState
       backgroundColor: _C.bg,
       body: ResponsiveCenter(
         child: Column(
-        children: [
-          _buildHeader(),
+          children: [
+            _buildHeader(),
 
-          Expanded(
-            child: Form(
-              key: _formKey,
-              child: SingleChildScrollView(
-                padding: const EdgeInsets.fromLTRB(16, 16, 16, 120),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    _sectionAsset(locations, assetsAsync),
+            Expanded(
+              child: Form(
+                key: _formKey,
+                child: SingleChildScrollView(
+                  padding: const EdgeInsets.fromLTRB(16, 16, 16, 120),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      _sectionAsset(locations, assetsAsync),
 
-                    const SizedBox(height: 16),
+                      const SizedBox(height: 16),
 
-                    _sectionRoute(locations, locationItems, locationsAsync),
+                      _sectionRoute(locations, locationItems, locationsAsync),
 
-                    const SizedBox(height: 16),
+                      const SizedBox(height: 16),
 
-                    _sectionReasonDoc(),
-                  ],
+                      _sectionReasonDoc(),
+                    ],
+                  ),
                 ),
               ),
             ),
-          ),
-        ],
-      ),
+          ],
+        ),
       ),
       bottomNavigationBar: _bottomBar(submitState.isLoading),
     );
@@ -1244,7 +1244,10 @@ class _PemohonCreateMutationScreenState
                   ),
                   TextButton(
                     onPressed: () => ref.refresh(masterLocationsProvider),
-                    child: const Text('Coba Lagi', style: TextStyle(fontSize: 12)),
+                    child: const Text(
+                      'Coba Lagi',
+                      style: TextStyle(fontSize: 12),
+                    ),
                   ),
                 ],
               ),

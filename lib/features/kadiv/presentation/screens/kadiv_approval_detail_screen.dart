@@ -68,98 +68,98 @@ class KadivApprovalDetailScreen extends ConsumerWidget {
       backgroundColor: _C.background,
       body: ResponsiveCenter(
         child: Column(
-        children: [
-          SafeArea(
-            bottom: false,
-            child: Stack(
-              children: [
-                const SizedBox(
-                  width: 0,
-                  height: 0,
-                  child: Text(
-                    'Detail Approval Kadiv',
-                    style: TextStyle(fontSize: 0, color: Colors.transparent),
+          children: [
+            SafeArea(
+              bottom: false,
+              child: Stack(
+                children: [
+                  const SizedBox(
+                    width: 0,
+                    height: 0,
+                    child: Text(
+                      'Detail Approval Kadiv',
+                      style: TextStyle(fontSize: 0, color: Colors.transparent),
+                    ),
+                  ),
+                  MutasiKuPageHeader(
+                    title: 'Detail Pengajuan',
+                    subtitle: 'Persetujuan Pengajuan Mutasi • Pemimpin Divisi',
+                    onBack: () => _safePop(context),
+                  ),
+                ],
+              ),
+            ),
+            Expanded(
+              child: asyncMutation.when(
+                data: (mutation) =>
+                    _buildBody(context, ref, mutation, actionState),
+                loading: () => const Center(
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
+                    color: _C.secondary,
                   ),
                 ),
-                MutasiKuPageHeader(
-                  title: 'Detail Pengajuan',
-                  subtitle: 'Persetujuan Pengajuan Mutasi • Pemimpin Divisi',
-                  onBack: () => _safePop(context),
-                ),
-              ],
-            ),
-          ),
-          Expanded(
-            child: asyncMutation.when(
-              data: (mutation) =>
-                  _buildBody(context, ref, mutation, actionState),
-              loading: () => const Center(
-                child: CircularProgressIndicator(
-                  strokeWidth: 2,
-                  color: _C.secondary,
-                ),
-              ),
-              error: (err, _) => Center(
-                child: Padding(
-                  padding: const EdgeInsets.all(32),
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Container(
-                        width: 64,
-                        height: 64,
-                        decoration: BoxDecoration(
-                          color: _C.errorLight,
-                          borderRadius: BorderRadius.circular(18),
-                        ),
-                        child: const Icon(
-                          Icons.error_outline_rounded,
-                          size: 32,
-                          color: _C.error,
-                        ),
-                      ),
-                      const SizedBox(height: 16),
-                      const Text(
-                        'Gagal Memuat Data',
-                        style: TextStyle(
-                          fontSize: 15,
-                          fontWeight: FontWeight.w700,
-                          color: _C.textPrimary,
-                        ),
-                      ),
-                      const SizedBox(height: 6),
-                      Text(
-                        '$err',
-                        textAlign: TextAlign.center,
-                        style: const TextStyle(
-                          fontSize: 12,
-                          color: _C.textSecondary,
-                        ),
-                      ),
-                      const SizedBox(height: 20),
-                      ElevatedButton.icon(
-                        onPressed: () => ref.invalidate(
-                          kadivMutationDetailProvider(mutationId),
-                        ),
-                        icon: const Icon(Icons.refresh_rounded, size: 16),
-                        label: const Text('Coba Lagi'),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: _C.secondary,
-                          foregroundColor: Colors.white,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(10),
+                error: (err, _) => Center(
+                  child: Padding(
+                    padding: const EdgeInsets.all(32),
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Container(
+                          width: 64,
+                          height: 64,
+                          decoration: BoxDecoration(
+                            color: _C.errorLight,
+                            borderRadius: BorderRadius.circular(18),
                           ),
-                          elevation: 0,
+                          child: const Icon(
+                            Icons.error_outline_rounded,
+                            size: 32,
+                            color: _C.error,
+                          ),
                         ),
-                      ),
-                    ],
+                        const SizedBox(height: 16),
+                        const Text(
+                          'Gagal Memuat Data',
+                          style: TextStyle(
+                            fontSize: 15,
+                            fontWeight: FontWeight.w700,
+                            color: _C.textPrimary,
+                          ),
+                        ),
+                        const SizedBox(height: 6),
+                        Text(
+                          '$err',
+                          textAlign: TextAlign.center,
+                          style: const TextStyle(
+                            fontSize: 12,
+                            color: _C.textSecondary,
+                          ),
+                        ),
+                        const SizedBox(height: 20),
+                        ElevatedButton.icon(
+                          onPressed: () => ref.invalidate(
+                            kadivMutationDetailProvider(mutationId),
+                          ),
+                          icon: const Icon(Icons.refresh_rounded, size: 16),
+                          label: const Text('Coba Lagi'),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: _C.secondary,
+                            foregroundColor: Colors.white,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                            elevation: 0,
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
               ),
             ),
-          ),
-        ],
-      ),
+          ],
+        ),
       ),
     );
   }
@@ -322,9 +322,11 @@ class KadivApprovalDetailScreen extends ConsumerWidget {
                 if (!mutation.isUnregisteredAsset && masterAssetAsync != null)
                   masterAssetAsync.when(
                     data: (master) {
-                      final validMaster = master ??
+                      final validMaster =
+                          master ??
                           (!mutation.isUnregisteredAsset &&
-                                  mutation.asset.name != 'Aset Tidak Terdaftar' &&
+                                  mutation.asset.name !=
+                                      'Aset Tidak Terdaftar' &&
                                   mutation.asset.assetCode != '-'
                               ? mutation.asset
                               : null);
@@ -444,7 +446,8 @@ class KadivApprovalDetailScreen extends ConsumerWidget {
                     const Divider(height: AppSpacing.md, color: _C.border),
                     _buildDetailRow('Alasan Mutasi', mutation.reason),
                     if (mutation.verifiedBy != null &&
-                        !RegExp(r'^\d+$').hasMatch(mutation.verifiedBy!.trim())) ...[
+                        !RegExp(r'^\d+$')
+                            .hasMatch(mutation.verifiedBy!.trim())) ...[
                       const Divider(height: AppSpacing.md, color: _C.border),
                       _buildDetailRow(
                         'Verifikasi Operator',
@@ -523,7 +526,8 @@ class KadivApprovalDetailScreen extends ConsumerWidget {
                     const Divider(height: AppSpacing.md, color: _C.border),
                     _buildDetailRow('Alasan Mutasi', mutation.reason),
                     if (mutation.verifiedBy != null &&
-                        !RegExp(r'^\d+$').hasMatch(mutation.verifiedBy!.trim())) ...[
+                        !RegExp(r'^\d+$')
+                            .hasMatch(mutation.verifiedBy!.trim())) ...[
                       const Divider(height: AppSpacing.md, color: _C.border),
                       _buildDetailRow(
                         'Verifikasi Operator',
@@ -586,11 +590,13 @@ class KadivApprovalDetailScreen extends ConsumerWidget {
                         : () => _handleProcessApproval(context, mutation),
                     style: ElevatedButton.styleFrom(
                       backgroundColor: _C.primaryContainer,
-                      disabledBackgroundColor:
-                          _C.primaryContainer.withValues(alpha: 0.35),
+                      disabledBackgroundColor: _C.primaryContainer.withValues(
+                        alpha: 0.35,
+                      ),
                       foregroundColor: Colors.white,
-                      disabledForegroundColor:
-                          Colors.white.withValues(alpha: 0.6),
+                      disabledForegroundColor: Colors.white.withValues(
+                        alpha: 0.6,
+                      ),
                       padding: const EdgeInsets.symmetric(vertical: 14),
                       elevation: 0,
                       shape: RoundedRectangleBorder(
@@ -1720,10 +1726,7 @@ class KadivApprovalDetailScreen extends ConsumerWidget {
                   ),
                   Text(
                     'Progres Alur Pengajuan',
-                    style: TextStyle(
-                      fontSize: 10,
-                      color: _C.textSecondary,
-                    ),
+                    style: TextStyle(fontSize: 10, color: _C.textSecondary),
                   ),
                 ],
               ),
@@ -2201,7 +2204,6 @@ class KadivApprovalDetailScreen extends ConsumerWidget {
     );
   }
 
-
   String _formatDateTime(DateTime dt) {
     return WitaTimeHelper.formatDateTimeWita(dt);
   }
@@ -2220,10 +2222,7 @@ class KadivApprovalDetailScreen extends ConsumerWidget {
     BuildContext context,
     Mutation mutation,
   ) async {
-    final result = await startKadivApprovalFlow(
-      context,
-      mutation: mutation,
-    );
+    final result = await startKadivApprovalFlow(context, mutation: mutation);
     if (result == true && context.mounted) {
       _safePop(context);
     }

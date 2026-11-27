@@ -70,7 +70,6 @@ class _PemohonConfirmationScreenState
     });
   }
 
-
   TextStyle _t({
     double size = 14,
     FontWeight w = FontWeight.w400,
@@ -132,32 +131,32 @@ class _PemohonConfirmationScreenState
       backgroundColor: _C.bg,
       body: ResponsiveCenter(
         child: Column(
-        children: [
-          _buildHeader(),
-          Expanded(
-            child: asyncMutation.when(
-              data: (mutation) {
-                if (!_isMutationOwnedBy(mutation, user)) {
-                  return _accessDenied();
-                }
-                return _buildBody(mutation, actionState);
-              },
-              loading: () => const Center(
-                child: CircularProgressIndicator(color: _C.primary),
-              ),
-              error: (err, _) => ErrorView(
-                message: err.toString(),
-                onRetry: () {
-                  ref.invalidate(
-                    pemohonMutationDetailProvider(widget.mutationId),
-                  );
-                  ref.invalidate(mutationDetailProvider(widget.mutationId));
+          children: [
+            _buildHeader(),
+            Expanded(
+              child: asyncMutation.when(
+                data: (mutation) {
+                  if (!_isMutationOwnedBy(mutation, user)) {
+                    return _accessDenied();
+                  }
+                  return _buildBody(mutation, actionState);
                 },
+                loading: () => const Center(
+                  child: CircularProgressIndicator(color: _C.primary),
+                ),
+                error: (err, _) => ErrorView(
+                  message: err.toString(),
+                  onRetry: () {
+                    ref.invalidate(
+                      pemohonMutationDetailProvider(widget.mutationId),
+                    );
+                    ref.invalidate(mutationDetailProvider(widget.mutationId));
+                  },
+                ),
               ),
             ),
-          ),
-        ],
-      ),
+          ],
+        ),
       ),
     );
   }
@@ -206,14 +205,16 @@ class _PemohonConfirmationScreenState
     PemohonConfirmationActionState actionState,
   ) {
     final cleanId = widget.mutationId.replaceAll('mut_', '');
-    final isMatchingResult = actionState.result != null &&
+    final isMatchingResult =
+        actionState.result != null &&
         (actionState.result!.id == widget.mutationId ||
             actionState.result!.id == cleanId);
     final m = isMatchingResult ? actionState.result! : mutation;
 
     final isCompleted =
         m.status == MutationStatus.completed || m.confirmedAt != null;
-    final isPending = !isCompleted &&
+    final isPending =
+        !isCompleted &&
         (m.status == MutationStatus.waitingConfirmation ||
             m.status == MutationStatus.pendingConfirmation ||
             m.status == MutationStatus.approved);
@@ -381,8 +382,8 @@ class _PemohonConfirmationScreenState
     final badgeLabel = isDisputedByApplicant
         ? 'Menunggu Bagian Aset'
         : (done
-            ? 'Selesai'
-            : (pending ? 'Menunggu Konfirmasi' : m.status.displayName));
+              ? 'Selesai'
+              : (pending ? 'Menunggu Konfirmasi' : m.status.displayName));
     final badgeIcon = isDisputedByApplicant
         ? Icons.hourglass_top
         : pending
@@ -1158,10 +1159,13 @@ class _PemohonConfirmationScreenState
                   'memverifikasi dan memperbaiki data mutasi Anda.',
                 );
 
-                final currentMutation = ref
-                    .read(pemohonMutationDetailProvider(widget.mutationId))
-                    .valueOrNull ??
-                    ref.read(mutationDetailProvider(widget.mutationId)).valueOrNull;
+                final currentMutation =
+                    ref
+                        .read(pemohonMutationDetailProvider(widget.mutationId))
+                        .valueOrNull ??
+                    ref
+                        .read(mutationDetailProvider(widget.mutationId))
+                        .valueOrNull;
                 ref
                     .read(notificationProvider.notifier)
                     .notifyRole(
@@ -1172,7 +1176,9 @@ class _PemohonConfirmationScreenState
                       type: NotificationType.action,
                       relatedMutationId: widget.mutationId,
                     );
-                ref.invalidate(pemohonMutationDetailProvider(widget.mutationId));
+                ref.invalidate(
+                  pemohonMutationDetailProvider(widget.mutationId),
+                );
                 ref.invalidate(mutationDetailProvider(widget.mutationId));
                 // PENTING: pemohon TIDAK diarahkan ke halaman Edit Pengajuan.
                 // Yang perlu diperbaiki adalah hasil update data aset oleh

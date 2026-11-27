@@ -77,92 +77,133 @@ class _BagianAsetVerificationsScreenState
       extendBody: true,
       body: ResponsiveCenter(
         child: Column(
-        children: [
-          // ── Header Baseline ──────────────────────────────────────────
-          SafeArea(
-            bottom: false,
-            child: MutasiKuPageHeader(
-              title: title,
-              subtitle: 'Antrean Verifikasi Data Aset & Validitas Mutasi',
-              onBack: () {
-                if (context.canPop()) {
-                  context.pop();
-                } else {
-                  context.go(RouteNames.bagianAsetDashboardPath);
-                }
-              },
+          children: [
+            // ── Header Baseline ──────────────────────────────────────────
+            SafeArea(
+              bottom: false,
+              child: MutasiKuPageHeader(
+                title: title,
+                subtitle: 'Antrean Verifikasi Data Aset & Validitas Mutasi',
+                onBack: () {
+                  if (context.canPop()) {
+                    context.pop();
+                  } else {
+                    context.go(RouteNames.bagianAsetDashboardPath);
+                  }
+                },
+              ),
             ),
-          ),
 
-          // ── Search & Filter ─────────────────────────────────────────
-          Container(
-            padding: const EdgeInsets.fromLTRB(16, 14, 16, 10),
-            color: _C.surface,
-            child: Column(
-              children: [
-                // Search Field
-                _SearchField(
-                  searchKey: const Key('input_search_approvals'),
-                  controller: _searchController,
-                  hintText: 'Cari no. tiket, aset, pemohon, lokasi...',
-                  onChanged: (v) {
-                    ref.read(bagianAsetSearchQueryProvider.notifier).state = v;
-                    setState(() {});
-                  },
-                  onClear: () {
-                    _searchController.clear();
-                    ref.read(bagianAsetSearchQueryProvider.notifier).state = '';
-                    setState(() {});
-                  },
-                ),
-                const SizedBox(height: 10),
+            // ── Search & Filter ─────────────────────────────────────────
+            Container(
+              padding: const EdgeInsets.fromLTRB(16, 14, 16, 10),
+              color: _C.surface,
+              child: Column(
+                children: [
+                  // Search Field
+                  _SearchField(
+                    searchKey: const Key('input_search_approvals'),
+                    controller: _searchController,
+                    hintText: 'Cari no. tiket, aset, pemohon, lokasi...',
+                    onChanged: (v) {
+                      ref.read(bagianAsetSearchQueryProvider.notifier).state =
+                          v;
+                      setState(() {});
+                    },
+                    onClear: () {
+                      _searchController.clear();
+                      ref.read(bagianAsetSearchQueryProvider.notifier).state =
+                          '';
+                      setState(() {});
+                    },
+                  ),
+                  const SizedBox(height: 10),
 
-                // Filter row
-                Row(
-                  children: [
-                    Expanded(
-                      child: _DropdownFilter(
-                        child: DropdownButtonHideUnderline(
-                          child: DropdownButton<BagianAsetStatusFilter>(
-                            key: const Key(
-                              'dropdown_filter_bagian_aset_status',
+                  // Filter row
+                  Row(
+                    children: [
+                      Expanded(
+                        child: _DropdownFilter(
+                          child: DropdownButtonHideUnderline(
+                            child: DropdownButton<BagianAsetStatusFilter>(
+                              key: const Key(
+                                'dropdown_filter_bagian_aset_status',
+                              ),
+                              value: statusFilter,
+                              isDense: true,
+                              isExpanded: true,
+                              icon: const Icon(
+                                Icons.filter_list_rounded,
+                                size: 16,
+                                color: _C.success,
+                              ),
+                              style: const TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w500,
+                                color: _C.textPrimary,
+                              ),
+                              items:
+                                  [
+                                        BagianAsetStatusFilter.all,
+                                        BagianAsetStatusFilter.waiting,
+                                        BagianAsetStatusFilter.processing,
+                                        BagianAsetStatusFilter.allocated,
+                                        BagianAsetStatusFilter.cancelled,
+                                        BagianAsetStatusFilter.completed,
+                                        BagianAsetStatusFilter.rejected,
+                                      ]
+                                      .map(
+                                        (s) => DropdownMenuItem(
+                                          value: s,
+                                          child: Text(s.displayName),
+                                        ),
+                                      )
+                                      .toList(),
+                              onChanged: (val) {
+                                if (val != null) {
+                                  ref
+                                          .read(
+                                            bagianAsetStatusFilterProvider
+                                                .notifier,
+                                          )
+                                          .state =
+                                      val;
+                                }
+                              },
                             ),
-                            value: statusFilter,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                      _DropdownFilter(
+                        child: DropdownButtonHideUnderline(
+                          child: DropdownButton<BagianAsetSortOrder>(
+                            key: const Key('dropdown_filter_bagian_aset_sort'),
+                            value: sortOrder,
                             isDense: true,
-                            isExpanded: true,
                             icon: const Icon(
-                              Icons.filter_list_rounded,
+                              Icons.sort_rounded,
                               size: 16,
-                              color: _C.success,
+                              color: _C.textSecondary,
                             ),
                             style: const TextStyle(
                               fontSize: 12,
                               fontWeight: FontWeight.w500,
                               color: _C.textPrimary,
                             ),
-                            items:
-                                [
-                                      BagianAsetStatusFilter.all,
-                                      BagianAsetStatusFilter.waiting,
-                                      BagianAsetStatusFilter.processing,
-                                      BagianAsetStatusFilter.allocated,
-                                      BagianAsetStatusFilter.cancelled,
-                                      BagianAsetStatusFilter.completed,
-                                      BagianAsetStatusFilter.rejected,
-                                    ]
-                                    .map(
-                                      (s) => DropdownMenuItem(
-                                        value: s,
-                                        child: Text(s.displayName),
-                                      ),
-                                    )
-                                    .toList(),
+                            items: BagianAsetSortOrder.values
+                                .map(
+                                  (s) => DropdownMenuItem(
+                                    value: s,
+                                    child: Text(s.displayName),
+                                  ),
+                                )
+                                .toList(),
                             onChanged: (val) {
                               if (val != null) {
                                 ref
                                         .read(
-                                          bagianAsetStatusFilterProvider
-                                              .notifier,
+                                          bagianAsetSortOrderProvider.notifier,
                                         )
                                         .state =
                                     val;
@@ -171,137 +212,99 @@ class _BagianAsetVerificationsScreenState
                           ),
                         ),
                       ),
-                    ),
-                    const SizedBox(width: 10),
-                    _DropdownFilter(
-                      child: DropdownButtonHideUnderline(
-                        child: DropdownButton<BagianAsetSortOrder>(
-                          key: const Key('dropdown_filter_bagian_aset_sort'),
-                          value: sortOrder,
-                          isDense: true,
-                          icon: const Icon(
-                            Icons.sort_rounded,
-                            size: 16,
-                            color: _C.textSecondary,
-                          ),
-                          style: const TextStyle(
-                            fontSize: 12,
-                            fontWeight: FontWeight.w500,
-                            color: _C.textPrimary,
-                          ),
-                          items: BagianAsetSortOrder.values
-                              .map(
-                                (s) => DropdownMenuItem(
-                                  value: s,
-                                  child: Text(s.displayName),
-                                ),
-                              )
-                              .toList(),
-                          onChanged: (val) {
-                            if (val != null) {
-                              ref
-                                      .read(
-                                        bagianAsetSortOrderProvider.notifier,
-                                      )
-                                      .state =
-                                  val;
-                            }
-                          },
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          ),
-          const Divider(height: 1, color: _C.border),
-
-          // ── Content List ─────────────────────────────────────────────
-          Expanded(
-            child: asyncVerifications.when(
-              data: (list) {
-                if (list.isEmpty) {
-                  return _EmptyState(
-                    statusFilter: statusFilter,
-                    hasQuery: _searchController.text.isNotEmpty,
-                  );
-                }
-                return RefreshIndicator(
-                  color: _C.navy,
-                  onRefresh: () async =>
-                      ref.invalidate(bagianAsetAllMutationsProvider),
-                  child: ListView.separated(
-                    padding: const EdgeInsets.fromLTRB(16, 12, 16, 100),
-                    itemCount: list.length,
-                    separatorBuilder: (_, _) => const SizedBox(height: 10),
-                    itemBuilder: (ctx, i) {
-                      return _VerificationCard(
-                        key: Key('approval_card_${list[i].id}'),
-                        mutation: list[i],
-                        onTap: () {
-                          context.push(
-                            RouteNames.bagianAsetVerificationDetailPath
-                                .replaceFirst(':id', list[i].id),
-                          );
-                        },
-                        onQuickVerify: list[i].status.isWaitingAssetVerification
-                            ? () async {
-                                final verified =
-                                    await startBagianAsetVerificationFlow(
-                                  context,
-                                  mutation: list[i],
-                                );
-                                if (verified == true && mounted) {
-                                  ref.invalidate(
-                                    bagianAsetAllMutationsProvider,
-                                  );
-                                }
-                              }
-                            : null,
-                      );
-                    },
+                    ],
                   ),
-                );
-              },
-              loading: () => const Center(
-                child: CircularProgressIndicator(color: _C.navy),
+                ],
               ),
-              error: (err, _) => Center(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    const Icon(
-                      Icons.error_outline_rounded,
-                      size: 40,
-                      color: _C.error,
+            ),
+            const Divider(height: 1, color: _C.border),
+
+            // ── Content List ─────────────────────────────────────────────
+            Expanded(
+              child: asyncVerifications.when(
+                data: (list) {
+                  if (list.isEmpty) {
+                    return _EmptyState(
+                      statusFilter: statusFilter,
+                      hasQuery: _searchController.text.isNotEmpty,
+                    );
+                  }
+                  return RefreshIndicator(
+                    color: _C.navy,
+                    onRefresh: () async =>
+                        ref.invalidate(bagianAsetAllMutationsProvider),
+                    child: ListView.separated(
+                      padding: const EdgeInsets.fromLTRB(16, 12, 16, 100),
+                      itemCount: list.length,
+                      separatorBuilder: (_, _) => const SizedBox(height: 10),
+                      itemBuilder: (ctx, i) {
+                        return _VerificationCard(
+                          key: Key('approval_card_${list[i].id}'),
+                          mutation: list[i],
+                          onTap: () {
+                            context.push(
+                              RouteNames.bagianAsetVerificationDetailPath
+                                  .replaceFirst(':id', list[i].id),
+                            );
+                          },
+                          onQuickVerify:
+                              list[i].status.isWaitingAssetVerification
+                              ? () async {
+                                  final verified =
+                                      await startBagianAsetVerificationFlow(
+                                        context,
+                                        mutation: list[i],
+                                      );
+                                  if (verified == true && mounted) {
+                                    ref.invalidate(
+                                      bagianAsetAllMutationsProvider,
+                                    );
+                                  }
+                                }
+                              : null,
+                        );
+                      },
                     ),
-                    const SizedBox(height: 8),
-                    Text(
-                      'Gagal memuat data: $err',
-                      style: const TextStyle(
-                        color: _C.textSecondary,
-                        fontSize: 13,
+                  );
+                },
+                loading: () => const Center(
+                  child: CircularProgressIndicator(color: _C.navy),
+                ),
+                error: (err, _) => Center(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(
+                        Icons.error_outline_rounded,
+                        size: 40,
+                        color: _C.error,
                       ),
-                      textAlign: TextAlign.center,
-                    ),
-                    const SizedBox(height: 12),
-                    ElevatedButton(
-                      onPressed: () =>
-                          ref.invalidate(bagianAsetAllMutationsProvider),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: _C.navy,
-                        foregroundColor: Colors.white,
+                      const SizedBox(height: 8),
+                      Text(
+                        'Gagal memuat data: $err',
+                        style: const TextStyle(
+                          color: _C.textSecondary,
+                          fontSize: 13,
+                        ),
+                        textAlign: TextAlign.center,
                       ),
-                      child: const Text('Coba Lagi'),
-                    ),
-                  ],
+                      const SizedBox(height: 12),
+                      ElevatedButton(
+                        onPressed: () =>
+                            ref.invalidate(bagianAsetAllMutationsProvider),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: _C.navy,
+                          foregroundColor: Colors.white,
+                        ),
+                        child: const Text('Coba Lagi'),
+                      ),
+                    ],
+                  ),
                 ),
               ),
             ),
-          ),
-        ],
-      ),
+          ],
+        ),
       ),
       bottomNavigationBar: CustomFloatingNavBar.scaffoldBottomBar(
         items: RoleNavConfig.getNavItemsForRole(role),

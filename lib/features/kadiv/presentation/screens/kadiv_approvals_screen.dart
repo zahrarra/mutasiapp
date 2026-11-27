@@ -74,90 +74,127 @@ class _KadivApprovalsScreenState extends ConsumerState<KadivApprovalsScreen> {
       extendBody: true,
       body: ResponsiveCenter(
         child: Column(
-        children: [
-          // ── Header Baseline ──────────────────────────────────────────
-          SafeArea(
-            bottom: false,
-            child: MutasiKuPageHeader(
-              title: 'Approval Kadiv',
-              subtitle: title,
-              onBack: () {
-                if (Navigator.of(context).canPop()) {
-                  Navigator.of(context).pop();
-                } else {
-                  context.go(RouteNames.kadivDashboardPath);
-                }
-              },
+          children: [
+            // ── Header Baseline ──────────────────────────────────────────
+            SafeArea(
+              bottom: false,
+              child: MutasiKuPageHeader(
+                title: 'Approval Kadiv',
+                subtitle: title,
+                onBack: () {
+                  if (Navigator.of(context).canPop()) {
+                    Navigator.of(context).pop();
+                  } else {
+                    context.go(RouteNames.kadivDashboardPath);
+                  }
+                },
+              ),
             ),
-          ),
 
-          // ── Search & Filter ─────────────────────────────────────────
-          Container(
-            padding: const EdgeInsets.fromLTRB(16, 14, 16, 10),
-            color: _C.surface,
-            child: Column(
-              children: [
-                // Search
-                _SearchField(
-                  searchKey: const Key('input_search_kadiv_approvals'),
-                  controller: _searchController,
-                  hintText: 'Cari no. tiket, aset, pemohon, lokasi...',
-                  onChanged: (v) {
-                    ref.read(kadivSearchQueryProvider.notifier).state = v;
-                    setState(() {});
-                  },
-                  onClear: () {
-                    _searchController.clear();
-                    ref.read(kadivSearchQueryProvider.notifier).state = '';
-                    setState(() {});
-                  },
-                  showClear: _searchController.text.isNotEmpty,
-                ),
-                const SizedBox(height: 10),
+            // ── Search & Filter ─────────────────────────────────────────
+            Container(
+              padding: const EdgeInsets.fromLTRB(16, 14, 16, 10),
+              color: _C.surface,
+              child: Column(
+                children: [
+                  // Search
+                  _SearchField(
+                    searchKey: const Key('input_search_kadiv_approvals'),
+                    controller: _searchController,
+                    hintText: 'Cari no. tiket, aset, pemohon, lokasi...',
+                    onChanged: (v) {
+                      ref.read(kadivSearchQueryProvider.notifier).state = v;
+                      setState(() {});
+                    },
+                    onClear: () {
+                      _searchController.clear();
+                      ref.read(kadivSearchQueryProvider.notifier).state = '';
+                      setState(() {});
+                    },
+                    showClear: _searchController.text.isNotEmpty,
+                  ),
+                  const SizedBox(height: 10),
 
-                // Filter row
-                Row(
-                  children: [
-                    Expanded(
-                      child: _DropdownFilter(
+                  // Filter row
+                  Row(
+                    children: [
+                      Expanded(
+                        child: _DropdownFilter(
+                          child: DropdownButtonHideUnderline(
+                            child: DropdownButton<KadivStatusFilter>(
+                              key: const Key('dropdown_filter_kadiv_status'),
+                              value: statusFilter,
+                              isDense: true,
+                              isExpanded: true,
+                              icon: const Icon(
+                                Icons.filter_list_rounded,
+                                size: 16,
+                                color: _C.teal,
+                              ),
+                              style: const TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w500,
+                                color: _C.textPrimary,
+                              ),
+                              items:
+                                  [
+                                        KadivStatusFilter.all,
+                                        KadivStatusFilter.waiting,
+                                        KadivStatusFilter.processing,
+                                        KadivStatusFilter.allocated,
+                                        KadivStatusFilter.completed,
+                                        KadivStatusFilter.rejected,
+                                      ]
+                                      .map(
+                                        (s) => DropdownMenuItem(
+                                          value: s,
+                                          child: Text(s.displayName),
+                                        ),
+                                      )
+                                      .toList(),
+                              onChanged: (val) {
+                                if (val != null) {
+                                  ref
+                                          .read(
+                                            kadivStatusFilterProvider.notifier,
+                                          )
+                                          .state =
+                                      val;
+                                }
+                              },
+                            ),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                      _DropdownFilter(
                         child: DropdownButtonHideUnderline(
-                          child: DropdownButton<KadivStatusFilter>(
-                            key: const Key('dropdown_filter_kadiv_status'),
-                            value: statusFilter,
+                          child: DropdownButton<KadivSortOrder>(
+                            key: const Key('dropdown_filter_kadiv_sort'),
+                            value: sortOrder,
                             isDense: true,
-                            isExpanded: true,
                             icon: const Icon(
-                              Icons.filter_list_rounded,
+                              Icons.sort_rounded,
                               size: 16,
-                              color: _C.teal,
+                              color: _C.textSecondary,
                             ),
                             style: const TextStyle(
                               fontSize: 12,
                               fontWeight: FontWeight.w500,
                               color: _C.textPrimary,
                             ),
-                            items:
-                                [
-                                      KadivStatusFilter.all,
-                                      KadivStatusFilter.waiting,
-                                      KadivStatusFilter.processing,
-                                      KadivStatusFilter.allocated,
-                                      KadivStatusFilter.completed,
-                                      KadivStatusFilter.rejected,
-                                    ]
-                                    .map(
-                                      (s) => DropdownMenuItem(
-                                        value: s,
-                                        child: Text(s.displayName),
-                                      ),
-                                    )
-                                    .toList(),
+                            items: KadivSortOrder.values
+                                .map(
+                                  (s) => DropdownMenuItem(
+                                    value: s,
+                                    child: Text(s.displayName),
+                                  ),
+                                )
+                                .toList(),
                             onChanged: (val) {
                               if (val != null) {
                                 ref
-                                        .read(
-                                          kadivStatusFilterProvider.notifier,
-                                        )
+                                        .read(kadivSortOrderProvider.notifier)
                                         .state =
                                     val;
                               }
@@ -165,93 +202,59 @@ class _KadivApprovalsScreenState extends ConsumerState<KadivApprovalsScreen> {
                           ),
                         ),
                       ),
-                    ),
-                    const SizedBox(width: 10),
-                    _DropdownFilter(
-                      child: DropdownButtonHideUnderline(
-                        child: DropdownButton<KadivSortOrder>(
-                          key: const Key('dropdown_filter_kadiv_sort'),
-                          value: sortOrder,
-                          isDense: true,
-                          icon: const Icon(
-                            Icons.sort_rounded,
-                            size: 16,
-                            color: _C.textSecondary,
-                          ),
-                          style: const TextStyle(
-                            fontSize: 12,
-                            fontWeight: FontWeight.w500,
-                            color: _C.textPrimary,
-                          ),
-                          items: KadivSortOrder.values
-                              .map(
-                                (s) => DropdownMenuItem(
-                                  value: s,
-                                  child: Text(s.displayName),
-                                ),
-                              )
-                              .toList(),
-                          onChanged: (val) {
-                            if (val != null) {
-                              ref.read(kadivSortOrderProvider.notifier).state =
-                                  val;
-                            }
-                          },
-                        ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+            const Divider(height: 1, color: _C.border),
+
+            // ── List ────────────────────────────────────────────────────
+            Expanded(
+              child: asyncApprovals.when(
+                data: (mutations) {
+                  if (mutations.isEmpty) {
+                    return _buildEmptyState(statusFilter);
+                  }
+                  return RefreshIndicator(
+                    color: _C.navy,
+                    onRefresh: () async =>
+                        ref.invalidate(kadivAllMutationsProvider),
+                    child: ListView.separated(
+                      padding: const EdgeInsets.fromLTRB(16, 12, 16, 100),
+                      itemCount: mutations.length,
+                      separatorBuilder: (_, _) => const SizedBox(height: 10),
+                      itemBuilder: (context, i) => _KadivApprovalCard(
+                        mutation: mutations[i],
+                        onTap: () =>
+                            context.push('/kadiv/approvals/${mutations[i].id}'),
+                        onQuickApprove:
+                            mutations[i].status.isWaitingDivisionApproval
+                            ? () async {
+                                final approved = await startKadivApprovalFlow(
+                                  context,
+                                  mutation: mutations[i],
+                                );
+                                if (approved == true && mounted) {
+                                  ref.invalidate(kadivAllMutationsProvider);
+                                }
+                              }
+                            : null,
                       ),
                     ),
-                  ],
+                  );
+                },
+                loading: () => const Center(
+                  child: CircularProgressIndicator(color: _C.navy),
                 ),
-              ],
-            ),
-          ),
-          const Divider(height: 1, color: _C.border),
-
-          // ── List ────────────────────────────────────────────────────
-          Expanded(
-            child: asyncApprovals.when(
-              data: (mutations) {
-                if (mutations.isEmpty) {
-                  return _buildEmptyState(statusFilter);
-                }
-                return RefreshIndicator(
-                  color: _C.navy,
-                  onRefresh: () async =>
-                      ref.invalidate(kadivAllMutationsProvider),
-                  child: ListView.separated(
-                    padding: const EdgeInsets.fromLTRB(16, 12, 16, 100),
-                    itemCount: mutations.length,
-                    separatorBuilder: (_, _) => const SizedBox(height: 10),
-                    itemBuilder: (context, i) => _KadivApprovalCard(
-                      mutation: mutations[i],
-                      onTap: () =>
-                          context.push('/kadiv/approvals/${mutations[i].id}'),
-                      onQuickApprove: mutations[i].status.isWaitingDivisionApproval
-                          ? () async {
-                              final approved = await startKadivApprovalFlow(
-                                context,
-                                mutation: mutations[i],
-                              );
-                              if (approved == true && mounted) {
-                                ref.invalidate(kadivAllMutationsProvider);
-                              }
-                            }
-                          : null,
-                    ),
-                  ),
-                );
-              },
-              loading: () => const Center(
-                child: CircularProgressIndicator(color: _C.navy),
-              ),
-              error: (err, _) => _ErrorState(
-                message: '$err',
-                onRetry: () => ref.invalidate(kadivAllMutationsProvider),
+                error: (err, _) => _ErrorState(
+                  message: '$err',
+                  onRetry: () => ref.invalidate(kadivAllMutationsProvider),
+                ),
               ),
             ),
-          ),
-        ],
-      ),
+          ],
+        ),
       ),
       bottomNavigationBar: CustomFloatingNavBar.scaffoldBottomBar(
         items: RoleNavConfig.getNavItemsForRole(UserRole.kadiv),
@@ -281,8 +284,7 @@ class _KadivApprovalsScreenState extends ConsumerState<KadivApprovalsScreen> {
         'Pengajuan yang dikembalikan ke pemohon akan muncul di sini.',
       KadivStatusFilter.completed =>
         'Pengajuan yang telah selesai dikonfirmasi akan muncul di sini.',
-      KadivStatusFilter.waiting =>
-        'Seluruh pengajuan mutasi tingkat Pemimpin Divisi telah selesai diproses.',
+      KadivStatusFilter.waiting => 'Seluruh pengajuan mutasi tingkat Pemimpin Divisi telah selesai diproses.',
       KadivStatusFilter.approved =>
         'Pengajuan yang Anda setujui akan muncul di sini.',
       KadivStatusFilter.rejected =>
@@ -462,18 +464,25 @@ class _KadivApprovalCard extends StatelessWidget {
 
                 // ── Row 4: Bagian Aset verification badge ────────────────
                 if ((mutation.assetVerifiedBy != null &&
-                        !RegExp(r'^\d+$').hasMatch(mutation.assetVerifiedBy!.trim())) ||
+                        !RegExp(r'^\d+$')
+                            .hasMatch(mutation.assetVerifiedBy!.trim())) ||
                     (mutation.approvedBy != null &&
-                        !RegExp(r'^\d+$').hasMatch(mutation.approvedBy!.trim())) ||
+                        !RegExp(r'^\d+$')
+                            .hasMatch(mutation.approvedBy!.trim())) ||
                     mutation.assetVerifiedAt != null ||
                     mutation.approvedAt != null) ...[
                   const SizedBox(height: 8),
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 4,
+                    ),
                     decoration: BoxDecoration(
                       color: _C.successLight,
                       borderRadius: BorderRadius.circular(8),
-                      border: Border.all(color: _C.success.withValues(alpha: 0.3)),
+                      border: Border.all(
+                        color: _C.success.withValues(alpha: 0.3),
+                      ),
                     ),
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
@@ -763,18 +772,11 @@ class _ErrorState extends StatelessWidget {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          const Icon(
-            Icons.error_outline_rounded,
-            size: 40,
-            color: _C.error,
-          ),
+          const Icon(Icons.error_outline_rounded, size: 40, color: _C.error),
           const SizedBox(height: 8),
           Text(
             'Gagal memuat data: $message',
-            style: const TextStyle(
-              color: _C.textSecondary,
-              fontSize: 13,
-            ),
+            style: const TextStyle(color: _C.textSecondary, fontSize: 13),
             textAlign: TextAlign.center,
           ),
           const SizedBox(height: 12),

@@ -291,7 +291,9 @@ class _BagianAsetDashboardScreenState
   // DIALOG VERIFIKASI BAGIAN ASET (Alur 2-Langkah: PIC -> Verifikasi)
   // ──────────────────────────────────────────────────────────────────────────
   void _openPicAssignmentDialog(BuildContext context, Mutation mutation) {
-    startBagianAsetVerificationFlow(context, mutation: mutation).then((verified) {
+    startBagianAsetVerificationFlow(context, mutation: mutation).then((
+      verified,
+    ) {
       if (verified == true && mounted) {
         ref.invalidate(bagianAsetAllMutationsProvider);
       }
@@ -299,7 +301,9 @@ class _BagianAsetDashboardScreenState
   }
 
   void _openDirectVerificationDialog(BuildContext context, Mutation mutation) {
-    startBagianAsetVerificationFlow(context, mutation: mutation).then((verified) {
+    startBagianAsetVerificationFlow(context, mutation: mutation).then((
+      verified,
+    ) {
       if (verified == true && mounted) {
         ref.invalidate(bagianAsetAllMutationsProvider);
       }
@@ -321,47 +325,47 @@ class _BagianAsetDashboardScreenState
       backgroundColor: _C.bg,
       body: ResponsiveCenter(
         child: RefreshIndicator(
-        color: _C.teal,
-        onRefresh: () async {
-          ref.invalidate(bagianAsetAllMutationsProvider);
-          await ref.read(bagianAsetAllMutationsProvider.future);
-        },
-        child: CustomScrollView(
-          physics: const AlwaysScrollableScrollPhysics(
-            parent: BouncingScrollPhysics(),
+          color: _C.teal,
+          onRefresh: () async {
+            ref.invalidate(bagianAsetAllMutationsProvider);
+            await ref.read(bagianAsetAllMutationsProvider.future);
+          },
+          child: CustomScrollView(
+            physics: const AlwaysScrollableScrollPhysics(
+              parent: BouncingScrollPhysics(),
+            ),
+            slivers: [
+              // ── 1. Curved Deep Navy Header Container (Stitch 1:1) ─────────────
+              SliverToBoxAdapter(
+                child: _buildCurvedHeader(
+                  user: user,
+                  userName: userName,
+                  unreadCount: unreadCount,
+                  asyncMutations: asyncMutations,
+                ),
+              ),
+
+              // ── 2. Body Content ──────────────────────────────────────────────
+              SliverPadding(
+                padding: const EdgeInsets.fromLTRB(16, 12, 16, 120),
+                sliver: SliverList(
+                  delegate: SliverChildListDelegate([
+                    // Quick Category Cards (Grid 2x2 — Stitch 1:1)
+                    _buildQuickCategoryGrid(asyncMutations),
+                    const SizedBox(height: 20),
+
+                    // Section: Pengajuan Perlu Verifikasi Bagian Aset
+                    _buildSectionHeader(asyncMutations),
+                    const SizedBox(height: 12),
+
+                    // Ticket Cards List
+                    _buildTicketCardsList(asyncMutations),
+                  ]),
+                ),
+              ),
+            ],
           ),
-          slivers: [
-            // ── 1. Curved Deep Navy Header Container (Stitch 1:1) ─────────────
-            SliverToBoxAdapter(
-              child: _buildCurvedHeader(
-                user: user,
-                userName: userName,
-                unreadCount: unreadCount,
-                asyncMutations: asyncMutations,
-              ),
-            ),
-
-            // ── 2. Body Content ──────────────────────────────────────────────
-            SliverPadding(
-              padding: const EdgeInsets.fromLTRB(16, 12, 16, 120),
-              sliver: SliverList(
-                delegate: SliverChildListDelegate([
-                  // Quick Category Cards (Grid 2x2 — Stitch 1:1)
-                  _buildQuickCategoryGrid(asyncMutations),
-                  const SizedBox(height: 20),
-
-                  // Section: Pengajuan Perlu Verifikasi Bagian Aset
-                  _buildSectionHeader(asyncMutations),
-                  const SizedBox(height: 12),
-
-                  // Ticket Cards List
-                  _buildTicketCardsList(asyncMutations),
-                ]),
-              ),
-            ),
-          ],
         ),
-      ),
       ),
       bottomNavigationBar: CustomFloatingNavBar.scaffoldBottomBar(
         items: RoleNavConfig.getNavItemsForRole(UserRole.bagianAset),

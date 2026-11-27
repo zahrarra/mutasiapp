@@ -65,94 +65,94 @@ class OperatorVerificationDetailScreen extends ConsumerWidget {
       backgroundColor: _C.background,
       body: ResponsiveCenter(
         child: Column(
-        children: [
-          SafeArea(
-            bottom: false,
-            child: MutasiKuPageHeader(
-              title: 'Detail Pengajuan',
-              subtitle: 'Tinjauan Pengajuan Mutasi',
-              onBack: () {
-                if (context.canPop()) {
-                  context.pop();
-                } else {
-                  context.go(RouteNames.operatorMutationsPath);
-                }
-              },
-            ),
-          ),
-
-          // ── Body Content ──────────────────────────────────────────
-          Expanded(
-            child: asyncMutation.when(
-              data: (mutation) =>
-                  _buildBody(context, ref, mutation, actionState),
-              loading: () => const Center(
-                child: CircularProgressIndicator(
-                  strokeWidth: 2,
-                  color: _C.secondary,
-                ),
+          children: [
+            SafeArea(
+              bottom: false,
+              child: MutasiKuPageHeader(
+                title: 'Detail Pengajuan',
+                subtitle: 'Tinjauan Pengajuan Mutasi',
+                onBack: () {
+                  if (context.canPop()) {
+                    context.pop();
+                  } else {
+                    context.go(RouteNames.operatorMutationsPath);
+                  }
+                },
               ),
-              error: (err, _) => Center(
-                child: Padding(
-                  padding: const EdgeInsets.all(32),
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Container(
-                        width: 64,
-                        height: 64,
-                        decoration: BoxDecoration(
-                          color: _C.errorLight,
-                          borderRadius: BorderRadius.circular(18),
-                        ),
-                        child: const Icon(
-                          Icons.error_outline_rounded,
-                          size: 32,
-                          color: _C.error,
-                        ),
-                      ),
-                      const SizedBox(height: 16),
-                      const Text(
-                        'Gagal Memuat Data',
-                        style: TextStyle(
-                          fontSize: 15,
-                          fontWeight: FontWeight.w700,
-                          color: _C.textPrimary,
-                        ),
-                      ),
-                      const SizedBox(height: 6),
-                      Text(
-                        '$err',
-                        textAlign: TextAlign.center,
-                        style: const TextStyle(
-                          fontSize: 12,
-                          color: _C.textSecondary,
-                        ),
-                      ),
-                      const SizedBox(height: 20),
-                      ElevatedButton.icon(
-                        onPressed: () => ref.invalidate(
-                          operatorMutationDetailProvider(mutationId),
-                        ),
-                        icon: const Icon(Icons.refresh_rounded, size: 16),
-                        label: const Text('Coba Lagi'),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: _C.secondary,
-                          foregroundColor: Colors.white,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(10),
+            ),
+
+            // ── Body Content ──────────────────────────────────────────
+            Expanded(
+              child: asyncMutation.when(
+                data: (mutation) =>
+                    _buildBody(context, ref, mutation, actionState),
+                loading: () => const Center(
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
+                    color: _C.secondary,
+                  ),
+                ),
+                error: (err, _) => Center(
+                  child: Padding(
+                    padding: const EdgeInsets.all(32),
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Container(
+                          width: 64,
+                          height: 64,
+                          decoration: BoxDecoration(
+                            color: _C.errorLight,
+                            borderRadius: BorderRadius.circular(18),
                           ),
-                          elevation: 0,
+                          child: const Icon(
+                            Icons.error_outline_rounded,
+                            size: 32,
+                            color: _C.error,
+                          ),
                         ),
-                      ),
-                    ],
+                        const SizedBox(height: 16),
+                        const Text(
+                          'Gagal Memuat Data',
+                          style: TextStyle(
+                            fontSize: 15,
+                            fontWeight: FontWeight.w700,
+                            color: _C.textPrimary,
+                          ),
+                        ),
+                        const SizedBox(height: 6),
+                        Text(
+                          '$err',
+                          textAlign: TextAlign.center,
+                          style: const TextStyle(
+                            fontSize: 12,
+                            color: _C.textSecondary,
+                          ),
+                        ),
+                        const SizedBox(height: 20),
+                        ElevatedButton.icon(
+                          onPressed: () => ref.invalidate(
+                            operatorMutationDetailProvider(mutationId),
+                          ),
+                          icon: const Icon(Icons.refresh_rounded, size: 16),
+                          label: const Text('Coba Lagi'),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: _C.secondary,
+                            foregroundColor: Colors.white,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                            elevation: 0,
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
               ),
             ),
-          ),
-        ],
-      ),
+          ],
+        ),
       ),
     );
   }
@@ -307,9 +307,11 @@ class OperatorVerificationDetailScreen extends ConsumerWidget {
                 if (!mutation.isUnregisteredAsset && masterAssetAsync != null)
                   masterAssetAsync.when(
                     data: (master) {
-                      final validMaster = master ??
+                      final validMaster =
+                          master ??
                           (!mutation.isUnregisteredAsset &&
-                                  mutation.asset.name != 'Aset Tidak Terdaftar' &&
+                                  mutation.asset.name !=
+                                      'Aset Tidak Terdaftar' &&
                                   mutation.asset.assetCode != '-'
                               ? mutation.asset
                               : null);
@@ -521,103 +523,123 @@ class OperatorVerificationDetailScreen extends ConsumerWidget {
         ),
 
         // ── 7. STICKY BOTTOM ACTIONS (Stitch Baseline) ──────────────
-        if (isSubmitted) () {
-          final hasDocument = (mutation.documentName != null && mutation.documentName!.trim().isNotEmpty) ||
-              (mutation.documentPath != null && mutation.documentPath!.trim().isNotEmpty) ||
-              (mutation.documentBytes != null && mutation.documentBytes!.isNotEmpty);
-          final hasLocation = mutation.targetLocation.trim().isNotEmpty && mutation.targetLocation.trim() != '-';
-          final hasReason = mutation.reason.trim().isNotEmpty && mutation.reason.trim() != '-';
-          final isDataComplete = hasDocument && hasLocation && hasReason;
+        if (isSubmitted)
+          () {
+            final hasDocument =
+                (mutation.documentName != null &&
+                    mutation.documentName!.trim().isNotEmpty) ||
+                (mutation.documentPath != null &&
+                    mutation.documentPath!.trim().isNotEmpty) ||
+                (mutation.documentBytes != null &&
+                    mutation.documentBytes!.isNotEmpty);
+            final hasLocation =
+                mutation.targetLocation.trim().isNotEmpty &&
+                mutation.targetLocation.trim() != '-';
+            final hasReason =
+                mutation.reason.trim().isNotEmpty &&
+                mutation.reason.trim() != '-';
+            final isDataComplete = hasDocument && hasLocation && hasReason;
 
-          return Container(
-            padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
-            decoration: BoxDecoration(
-              color: _C.surface,
-              border: const Border(top: BorderSide(color: _C.border)),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.05),
-                  blurRadius: 10,
-                  offset: const Offset(0, -4),
-                ),
-              ],
-            ),
-            child: SafeArea(
-              top: false,
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  if (!isDataComplete)
-                    Container(
-                      margin: const EdgeInsets.only(bottom: 10),
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFFEF3F2),
-                        borderRadius: BorderRadius.circular(8),
-                        border: Border.all(color: const Color(0xFFFECDCA)),
-                      ),
-                      child: const Row(
-                        children: [
-                          Icon(Icons.info_outline, color: Color(0xFFD92D20), size: 18),
-                          SizedBox(width: 8),
-                          Expanded(
-                            child: Text(
-                              'Pengajuan belum lengkap. Dokumen SK SDM atau data wajib belum terpenuhi sehingga tidak dapat diteruskan ke Bagian Aset.',
-                              style: TextStyle(
-                                fontSize: 11,
-                                color: Color(0xFFB42318),
-                                fontWeight: FontWeight.w500,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  SizedBox(
-                    width: double.infinity,
-                    child: ElevatedButton.icon(
-                      key: const Key('btn_verifikasi_valid'),
-                      onPressed: (actionState.isLoading || !isDataComplete)
-                          ? null
-                          : () => _executeVerification(context, ref, mutation),
-                      icon: actionState.isLoading
-                          ? const SizedBox(
-                              height: 18,
-                              width: 18,
-                              child: CircularProgressIndicator(
-                                strokeWidth: 2,
-                                color: Colors.white,
-                              ),
-                            )
-                          : const Icon(Icons.check_circle_rounded, size: 19),
-                      label: const Text(
-                        'Teruskan ke Bagian Aset',
-                        maxLines: 1,
-                        softWrap: false,
-                        overflow: TextOverflow.ellipsis,
-                        style: TextStyle(
-                          fontWeight: FontWeight.w600,
-                          fontSize: 13,
-                        ),
-                      ),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: _C.primaryContainer,
-                        disabledBackgroundColor: _C.primaryContainer.withValues(alpha: 0.35),
-                        foregroundColor: Colors.white,
-                        disabledForegroundColor: Colors.white.withValues(alpha: 0.6),
-                        padding: const EdgeInsets.symmetric(vertical: 14),
-                        elevation: 0,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                      ),
-                    ),
+            return Container(
+              padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
+              decoration: BoxDecoration(
+                color: _C.surface,
+                border: const Border(top: BorderSide(color: _C.border)),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.05),
+                    blurRadius: 10,
+                    offset: const Offset(0, -4),
                   ),
                 ],
               ),
-            ),
-          );
-        }(),
+              child: SafeArea(
+                top: false,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    if (!isDataComplete)
+                      Container(
+                        margin: const EdgeInsets.only(bottom: 10),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 10,
+                        ),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFFEF3F2),
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(color: const Color(0xFFFECDCA)),
+                        ),
+                        child: const Row(
+                          children: [
+                            Icon(
+                              Icons.info_outline,
+                              color: Color(0xFFD92D20),
+                              size: 18,
+                            ),
+                            SizedBox(width: 8),
+                            Expanded(
+                              child: Text(
+                                'Pengajuan belum lengkap. Dokumen SK SDM atau data wajib belum terpenuhi sehingga tidak dapat diteruskan ke Bagian Aset.',
+                                style: TextStyle(
+                                  fontSize: 11,
+                                  color: Color(0xFFB42318),
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    SizedBox(
+                      width: double.infinity,
+                      child: ElevatedButton.icon(
+                        key: const Key('btn_verifikasi_valid'),
+                        onPressed: (actionState.isLoading || !isDataComplete)
+                            ? null
+                            : () =>
+                                  _executeVerification(context, ref, mutation),
+                        icon: actionState.isLoading
+                            ? const SizedBox(
+                                height: 18,
+                                width: 18,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  color: Colors.white,
+                                ),
+                              )
+                            : const Icon(Icons.check_circle_rounded, size: 19),
+                        label: const Text(
+                          'Teruskan ke Bagian Aset',
+                          maxLines: 1,
+                          softWrap: false,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            fontWeight: FontWeight.w600,
+                            fontSize: 13,
+                          ),
+                        ),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: _C.primaryContainer,
+                          disabledBackgroundColor: _C.primaryContainer
+                              .withValues(alpha: 0.35),
+                          foregroundColor: Colors.white,
+                          disabledForegroundColor: Colors.white.withValues(
+                            alpha: 0.6,
+                          ),
+                          padding: const EdgeInsets.symmetric(vertical: 14),
+                          elevation: 0,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          }(),
       ],
     );
   }

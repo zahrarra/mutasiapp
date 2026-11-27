@@ -59,204 +59,205 @@ class PemohonMutationDetailScreen extends ConsumerWidget {
       backgroundColor: const Color(0xFFF6F8FA),
       body: ResponsiveCenter(
         child: Column(
-        children: [
-          SafeArea(
-            bottom: false,
-            child: MutasiKuPageHeader(
-              title: 'Detail Mutasi',
-              subtitle: 'Informasi lengkap dan riwayat status mutasi',
-              onBack: () {
-                if (Navigator.of(context).canPop()) {
-                  Navigator.of(context).pop();
-                } else {
-                  try {
-                    context.go(RouteNames.pemohonMutasiPath);
-                  } catch (_) {}
-                }
-              },
-            ),
-          ),
-          Expanded(
-            child: asyncDetail.when(
-              loading: () => const LoadingIndicator(),
-              error: (e, _) => ErrorView(
-                message: e.toString(),
-                onRetry: () =>
-                    ref.invalidate(pemohonMutationDetailProvider(mutationId)),
+          children: [
+            SafeArea(
+              bottom: false,
+              child: MutasiKuPageHeader(
+                title: 'Detail Mutasi',
+                subtitle: 'Informasi lengkap dan riwayat status mutasi',
+                onBack: () {
+                  if (Navigator.of(context).canPop()) {
+                    Navigator.of(context).pop();
+                  } else {
+                    try {
+                      context.go(RouteNames.pemohonMutasiPath);
+                    } catch (_) {}
+                  }
+                },
               ),
-              data: (m) {
-                // Ownership guard
-                if (!_isMutationOwnedBy(m, authState.user)) {
-                  return Center(
-                    child: Padding(
-                      padding: const EdgeInsets.all(AppSpacing.xl),
+            ),
+            Expanded(
+              child: asyncDetail.when(
+                loading: () => const LoadingIndicator(),
+                error: (e, _) => ErrorView(
+                  message: e.toString(),
+                  onRetry: () =>
+                      ref.invalidate(pemohonMutationDetailProvider(mutationId)),
+                ),
+                data: (m) {
+                  // Ownership guard
+                  if (!_isMutationOwnedBy(m, authState.user)) {
+                    return Center(
+                      child: Padding(
+                        padding: const EdgeInsets.all(AppSpacing.xl),
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Icon(
+                              Icons.lock_outline,
+                              size: 64,
+                              color: AppColors.error,
+                            ),
+                            const SizedBox(height: AppSpacing.md),
+                            const Text(
+                              'Akses Ditolak',
+                              style: TextStyle(
+                                fontSize: 18,
+                                fontWeight: FontWeight.bold,
+                                color: AppColors.textPrimary,
+                              ),
+                            ),
+                            const SizedBox(height: AppSpacing.sm),
+                            const Text(
+                              'Anda hanya dapat melihat pengajuan mutasi milik Anda sendiri.',
+                              textAlign: TextAlign.center,
+                              style: TextStyle(
+                                fontSize: 14,
+                                color: AppColors.textSecondary,
+                              ),
+                            ),
+                            const SizedBox(height: AppSpacing.lg),
+                            OutlinedButton.icon(
+                              onPressed: () {
+                                if (Navigator.of(context).canPop()) {
+                                  Navigator.of(context).pop();
+                                } else {
+                                  try {
+                                    context.go(RouteNames.pemohonMutasiPath);
+                                  } catch (_) {}
+                                }
+                              },
+                              icon: const Icon(Icons.arrow_back),
+                              label: const Text('Kembali'),
+                            ),
+                          ],
+                        ),
+                      ),
+                    );
+                  }
+
+                  return RefreshIndicator(
+                    onRefresh: () async {
+                      ref.invalidate(pemohonMutationDetailProvider(mutationId));
+                    },
+                    child: SingleChildScrollView(
+                      physics: const AlwaysScrollableScrollPhysics(),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 16,
+                      ),
                       child: Column(
-                        mainAxisSize: MainAxisSize.min,
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
                         children: [
-                          const Icon(
-                            Icons.lock_outline,
-                            size: 64,
-                            color: AppColors.error,
-                          ),
-                          const SizedBox(height: AppSpacing.md),
-                          const Text(
-                            'Akses Ditolak',
-                            style: TextStyle(
-                              fontSize: 18,
-                              fontWeight: FontWeight.bold,
-                              color: AppColors.textPrimary,
+                          // 1. Status & Ticket Hero Card (Navy Gradient)
+                          _buildHeroCard(context, m),
+                          const SizedBox(height: 16),
+
+                          // 2. Alert Banners (Returned / Rejected)
+                          if (m.status == MutationStatus.returned) ...[
+                            _buildReturnedAlertBanner(m),
+                            const SizedBox(height: 16),
+                          ],
+                          if (m.status == MutationStatus.rejected) ...[
+                            _buildRejectedAlertBanner(m),
+                            const SizedBox(height: 16),
+                          ],
+
+                          // 3. Pelacakan Alur Kerja (Workflow Timeline)
+                          _buildTrackingTimelineCard(m),
+                          const SizedBox(height: 16),
+
+                          // 4. Spesifikasi Aset Card
+                          _buildAssetSpecificationCard(m),
+                          const SizedBox(height: 16),
+
+                          // 5. Rincian Perpindahan Card
+                          _buildTransferDetailsCard(m),
+                          const SizedBox(height: 16),
+
+                          // 6. Alasan & Dokumen Pendukung
+                          _buildJustificationAndDocumentCard(context, m, ref),
+                          const SizedBox(height: 16),
+
+                          // 7. Status Info Card
+                          _buildStatusInfoBanner(m),
+                          const SizedBox(height: 24),
+
+                          // 8. Bottom Action Buttons
+                          if (m.status == MutationStatus.returned ||
+                              m.status == MutationStatus.rejected) ...[
+                            ElevatedButton.icon(
+                              key: const Key('btn_ajukan_mutasi_baru'),
+                              onPressed: () {
+                                context.push(
+                                  RouteNames.pemohonMutasiCreatePath,
+                                );
+                              },
+                              icon: const Icon(
+                                Icons.add_circle_outline,
+                                color: Colors.white,
+                              ),
+                              label: const Text(
+                                'Ajukan Mutasi Baru',
+                                style: TextStyle(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.white,
+                                ),
+                              ),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: AppColors.primary,
+                                minimumSize: const Size.fromHeight(48),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                elevation: 0,
+                              ),
                             ),
-                          ),
-                          const SizedBox(height: AppSpacing.sm),
-                          const Text(
-                            'Anda hanya dapat melihat pengajuan mutasi milik Anda sendiri.',
-                            textAlign: TextAlign.center,
-                            style: TextStyle(
-                              fontSize: 14,
-                              color: AppColors.textSecondary,
+                            const SizedBox(height: 24),
+                          ],
+                          if (m.status == MutationStatus.waitingConfirmation ||
+                              m.status ==
+                                  MutationStatus.pendingConfirmation) ...[
+                            ElevatedButton.icon(
+                              onPressed: () {
+                                context.push(
+                                  RouteNames.pemohonConfirmationPath
+                                      .replaceFirst(':id', m.id),
+                                );
+                              },
+                              icon: const Icon(
+                                Icons.check_circle_outline,
+                                color: Colors.white,
+                              ),
+                              label: const Text(
+                                'Konfirmasi Mutasi',
+                                style: TextStyle(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.white,
+                                ),
+                              ),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: AppColors.primary,
+                                minimumSize: const Size.fromHeight(48),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                elevation: 0,
+                              ),
                             ),
-                          ),
-                          const SizedBox(height: AppSpacing.lg),
-                          OutlinedButton.icon(
-                            onPressed: () {
-                              if (Navigator.of(context).canPop()) {
-                                Navigator.of(context).pop();
-                              } else {
-                                try {
-                                  context.go(RouteNames.pemohonMutasiPath);
-                                } catch (_) {}
-                              }
-                            },
-                            icon: const Icon(Icons.arrow_back),
-                            label: const Text('Kembali'),
-                          ),
+                            const SizedBox(height: 24),
+                          ],
                         ],
                       ),
                     ),
                   );
-                }
-
-                return RefreshIndicator(
-                  onRefresh: () async {
-                    ref.invalidate(pemohonMutationDetailProvider(mutationId));
-                  },
-                  child: SingleChildScrollView(
-                    physics: const AlwaysScrollableScrollPhysics(),
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 16,
-                      vertical: 16,
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: [
-                        // 1. Status & Ticket Hero Card (Navy Gradient)
-                        _buildHeroCard(context, m),
-                        const SizedBox(height: 16),
-
-                        // 2. Alert Banners (Returned / Rejected)
-                        if (m.status == MutationStatus.returned) ...[
-                          _buildReturnedAlertBanner(m),
-                          const SizedBox(height: 16),
-                        ],
-                        if (m.status == MutationStatus.rejected) ...[
-                          _buildRejectedAlertBanner(m),
-                          const SizedBox(height: 16),
-                        ],
-
-                        // 3. Pelacakan Alur Kerja (Workflow Timeline)
-                        _buildTrackingTimelineCard(m),
-                        const SizedBox(height: 16),
-
-                        // 4. Spesifikasi Aset Card
-                        _buildAssetSpecificationCard(m),
-                        const SizedBox(height: 16),
-
-                        // 5. Rincian Perpindahan Card
-                        _buildTransferDetailsCard(m),
-                        const SizedBox(height: 16),
-
-                        // 6. Alasan & Dokumen Pendukung
-                        _buildJustificationAndDocumentCard(context, m, ref),
-                        const SizedBox(height: 16),
-
-                        // 7. Status Info Card
-                        _buildStatusInfoBanner(m),
-                        const SizedBox(height: 24),
-
-                        // 8. Bottom Action Buttons
-                        if (m.status == MutationStatus.returned ||
-                            m.status == MutationStatus.rejected) ...[
-                          ElevatedButton.icon(
-                            key: const Key('btn_ajukan_mutasi_baru'),
-                            onPressed: () {
-                              context.push(RouteNames.pemohonMutasiCreatePath);
-                            },
-                            icon: const Icon(
-                              Icons.add_circle_outline,
-                              color: Colors.white,
-                            ),
-                            label: const Text(
-                              'Ajukan Mutasi Baru',
-                              style: TextStyle(
-                                fontSize: 14,
-                                fontWeight: FontWeight.bold,
-                                color: Colors.white,
-                              ),
-                            ),
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: AppColors.primary,
-                              minimumSize: const Size.fromHeight(48),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                              elevation: 0,
-                            ),
-                          ),
-                          const SizedBox(height: 24),
-                        ],
-                        if (m.status == MutationStatus.waitingConfirmation ||
-                            m.status == MutationStatus.pendingConfirmation) ...[
-                          ElevatedButton.icon(
-                            onPressed: () {
-                              context.push(
-                                RouteNames.pemohonConfirmationPath.replaceFirst(
-                                  ':id',
-                                  m.id,
-                                ),
-                              );
-                            },
-                            icon: const Icon(
-                              Icons.check_circle_outline,
-                              color: Colors.white,
-                            ),
-                            label: const Text(
-                              'Konfirmasi Mutasi',
-                              style: TextStyle(
-                                fontSize: 14,
-                                fontWeight: FontWeight.bold,
-                                color: Colors.white,
-                              ),
-                            ),
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: AppColors.primary,
-                              minimumSize: const Size.fromHeight(48),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                              elevation: 0,
-                            ),
-                          ),
-                          const SizedBox(height: 24),
-                        ],
-                      ],
-                    ),
-                  ),
-                );
-              },
+                },
+              ),
             ),
-          ),
-        ],
-      ),
+          ],
+        ),
       ),
     );
   }
@@ -393,7 +394,9 @@ class PemohonMutationDetailScreen extends ConsumerWidget {
                           const SizedBox(width: 4),
                           Expanded(
                             child: Text(
-                              WitaTimeHelper.formatDateTimeWita(mutation.createdAt),
+                              WitaTimeHelper.formatDateTimeWita(
+                                mutation.createdAt,
+                              ),
                               style: const TextStyle(
                                 fontSize: 11,
                                 fontWeight: FontWeight.w500,
@@ -1662,13 +1665,14 @@ class PemohonMutationDetailScreen extends ConsumerWidget {
   }
 
   Widget _buildReturnedAlertBanner(Mutation mutation) {
-    final reasonText = (mutation.returnReason != null &&
+    final reasonText =
+        (mutation.returnReason != null &&
             mutation.returnReason!.trim().isNotEmpty)
         ? mutation.returnReason!.trim()
         : ((mutation.assetReturnReason != null &&
-                mutation.assetReturnReason!.trim().isNotEmpty)
-            ? mutation.assetReturnReason!.trim()
-            : 'Dokumen atau verifikasi fisik aset tidak sesuai.');
+                  mutation.assetReturnReason!.trim().isNotEmpty)
+              ? mutation.assetReturnReason!.trim()
+              : 'Dokumen atau verifikasi fisik aset tidak sesuai.');
 
     return Container(
       padding: const EdgeInsets.all(14),
@@ -1797,24 +1801,33 @@ class PemohonMutationDetailScreen extends ConsumerWidget {
   // ─────────────────────────────────────────────────────────────────────────
   String _getReviewerName(Mutation mutation) {
     String? cleanName(String? name) {
-      if (name == null || name.trim().isEmpty || name.trim() == 'null') return null;
+      if (name == null || name.trim().isEmpty || name.trim() == 'null')
+        return null;
       if (RegExp(r'^\d+$').hasMatch(name.trim())) return null;
       return name.trim();
     }
 
     return switch (mutation.status) {
-      MutationStatus.submitted ||
-      MutationStatus.waitingSync => cleanName(mutation.verifiedBy) ?? 'Operator',
+      MutationStatus.submitted || MutationStatus.waitingSync =>
+        cleanName(mutation.verifiedBy) ?? 'Operator',
       MutationStatus.returned =>
-        cleanName(mutation.assetVerifiedBy) ?? cleanName(mutation.approvedBy) ?? 'Bagian Aset',
-      MutationStatus.waitingAssetVerification ||
-      MutationStatus.verified =>
-        cleanName(mutation.assetVerifiedBy) ?? cleanName(mutation.approvedBy) ?? 'Bagian Aset',
+        cleanName(mutation.assetVerifiedBy) ??
+            cleanName(mutation.approvedBy) ??
+            'Bagian Aset',
+      MutationStatus.waitingAssetVerification || MutationStatus.verified =>
+        cleanName(mutation.assetVerifiedBy) ??
+            cleanName(mutation.approvedBy) ??
+            'Bagian Aset',
       MutationStatus.waitingDivisionHeadApproval ||
       MutationStatus.waitingKadivApproval =>
-        cleanName(mutation.kadivApprovedBy) ?? cleanName(mutation.approvedBy) ?? 'Pemimpin Divisi',
+        cleanName(mutation.kadivApprovedBy) ??
+            cleanName(mutation.approvedBy) ??
+            'Pemimpin Divisi',
       MutationStatus.approved =>
-        cleanName(mutation.staffUpdatedBy) ?? cleanName(mutation.assetVerifiedBy) ?? cleanName(mutation.approvedBy) ?? 'Bagian Aset',
+        cleanName(mutation.staffUpdatedBy) ??
+            cleanName(mutation.assetVerifiedBy) ??
+            cleanName(mutation.approvedBy) ??
+            'Bagian Aset',
       MutationStatus.waitingConfirmation ||
       MutationStatus.pendingConfirmation =>
         mutation.applicantName.isNotEmpty ? mutation.applicantName : 'Pemohon',
@@ -1822,11 +1835,11 @@ class PemohonMutationDetailScreen extends ConsumerWidget {
       MutationStatus.rejected =>
         mutation.isAssetRejected
             ? (cleanName(mutation.assetRejectedBy) ??
-                cleanName(mutation.rejectedBy) ??
-                'Bagian Aset')
+                  cleanName(mutation.rejectedBy) ??
+                  'Bagian Aset')
             : (cleanName(mutation.kadivRejectedBy) ??
-                cleanName(mutation.rejectedBy) ??
-                'Pemimpin Divisi'),
+                  cleanName(mutation.rejectedBy) ??
+                  'Pemimpin Divisi'),
     };
   }
 
@@ -1843,9 +1856,10 @@ class PemohonMutationDetailScreen extends ConsumerWidget {
       MutationStatus.waitingConfirmation ||
       MutationStatus.pendingConfirmation => 'Konfirmasi Pemohon',
       MutationStatus.completed => 'Siklus Mutasi Selesai',
-      MutationStatus.rejected => mutation.isAssetRejected
-          ? 'Penolakan oleh Bagian Aset'
-          : 'Penolakan oleh Pemimpin Divisi',
+      MutationStatus.rejected =>
+        mutation.isAssetRejected
+            ? 'Penolakan oleh Bagian Aset'
+            : 'Penolakan oleh Pemimpin Divisi',
     };
   }
 

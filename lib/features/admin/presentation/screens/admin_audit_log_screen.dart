@@ -82,166 +82,167 @@ class _AdminAuditLogScreenState extends ConsumerState<AdminAuditLogScreen> {
 
     return Scaffold(
       backgroundColor: _AuditColors.canvasBg,
-      body: ResponsiveCenter(maxWidth: ResponsiveBreakpoints.wideMaxWidth,
+      body: ResponsiveCenter(
+        maxWidth: ResponsiveBreakpoints.wideMaxWidth,
         child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          SafeArea(
-            bottom: false,
-            child: MutasiKuPageHeader(
-              title: 'Log Audit Sistem',
-              subtitle:
-                  'Histori pembaruan konfigurasi & rekam jejak tata kelola',
-              onBack: () {
-                if (context.canPop()) {
-                  context.pop();
-                } else {
-                  context.go(RouteNames.adminDashboardPath);
-                }
-              },
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            SafeArea(
+              bottom: false,
+              child: MutasiKuPageHeader(
+                title: 'Log Audit Sistem',
+                subtitle:
+                    'Histori pembaruan konfigurasi & rekam jejak tata kelola',
+                onBack: () {
+                  if (context.canPop()) {
+                    context.pop();
+                  } else {
+                    context.go(RouteNames.adminDashboardPath);
+                  }
+                },
+              ),
             ),
-          ),
 
-          // Search & Filter Category Bar
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-            child: Column(
-              children: [
-                TextField(
-                  controller: _searchController,
-                  style: _t(size: 13, color: _AuditColors.slate800),
-                  decoration: InputDecoration(
-                    hintText: 'Cari log, kode tag, atau aktivitas...',
-                    hintStyle: _t(size: 13, color: _AuditColors.slate400),
-                    prefixIcon: const Icon(
-                      Icons.search,
-                      size: 20,
-                      color: _AuditColors.primaryNavy,
-                    ),
-                    suffixIcon: _searchQuery.isNotEmpty
-                        ? IconButton(
-                            icon: const Icon(Icons.clear, size: 18),
-                            onPressed: () {
-                              _searchController.clear();
-                              setState(() => _searchQuery = '');
-                            },
-                          )
-                        : null,
-                    filled: true,
-                    fillColor: Colors.white,
-                    contentPadding: const EdgeInsets.symmetric(
-                      horizontal: AppSpacing.md,
-                      vertical: AppSpacing.sm,
-                    ),
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(999),
-                      borderSide: const BorderSide(
-                        color: _AuditColors.slate200,
-                        width: 1,
-                      ),
-                    ),
-                    enabledBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(999),
-                      borderSide: const BorderSide(
-                        color: _AuditColors.slate200,
-                        width: 1,
-                      ),
-                    ),
-                    focusedBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(999),
-                      borderSide: const BorderSide(
+            // Search & Filter Category Bar
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              child: Column(
+                children: [
+                  TextField(
+                    controller: _searchController,
+                    style: _t(size: 13, color: _AuditColors.slate800),
+                    decoration: InputDecoration(
+                      hintText: 'Cari log, kode tag, atau aktivitas...',
+                      hintStyle: _t(size: 13, color: _AuditColors.slate400),
+                      prefixIcon: const Icon(
+                        Icons.search,
+                        size: 20,
                         color: _AuditColors.primaryNavy,
-                        width: 1.5,
+                      ),
+                      suffixIcon: _searchQuery.isNotEmpty
+                          ? IconButton(
+                              icon: const Icon(Icons.clear, size: 18),
+                              onPressed: () {
+                                _searchController.clear();
+                                setState(() => _searchQuery = '');
+                              },
+                            )
+                          : null,
+                      filled: true,
+                      fillColor: Colors.white,
+                      contentPadding: const EdgeInsets.symmetric(
+                        horizontal: AppSpacing.md,
+                        vertical: AppSpacing.sm,
+                      ),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(999),
+                        borderSide: const BorderSide(
+                          color: _AuditColors.slate200,
+                          width: 1,
+                        ),
+                      ),
+                      enabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(999),
+                        borderSide: const BorderSide(
+                          color: _AuditColors.slate200,
+                          width: 1,
+                        ),
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(999),
+                        borderSide: const BorderSide(
+                          color: _AuditColors.primaryNavy,
+                          width: 1.5,
+                        ),
                       ),
                     ),
+                    onChanged: (val) {
+                      setState(() => _searchQuery = val.trim());
+                    },
                   ),
-                  onChanged: (val) {
-                    setState(() => _searchQuery = val.trim());
-                  },
-                ),
-                const SizedBox(height: 10),
+                  const SizedBox(height: 10),
 
-                // Category Chips
-                SizedBox(
-                  height: 34,
-                  child: ListView.separated(
-                    scrollDirection: Axis.horizontal,
-                    itemCount: _categories.length,
-                    separatorBuilder: (_, _) => const SizedBox(width: 8),
-                    itemBuilder: (ctx, idx) {
-                      final cat = _categories[idx];
-                      final isSelected = _selectedCategory == cat;
-                      return ChoiceChip(
-                        label: Text(
-                          cat,
-                          style: _t(
-                            size: 12,
-                            w: isSelected ? FontWeight.w600 : FontWeight.w500,
+                  // Category Chips
+                  SizedBox(
+                    height: 34,
+                    child: ListView.separated(
+                      scrollDirection: Axis.horizontal,
+                      itemCount: _categories.length,
+                      separatorBuilder: (_, _) => const SizedBox(width: 8),
+                      itemBuilder: (ctx, idx) {
+                        final cat = _categories[idx];
+                        final isSelected = _selectedCategory == cat;
+                        return ChoiceChip(
+                          label: Text(
+                            cat,
+                            style: _t(
+                              size: 12,
+                              w: isSelected ? FontWeight.w600 : FontWeight.w500,
+                              color: isSelected
+                                  ? Colors.white
+                                  : _AuditColors.slate600,
+                            ),
+                          ),
+                          selected: isSelected,
+                          selectedColor: _AuditColors.primaryNavy,
+                          backgroundColor: Colors.white,
+                          side: BorderSide(
                             color: isSelected
-                                ? Colors.white
-                                : _AuditColors.slate600,
+                                ? _AuditColors.primaryNavy
+                                : _AuditColors.slate200,
                           ),
-                        ),
-                        selected: isSelected,
-                        selectedColor: _AuditColors.primaryNavy,
-                        backgroundColor: Colors.white,
-                        side: BorderSide(
-                          color: isSelected
-                              ? _AuditColors.primaryNavy
-                              : _AuditColors.slate200,
-                        ),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(999),
-                        ),
-                        onSelected: (val) {
-                          if (val) {
-                            setState(() => _selectedCategory = cat);
-                          }
-                        },
-                      );
-                    },
-                  ),
-                ),
-              ],
-            ),
-          ),
-
-          // List of Audit Logs
-          Expanded(
-            child: logs.isEmpty
-                ? Center(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        const Icon(
-                          Icons.search_off,
-                          size: 48,
-                          color: _AuditColors.slate400,
-                        ),
-                        const SizedBox(height: 12),
-                        Text(
-                          'Tidak ada log audit yang cocok.',
-                          style: _t(
-                            size: 14,
-                            w: FontWeight.w600,
-                            color: _AuditColors.slate600,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(999),
                           ),
-                        ),
-                      ],
+                          onSelected: (val) {
+                            if (val) {
+                              setState(() => _selectedCategory = cat);
+                            }
+                          },
+                        );
+                      },
                     ),
-                  )
-                : ListView.separated(
-                    padding: const EdgeInsets.fromLTRB(16, 8, 16, 120),
-                    itemCount: logs.length,
-                    separatorBuilder: (_, _) => const SizedBox(height: 10),
-                    itemBuilder: (ctx, idx) {
-                      final item = logs[idx];
-                      return _buildLogCard(item);
-                    },
                   ),
-          ),
-        ],
-      ),
+                ],
+              ),
+            ),
+
+            // List of Audit Logs
+            Expanded(
+              child: logs.isEmpty
+                  ? Center(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          const Icon(
+                            Icons.search_off,
+                            size: 48,
+                            color: _AuditColors.slate400,
+                          ),
+                          const SizedBox(height: 12),
+                          Text(
+                            'Tidak ada log audit yang cocok.',
+                            style: _t(
+                              size: 14,
+                              w: FontWeight.w600,
+                              color: _AuditColors.slate600,
+                            ),
+                          ),
+                        ],
+                      ),
+                    )
+                  : ListView.separated(
+                      padding: const EdgeInsets.fromLTRB(16, 8, 16, 120),
+                      itemCount: logs.length,
+                      separatorBuilder: (_, _) => const SizedBox(height: 10),
+                      itemBuilder: (ctx, idx) {
+                        final item = logs[idx];
+                        return _buildLogCard(item);
+                      },
+                    ),
+            ),
+          ],
+        ),
       ),
       bottomNavigationBar: CustomFloatingNavBar.scaffoldBottomBar(
         items: RoleNavConfig.getNavItemsForRole(UserRole.admin),
@@ -252,8 +253,7 @@ class _AdminAuditLogScreenState extends ConsumerState<AdminAuditLogScreen> {
   List<_AuditLogItem> _getFilteredLogs() {
     final mutationsList =
         ref.watch(adminMutationsProvider).valueOrNull ?? const <Mutation>[];
-    final usersList =
-        ref.watch(masterUsersProvider).valueOrNull ?? const [];
+    final usersList = ref.watch(masterUsersProvider).valueOrNull ?? const [];
     final locationsList =
         ref.watch(masterLocationsProvider).valueOrNull ?? const [];
 

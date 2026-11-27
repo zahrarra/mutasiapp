@@ -74,99 +74,99 @@ class BagianAsetVerificationDetailScreen extends ConsumerWidget {
       backgroundColor: _C.background,
       body: ResponsiveCenter(
         child: Column(
-        children: [
-          SafeArea(
-            bottom: false,
-            child: Stack(
-              children: [
-                const SizedBox(
-                  width: 0,
-                  height: 0,
-                  child: Text(
-                    'Verifikasi Mutasi Aset',
-                    style: TextStyle(fontSize: 0, color: Colors.transparent),
+          children: [
+            SafeArea(
+              bottom: false,
+              child: Stack(
+                children: [
+                  const SizedBox(
+                    width: 0,
+                    height: 0,
+                    child: Text(
+                      'Verifikasi Mutasi Aset',
+                      style: TextStyle(fontSize: 0, color: Colors.transparent),
+                    ),
+                  ),
+                  MutasiKuPageHeader(
+                    title: 'Detail Pengajuan',
+                    subtitle:
+                        'Pemeriksaan kelengkapan berkas & validasi mutasi aset',
+                    onBack: () => _safePop(context, ref),
+                  ),
+                ],
+              ),
+            ),
+            Expanded(
+              child: asyncMutation.when(
+                data: (mutation) =>
+                    _buildBody(context, ref, mutation, actionState),
+                loading: () => const Center(
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
+                    color: _C.secondary,
                   ),
                 ),
-                MutasiKuPageHeader(
-                  title: 'Detail Pengajuan',
-                  subtitle:
-                      'Pemeriksaan kelengkapan berkas & validasi mutasi aset',
-                  onBack: () => _safePop(context, ref),
-                ),
-              ],
-            ),
-          ),
-          Expanded(
-            child: asyncMutation.when(
-              data: (mutation) =>
-                  _buildBody(context, ref, mutation, actionState),
-              loading: () => const Center(
-                child: CircularProgressIndicator(
-                  strokeWidth: 2,
-                  color: _C.secondary,
-                ),
-              ),
-              error: (err, _) => Center(
-                child: Padding(
-                  padding: const EdgeInsets.all(32),
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Container(
-                        width: 64,
-                        height: 64,
-                        decoration: BoxDecoration(
-                          color: _C.errorLight,
-                          borderRadius: BorderRadius.circular(18),
-                        ),
-                        child: const Icon(
-                          Icons.error_outline_rounded,
-                          size: 32,
-                          color: _C.error,
-                        ),
-                      ),
-                      const SizedBox(height: 16),
-                      const Text(
-                        'Gagal Memuat Data',
-                        style: TextStyle(
-                          fontSize: 15,
-                          fontWeight: FontWeight.w700,
-                          color: _C.textPrimary,
-                        ),
-                      ),
-                      const SizedBox(height: 6),
-                      Text(
-                        '$err',
-                        textAlign: TextAlign.center,
-                        style: const TextStyle(
-                          fontSize: 12,
-                          color: _C.textSecondary,
-                        ),
-                      ),
-                      const SizedBox(height: 20),
-                      ElevatedButton.icon(
-                        onPressed: () => ref.invalidate(
-                          bagianAsetMutationDetailProvider(mutationId),
-                        ),
-                        icon: const Icon(Icons.refresh_rounded, size: 16),
-                        label: const Text('Coba Lagi'),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: _C.secondary,
-                          foregroundColor: Colors.white,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(10),
+                error: (err, _) => Center(
+                  child: Padding(
+                    padding: const EdgeInsets.all(32),
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Container(
+                          width: 64,
+                          height: 64,
+                          decoration: BoxDecoration(
+                            color: _C.errorLight,
+                            borderRadius: BorderRadius.circular(18),
                           ),
-                          elevation: 0,
+                          child: const Icon(
+                            Icons.error_outline_rounded,
+                            size: 32,
+                            color: _C.error,
+                          ),
                         ),
-                      ),
-                    ],
+                        const SizedBox(height: 16),
+                        const Text(
+                          'Gagal Memuat Data',
+                          style: TextStyle(
+                            fontSize: 15,
+                            fontWeight: FontWeight.w700,
+                            color: _C.textPrimary,
+                          ),
+                        ),
+                        const SizedBox(height: 6),
+                        Text(
+                          '$err',
+                          textAlign: TextAlign.center,
+                          style: const TextStyle(
+                            fontSize: 12,
+                            color: _C.textSecondary,
+                          ),
+                        ),
+                        const SizedBox(height: 20),
+                        ElevatedButton.icon(
+                          onPressed: () => ref.invalidate(
+                            bagianAsetMutationDetailProvider(mutationId),
+                          ),
+                          icon: const Icon(Icons.refresh_rounded, size: 16),
+                          label: const Text('Coba Lagi'),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: _C.secondary,
+                            foregroundColor: Colors.white,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                            elevation: 0,
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
               ),
             ),
-          ),
-        ],
-      ),
+          ],
+        ),
       ),
     );
   }
@@ -426,9 +426,11 @@ class BagianAsetVerificationDetailScreen extends ConsumerWidget {
                 if (!mutation.isUnregisteredAsset && masterAssetAsync != null)
                   masterAssetAsync.when(
                     data: (master) {
-                      final validMaster = master ??
+                      final validMaster =
+                          master ??
                           (!mutation.isUnregisteredAsset &&
-                                  mutation.asset.name != 'Aset Tidak Terdaftar' &&
+                                  mutation.asset.name !=
+                                      'Aset Tidak Terdaftar' &&
                                   mutation.asset.assetCode != '-'
                               ? mutation.asset
                               : null);
@@ -544,8 +546,7 @@ class BagianAsetVerificationDetailScreen extends ConsumerWidget {
                             color: AppColors.primaryContainer.withValues(
                               alpha: 0.5,
                             ),
-                            borderRadius:
-                                BorderRadius.circular(AppRadius.pill),
+                            borderRadius: BorderRadius.circular(AppRadius.pill),
                           ),
                           child: Text(
                             mutation.asset.category.name,
@@ -600,10 +601,7 @@ class BagianAsetVerificationDetailScreen extends ConsumerWidget {
                     const SizedBox(height: AppSpacing.sm),
                     _buildDetailRow('Kode Aset', mutation.asset.assetCode),
                     const SizedBox(height: AppSpacing.sm),
-                    _buildDetailRow(
-                      'Nomor Seri',
-                      mutation.displaySerialNumber,
-                    ),
+                    _buildDetailRow('Nomor Seri', mutation.displaySerialNumber),
                     const SizedBox(height: AppSpacing.sm),
                     _buildDetailRow(
                       'Kondisi Aset',
@@ -626,16 +624,16 @@ class BagianAsetVerificationDetailScreen extends ConsumerWidget {
                     to: mutation.targetLocation,
                     extraBottom: masterAsset != null
                         ? (masterAsset.location.trim().toLowerCase() !=
-                                mutation.currentLocation.trim().toLowerCase()
-                            ? _buildDiffIndicator(
-                                label: 'Lokasi',
-                                masterValue: masterAsset.location,
-                                key: const Key('indicator_diff_location'),
-                              )
-                            : _buildMatchIndicator(
-                                'Sesuai dengan Lokasi Master',
-                                key: const Key('indicator_match_location'),
-                              ))
+                                  mutation.currentLocation.trim().toLowerCase()
+                              ? _buildDiffIndicator(
+                                  label: 'Lokasi',
+                                  masterValue: masterAsset.location,
+                                  key: const Key('indicator_diff_location'),
+                                )
+                              : _buildMatchIndicator(
+                                  'Sesuai dengan Lokasi Master',
+                                  key: const Key('indicator_match_location'),
+                                ))
                         : null,
                   ),
                   const SizedBox(height: AppSpacing.md),
@@ -645,20 +643,20 @@ class BagianAsetVerificationDetailScreen extends ConsumerWidget {
                     to: mutation.targetPic.isNotEmpty
                         ? mutation.targetPic
                         : (mutation.isAssetMovingWithApplicant
-                            ? mutation.applicantName
-                            : 'Belum Ditentukan (Wajib Ditentukan Bagian Aset)'),
+                              ? mutation.applicantName
+                              : 'Belum Ditentukan (Wajib Ditentukan Bagian Aset)'),
                     extraBottom: masterAsset != null
                         ? (masterAsset.pic.trim().toLowerCase() !=
-                                mutation.currentPic.trim().toLowerCase()
-                            ? _buildDiffIndicator(
-                                label: 'PIC',
-                                masterValue: masterAsset.pic,
-                                key: const Key('indicator_diff_pic'),
-                              )
-                            : _buildMatchIndicator(
-                                'Sesuai dengan PIC Master',
-                                key: const Key('indicator_match_pic'),
-                              ))
+                                  mutation.currentPic.trim().toLowerCase()
+                              ? _buildDiffIndicator(
+                                  label: 'PIC',
+                                  masterValue: masterAsset.pic,
+                                  key: const Key('indicator_diff_pic'),
+                                )
+                              : _buildMatchIndicator(
+                                  'Sesuai dengan PIC Master',
+                                  key: const Key('indicator_match_pic'),
+                                ))
                         : null,
                   ),
                   const SizedBox(height: AppSpacing.sm),
@@ -704,11 +702,7 @@ class BagianAsetVerificationDetailScreen extends ConsumerWidget {
                   key: const Key('btn_setujui_approval'),
                   onPressed: actionState.isLoading
                       ? null
-                      : () => _showVerifyConfirmDialog(
-                          context,
-                          ref,
-                          mutation,
-                        ),
+                      : () => _showVerifyConfirmDialog(context, ref, mutation),
                   icon: actionState.isLoading
                       ? const SizedBox(
                           height: 18,
@@ -733,11 +727,13 @@ class BagianAsetVerificationDetailScreen extends ConsumerWidget {
                   ),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: _C.primaryContainer,
-                    disabledBackgroundColor:
-                        _C.primaryContainer.withValues(alpha: 0.35),
+                    disabledBackgroundColor: _C.primaryContainer.withValues(
+                      alpha: 0.35,
+                    ),
                     foregroundColor: Colors.white,
-                    disabledForegroundColor:
-                        Colors.white.withValues(alpha: 0.6),
+                    disabledForegroundColor: Colors.white.withValues(
+                      alpha: 0.6,
+                    ),
                     padding: const EdgeInsets.symmetric(vertical: 14),
                     elevation: 0,
                     shape: RoundedRectangleBorder(
@@ -2218,7 +2214,6 @@ class BagianAsetVerificationDetailScreen extends ConsumerWidget {
     );
   }
 
-
   String _formatDateTime(DateTime dt) {
     return WitaTimeHelper.formatDateTimeWita(dt);
   }
@@ -2238,10 +2233,9 @@ class BagianAsetVerificationDetailScreen extends ConsumerWidget {
     WidgetRef ref,
     Mutation mutation,
   ) {
-    startBagianAsetVerificationFlow(
-      context,
-      mutation: mutation,
-    ).then((verified) {
+    startBagianAsetVerificationFlow(context, mutation: mutation).then((
+      verified,
+    ) {
       if (verified == true && context.mounted) {
         _safePop(context, ref);
       }

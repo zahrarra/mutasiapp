@@ -150,16 +150,21 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
       } else {
         final activeCount = usersList.where((u) => u.isActive).length;
         final inactiveCount = totalUsers - activeCount;
-        final pemohonCount =
-            usersList.where((u) => u.role == UserRole.pemohon).length;
-        final oprCount =
-            usersList.where((u) => u.role == UserRole.operator).length;
-        final asetCount =
-            usersList.where((u) => u.role == UserRole.bagianAset).length;
-        final kadivCount =
-            usersList.where((u) => u.role == UserRole.kadiv).length;
-        final adminCount =
-            usersList.where((u) => u.role == UserRole.admin).length;
+        final pemohonCount = usersList
+            .where((u) => u.role == UserRole.pemohon)
+            .length;
+        final oprCount = usersList
+            .where((u) => u.role == UserRole.operator)
+            .length;
+        final asetCount = usersList
+            .where((u) => u.role == UserRole.bagianAset)
+            .length;
+        final kadivCount = usersList
+            .where((u) => u.role == UserRole.kadiv)
+            .length;
+        final adminCount = usersList
+            .where((u) => u.role == UserRole.admin)
+            .length;
 
         final roleParts = <String>[];
         if (pemohonCount > 0) roleParts.add('$pemohonCount Pemohon');
@@ -172,8 +177,8 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
         usersSubtitle = roleParts.isNotEmpty
             ? roleParts.join(' • ')
             : (inactiveCount > 0
-                ? '$activeCount Aktif • $inactiveCount Nonaktif'
-                : '$activeCount Aktif');
+                  ? '$activeCount Aktif • $inactiveCount Nonaktif'
+                  : '$activeCount Aktif');
       }
     }
 
@@ -253,15 +258,16 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
             .map((c) => c.code.isNotEmpty ? c.code : c.name)
             .take(4)
             .join(' • ');
-        final overflowText =
-            categoriesList.length > 4 ? ' • +${categoriesList.length - 4}' : '';
+        final overflowText = categoriesList.length > 4
+            ? ' • +${categoriesList.length - 4}'
+            : '';
 
         categoriesTag = '$activeCount Aktif';
         categoriesSubtitle = '$catLabels$overflowText';
         configCategoriesTag = categoriesList.length <= 2
             ? categoriesList
-                .map((c) => c.code.isNotEmpty ? c.code : c.name)
-                .join(' & ')
+                  .map((c) => c.code.isNotEmpty ? c.code : c.name)
+                  .join(' & ')
             : '$totalCategories Kategori';
       }
     }
@@ -280,7 +286,8 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
       mutationsTag = 'Backend';
       mutationsSubtitle = 'Gagal memuat mutasi';
     } else {
-      final mutationsList = mutationsAsync.asData?.value ??
+      final mutationsList =
+          mutationsAsync.asData?.value ??
           mutationsAsync.valueOrNull ??
           const <Mutation>[];
       final totalMutations = mutationsList.length;
@@ -290,15 +297,18 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
         mutationsSubtitle = 'Belum ada transaksi mutasi';
       } else {
         final activeCount = mutationsList
-            .where((m) =>
-                m.status != MutationStatus.completed &&
-                m.status != MutationStatus.rejected)
+            .where(
+              (m) =>
+                  m.status != MutationStatus.completed &&
+                  m.status != MutationStatus.rejected,
+            )
             .length;
         final completedCount = mutationsList
             .where((m) => m.status == MutationStatus.completed)
             .length;
         mutationsTag = '$activeCount Proses';
-        mutationsSubtitle = '$completedCount Selesai • $activeCount Dalam Proses';
+        mutationsSubtitle =
+            '$completedCount Selesai • $activeCount Dalam Proses';
       }
     }
 
@@ -332,98 +342,98 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
           backgroundColor: _StitchColors.canvasBg,
           body: ResponsiveCenter(
             child: RefreshIndicator(
-            color: _StitchColors.primaryNavy,
-            onRefresh: () async {
-              ref.invalidate(masterUsersProvider);
-              ref.invalidate(masterLocationsProvider);
-              ref.invalidate(assetCategoriesProvider);
-              ref.invalidate(adminMutationsProvider);
-            },
-            child: SingleChildScrollView(
-              controller: _scrollController,
-              physics: const AlwaysScrollableScrollPhysics(
-                parent: BouncingScrollPhysics(),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // 1. TOP HERO CONTAINER (Stretches fluidly with responsive gutters)
-                  _buildTopHero(
-                    context,
-                    userName: userName,
-                    userInitials: userInitials,
-                    horizontalPad: horizontalPad,
-                    availableWidth: availableWidth,
-                  ),
-
-                  // 2. MAIN SCROLL CONTENT (No 1040 clamp; full multiplatform fluid layout)
-                  Padding(
-                    padding: EdgeInsets.fromLTRB(
-                      horizontalPad,
-                      availableWidth >= 1024 ? 28 : 20,
-                      horizontalPad,
-                      120, // Extra bottom padding for floating navigation bar
+              color: _StitchColors.primaryNavy,
+              onRefresh: () async {
+                ref.invalidate(masterUsersProvider);
+                ref.invalidate(masterLocationsProvider);
+                ref.invalidate(assetCategoriesProvider);
+                ref.invalidate(adminMutationsProvider);
+              },
+              child: SingleChildScrollView(
+                controller: _scrollController,
+                physics: const AlwaysScrollableScrollPhysics(
+                  parent: BouncingScrollPhysics(),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // 1. TOP HERO CONTAINER (Stretches fluidly with responsive gutters)
+                    _buildTopHero(
+                      context,
+                      userName: userName,
+                      userInitials: userInitials,
+                      horizontalPad: horizontalPad,
+                      availableWidth: availableWidth,
                     ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        // A. RINGKASAN MASTER DATA SISTEM (Adaptive 4-col or 2x2 Bento Metric Grid)
-                        _buildMasterDataSummarySection(
-                          availableWidth: availableWidth,
-                          usersValue: usersValue,
-                          usersTag: usersTag,
-                          usersSubtitle: usersSubtitle,
-                          locationsValue: locationsValue,
-                          locationsTag: locationsTag,
-                          locationsSubtitle: locationsSubtitle,
-                          categoriesValue: categoriesValue,
-                          categoriesTag: categoriesTag,
-                          categoriesSubtitle: categoriesSubtitle,
-                          mutationsValue: mutationsValue,
-                          mutationsTag: mutationsTag,
-                          mutationsSubtitle: mutationsSubtitle,
-                        ),
-                        const SizedBox(height: 24),
 
-                        // B. SECTION UTAMA: KELOLA MASTER DATA & KONFIGURASI (Responsive Grid)
-                        _buildMasterDataConfigSection(
-                          context: context,
-                          usersTag: configUsersTag,
-                          locationsTag: configLocationsTag,
-                          categoriesTag: configCategoriesTag,
-                          columns: actionGridColumns,
-                        ),
-                        const SizedBox(height: 24),
+                    // 2. MAIN SCROLL CONTENT (No 1040 clamp; full multiplatform fluid layout)
+                    Padding(
+                      padding: EdgeInsets.fromLTRB(
+                        horizontalPad,
+                        availableWidth >= 1024 ? 28 : 20,
+                        horizontalPad,
+                        120, // Extra bottom padding for floating navigation bar
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          // A. RINGKASAN MASTER DATA SISTEM (Adaptive 4-col or 2x2 Bento Metric Grid)
+                          _buildMasterDataSummarySection(
+                            availableWidth: availableWidth,
+                            usersValue: usersValue,
+                            usersTag: usersTag,
+                            usersSubtitle: usersSubtitle,
+                            locationsValue: locationsValue,
+                            locationsTag: locationsTag,
+                            locationsSubtitle: locationsSubtitle,
+                            categoriesValue: categoriesValue,
+                            categoriesTag: categoriesTag,
+                            categoriesSubtitle: categoriesSubtitle,
+                            mutationsValue: mutationsValue,
+                            mutationsTag: mutationsTag,
+                            mutationsSubtitle: mutationsSubtitle,
+                          ),
+                          const SizedBox(height: 24),
 
-                        // C. SECTION SEKUNDER: LOG AUDIT & AKTIVITAS MASTER DATA TERKINI
-                        _buildAuditLogSection(context),
-                        const SizedBox(height: 20),
+                          // B. SECTION UTAMA: KELOLA MASTER DATA & KONFIGURASI (Responsive Grid)
+                          _buildMasterDataConfigSection(
+                            context: context,
+                            usersTag: configUsersTag,
+                            locationsTag: configLocationsTag,
+                            categoriesTag: configCategoriesTag,
+                            columns: actionGridColumns,
+                          ),
+                          const SizedBox(height: 24),
 
-                        // D. QUICK MASTER DATA ACTION BUTTON
-                        _buildCreateMasterDataButton(context),
+                          // C. SECTION SEKUNDER: LOG AUDIT & AKTIVITAS MASTER DATA TERKINI
+                          _buildAuditLogSection(context),
+                          const SizedBox(height: 20),
 
-                        // Semantic compatibility for legacy smoke tests
-                        const SizedBox(
-                          width: 0,
-                          height: 0,
-                          child: OverflowBox(
-                            maxWidth: 0,
-                            maxHeight: 0,
-                            child: Column(
-                              children: [
-                                Text('User & Permission'),
-                                Text('Lokasi & Unit'),
-                              ],
+                          // D. QUICK MASTER DATA ACTION BUTTON
+                          _buildCreateMasterDataButton(context),
+
+                          // Semantic compatibility for legacy smoke tests
+                          const SizedBox(
+                            width: 0,
+                            height: 0,
+                            child: OverflowBox(
+                              maxWidth: 0,
+                              maxHeight: 0,
+                              child: Column(
+                                children: [
+                                  Text('User & Permission'),
+                                  Text('Lokasi & Unit'),
+                                ],
+                              ),
                             ),
                           ),
-                        ),
-                      ],
+                        ],
+                      ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
             ),
-          ),
           ),
 
           // 3. FLOATING BOTTOM NAVIGATION BAR (Standardized across all Admin screens)
@@ -1466,19 +1476,34 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
 
   // ── 4. SECTION SEKUNDER: LOG AUDIT & AKTIVITAS TERKINI (Data Nyata Sistem) ───
   Widget _buildAuditLogSection(BuildContext context) {
-    final usersList = ref.watch(masterUsersProvider).valueOrNull ?? const <User>[];
-    final locationsList = ref.watch(masterLocationsProvider).valueOrNull ?? const <LocationItem>[];
-    final categoriesList = ref.watch(assetCategoriesProvider).valueOrNull ?? const <AssetCategory>[];
-    final mutationsList = ref.watch(adminMutationsProvider).valueOrNull ?? const <Mutation>[];
+    final usersList =
+        ref.watch(masterUsersProvider).valueOrNull ?? const <User>[];
+    final locationsList =
+        ref.watch(masterLocationsProvider).valueOrNull ??
+        const <LocationItem>[];
+    final categoriesList =
+        ref.watch(assetCategoriesProvider).valueOrNull ??
+        const <AssetCategory>[];
+    final mutationsList =
+        ref.watch(adminMutationsProvider).valueOrNull ?? const <Mutation>[];
 
-    final latestMutation = mutationsList.isNotEmpty ? mutationsList.first : null;
+    final latestMutation = mutationsList.isNotEmpty
+        ? mutationsList.first
+        : null;
     final latestUser = usersList.isNotEmpty ? usersList.first : null;
     final latestLoc = locationsList.isNotEmpty
-        ? locationsList.firstWhere((l) => l.isBranch, orElse: () => locationsList.first)
+        ? locationsList.firstWhere(
+            (l) => l.isBranch,
+            orElse: () => locationsList.first,
+          )
         : null;
 
-    final userInitials = latestUser != null ? _formatInitials(latestUser.name) : 'AP';
-    final locInitials = latestLoc != null ? _formatInitials(latestLoc.name) : 'LK';
+    final userInitials = latestUser != null
+        ? _formatInitials(latestUser.name)
+        : 'AP';
+    final locInitials = latestLoc != null
+        ? _formatInitials(latestLoc.name)
+        : 'LK';
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -1568,7 +1593,8 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
                     ),
                   ),
                   TextSpan(
-                    text: ' diajukan oleh ${latestMutation.applicantName} menuju ${latestMutation.targetLocation}.',
+                    text:
+                        ' diajukan oleh ${latestMutation.applicantName} menuju ${latestMutation.targetLocation}.',
                   ),
                 ],
               ),
@@ -1594,9 +1620,7 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
             text: TextSpan(
               style: _t(size: 12, color: _StitchColors.slate600, h: 1.3),
               children: [
-                const TextSpan(
-                  text: 'Lokasi resmi terverifikasi: ',
-                ),
+                const TextSpan(text: 'Lokasi resmi terverifikasi: '),
                 TextSpan(
                   text: latestLoc?.name ?? 'Kantor Pusat',
                   style: _t(
@@ -1606,7 +1630,10 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
                   ),
                 ),
                 TextSpan(
-                  text: latestLoc != null && latestLoc.description != null && latestLoc.description!.isNotEmpty
+                  text:
+                      latestLoc != null &&
+                          latestLoc.description != null &&
+                          latestLoc.description!.isNotEmpty
                       ? ' (${latestLoc.description}).'
                       : '.',
                 ),
@@ -1627,7 +1654,9 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
               ),
               const SizedBox(width: 4),
               Text(
-                latestLoc?.isActive == true ? 'Aktif Resmi' : 'Menunggu Konfirmasi',
+                latestLoc?.isActive == true
+                    ? 'Aktif Resmi'
+                    : 'Menunggu Konfirmasi',
                 style: _t(
                   size: 10,
                   w: FontWeight.w600,
@@ -1657,7 +1686,8 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
                   ),
                 ),
                 TextSpan(
-                  text: ' dengan role ${latestUser?.role.displayName ?? "Administrator"} (${latestUser?.department ?? "Divisi TI"}).',
+                  text:
+                      ' dengan role ${latestUser?.role.displayName ?? "Administrator"} (${latestUser?.department ?? "Divisi TI"}).',
                 ),
               ],
             ),
