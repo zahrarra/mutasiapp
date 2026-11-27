@@ -7,6 +7,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:mutasiku/core/widgets/responsive_scaffold.dart';
 
 import '../../../../app/router/route_names.dart';
 import '../../../auth/domain/entities/user_role.dart';
@@ -209,7 +210,8 @@ class _OperatorMutationsScreenState
     return Scaffold(
       backgroundColor: _C.bg,
       extendBody: true,
-      body: Column(
+      body: ResponsiveCenter(
+        child: Column(
         children: [
           // ── App bar ───────────────────────────────────────────────────
           _buildTopBar(context, totalCount),
@@ -236,6 +238,7 @@ class _OperatorMutationsScreenState
             ),
           ),
         ],
+      ),
       ),
       bottomNavigationBar: CustomFloatingNavBar.scaffoldBottomBar(
         items: RoleNavConfig.getNavItemsForRole(UserRole.operator),

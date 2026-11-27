@@ -5,6 +5,7 @@
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:mutasiku/core/widgets/responsive_scaffold.dart';
 
 import '../../../../app/theme/app_colors.dart';
 import '../../../../app/theme/app_spacing.dart';
@@ -305,7 +306,8 @@ class _AdminLocationsScreenState extends ConsumerState<AdminLocationsScreen> {
 
     return Scaffold(
       backgroundColor: const Color(0xFFF6F8FA),
-      body: Column(
+      body: ResponsiveCenter(
+        child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           SafeArea(
@@ -635,6 +637,7 @@ class _AdminLocationsScreenState extends ConsumerState<AdminLocationsScreen> {
             ),
           ),
         ],
+      ),
       ),
       floatingActionButton: FloatingActionButton.extended(
         backgroundColor: AppColors.primary,

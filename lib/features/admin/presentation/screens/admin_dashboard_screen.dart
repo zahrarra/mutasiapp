@@ -11,6 +11,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:mutasiku/core/widgets/responsive_scaffold.dart';
 
 import '../../../../app/router/route_names.dart';
 import '../../../../core/widgets/app_feedback.dart';
@@ -329,7 +330,8 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
 
         return Scaffold(
           backgroundColor: _StitchColors.canvasBg,
-          body: RefreshIndicator(
+          body: ResponsiveCenter(
+            child: RefreshIndicator(
             color: _StitchColors.primaryNavy,
             onRefresh: () async {
               ref.invalidate(masterUsersProvider);
@@ -421,6 +423,7 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
                 ],
               ),
             ),
+          ),
           ),
 
           // 3. FLOATING BOTTOM NAVIGATION BAR (Standardized across all Admin screens)

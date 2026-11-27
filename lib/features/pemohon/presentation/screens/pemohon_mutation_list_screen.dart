@@ -10,6 +10,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:mutasiku/core/widgets/custom_floating_nav_bar.dart';
 import 'package:mutasiku/core/widgets/error_view.dart';
 import 'package:mutasiku/core/widgets/mutasiku_page_header.dart';
+import 'package:mutasiku/core/widgets/responsive_scaffold.dart';
 import 'package:mutasiku/features/auth/domain/entities/user_role.dart';
 
 import '../../../../app/router/route_names.dart';
@@ -282,7 +283,8 @@ class _PemohonMutationListScreenState
 
     return Scaffold(
       backgroundColor: _C.background,
-      body: Column(
+      body: ResponsiveCenter(
+        child: Column(
         children: [
           _buildHeader(),
           Expanded(
@@ -348,6 +350,7 @@ class _PemohonMutationListScreenState
             ),
           ),
         ],
+      ),
       ),
       floatingActionButtonLocation: const _SnugEndFloatFabLocation(gap: 10.0),
       floatingActionButton: FloatingActionButton.extended(

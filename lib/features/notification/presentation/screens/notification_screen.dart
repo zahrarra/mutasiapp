@@ -9,6 +9,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:mutasiku/core/widgets/custom_floating_nav_bar.dart';
+import 'package:mutasiku/core/widgets/responsive_scaffold.dart';
 
 import '../../../../core/utils/wita_time_helper.dart';
 import '../../../../core/widgets/mutasiku_page_header.dart';
@@ -207,7 +208,8 @@ class _NotificationScreenState extends ConsumerState<NotificationScreen> {
     return Scaffold(
       backgroundColor: _S.bg,
       extendBody: true,
-      body: Column(
+      body: ResponsiveCenter(
+        child: Column(
         children: [
           _buildHeader(),
           Expanded(
@@ -339,6 +341,7 @@ class _NotificationScreenState extends ConsumerState<NotificationScreen> {
                   ),
           ),
         ],
+      ),
       ),
       bottomNavigationBar: role != null
           ? CustomFloatingNavBar.scaffoldBottomBar(

@@ -10,6 +10,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:mutasiku/core/widgets/responsive_scaffold.dart';
 
 import '../../../../app/router/route_names.dart';
 import '../../../../core/widgets/custom_floating_nav_bar.dart';
@@ -251,7 +252,8 @@ class _OperatorDashboardScreenState
 
     return Scaffold(
       backgroundColor: _C.bg,
-      body: RefreshIndicator(
+      body: ResponsiveCenter(
+        child: RefreshIndicator(
         color: _C.teal,
         onRefresh: () async {
           ref.invalidate(operatorAllMutationsProvider);
@@ -291,6 +293,7 @@ class _OperatorDashboardScreenState
             ),
           ],
         ),
+      ),
       ),
       bottomNavigationBar: CustomFloatingNavBar.scaffoldBottomBar(
         items: RoleNavConfig.getNavItemsForRole(UserRole.operator),

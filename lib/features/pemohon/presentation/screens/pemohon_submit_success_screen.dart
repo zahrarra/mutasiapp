@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:mutasiku/core/widgets/responsive_scaffold.dart';
 
 import '../../../../app/router/route_names.dart';
 import '../../../../app/theme/app_colors.dart';
@@ -20,7 +21,8 @@ class PemohonSubmitSuccessScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color(0xFFF6F8FA),
-      body: Column(
+      body: ResponsiveCenter(
+        child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           SafeArea(
@@ -119,6 +121,7 @@ class PemohonSubmitSuccessScreen extends StatelessWidget {
             ),
           ),
         ],
+      ),
       ),
     );
   }

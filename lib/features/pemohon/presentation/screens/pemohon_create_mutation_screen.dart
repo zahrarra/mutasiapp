@@ -11,6 +11,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:mutasiku/core/widgets/responsive_scaffold.dart';
 
 import '../../../../app/router/route_names.dart';
 import '../../../../core/services/document_picker_service.dart';
@@ -707,7 +708,8 @@ class _PemohonCreateMutationScreenState
 
     return Scaffold(
       backgroundColor: _C.bg,
-      body: Column(
+      body: ResponsiveCenter(
+        child: Column(
         children: [
           _buildHeader(),
 
@@ -734,6 +736,7 @@ class _PemohonCreateMutationScreenState
             ),
           ),
         ],
+      ),
       ),
       bottomNavigationBar: _bottomBar(submitState.isLoading),
     );

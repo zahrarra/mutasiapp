@@ -6,6 +6,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:mutasiku/core/widgets/responsive_scaffold.dart';
 
 import '../../../../app/theme/app_colors.dart';
 import '../../../../app/theme/app_spacing.dart';
@@ -52,7 +53,8 @@ class AssetListScreen extends ConsumerWidget {
               foregroundColor: Colors.white,
             )
           : null,
-      body: Column(
+      body: ResponsiveCenter(
+        child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           SafeArea(
@@ -239,6 +241,7 @@ class AssetListScreen extends ConsumerWidget {
             ),
           ),
         ],
+      ),
       ),
     );
   }

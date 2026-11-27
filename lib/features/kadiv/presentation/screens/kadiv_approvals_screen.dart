@@ -7,6 +7,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:mutasiku/core/widgets/responsive_scaffold.dart';
 
 import '../../../../app/router/route_names.dart';
 import '../../../auth/domain/entities/user_role.dart';
@@ -71,7 +72,8 @@ class _KadivApprovalsScreenState extends ConsumerState<KadivApprovalsScreen> {
     return Scaffold(
       backgroundColor: _C.background,
       extendBody: true,
-      body: Column(
+      body: ResponsiveCenter(
+        child: Column(
         children: [
           // ── Header Baseline ──────────────────────────────────────────
           SafeArea(
@@ -249,6 +251,7 @@ class _KadivApprovalsScreenState extends ConsumerState<KadivApprovalsScreen> {
             ),
           ),
         ],
+      ),
       ),
       bottomNavigationBar: CustomFloatingNavBar.scaffoldBottomBar(
         items: RoleNavConfig.getNavItemsForRole(UserRole.kadiv),
